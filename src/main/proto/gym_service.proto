@@ -1,0 +1,276 @@
+syntax = "proto3";
+
+package catalog;
+option java_multiple_files = true;
+option java_package = "az.fitnest.catalog.grpc";
+
+service GymService {
+  rpc GetGymDetail(GetGymDetailRequest) returns (GymDetailResponse);
+  rpc GetGymImages(GetGymImagesRequest) returns (GymImageResponse);
+  rpc GetGymPackages(GetGymPackagesRequest) returns (GymPackagesResponse);
+  rpc GetPackageIncludes(GetPackageIncludesRequest) returns (GymPackageIncludesResponse);
+  rpc GetTrainers(GetTrainersRequest) returns (GymTrainersResponse);
+  rpc GetReviews(GetReviewsRequest) returns (GymReviewsResponse);
+  rpc AddReview(AddReviewRequest) returns (AddReviewResponse);
+  rpc GetReservationRules(GetReservationRulesRequest) returns (ReservationRulesResponse);
+  rpc GetMainPageGyms(GetMainPageGymsRequest) returns (GetMainPageGymsResponse);
+  // Admin endpoints
+  rpc AddPackage(AddPackageRequest) returns (AddPackageResponse);
+  rpc UpdatePackage(UpdatePackageRequest) returns (UpdatePackageResponse);
+  rpc DeletePackage(DeletePackageRequest) returns (DeletePackageResponse);
+  rpc AddTrainer(AddTrainerRequest) returns (AddTrainerResponse);
+  rpc UpdateTrainer(UpdateTrainerRequest) returns (UpdateTrainerResponse);
+  rpc DeleteTrainer(DeleteTrainerRequest) returns (DeleteTrainerResponse);
+  rpc CreateGym(CreateGymRequest) returns (CreateGymResponse);
+  rpc UpdateGym(UpdateGymRequest) returns (UpdateGymResponse);
+  // New endpoint for adding/updating gym images
+  rpc PutGymImage(PutGymImageRequest) returns (PutGymImageResponse);
+}
+
+message GetGymDetailRequest {
+  int64 user_id = 1;
+  int64 gym_id = 2;
+}
+message GymDetailResponse {
+  string gym_id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string cover_image_url = 5;
+  Address address = 6;
+  string phone = 7;
+  string email = 8;
+  repeated GymSocialLink social_links = 9;
+  repeated GymWorkHour work_hours = 10;
+  double rating = 11;
+  int32 reviews_count = 12;
+  bool is_saved = 13;
+  repeated Category categories = 14;
+}
+message Address {
+  string address_text = 1;
+  double latitude = 2;
+  double longitude = 3;
+}
+message GymSocialLink {
+  string name = 1;
+  string url = 2;
+}
+message GymWorkHour {
+  string day = 1;
+  string from = 2;
+  string to = 3;
+}
+message Category {
+  int64 id = 1;
+  string name = 2;
+  string photo_url = 3;
+}
+message GetGymImagesRequest {
+  int64 gym_id = 1;
+}
+message GymImageResponse {
+  repeated GymImageItem items = 1;
+}
+message GymImageItem {
+  string image_id = 1;
+  string url = 2;
+  string type = 3;
+  string title = 4;
+}
+message GetGymPackagesRequest {
+  int64 gym_id = 1;
+}
+message GymPackagesResponse {
+  repeated GymPlanItem items = 1;
+}
+// Simplified: only plan_id, name and list of benefit descriptions (strings)
+message GymPlanItem {
+  string plan_id = 1;
+  string name = 2;
+  repeated string benefits = 3;
+}
+message GymPlanBenefit {
+  string logo = 1;
+  string description = 2;
+}
+message GetPackageIncludesRequest {
+  int64 gym_id = 1;
+  int64 package_id = 2;
+}
+message GymPackageIncludesResponse {
+  string plan_id = 1;
+  repeated GymPlanBenefit items = 2;
+}
+message GetTrainersRequest {
+  int64 gym_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+message GymTrainersResponse {
+  repeated GymTrainer items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total = 4;
+}
+message GymTrainer {
+  string trainer_id = 1;
+  string full_name = 2;
+  string specialization = 3;
+  string image_url = 4;
+}
+message GetReviewsRequest {
+  int64 gym_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  string sort = 4;
+}
+message GymReviewsResponse {
+  repeated GymReview items = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total = 4;
+}
+message GymReview {
+  string review_id = 1;
+  int32 rating = 2;
+  string comment = 3;
+  string created_at = 4;
+  GymReviewAuthor author = 5;
+}
+message GymReviewAuthor {
+  string user_id = 1;
+  string full_name = 2;
+  string avatar_url = 3;
+}
+message AddReviewRequest {
+  int64 user_id = 1;
+  int64 gym_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+message AddReviewResponse {
+  bool success = 1;
+}
+message GetReservationRulesRequest {
+  int64 gym_id = 1;
+}
+message ReservationRulesResponse {
+  bool reservation_required = 1;
+  int32 max_reservations_per_day = 2;
+  int32 cancel_before_minutes = 3;
+}
+message GetMainPageGymsRequest {
+  double lat = 1;
+  double lng = 2;
+}
+message GetMainPageGymsResponse {
+  repeated GymMainPage items = 1;
+}
+message GymMainPage {
+  string gym_id = 1;
+  string name = 2;
+  string image_url = 3;
+  double stars = 4;
+  bool is_new = 5;
+  string location = 6;
+  double distance_km = 7;
+}
+// Admin requests and responses
+message AddPackageRequest {
+  int64 gym_id = 1;
+  string name = 2;
+  double price = 3;
+  string currency = 4;
+  string billing_period = 5;
+  repeated GymPlanBenefit benefits = 6;
+  bool is_active = 7;
+  int32 sort_order = 8;
+}
+message AddPackageResponse {
+  bool success = 1;
+}
+message UpdatePackageRequest {
+  int64 gym_id = 1;
+  int64 package_id = 2;
+  string name = 3;
+  double price = 4;
+  string currency = 5;
+  string billing_period = 6;
+  repeated GymPlanBenefit benefits = 7;
+  bool is_active = 8;
+  int32 sort_order = 9;
+}
+message UpdatePackageResponse {
+  bool success = 1;
+}
+message DeletePackageRequest {
+  int64 gym_id = 1;
+  int64 package_id = 2;
+}
+message DeletePackageResponse {
+  bool success = 1;
+}
+message AddTrainerRequest {
+  int64 gym_id = 1;
+  string full_name = 2;
+  string specialization = 3;
+  string image_url = 4;
+}
+message AddTrainerResponse {
+  bool success = 1;
+}
+message UpdateTrainerRequest {
+  int64 gym_id = 1;
+  int64 trainer_id = 2;
+  string full_name = 3;
+  string specialization = 4;
+  string image_url = 5;
+}
+message UpdateTrainerResponse {
+  bool success = 1;
+}
+message DeleteTrainerRequest {
+  int64 gym_id = 1;
+  int64 trainer_id = 2;
+}
+message DeleteTrainerResponse {
+  bool success = 1;
+}
+message CreateGymRequest {
+  string name = 1;
+  string description = 2;
+  string status = 3;
+  string cover_image_url = 4;
+  Address address = 5;
+  string phone = 6;
+  string email = 7;
+  repeated string category_ids = 8;
+}
+message CreateGymResponse {
+  bool success = 1;
+}
+message UpdateGymRequest {
+  int64 gym_id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string cover_image_url = 5;
+  Address address = 6;
+  string phone = 7;
+  string email = 8;
+  repeated string category_ids = 9;
+}
+message UpdateGymResponse {
+  bool success = 1;
+}
+// New messages for image upload
+message PutGymImageRequest {
+  int64 gym_id = 1;
+  string image_name = 2; // e.g., "sauna", "training zone"
+  string url = 3;
+}
+message PutGymImageResponse {
+  bool success = 1;
+  GymImageItem item = 2;
+}

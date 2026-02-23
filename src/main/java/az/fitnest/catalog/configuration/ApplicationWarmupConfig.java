@@ -1,0 +1,111 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.slf4j.Logger
+ *  org.slf4j.LoggerFactory
+ *  org.springframework.beans.factory.annotation.Value
+ *  org.springframework.boot.context.event.ApplicationReadyEvent
+ *  org.springframework.context.annotation.Configuration
+ *  org.springframework.context.event.EventListener
+ *  org.springframework.data.redis.core.RedisTemplate
+ *  org.springframework.scheduling.annotation.Async
+ */
+package az.fitnest.catalog.configuration;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import javax.sql.DataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
+
+@Configuration
+public class ApplicationWarmupConfig {
+    private static final Logger log = LoggerFactory.getLogger(ApplicationWarmupConfig.class);
+    private final DataSource dataSource;
+    private final RedisTemplate<String, Object> redisTemplate;
+    @Value(value="${app.warmup.enabled:true}")
+    private boolean warmupEnabled;
+    @Value(value="${app.warmup.db:true}")
+    private boolean warmupDb;
+
+    public ApplicationWarmupConfig(DataSource dataSource, RedisTemplate<String, Object> redisTemplate) {
+        this.dataSource = dataSource;
+        this.redisTemplate = redisTemplate;
+    }
+
+    @EventListener(value={ApplicationReadyEvent.class})
+    @Async
+    public void warmupApplication() {
+        if (!this.warmupEnabled) {
+            return;
+        }
+        if (this.warmupDb) {
+            this.warmupDatabase();
+        }
+        this.warmupRedis();
+        this.warmupJit();
+    }
+
+    private void warmupDatabase() {
+        try {
+            long start = System.currentTimeMillis();
+            for (int i = 0; i < 3; ++i) {
+                try (Connection conn = this.dataSource.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement("SELECT 1");
+                     ResultSet rs = stmt.executeQuery();){
+                    if (!rs.next()) continue;
+                    rs.getInt(1);
+                    continue;
+                }
+            }
+            log.debug("Database warmup completed in {}ms", System.currentTimeMillis() - start);
+        }
+        catch (Exception e) {
+            log.warn("Failed to warm up database: {}", e.getMessage());
+        }
+    }
+
+    private void warmupRedis() {
+        try {
+            log.debug("Warming up Redis connection...");
+            long start = System.currentTimeMillis();
+            this.redisTemplate.hasKey("__warmup__");
+            log.debug("Redis warmup completed in {}ms", System.currentTimeMillis() - start);
+        }
+        catch (Exception e) {
+            log.warn("Failed to warm up Redis: {}", e.getMessage());
+        }
+    }
+
+    private void warmupJit() {
+        try {
+            log.debug("Warming up JIT...");
+            long start = System.currentTimeMillis();
+            String test = "warmup-test-string";
+            test.toLowerCase();
+            test.toUpperCase();
+            test.split("-");
+            ArrayList<String> list = new ArrayList<String>();
+            list.add("test");
+            list.stream().filter(s -> s != null).count();
+            HashMap<String, String> map = new HashMap<String, String>();
+            map.put("key", "value");
+            map.get("key");
+            log.debug("JIT warmup completed in {}ms", System.currentTimeMillis() - start);
+        }
+        catch (Exception e) {
+            log.warn("Failed JIT warmup: {}", e.getMessage());
+        }
+    }
+}
+

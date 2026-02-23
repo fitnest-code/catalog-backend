@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package catalog;
+
+option java_multiple_files = true;
+option java_package = "az.fitnest.catalog.grpc";
+option java_outer_classname = "StoreProto";
+
+service StoreService {
+    rpc GetMarketStores(GetStoresRequest) returns (StoreListResponse);
+    rpc ToggleFavorite(ToggleFavoriteRequest) returns (ToggleFavoriteResponse);
+    rpc CreateStoreAdmin(CreateStoreAdminRequest) returns (StoreDetailResponse);
+    rpc UpdateStoreAdmin(UpdateStoreAdminRequest) returns (StoreDetailResponse);
+    rpc DeleteStoreAdmin(DeleteStoreAdminRequest) returns (google.protobuf.Empty);
+}
+
+message GetStoresRequest {
+    string query = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+    int64 user_id = 4;
+}
+
+message StoreListResponse {
+    string json_payload = 1;
+}
+
+message ToggleFavoriteRequest {
+    string store_id = 1;
+    int64 user_id = 2;
+}
+
+message ToggleFavoriteResponse {
+    bool success = 1;
+}
+
+message CreateStoreAdminRequest {
+    string json_payload = 1;
+}
+
+message UpdateStoreAdminRequest {
+    string store_id = 1;
+    string json_payload = 2;
+}
+
+message DeleteStoreAdminRequest {
+    string store_id = 1;
+}
+
+message StoreDetailResponse {
+    string json_payload = 1;
+}

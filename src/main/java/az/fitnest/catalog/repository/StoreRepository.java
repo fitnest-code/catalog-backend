@@ -1,0 +1,68 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.springframework.data.domain.Page
+ *  org.springframework.data.domain.Pageable
+ *  org.springframework.data.jpa.repository.EntityGraph
+ *  org.springframework.data.jpa.repository.JpaRepository
+ *  org.springframework.data.jpa.repository.JpaSpecificationExecutor
+ *  org.springframework.data.jpa.repository.Query
+ *  org.springframework.data.repository.query.Param
+ *  org.springframework.stereotype.Repository
+ */
+package az.fitnest.catalog.repository;
+
+import az.fitnest.catalog.model.entity.Store;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface StoreRepository
+extends JpaRepository<Store, Long>,
+JpaSpecificationExecutor<Store> {
+    @Query(value="SELECT s.*,\n(6371 * acos(cos(radians(:lat)) * cos(radians(s.address_lat)) * cos(radians(s.address_lng) - radians(:lng)) + sin(radians(:lat)) * sin(radians(s.address_lat)))) AS distance\nFROM stores s\nHAVING distance < :radius\nORDER BY distance ASC\n", nativeQuery=true)
+    public Page<Store> findNearby(@Param(value="lat") Double var1, @Param(value="lng") Double var2, @Param(value="radius") Double var3, Pageable var4);
+
+    @Query(value="SELECT s.*,\n(6371 * acos(cos(radians(:lat)) * cos(radians(s.address_lat)) * cos(radians(s.address_lng) - radians(:lng)) + sin(radians(:lat)) * sin(radians(s.address_lat)))) AS distance\nFROM stores s\n", nativeQuery=true)
+    public Page<Store> findAllWithDistance(@Param(value="lat") Double var1, @Param(value="lng") Double var2, Pageable var3);
+
+    public List<Store> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4);
+
+    @EntityGraph(attributePaths={"discounts", "images", "workHours", "social"})
+    public Page<Store> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4, Pageable var5);
+
+    @EntityGraph(attributePaths={"discounts", "workHours", "social"})
+    @Query(value="SELECT s FROM Store s")
+    public Page<Store> findAllWithAssociations(Pageable var1);
+
+    @EntityGraph(attributePaths={"discounts", "workHours", "social"})
+    @Query(value="SELECT DISTINCT s FROM Store s JOIN s.discounts d")
+    public Page<Store> findDiscountedStores(Pageable var1);
+
+    @EntityGraph(attributePaths={"discounts", "workHours", "social"})
+    @Query(value="SELECT DISTINCT s FROM Store s JOIN s.discounts d WHERE LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern")
+    public Page<Store> findDiscountedStoresByQuery(@Param(value="pattern") String var1, Pageable var2);
+
+    @EntityGraph(attributePaths={"discounts", "images", "workHours", "social"})
+    @Query(value="SELECT s FROM Store s WHERE s.id = :id")
+    public Optional<Store> findByIdWithAssociations(@Param(value="id") Long var1);
+
+    @EntityGraph(attributePaths={"discounts", "workHours", "social"})
+    @Query(value="SELECT s FROM Store s WHERE s.createdDate >= :cutoff")
+    public Page<Store> findNewStores(@Param(value="cutoff") LocalDateTime var1, Pageable var2);
+
+    @EntityGraph(attributePaths={"discounts", "workHours", "social"})
+    @Query(value="SELECT s FROM Store s WHERE s.createdDate >= :cutoff AND (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern)")
+    public Page<Store> findNewStoresByQuery(@Param(value="cutoff") LocalDateTime var1, @Param(value="pattern") String var2, Pageable var3);
+}
+
