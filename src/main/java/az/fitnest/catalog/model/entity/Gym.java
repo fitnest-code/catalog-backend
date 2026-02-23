@@ -60,6 +60,8 @@ extends BaseAuditableEntity {
     private String coverImageUrl;
     @Column(name="logo_url")
     private String logoUrl;
+    @Column(name="qr_code_url")
+    private String qrCodeUrl;
     @Embedded
     private Address address;
     @Column(name="phone")
@@ -109,6 +111,10 @@ extends BaseAuditableEntity {
 
     public String getLogoUrl() {
         return this.logoUrl;
+    }
+
+    public String getQrCodeUrl() {
+        return this.qrCodeUrl;
     }
 
     public Address getAddress() {
@@ -177,6 +183,10 @@ extends BaseAuditableEntity {
 
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
+    }
+
+    public void setQrCodeUrl(String qrCodeUrl) {
+        this.qrCodeUrl = qrCodeUrl;
     }
 
     public void setAddress(Address address) {

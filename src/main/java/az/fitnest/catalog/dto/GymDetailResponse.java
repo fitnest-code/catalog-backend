@@ -23,6 +23,7 @@ public class GymDetailResponse {
     private List<GymPlanItemDto> membership_plans;
     private List<GymTrainerDto> trainers;
     private List<GymReviewDto> recent_reviews;
+    private String qr_code_url;
 
     public static GymDetailResponseBuilder builder() {
         return new GymDetailResponseBuilder();
@@ -76,6 +77,10 @@ public class GymDetailResponse {
         return this.recent_reviews;
     }
 
+    public String getQr_code_url() {
+        return this.qr_code_url;
+    }
+
     public void setGym_id(String gym_id) {
         this.gym_id = gym_id;
     }
@@ -122,6 +127,10 @@ public class GymDetailResponse {
 
     public void setRecent_reviews(List<GymReviewDto> recent_reviews) {
         this.recent_reviews = recent_reviews;
+    }
+
+    public void setQr_code_url(String qr_code_url) {
+        this.qr_code_url = qr_code_url;
     }
 
     public boolean equals(Object o) {
@@ -236,7 +245,7 @@ public class GymDetailResponse {
     public GymDetailResponse() {
     }
 
-    public GymDetailResponse(String gym_id, String name, String description, String status, String address, String phone, String email, List<GymWorkHourDto> work_hours, List<GymRoomDto> rooms, List<GymPlanItemDto> membership_plans, List<GymTrainerDto> trainers, List<GymReviewDto> recent_reviews) {
+    public GymDetailResponse(String gym_id, String name, String description, String status, String address, String phone, String email, List<GymWorkHourDto> work_hours, List<GymRoomDto> rooms, List<GymPlanItemDto> membership_plans, List<GymTrainerDto> trainers, List<GymReviewDto> recent_reviews, String qr_code_url) {
         this.gym_id = gym_id;
         this.name = name;
         this.description = description;
@@ -249,6 +258,7 @@ public class GymDetailResponse {
         this.membership_plans = membership_plans;
         this.trainers = trainers;
         this.recent_reviews = recent_reviews;
+        this.qr_code_url = qr_code_url;
     }
 
     public static class GymDetailResponseBuilder {
@@ -264,6 +274,7 @@ public class GymDetailResponse {
         private List<GymPlanItemDto> membership_plans;
         private List<GymTrainerDto> trainers;
         private List<GymReviewDto> recent_reviews;
+        private String qr_code_url;
 
         GymDetailResponseBuilder() {
         }
@@ -328,8 +339,13 @@ public class GymDetailResponse {
             return this;
         }
 
+        public GymDetailResponseBuilder qr_code_url(String qr_code_url) {
+            this.qr_code_url = qr_code_url;
+            return this;
+        }
+
         public GymDetailResponse build() {
-            return new GymDetailResponse(this.gym_id, this.name, this.description, this.status, this.address, this.phone, this.email, this.work_hours, this.rooms, this.membership_plans, this.trainers, this.recent_reviews);
+            return new GymDetailResponse(this.gym_id, this.name, this.description, this.status, this.address, this.phone, this.email, this.work_hours, this.rooms, this.membership_plans, this.trainers, this.recent_reviews, this.qr_code_url);
         }
 
         public String toString() {

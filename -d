@@ -1,0 +1,69 @@
+== Info:   Trying 161.97.183.7:80...
+== Info: Connected to 161.97.183.7 (161.97.183.7) port 80
+=> Send header, 361 bytes (0x169)
+0000: 50 4f 53 54 20 2f 61 70 69 2f 76 31 2f 73 74 6f POST /api/v1/sto
+0010: 72 65 73 2f 61 64 6d 69 6e 20 48 54 54 50 2f 31 res/admin HTTP/1
+0020: 2e 31 0d 0a 48 6f 73 74 3a 20 31 36 31 2e 39 37 .1..Host: 161.97
+0030: 2e 31 38 33 2e 37 0d 0a 55 73 65 72 2d 41 67 65 .183.7..User-Age
+0040: 6e 74 3a 20 63 75 72 6c 2f 38 2e 37 2e 31 0d 0a nt: curl/8.7.1..
+0050: 61 63 63 65 70 74 3a 20 61 70 70 6c 69 63 61 74 accept: applicat
+0060: 69 6f 6e 2f 6a 73 6f 6e 0d 0a 43 6f 6e 74 65 6e ion/json..Conten
+0070: 74 2d 54 79 70 65 3a 20 61 70 70 6c 69 63 61 74 t-Type: applicat
+0080: 69 6f 6e 2f 6a 73 6f 6e 0d 0a 41 75 74 68 6f 72 ion/json..Author
+0090: 69 7a 61 74 69 6f 6e 3a 20 42 65 61 72 65 72 20 ization: Bearer 
+00a0: 65 79 4a 68 62 47 63 69 4f 69 4a 49 55 7a 49 31 eyJhbGciOiJIUzI1
+00b0: 4e 69 4a 39 2e 65 79 4a 70 63 33 4d 69 4f 69 4a NiJ9.eyJpc3MiOiJ
+00c0: 6d 61 58 52 75 5a 58 4e 30 49 69 77 69 63 33 56 maXRuZXN0Iiwic3V
+00d0: 69 49 6a 6f 69 4d 53 49 73 49 6d 6c 68 64 43 49 iIjoiMSIsImlhdCI
+00e0: 36 4d 54 63 33 4d 54 55 77 4d 44 49 30 4d 53 77 6MTc3MTUwMDI0MSw
+00f0: 69 5a 58 68 77 49 6a 6f 78 4e 7a 63 78 4e 54 41 iZXhwIjoxNzcxNTA
+0100: 7a 4f 44 51 78 4c 43 4a 30 65 58 41 69 4f 69 4a zODQxLCJ0eXAiOiJ
+0110: 68 59 32 4e 6c 63 33 4d 69 4c 43 4a 79 62 32 78 hY2Nlc3MiLCJyb2x
+0120: 6c 63 79 49 36 57 79 4a 53 54 30 78 46 58 30 46 lcyI6WyJST0xFX0F
+0130: 45 54 55 6c 4f 49 6c 31 39 2e 72 4a 52 7a 57 4b ETUlOIl19.rJRzWK
+0140: 66 32 71 41 6f 6d 71 51 72 71 65 65 48 41 5f 6c f2qAomqQrqeeHA_l
+0150: 54 57 44 48 54 6e 65 48 78 6c 69 6a 5a 57 48 47 TWDHTneHxlijZWHG
+0160: 72 46 59 44 63 0d 0a 0d 0a                      rFYDc....
+== Info: Request completely sent off
+<= Recv header, 24 bytes (0x18)
+0000: 48 54 54 50 2f 31 2e 31 20 34 30 34 20 4e 6f 74 HTTP/1.1 404 Not
+0010: 20 46 6f 75 6e 64 0d 0a                          Found..
+<= Recv header, 75 bytes (0x4b)
+0000: 76 61 72 79 3a 20 4f 72 69 67 69 6e 2c 41 63 63 vary: Origin,Acc
+0010: 65 73 73 2d 43 6f 6e 74 72 6f 6c 2d 52 65 71 75 ess-Control-Requ
+0020: 65 73 74 2d 4d 65 74 68 6f 64 2c 41 63 63 65 73 est-Method,Acces
+0030: 73 2d 43 6f 6e 74 72 6f 6c 2d 52 65 71 75 65 73 s-Control-Reques
+0040: 74 2d 48 65 61 64 65 72 73 0d 0a                t-Headers..
+<= Recv header, 32 bytes (0x20)
+0000: 63 6f 6e 74 65 6e 74 2d 74 79 70 65 3a 20 61 70 content-type: ap
+0010: 70 6c 69 63 61 74 69 6f 6e 2f 6a 73 6f 6e 0d 0a plication/json..
+<= Recv header, 21 bytes (0x15)
+0000: 63 6f 6e 74 65 6e 74 2d 6c 65 6e 67 74 68 3a 20 content-length: 
+0010: 31 38 32 0d 0a                                  182..
+<= Recv header, 34 bytes (0x22)
+0000: 78 2d 65 6e 76 6f 79 2d 75 70 73 74 72 65 61 6d x-envoy-upstream
+0010: 2d 73 65 72 76 69 63 65 2d 74 69 6d 65 3a 20 37 -service-time: 7
+0020: 0d 0a                                           ..
+<= Recv header, 37 bytes (0x25)
+0000: 64 61 74 65 3a 20 54 68 75 2c 20 31 39 20 46 65 date: Thu, 19 Fe
+0010: 62 20 32 30 32 36 20 31 31 3a 32 37 3a 32 35 20 b 2026 11:27:25 
+0020: 47 4d 54 0d 0a                                  GMT..
+<= Recv header, 21 bytes (0x15)
+0000: 73 65 72 76 65 72 3a 20 69 73 74 69 6f 2d 65 6e server: istio-en
+0010: 76 6f 79 0d 0a                                  voy..
+<= Recv header, 2 bytes (0x2)
+0000: 0d 0a                                           ..
+<= Recv data, 182 bytes (0xb6)
+0000: 7b 22 65 72 72 6f 72 22 3a 7b 22 63 6f 64 65 22 {"error":{"code"
+0010: 3a 22 4e 4f 54 5f 46 4f 55 4e 44 22 2c 22 6d 65 :"NOT_FOUND","me
+0020: 73 73 61 67 65 22 3a 22 54 68 65 20 72 65 71 75 ssage":"The requ
+0030: 65 73 74 65 64 20 72 65 73 6f 75 72 63 65 20 77 ested resource w
+0040: 61 73 20 6e 6f 74 20 66 6f 75 6e 64 2e 22 2c 22 as not found.","
+0050: 73 74 61 74 75 73 22 3a 34 30 34 2c 22 70 61 74 status":404,"pat
+0060: 68 22 3a 22 2f 61 70 69 2f 76 31 2f 73 74 6f 72 h":"/api/v1/stor
+0070: 65 73 2f 61 64 6d 69 6e 22 2c 22 74 69 6d 65 73 es/admin","times
+0080: 74 61 6d 70 22 3a 22 32 30 32 36 2d 30 32 2d 31 tamp":"2026-02-1
+0090: 39 54 31 31 3a 32 37 3a 32 36 2e 30 31 32 34 34 9T11:27:26.01244
+00a0: 33 35 39 34 22 2c 22 64 65 74 61 69 6c 73 22 3a 3594","details":
+00b0: 6e 75 6c 6c 7d 7d                               null}}
+== Info: Connection #0 to host 161.97.183.7 left intact

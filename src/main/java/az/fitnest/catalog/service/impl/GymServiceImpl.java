@@ -30,7 +30,6 @@ import az.fitnest.catalog.dto.GymRoomDto;
 import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.GymTrainersResponse;
 import az.fitnest.catalog.dto.GymWorkHourDto;
-import az.fitnest.catalog.dto.MembershipPresetDto;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.exception.BadRequestException;
@@ -49,7 +48,6 @@ import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.GymService;
-import az.fitnest.catalog.service.MembershipPresetsProvider;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -80,6 +78,7 @@ implements GymService {
     private final GymImageRepository gymImageRepository;
     private final FileStorageService fileStorageService;
     private final ReverseGeocodingService reverseGeocodingService;
+    private final az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient;
 
     @Override
     @Transactional(readOnly=true)
@@ -90,14 +89,10 @@ implements GymService {
             List<GymImageDto> images = entry.getValue().stream().map(img -> GymImageDto.builder().id(img.getId()).gymId(img.getGym() != null ? img.getGym().getId() : null).name(img.getImageName()).url(img.getUrl()).build()).collect(Collectors.toList());
             return GymRoomDto.builder().images(images).build();
         }).collect(Collectors.toList());
-        List<MembershipPresetDto> presets = MembershipPresetsProvider.getPresets();
-        List<GymPlanItemDto> membershipPlans = presets.stream().map(preset -> {
-            List<String> benefits = preset.getOptions().stream().flatMap(opt -> opt.getServices().stream()).distinct().collect(Collectors.toList());
-            return GymPlanItemDto.builder().plan_id(null).name(preset.getName()).benefits(benefits).build();
-        }).collect(Collectors.toList());
+        List<GymPlanItemDto> membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
         List<GymTrainerDto> trainerDtos = gym.getTrainers().stream().limit(5L).map(t -> GymTrainerDto.builder().trainer_id(t.getId() != null ? t.getId().toString() : null).full_name(t.getFullName()).specialization(t.getSpecialization()).image_url(t.getImageUrl()).build()).collect(Collectors.toList());
         List<GymReviewDto> recentReviews = gym.getReviews().stream().sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate())).limit(3L).map(r -> GymReviewDto.builder().review_id(r.getId() != null ? r.getId().toString() : null).rating(r.getRating()).comment(r.getComment()).created_at(r.getCreatedDate() != null ? r.getCreatedDate().format(DateTimeFormatter.ISO_DATE_TIME) : null).author(GymReviewAuthorDto.builder().user_id(r.getUserId() != null ? r.getUserId().toString() : null).full_name("User " + r.getUserId()).avatar_url(null).build()).build()).collect(Collectors.toList());
-        return GymDetailResponse.builder().gym_id(gym.getId().toString()).name(gym.getName()).description(gym.getDescription()).status(gym.getStatus() != null ? gym.getStatus().name() : null).address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null).phone(gym.getPhone()).email(gym.getEmail()).work_hours(gym.getWorkHours().stream().map(wh -> GymWorkHourDto.builder().day(wh.getDay()).from(wh.getFromTime()).to(wh.getToTime()).build()).collect(Collectors.toList())).rooms(rooms).membership_plans(membershipPlans).trainers(trainerDtos).recent_reviews(recentReviews).build();
+        return GymDetailResponse.builder().gym_id(gym.getId().toString()).name(gym.getName()).description(gym.getDescription()).status(gym.getStatus() != null ? gym.getStatus().name() : null).address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null).phone(gym.getPhone()).email(gym.getEmail()).work_hours(gym.getWorkHours().stream().map(wh -> GymWorkHourDto.builder().day(wh.getDay()).from(wh.getFromTime()).to(wh.getToTime()).build()).collect(Collectors.toList())).rooms(rooms).membership_plans(membershipPlans).trainers(trainerDtos).recent_reviews(recentReviews).qr_code_url(gym.getQrCodeUrl()).build();
     }
 
     @Override
@@ -112,11 +107,7 @@ implements GymService {
     @Transactional(readOnly=true)
     public GymPackagesResponse getGymPackages(Long gymId) {
         Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        List<MembershipPresetDto> presets = MembershipPresetsProvider.getPresets();
-        List<GymPlanItemDto> items = presets.stream().map(preset -> {
-            List<String> benefits = preset.getOptions().stream().flatMap(opt -> opt.getServices().stream()).distinct().collect(Collectors.toList());
-            return GymPlanItemDto.builder().plan_id(null).name(preset.getName()).benefits(benefits).build();
-        }).collect(Collectors.toList());
+        List<GymPlanItemDto> items = orderServiceGrpcClient.getGymPlans(gymId);
         return GymPackagesResponse.builder().items(items).build();
     }
 
@@ -240,7 +231,9 @@ implements GymService {
             HashSet<Category> categories = new HashSet<Category>(this.categoryRepository.findAllById(request.getCategoryIds()));
             gym.setCategories(categories);
         }
-        this.gymRepository.save(gym);
+        Gym saved = this.gymRepository.save(gym);
+        saved.setQrCodeUrl("/api/v1/gyms/" + saved.getId() + "/qr");
+        this.gymRepository.save(saved);
     }
 
     @Override
@@ -533,7 +526,7 @@ implements GymService {
         this.gymRepository.delete(gym);
     }
 
-    public GymServiceImpl(GymRepository gymRepository, ReviewRepository reviewRepository, TrainerRepository trainerRepository, CategoryRepository categoryRepository, GymImageRepository gymImageRepository, FileStorageService fileStorageService, ReverseGeocodingService reverseGeocodingService) {
+    public GymServiceImpl(GymRepository gymRepository, ReviewRepository reviewRepository, TrainerRepository trainerRepository, CategoryRepository categoryRepository, GymImageRepository gymImageRepository, FileStorageService fileStorageService, ReverseGeocodingService reverseGeocodingService, az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient) {
         this.gymRepository = gymRepository;
         this.reviewRepository = reviewRepository;
         this.trainerRepository = trainerRepository;
@@ -541,6 +534,7 @@ implements GymService {
         this.gymImageRepository = gymImageRepository;
         this.fileStorageService = fileStorageService;
         this.reverseGeocodingService = reverseGeocodingService;
+        this.orderServiceGrpcClient = orderServiceGrpcClient;
     }
 }
 
