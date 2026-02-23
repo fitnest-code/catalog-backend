@@ -29,6 +29,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.GymDetailResponse;
 import az.fitnest.catalog.dto.GymImageDto;
+import az.fitnest.catalog.dto.GymQrResponse;
 import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
 import az.fitnest.catalog.dto.GymPackageIncludesResponse;
@@ -83,6 +84,14 @@ public class GymController {
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Images retrieved successfully", content={@Content(schema=@Schema(implementation=GymImageResponse.class))})})
     public ResponseEntity<GymImageResponse> getGymImages(@PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymService.getGymImages(gymId));
+    }
+
+    @GetMapping(value={"/gyms/{gymId}/qr"})
+    @Operation(summary="Get gym QR code URL", description="Returns a stream URL for the gym's QR code image.")
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="QR code URL retrieved successfully", content={@Content(schema=@Schema(implementation=GymQrResponse.class))})})
+    public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description="ID of the gym") @PathVariable Long gymId) {
+        String qrCodeUrl = this.gymService.getGymQrUrl(gymId);
+        return ResponseEntity.ok(GymQrResponse.builder().qrCodeUrl(qrCodeUrl).build());
     }
 
     @GetMapping(value={"/gyms/{gymId}/packages"})

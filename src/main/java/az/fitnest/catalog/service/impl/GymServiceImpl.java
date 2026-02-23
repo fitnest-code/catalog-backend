@@ -67,6 +67,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import az.fitnest.catalog.util.ByteArrayMultipartFile;
+import java.io.ByteArrayOutputStream;
 
 @Service
 public class GymServiceImpl
@@ -232,7 +238,30 @@ implements GymService {
             gym.setCategories(categories);
         }
         Gym saved = this.gymRepository.save(gym);
-        saved.setQrCodeUrl("/api/v1/gyms/" + saved.getId() + "/qr");
+        
+        try {
+            String qrContent = "{\"gymId\": " + saved.getId() + "}";
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
+            
+            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+            byte[] pngData = pngOutputStream.toByteArray();
+            
+            ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
+                    pngData,
+                    "qr_code",
+                    "gym_" + saved.getId() + "_qr.png",
+                    "image/png"
+            );
+            
+            String fsId = this.fileStorageService.saveFile(multipartFile, "/gyms/" + saved.getId() + "/qr");
+            saved.setQrCodeUrl("/api/v1/media/stream/" + fsId);
+        } catch (Exception e) {
+            // Log issue but don't fail gym creation; maybe fallback to relative
+            saved.setQrCodeUrl("/api/v1/gyms/" + saved.getId() + "/qr");
+        }
+        
         this.gymRepository.save(saved);
     }
 
@@ -524,6 +553,13 @@ implements GymService {
             }
         }
         this.gymRepository.delete(gym);
+    }
+
+    @Override
+    @Transactional(readOnly=true)
+    public String getGymQrUrl(Long gymId) {
+        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        return gym.getQrCodeUrl();
     }
 
     public GymServiceImpl(GymRepository gymRepository, ReviewRepository reviewRepository, TrainerRepository trainerRepository, CategoryRepository categoryRepository, GymImageRepository gymImageRepository, FileStorageService fileStorageService, ReverseGeocodingService reverseGeocodingService, az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient) {

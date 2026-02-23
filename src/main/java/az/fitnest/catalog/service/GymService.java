@@ -58,6 +58,8 @@ public interface GymService {
 
     public void deleteGym(Long var1);
 
+    public String getGymQrUrl(Long gymId);
+
     public void updateLogoUrl(Long var1, String var2);
 
     public void updateCoverImageUrl(Long var1, String var2);
