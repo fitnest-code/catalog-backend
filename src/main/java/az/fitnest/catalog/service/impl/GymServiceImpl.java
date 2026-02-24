@@ -1,3 +1,5 @@
+package az.fitnest.catalog.service.impl;
+
 /*
  * Decompiled with CFR 0.152.
  * 
