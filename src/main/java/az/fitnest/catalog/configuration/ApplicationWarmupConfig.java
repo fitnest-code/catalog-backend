@@ -8,7 +8,6 @@
  *  org.springframework.boot.context.event.ApplicationReadyEvent
  *  org.springframework.context.annotation.Configuration
  *  org.springframework.context.event.EventListener
- *  org.springframework.data.redis.core.RedisTemplate
  *  org.springframework.scheduling.annotation.Async
  */
 package az.fitnest.catalog.configuration;
@@ -25,22 +24,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 
 @Configuration
 public class ApplicationWarmupConfig {
     private static final Logger log = LoggerFactory.getLogger(ApplicationWarmupConfig.class);
     private final DataSource dataSource;
-    private final RedisTemplate<String, Object> redisTemplate;
     @Value(value="${app.warmup.enabled:true}")
     private boolean warmupEnabled;
     @Value(value="${app.warmup.db:true}")
     private boolean warmupDb;
 
-    public ApplicationWarmupConfig(DataSource dataSource, RedisTemplate<String, Object> redisTemplate) {
+    public ApplicationWarmupConfig(DataSource dataSource) {
         this.dataSource = dataSource;
-        this.redisTemplate = redisTemplate;
     }
 
     @EventListener(value={ApplicationReadyEvent.class})
@@ -52,7 +48,6 @@ public class ApplicationWarmupConfig {
         if (this.warmupDb) {
             this.warmupDatabase();
         }
-        this.warmupRedis();
         this.warmupJit();
     }
 
@@ -72,18 +67,6 @@ public class ApplicationWarmupConfig {
         }
         catch (Exception e) {
             log.warn("Failed to warm up database: {}", e.getMessage());
-        }
-    }
-
-    private void warmupRedis() {
-        try {
-            log.debug("Warming up Redis connection...");
-            long start = System.currentTimeMillis();
-            this.redisTemplate.hasKey("__warmup__");
-            log.debug("Redis warmup completed in {}ms", System.currentTimeMillis() - start);
-        }
-        catch (Exception e) {
-            log.warn("Failed to warm up Redis: {}", e.getMessage());
         }
     }
 
