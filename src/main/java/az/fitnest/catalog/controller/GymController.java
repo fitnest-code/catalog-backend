@@ -71,7 +71,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class GymController {
     private final GymService gymService;
 
-    @GetMapping(value={"/gyms/{gymId}"})
+    @GetMapping(value={"/gyms/{gymId:\\d+}"})
     @Operation(summary="Get gym details", description="Retrieves full details of a specific gym, including location, facilities, and user-specific favorite status.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Gym details retrieved successfully", content={@Content(schema=@Schema(implementation=GymDetailResponse.class))}), @ApiResponse(responseCode="404", description="Gym not found")})
     public ResponseEntity<GymDetailResponse> getGymDetail(@AuthenticationPrincipal Object principal, @Parameter(description="ID of the gym") @PathVariable Long gymId) {

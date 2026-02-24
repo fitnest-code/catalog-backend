@@ -87,7 +87,7 @@ public class StoreController {
     @PreAuthorize(value="isAuthenticated()")
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Store details retrieved successfully", content={@Content(schema=@Schema(implementation=StoreDetailResponseDto.class))}), @ApiResponse(responseCode="404", description="Store not found")})
-    @GetMapping(value={"/stores/{storeId}"})
+    @GetMapping(value={"/stores/{storeId:\\d+}"})
     public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description="ID of the store") @PathVariable Long storeId, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
