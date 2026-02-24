@@ -21,6 +21,8 @@ public class Review
 extends BaseAuditableEntity {
     @Column(name="user_id")
     private Long userId;
+    @Column(name="gym_id", updatable=false, insertable=false)
+    private Long gymId;
     @Column(name="rating")
     private Integer rating;
     @Column(name="comment", columnDefinition="TEXT")
@@ -28,6 +30,10 @@ extends BaseAuditableEntity {
 
     public Long getUserId() {
         return this.userId;
+    }
+
+    public Long getGymId() {
+        return this.gymId;
     }
 
     public Integer getRating() {
@@ -40,6 +46,10 @@ extends BaseAuditableEntity {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public void setGymId(Long gymId) {
+        this.gymId = gymId;
     }
 
     public void setRating(Integer rating) {

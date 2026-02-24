@@ -180,7 +180,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
                         .setReviewId(item.getReview_id() != null ? item.getReview_id() : "")
                         .setRating(item.getRating() != null ? item.getRating() : 0)
                         .setComment(item.getComment() != null ? item.getComment() : "")
-                        .setCreatedAt(item.getCreated_at() != null ? item.getCreated_at() : "");
+                        .setCreatedAt(item.getCreated_at() != null ? item.getCreated_at().format(java.time.format.DateTimeFormatter.ISO_DATE_TIME) : "");
                 if (item.getAuthor() != null) {
                     reviewBuilder.setAuthor(GymReviewAuthor.newBuilder()
                             .setUserId(item.getAuthor().getUser_id())

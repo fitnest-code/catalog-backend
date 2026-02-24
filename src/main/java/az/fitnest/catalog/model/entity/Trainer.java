@@ -17,12 +17,18 @@ import jakarta.persistence.Table;
 @Table(name="trainers")
 public class Trainer
 extends BaseAuditableEntity {
+    @Column(name="gym_id", insertable=false, updatable=false)
+    private Long gymId;
     @Column(name="full_name")
     private String fullName;
     @Column(name="specialization")
     private String specialization;
     @Column(name="image_url")
     private String imageUrl;
+
+    public Long getGymId() {
+        return this.gymId;
+    }
 
     public String getFullName() {
         return this.fullName;
@@ -34,6 +40,10 @@ extends BaseAuditableEntity {
 
     public String getImageUrl() {
         return this.imageUrl;
+    }
+
+    public void setGymId(Long gymId) {
+        this.gymId = gymId;
     }
 
     public void setFullName(String fullName) {

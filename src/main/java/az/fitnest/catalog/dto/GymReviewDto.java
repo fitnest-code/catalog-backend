@@ -10,7 +10,7 @@ public class GymReviewDto {
     private Integer rating;
     private String comment;
     private GymReviewAuthorDto author;
-    private String created_at;
+    private java.time.LocalDateTime created_at;
 
     public static GymReviewDtoBuilder builder() {
         return new GymReviewDtoBuilder();
@@ -32,7 +32,7 @@ public class GymReviewDto {
         return this.author;
     }
 
-    public String getCreated_at() {
+    public java.time.LocalDateTime getCreated_at() {
         return this.created_at;
     }
 
@@ -52,7 +52,7 @@ public class GymReviewDto {
         this.author = author;
     }
 
-    public void setCreated_at(String created_at) {
+    public void setCreated_at(java.time.LocalDateTime created_at) {
         this.created_at = created_at;
     }
 
@@ -87,8 +87,8 @@ public class GymReviewDto {
         if (this$author == null ? other$author != null : !((Object)this$author).equals(other$author)) {
             return false;
         }
-        String this$created_at = this.getCreated_at();
-        String other$created_at = other.getCreated_at();
+        java.time.LocalDateTime this$created_at = this.getCreated_at();
+        java.time.LocalDateTime other$created_at = other.getCreated_at();
         return !(this$created_at == null ? other$created_at != null : !this$created_at.equals(other$created_at));
     }
 
@@ -107,7 +107,7 @@ public class GymReviewDto {
         result = result * 59 + ($comment == null ? 43 : $comment.hashCode());
         GymReviewAuthorDto $author = this.getAuthor();
         result = result * 59 + ($author == null ? 43 : ((Object)$author).hashCode());
-        String $created_at = this.getCreated_at();
+        java.time.LocalDateTime $created_at = this.getCreated_at();
         result = result * 59 + ($created_at == null ? 43 : $created_at.hashCode());
         return result;
     }
@@ -119,7 +119,7 @@ public class GymReviewDto {
     public GymReviewDto() {
     }
 
-    public GymReviewDto(String review_id, Integer rating, String comment, GymReviewAuthorDto author, String created_at) {
+    public GymReviewDto(String review_id, Integer rating, String comment, GymReviewAuthorDto author, java.time.LocalDateTime created_at) {
         this.review_id = review_id;
         this.rating = rating;
         this.comment = comment;
@@ -132,7 +132,7 @@ public class GymReviewDto {
         private Integer rating;
         private String comment;
         private GymReviewAuthorDto author;
-        private String created_at;
+        private java.time.LocalDateTime created_at;
 
         GymReviewDtoBuilder() {
         }
@@ -157,7 +157,7 @@ public class GymReviewDto {
             return this;
         }
 
-        public GymReviewDtoBuilder created_at(String created_at) {
+        public GymReviewDtoBuilder created_at(java.time.LocalDateTime created_at) {
             this.created_at = created_at;
             return this;
         }

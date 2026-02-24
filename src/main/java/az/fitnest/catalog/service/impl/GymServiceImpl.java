@@ -11,7 +11,8 @@
  *  org.springframework.transaction.annotation.Transactional
  *  org.springframework.web.multipart.MultipartFile
  */
-package az.fitnest.catalog.service.impl;
+import az.fitnest.catalog.dto.ReservationRulesResponse;
+import az.fitnest.catalog.exception.BadRequestException;
 
 import az.fitnest.catalog.dto.GymDetailResponse;
 import az.fitnest.catalog.dto.GymImageDto;
@@ -50,6 +51,7 @@ import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.GymService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -86,33 +88,37 @@ implements GymService {
     private final ReverseGeocodingService reverseGeocodingService;
     private final az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient;
 
-    @Override
-    @Transactional(readOnly=true)
-    public GymDetailResponse getGymDetail(Long userId, Long gymId) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        Map<String, List<GymImage>> grouped = gym.getImages().stream().filter(img -> img.getImageName() != null).collect(Collectors.groupingBy(GymImage::getImageName));
-        List<GymRoomDto> rooms = grouped.entrySet().stream().map(entry -> {
-            List<GymImageDto> images = entry.getValue().stream().map(img -> GymImageDto.builder().id(img.getId()).gymId(img.getGym() != null ? img.getGym().getId() : null).name(img.getImageName()).url(img.getUrl()).build()).collect(Collectors.toList());
-            return GymRoomDto.builder().images(images).build();
-        }).collect(Collectors.toList());
-        List<GymPlanItemDto> membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
-        List<GymTrainerDto> trainerDtos = gym.getTrainers().stream().limit(5L).map(t -> GymTrainerDto.builder().trainer_id(t.getId() != null ? t.getId().toString() : null).full_name(t.getFullName()).specialization(t.getSpecialization()).image_url(t.getImageUrl()).build()).collect(Collectors.toList());
-        List<GymReviewDto> recentReviews = gym.getReviews().stream().sorted((a, b) -> b.getCreatedDate().compareTo(a.getCreatedDate())).limit(3L).map(r -> GymReviewDto.builder().review_id(r.getId() != null ? r.getId().toString() : null).rating(r.getRating()).comment(r.getComment()).created_at(r.getCreatedDate() != null ? r.getCreatedDate().format(DateTimeFormatter.ISO_DATE_TIME) : null).author(GymReviewAuthorDto.builder().user_id(r.getUserId() != null ? r.getUserId().toString() : null).full_name("User " + r.getUserId()).avatar_url(null).build()).build()).collect(Collectors.toList());
-        return GymDetailResponse.builder().gym_id(gym.getId().toString()).name(gym.getName()).description(gym.getDescription()).status(gym.getStatus() != null ? gym.getStatus().name() : null).address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null).phone(gym.getPhone()).email(gym.getEmail()).work_hours(gym.getWorkHours().stream().map(wh -> GymWorkHourDto.builder().day(wh.getDay()).from(wh.getFromTime()).to(wh.getToTime()).build()).collect(Collectors.toList())).rooms(rooms).membership_plans(membershipPlans).trainers(trainerDtos).recent_reviews(recentReviews).qr_code_url(gym.getQrCodeUrl()).build();
-    }
+        @Override
+        @Transactional(readOnly=true)
+        public GymDetailResponse getGymDetail(Long userId, Long gymId) {
+            Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+            Map<String, List<GymImage>> grouped = this.gymImageRepository.findByGymId(gymId).stream().filter(img -> img.getImageName() != null).collect(Collectors.groupingBy(GymImage::getImageName));
+            List<GymRoomDto> rooms = grouped.entrySet().stream().map(entry -> {
+                List<GymImageDto> images = entry.getValue().stream().map(this::toGymImageDto).collect(Collectors.toList());
+                return GymRoomDto.builder().room_name(entry.getKey()).images(images).build();
+            }).collect(Collectors.toList());
+            List<GymPlanItemDto> membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
+            List<GymTrainerDto> trainerDtos = this.trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id"))).getContent().stream().map(this::toGymTrainerDto).collect(Collectors.toList());
+            List<GymReviewDto> recentReviews = this.reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate"))).getContent().stream().map(this::toGymReviewDto).collect(Collectors.toList());
+            return GymDetailResponse.builder().gym_id(gym.getId().toString()).name(gym.getName()).description(gym.getDescription()).status(gym.getStatus() != null ? gym.getStatus().name() : null).address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null).phone(gym.getPhone()).email(gym.getEmail()).work_hours(this.gymRepository.findWorkHoursByGymId(gymId).stream().map(wh -> GymWorkHourDto.builder().day(wh.getDay()).from(wh.getFromTime()).to(wh.getToTime()).build()).collect(Collectors.toList())).rooms(rooms).membership_plans(membershipPlans).trainers(trainerDtos).recent_reviews(recentReviews).qr_code_url(gym.getQrCodeUrl()).build();
+        }
 
     @Override
     @Transactional(readOnly=true)
     public GymImageResponse getGymImages(Long gymId) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        List<GymImageItemDto> items = gym.getImages().stream().map(img -> GymImageItemDto.builder().image_id((String)(img.getId() != null ? img.getId().toString() : "img_" + img.hashCode())).url(img.getUrl()).type(img.getType() != null ? img.getType() : "other").title(img.getTitle()).build()).collect(Collectors.toList());
+        if (!this.gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+        }
+        List<GymImageItemDto> items = this.gymImageRepository.findByGymId(gymId).stream().map(this::toGymImageItemDto).collect(Collectors.toList());
         return GymImageResponse.builder().items(items).build();
     }
 
     @Override
     @Transactional(readOnly=true)
     public GymPackagesResponse getGymPackages(Long gymId) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        if (!this.gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+        }
         List<GymPlanItemDto> items = orderServiceGrpcClient.getGymPlans(gymId);
         return GymPackagesResponse.builder().items(items).build();
     }
@@ -132,8 +138,8 @@ implements GymService {
         if (!this.gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
-        Page<Trainer> trainerPage = this.trainerRepository.findByGymId(gymId, (Pageable)PageRequest.of((int)(page - 1), (int)pageSize));
-        List<GymTrainerDto> items = trainerPage.getContent().stream().map(t -> GymTrainerDto.builder().trainer_id(t.getId().toString()).full_name(t.getFullName()).specialization(t.getSpecialization()).image_url(t.getImageUrl()).build()).collect(Collectors.toList());
+        Page<Trainer> trainerPage = this.trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.unsorted()));
+        List<GymTrainerDto> items = trainerPage.getContent().stream().map(this::toGymTrainerDto).collect(Collectors.toList());
         return GymTrainersResponse.builder().items(items).total(trainerPage.getTotalElements()).page(page).pageSize(pageSize).build();
     }
 
@@ -143,16 +149,8 @@ implements GymService {
         if (!this.gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
-        Sort sortObj = Sort.unsorted();
-        if ("newest".equalsIgnoreCase(sort)) {
-            sortObj = Sort.by((Sort.Direction)Sort.Direction.DESC, (String[])new String[]{"createdDate"});
-        } else if ("highest".equalsIgnoreCase(sort)) {
-            sortObj = Sort.by((Sort.Direction)Sort.Direction.DESC, (String[])new String[]{"rating"});
-        } else if ("lowest".equalsIgnoreCase(sort)) {
-            sortObj = Sort.by((Sort.Direction)Sort.Direction.ASC, (String[])new String[]{"rating"});
-        }
-        Page<Review> reviewPage = this.reviewRepository.findByGymId(gymId, (Pageable)PageRequest.of((int)(page - 1), (int)pageSize, (Sort)sortObj));
-        List<GymReviewDto> items = reviewPage.getContent().stream().map(r -> GymReviewDto.builder().review_id(r.getId().toString()).rating(r.getRating()).comment(r.getComment()).created_at(r.getCreatedDate().format(DateTimeFormatter.ISO_DATE_TIME)).author(GymReviewAuthorDto.builder().user_id(r.getUserId().toString()).full_name("User " + r.getUserId()).avatar_url(null).build()).build()).collect(Collectors.toList());
+        Page<Review> reviewPage = this.reviewRepository.findByGymId(gymId, pageable(page, pageSize, sortForReviews(sort)));
+        List<GymReviewDto> items = reviewPage.getContent().stream().map(this::toGymReviewDto).collect(Collectors.toList());
         return GymReviewsResponse.builder().items(items).total(reviewPage.getTotalElements()).page(page).pageSize(pageSize).build();
     }
 
@@ -162,47 +160,57 @@ implements GymService {
         Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
         Review review = new Review();
         review.setUserId(userId);
+        review.setGymId(gymId);
         review.setRating(request.getRating());
         review.setComment(request.getComment());
-        gym.getReviews().add(review);
-        double newRating = (gym.getRating() * (double)gym.getReviewsCount().intValue() + (double)request.getRating().intValue()) / (double)(gym.getReviewsCount() + 1);
-        gym.setRating(newRating);
-        gym.setReviewsCount(gym.getReviewsCount() + 1);
+        this.reviewRepository.save(review);
+        
+        Map<String, Object> stats = this.reviewRepository.getRatingAndCountByGymId(gymId);
+        Double avgRating = stats.get("avgRating") != null ? (Double) stats.get("avgRating") : 0.0;
+        Long totalCount = stats.get("totalCount") != null ? (Long) stats.get("totalCount") : 0L;
+        
+        gym.setRating(avgRating);
+        gym.setReviewsCount(totalCount.intValue());
         this.gymRepository.save(gym);
     }
 
     @Override
     @Transactional
     public void addTrainer(Long gymId, TrainerRequest request) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        if (!this.gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+        }
         Trainer trainer = new Trainer();
+        trainer.setGymId(gymId);
         this.updateTrainerFromRequest(trainer, request);
-        gym.getTrainers().add(trainer);
-        this.gymRepository.save(gym);
+        this.trainerRepository.save(trainer);
     }
 
     @Override
     @Transactional
     public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        Trainer trainer = gym.getTrainers().stream().filter(t -> t.getId().equals(trainerId)).findFirst().orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+        Trainer trainer = this.trainerRepository.findById(trainerId).orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+        if (!gymId.equals(trainer.getGymId())) {
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
+        }
         if (request.getImageUrl() != null && !request.getImageUrl().equals(trainer.getImageUrl())) {
             this.fileStorageService.deleteFile(trainer.getImageUrl());
         }
         this.updateTrainerFromRequest(trainer, request);
-        this.gymRepository.save(gym);
+        this.trainerRepository.save(trainer);
     }
 
     @Override
     @Transactional
     public void deleteTrainer(Long gymId, Long trainerId) {
-        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        Trainer trainerToDelete = gym.getTrainers().stream().filter(t -> t.getId().equals(trainerId)).findFirst().orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+        Trainer trainerToDelete = this.trainerRepository.findById(trainerId).orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+        if (!gymId.equals(trainerToDelete.getGymId())) {
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
+        }
         if (trainerToDelete.getImageUrl() != null && !trainerToDelete.getImageUrl().isBlank()) {
             this.fileStorageService.deleteFile(trainerToDelete.getImageUrl());
         }
-        gym.getTrainers().remove(trainerToDelete);
-        this.gymRepository.save(gym);
+        this.trainerRepository.delete(trainerToDelete);
     }
 
     @Override
@@ -238,30 +246,7 @@ implements GymService {
             gym.setCategories(categories);
         }
         Gym saved = this.gymRepository.save(gym);
-        
-        try {
-            String qrContent = "{\"gymId\": " + saved.getId() + "}";
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
-            
-            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-            byte[] pngData = pngOutputStream.toByteArray();
-            
-            ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
-                    pngData,
-                    "qr_code",
-                    "gym_" + saved.getId() + "_qr.png",
-                    "image/png"
-            );
-            
-            String fsId = this.fileStorageService.saveFile(multipartFile, "/gyms/" + saved.getId() + "/qr");
-            saved.setQrCodeUrl("/api/v1/media/stream/" + fsId);
-        } catch (Exception e) {
-            // Log issue but don't fail gym creation; maybe fallback to relative
-            saved.setQrCodeUrl("/api/v1/gyms/" + saved.getId() + "/qr");
-        }
-        
+        generateAndSaveQrCode(saved);
         this.gymRepository.save(saved);
     }
 
@@ -330,11 +315,12 @@ implements GymService {
     }
 
     @Override
-    public Object getReservationRules(Long gymId) {
+    @Transactional(readOnly=true)
+    public ReservationRulesResponse getReservationRules(Long gymId) {
         if (!this.gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
-        return Map.of("reservation_required", false, "rules", Map.of("max_reservations_per_day", 1, "cancel_before_minutes", 60));
+        return new ReservationRulesResponse(false, Map.of("max_reservations_per_day", 1, "cancel_before_minutes", 60));
     }
 
     @Override
@@ -357,20 +343,31 @@ implements GymService {
     @Override
     @Transactional(readOnly=true)
     public List<GymMainPageDto> getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
-        List<Gym> gyms;
+        Page<Gym> gymPage;
+        Pageable pageable = pageable(page, pageSize, Sort.unsorted());
         if (userLat != null && userLng != null) {
             double initialRadiusKm = 50.0;
             double[] bbox = this.boundingBox(userLat, userLng, initialRadiusKm);
-            gyms = this.gymRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1], bbox[2], bbox[3]);
+            if (q != null && !q.isBlank()) {
+                gymPage = this.gymRepository.findClosestGymsWithQuery(q, bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+            } else {
+                gymPage = this.gymRepository.findClosestGyms(bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+            }
         } else {
-            gyms = this.gymRepository.findAll();
+            // Fallback generic sorting if no location provided
+            gymPage = this.gymRepository.findAll(pageable);
+            if (q != null && !q.isBlank()) {
+                // Not ideal, but realistically user location should be pushed for typical closest requests.
+                // Could be moved to DB natively in the future.
+                List<Gym> filtered = gymPage.getContent().stream()
+                        .filter(g -> g.getName() != null && g.getName().toLowerCase().contains(q.toLowerCase())
+                                || g.getDescription() != null && g.getDescription().toLowerCase().contains(q.toLowerCase()))
+                        .toList();
+                gymPage = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+            }
         }
-        Stream<Gym> stream = gyms.stream();
-        if (q != null && !q.isBlank()) {
-            String lowerQ = q.toLowerCase();
-            stream = stream.filter(g -> g.getName() != null && g.getName().toLowerCase().contains(lowerQ) || g.getDescription() != null && g.getDescription().toLowerCase().contains(lowerQ));
-        }
-        List<GymMainPageDto> all = stream.map(gym -> {
+
+        return gymPage.getContent().stream().map(gym -> {
             double stars = gym.getRating() != null ? gym.getRating() : 0.0;
             boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
             String imageUrl = gym.getCoverImageUrl();
@@ -382,28 +379,64 @@ implements GymService {
             }
             return GymMainPageDto.builder().gymId(gym.getId().toString()).name(gym.getName()).imageUrl(imageUrl).stars(stars).isNew(isNew).location(location).distanceKm(distanceKm).build();
         }).collect(Collectors.toList());
-        if (userLat != null && userLng != null) {
-            all.sort((a, b) -> {
-                Double da = a.getDistanceKm();
-                Double db = b.getDistanceKm();
-                if (da == null && db == null) {
-                    return 0;
-                }
-                if (da == null) {
-                    return 1;
-                }
-                if (db == null) {
-                    return -1;
-                }
-                return Double.compare(da, db);
-            });
+    }
+
+    private GymTrainerDto toGymTrainerDto(Trainer t) {
+        return GymTrainerDto.builder()
+                .trainer_id(t.getId() != null ? t.getId().toString() : null)
+                .full_name(t.getFullName())
+                .specialization(t.getSpecialization())
+                .image_url(t.getImageUrl())
+                .build();
+    }
+
+    private GymReviewDto toGymReviewDto(Review r) {
+        return GymReviewDto.builder()
+                .review_id(r.getId() != null ? r.getId().toString() : null)
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .created_at(r.getCreatedDate() != null ? r.getCreatedDate() : null)
+                .author(GymReviewAuthorDto.builder()
+                        .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
+                        .full_name("User " + r.getUserId())
+                        .avatar_url(null)
+                        .build())
+                .build();
+    }
+
+    private GymImageDto toGymImageDto(GymImage img) {
+        return GymImageDto.builder()
+                .id(img.getId())
+                .gymId(img.getGym() != null ? img.getGym().getId() : null)
+                .name(img.getImageName())
+                .url(img.getUrl())
+                .build();
+    }
+
+    private GymImageItemDto toGymImageItemDto(GymImage img) {
+        return GymImageItemDto.builder()
+                .image_id(img.getId() != null ? img.getId().toString() : "img_" + System.identityHashCode(img))
+                .url(img.getUrl())
+                .type(img.getType() != null ? img.getType() : "other")
+                .title(img.getTitle())
+                .build();
+    }
+
+    private Pageable pageable(int page, int size, Sort sort) {
+        int safePage = Math.max(page, 1) - 1;
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return PageRequest.of(safePage, safeSize, sort);
+    }
+
+    private Sort sortForReviews(String sort) {
+        if ("newest".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.DESC, "createdDate");
+        } else if ("highest".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.DESC, "rating");
+        } else if ("lowest".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.ASC, "rating");
         }
-        int from = Math.max(0, (page - 1) * pageSize);
-        int to = Math.min(all.size(), from + pageSize);
-        if (from >= all.size()) {
-            return Collections.emptyList();
-        }
-        return all.subList(from, to);
+        return Sort.unsorted();
     }
 
     private double[] boundingBox(double lat, double lng, double radiusKm) {
@@ -443,6 +476,7 @@ implements GymService {
     @Override
     @Transactional
     public GymImageDto uploadGymImage(Long gymId, String imageName, MultipartFile file) {
+        validateImageFile(file);
         Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
         GymImage existingImage = gym.getImages().stream().filter(img -> imageName.equals(img.getImageName())).findFirst().orElse(null);
         if (existingImage != null && existingImage.getUrl() != null && !existingImage.getUrl().isBlank()) {
@@ -464,6 +498,7 @@ implements GymService {
         if (files == null || files.length == 0) {
             return Collections.emptyList();
         }
+        Arrays.stream(files).forEach(this::validateImageFile);
         Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
         ArrayList<GymImageDto> uploaded = new ArrayList<GymImageDto>();
         for (MultipartFile file : files) {
@@ -474,7 +509,7 @@ implements GymService {
             gi.setImageName(imageName);
             gi.setUrl(fullUrl);
             gi.setType("photo");
-            gi.setTitle(file.getOriginalFilename() != null ? file.getOriginalFilename() : "");
+            gi.setTitle(sanitizeFilename(file.getOriginalFilename()));
             gi = (GymImage)this.gymImageRepository.save(gi);
             uploaded.add(GymImageDto.builder().id(gi.getId()).gymId(gymId).name(gi.getImageName()).url(gi.getUrl()).build());
         }
@@ -484,6 +519,7 @@ implements GymService {
     @Override
     @Transactional
     public GymImageDto replaceRoomImage(Long gymId, Long imageId, MultipartFile file) {
+        validateImageFile(file);
         GymImage existing = (GymImage)this.gymImageRepository.findById(imageId).orElseThrow(() -> new ResourceNotFoundException("GYM_IMAGE_NOT_FOUND", "Gym image not found"));
         if (existing.getGym() == null || !existing.getGym().getId().equals(gymId)) {
             throw new ResourceNotFoundException("GYM_IMAGE_MISMATCH", "Image does not belong to specified gym");
@@ -499,7 +535,7 @@ implements GymService {
         String fsId = this.fileStorageService.saveFile(file, "/gyms/" + gymId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
         existing.setUrl(fullUrl);
-        existing.setTitle(file.getOriginalFilename() != null ? file.getOriginalFilename() : existing.getTitle());
+        existing.setTitle(sanitizeFilename(file.getOriginalFilename()));
         GymImage saved = (GymImage)this.gymImageRepository.save(existing);
         return GymImageDto.builder().id(saved.getId()).gymId(gymId).name(saved.getImageName()).url(saved.getUrl()).build();
     }
@@ -571,6 +607,52 @@ implements GymService {
         this.fileStorageService = fileStorageService;
         this.reverseGeocodingService = reverseGeocodingService;
         this.orderServiceGrpcClient = orderServiceGrpcClient;
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new BadRequestException("FILE_EMPTY", "File cannot be empty");
+        }
+        long maxSize = 5 * 1024 * 1024; // 5 MB
+        if (file.getSize() > maxSize) {
+            throw new BadRequestException("FILE_TOO_LARGE", "File size exceeds 5MB limit");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
+            throw new BadRequestException("INVALID_FILE_TYPE", "Only JPG, PNG and WEBP images are allowed");
+        }
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "unnamed";
+        }
+        return filename.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
+    }
+
+    private void generateAndSaveQrCode(Gym gym) {
+        try {
+            String qrContent = "{\"gymId\": " + gym.getId() + "}";
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
+            
+            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+            byte[] pngData = pngOutputStream.toByteArray();
+            
+            ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
+                    pngData,
+                    "qr_code",
+                    "gym_" + gym.getId() + "_qr.png",
+                    "image/png"
+            );
+            
+            String fsId = this.fileStorageService.saveFile(multipartFile, "/gyms/" + gym.getId() + "/qr");
+            gym.setQrCodeUrl("/api/v1/media/stream/" + fsId);
+        } catch (Exception e) {
+            // Log issue but don't fail gym creation; fallback to relative URL
+            gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");
+        }
     }
 }
 
