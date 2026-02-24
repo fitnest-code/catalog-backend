@@ -18,6 +18,7 @@ import az.fitnest.catalog.dto.GymReviewsResponse;
 import az.fitnest.catalog.dto.GymTrainersResponse;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.dto.TrainerRequest;
+import az.fitnest.catalog.dto.AddressDto;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -69,5 +70,7 @@ public interface GymService {
     public GymImageDto replaceRoomImage(Long var1, Long var2, MultipartFile var3);
 
     public void deleteRoomImage(Long var1, Long var2);
-}
 
+    // New: return address (lat/lng and resolved address text) for a gym
+    public AddressDto getGymLocation(Long gymId);
+}

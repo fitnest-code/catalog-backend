@@ -598,6 +598,21 @@ implements GymService {
         return gym.getQrCodeUrl();
     }
 
+    @Override
+    @Transactional(readOnly=true)
+    public az.fitnest.catalog.dto.AddressDto getGymLocation(Long gymId) {
+        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        az.fitnest.catalog.model.entity.Address addr = gym.getAddress();
+        if (addr == null) {
+            return az.fitnest.catalog.dto.AddressDto.builder().addressText(null).latitude(null).longitude(null).build();
+        }
+        return az.fitnest.catalog.dto.AddressDto.builder()
+                .addressText(addr.getAddressText())
+                .latitude(addr.getLatitude())
+                .longitude(addr.getLongitude())
+                .build();
+    }
+
     public GymServiceImpl(GymRepository gymRepository, ReviewRepository reviewRepository, TrainerRepository trainerRepository, CategoryRepository categoryRepository, GymImageRepository gymImageRepository, FileStorageService fileStorageService, ReverseGeocodingService reverseGeocodingService, az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient) {
         this.gymRepository = gymRepository;
         this.reviewRepository = reviewRepository;

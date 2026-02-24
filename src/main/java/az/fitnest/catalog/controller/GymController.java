@@ -27,6 +27,7 @@
  */
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.AddressDto;
 import az.fitnest.catalog.dto.GymDetailResponse;
 import az.fitnest.catalog.dto.GymImageDto;
 import az.fitnest.catalog.dto.GymQrResponse;
@@ -254,6 +255,13 @@ public class GymController {
     public ResponseEntity<Void> deleteRoomImage(@PathVariable Long gymId, @PathVariable Long imageId) {
         this.gymService.deleteRoomImage(gymId, imageId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value={"/gyms/{gymId}/location"})
+    @Operation(summary="Get gym location", description="Returns the resolved address text along with latitude and longitude for the gym.")
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Location retrieved successfully", content={@Content(schema=@Schema(implementation=AddressDto.class))}), @ApiResponse(responseCode="404", description="Gym not found")})
+    public ResponseEntity<AddressDto> getGymLocation(@Parameter(description="ID of the gym") @PathVariable Long gymId) {
+        return ResponseEntity.ok(this.gymService.getGymLocation(gymId));
     }
 
     private Long extractUserId(Object principal) {
