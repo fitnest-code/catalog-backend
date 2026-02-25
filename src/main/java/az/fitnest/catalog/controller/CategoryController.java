@@ -88,7 +88,7 @@ public class CategoryController {
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={@ApiResponse(responseCode="201", description="Category created successfully"), @ApiResponse(responseCode="400", description="Invalid category name or duplicate")})
     @PostMapping(value={"/admin/categories"})
-    public ResponseEntity<Category> createCategory(@RequestBody CategoryRequest request) {
+    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "categoryRequest");
         if (request.getName() == null || request.getName().isBlank()) {
             bindingResult.rejectValue("name", "NotBlank", "Category name must not be blank");
@@ -101,7 +101,9 @@ public class CategoryController {
         }
         Category category = new Category();
         category.setName(request.getName());
-        return ResponseEntity.status(201).body(((Category)this.categoryRepository.save(category)));
+        Category saved = this.categoryRepository.save(category);
+        CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
+        return ResponseEntity.status(201).body(dto);
     }
 
     @Operation(summary="Update category (Admin)", description="Updates an existing category. Requires ADMIN role.")
@@ -109,7 +111,7 @@ public class CategoryController {
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Category updated successfully"), @ApiResponse(responseCode="404", description="Category not found")})
     @PutMapping(value={"/admin/categories/{id}"})
-    public ResponseEntity<Category> updateCategory(@Parameter(description="ID of the category") @PathVariable Long id, @RequestBody Category category) {
+    public ResponseEntity<CategoryDto> updateCategory(@Parameter(description="ID of the category") @PathVariable Long id, @RequestBody Category category) {
         Category existing = (Category)this.categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(category, "category");
         if (category.getName() == null || category.getName().isBlank()) {
@@ -122,7 +124,9 @@ public class CategoryController {
             throw new ValidationException("Validation failed", (BindingResult)bindingResult);
         }
         existing.setName(category.getName());
-        return ResponseEntity.ok(((Category)this.categoryRepository.save(existing)));
+        Category saved = this.categoryRepository.save(existing);
+        CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
+        return ResponseEntity.ok(dto);
     }
 
     @Operation(summary="Delete category (Admin)", description="Deletes a category and its associated photo. Requires ADMIN role.")
@@ -139,17 +143,19 @@ public class CategoryController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary="Update category photo (Admin)", description="Uploads a new photo for a category, replacing the old one. Requires ADMIN role.")
+    @Operation(summary="Upload category image (Admin)", description="Uploads a new image for a category, replacing the old one. Requires ADMIN role.")
     @PreAuthorize(value="hasRole('ADMIN')")
     @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Photo updated successfully"), @ApiResponse(responseCode="404", description="Category not found")})
-    @PutMapping(value={"/admin/categories/{id}/photo"})
-    public ResponseEntity<Category> updateCategoryPhoto(@Parameter(description="ID of the category") @PathVariable Long id, @Parameter(description="Photo file to upload") @RequestParam(value="file") MultipartFile file) {
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Image uploaded successfully"), @ApiResponse(responseCode="404", description="Category not found")})
+    @PutMapping(value={"/admin/categories/{id}/image"}, consumes={"multipart/form-data"})
+    public ResponseEntity<CategoryDto> uploadCategoryImage(@Parameter(description="ID of the category") @PathVariable Long id, @Parameter(description="Image file to upload") @RequestParam(value="file") MultipartFile file) {
         Category category = (Category)this.categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         String fsId = this.fileStorageService.saveFile(file, "/categories", category.getPhotoUrl());
         String fullUrl = "/api/v1/media/stream/" + fsId;
         category.setPhotoUrl(fullUrl);
-        return ResponseEntity.ok(((Category)this.categoryRepository.save(category)));
+        Category saved = this.categoryRepository.save(category);
+        CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
+        return ResponseEntity.ok(dto);
     }
 }
 
