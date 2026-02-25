@@ -674,10 +674,12 @@ implements GymService {
             MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
             byte[] pngData = pngOutputStream.toByteArray();
             
+            String gymAddress = gym.getAddress() != null && gym.getAddress().getAddressText() != null ? gym.getAddress().getAddressText() : "";
+            String baseName = sanitizeFilename(gym.getName() + "_" + gymAddress);
             ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
                     pngData,
                     "qr_code",
-                    "gym_" + gym.getId() + "_qr.png",
+                    baseName + "_" + java.util.UUID.randomUUID().toString().substring(0, 8) + "_qr.png",
                     "image/png"
             );
             
