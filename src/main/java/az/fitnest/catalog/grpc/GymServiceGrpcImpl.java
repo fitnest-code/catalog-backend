@@ -77,19 +77,18 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
                 .setGymId(dto.getGym_id() != null ? dto.getGym_id() : "")
                 .setName(dto.getName() != null ? dto.getName() : "")
                 .setDescription(dto.getDescription() != null ? dto.getDescription() : "")
-                .setStatus(dto.getStatus() != null ? dto.getStatus() : "")
                 // cover_image_url was removed from DTO; return empty string as default
                 .setCoverImageUrl("")
                 // Only return resolved address text for clients; do not expose lat/lng here
                 .setAddress(Address.newBuilder()
-                        .setAddressText(dto.getAddress() != null ? dto.getAddress() : "")
+                        .setAddressText(dto.getAddress() != null && dto.getAddress().getAddressText() != null ? dto.getAddress().getAddressText() : "")
                         .build())
                 .setPhone(dto.getPhone() != null ? dto.getPhone() : "")
                 .setEmail(dto.getEmail() != null ? dto.getEmail() : "")
                 // rating, reviews_count, is_saved were removed from DTO; default values
                 .setRating(0.0)
                 .setReviewsCount(0)
-                .setIsSaved(false);
+                .setIsSaved(dto.getIsSaved() != null ? dto.getIsSaved() : false);
 
         // Map work_hours if present
         if (dto.getWork_hours() != null) {
@@ -310,7 +309,6 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         az.fitnest.catalog.dto.GymRequest gymRequest = new az.fitnest.catalog.dto.GymRequest();
         gymRequest.setName(request.getName());
         gymRequest.setDescription(request.getDescription());
-        gymRequest.setStatus(request.getStatus());
 
         
         az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();
@@ -349,7 +347,6 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
          az.fitnest.catalog.dto.GymRequest gymRequest = new az.fitnest.catalog.dto.GymRequest();
          gymRequest.setName(request.getName());
          gymRequest.setDescription(request.getDescription());
-         gymRequest.setStatus(request.getStatus());
 
 
          az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();

@@ -52,8 +52,13 @@ public class GymReadService {
             return GymRoomDto.builder().room_name(entry.getKey()).images(images).build();
         }).collect(Collectors.toList());
 
-        // Note: Ideal to execute remote call in parallel using CompletableFuture if latency is still high
-        List<GymPlanItemDto> membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
+        List<GymPlanItemDto> membershipPlans = List.of();
+        try {
+            membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
+        } catch (Exception e) {
+            // Log error or ignore if unavailable (e.g. StatusRuntimeException)
+            System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
+        }
 
         List<GymTrainerDto> trainerDtos = trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
                 .getContent().stream()
@@ -77,8 +82,12 @@ public class GymReadService {
                 .gym_id(gym.getId().toString())
                 .name(gym.getName())
                 .description(gym.getDescription())
-                .status(gym.getStatus() != null ? gym.getStatus().name() : null)
-                .address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null)
+                .isSaved(false)
+                .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
+                        .addressText(gym.getAddress().getAddressText())
+                        .latitude(gym.getAddress().getLatitude())
+                        .longitude(gym.getAddress().getLongitude())
+                        .build() : null)
                 .phone(gym.getPhone())
                 .email(gym.getEmail())
                 .work_hours(workHours)

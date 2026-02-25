@@ -53,9 +53,7 @@ extends BaseAuditableEntity {
     private String name;
     @Column(name="description", columnDefinition="TEXT")
     private String description;
-    @Enumerated(value=EnumType.STRING)
-    @Column(name="status")
-    private GymStatus status = GymStatus.ACTIVE;
+
     @Column(name="cover_image_url")
     private String coverImageUrl;
     @Column(name="logo_url")
@@ -101,9 +99,7 @@ extends BaseAuditableEntity {
         return this.description;
     }
 
-    public GymStatus getStatus() {
-        return this.status;
-    }
+
 
     public String getCoverImageUrl() {
         return this.coverImageUrl;
@@ -173,9 +169,7 @@ extends BaseAuditableEntity {
         this.description = description;
     }
 
-    public void setStatus(GymStatus status) {
-        this.status = status;
-    }
+
 
     public void setCoverImageUrl(String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
@@ -239,11 +233,9 @@ extends BaseAuditableEntity {
 
     public Gym() {
     }
-
-    public Gym(String name, String description, GymStatus status, String coverImageUrl, String logoUrl, Address address, String phone, String email, List<GymSocialLink> socialLinks, List<GymWorkHour> workHours, List<GymImage> images, List<Trainer> trainers, List<Review> reviews, Set<Category> categories, Double rating, Integer reviewsCount, Boolean isNew) {
+    public Gym(String name, String description, String coverImageUrl, String logoUrl, Address address, String phone, String email, List<GymSocialLink> socialLinks, List<GymWorkHour> workHours, List<GymImage> images, List<Trainer> trainers, List<Review> reviews, Set<Category> categories, Double rating, Integer reviewsCount, Boolean isNew) {
         this.name = name;
         this.description = description;
-        this.status = status;
         this.coverImageUrl = coverImageUrl;
         this.logoUrl = logoUrl;
         this.address = address;

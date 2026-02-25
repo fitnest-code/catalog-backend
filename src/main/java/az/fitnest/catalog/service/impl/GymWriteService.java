@@ -47,15 +47,7 @@ public class GymWriteService {
         Gym gym = new Gym();
         gym.setName(request.getName());
         gym.setDescription(request.getDescription());
-        if (request.getStatus() != null) {
-            try {
-                gym.setStatus(GymStatus.valueOf(request.getStatus().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
-                throw new BadRequestException("INVALID_GYM_STATUS", "Invalid gym status: " + request.getStatus());
-            }
-        } else {
-            gym.setStatus(GymStatus.ACTIVE);
-        }
+
 
         if (request.getAddress() != null) {
             Address address = new Address();
@@ -89,13 +81,7 @@ public class GymWriteService {
 
         gym.setName(request.getName());
         gym.setDescription(request.getDescription());
-        if (request.getStatus() != null) {
-            try {
-                gym.setStatus(GymStatus.valueOf(request.getStatus().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
-                throw new BadRequestException("INVALID_GYM_STATUS", "Invalid gym status: " + request.getStatus());
-            }
-        }
+
 
         if (request.getAddress() != null) {
             Address address = new Address();
