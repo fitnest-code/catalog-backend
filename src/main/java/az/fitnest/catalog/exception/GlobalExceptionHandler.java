@@ -25,12 +25,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value={BaseException.class})
     public ResponseEntity<ErrorResponse> handleBaseException(BaseException exception, WebRequest request) {
         
-        ErrorResponse.ErrorDetail errorDetail = new ErrorResponse.ErrorDetail(
-                exception.getErrorCode(),
-                exception.getMessage(),
+        ErrorResponse errorResponse = new ErrorResponse(
                 exception.getHttpStatus().value(),
+                exception.getMessage(),
                 request.getDescription(false).replace("uri=", ""),
-                OffsetDateTime.now(),
                 null
         );
                 
@@ -41,11 +39,10 @@ public class GlobalExceptionHandler {
                 HashMap<String, Object> details = new HashMap<String, Object>();
                 List<Map<String, String>> fieldIssues = result.getFieldErrors().stream().map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage())).toList();
                 details.put("fieldIssues", fieldIssues);
-                errorDetail.setDetails(details);
+                errorResponse.setDetails(details);
             }
         }
         
-        ErrorResponse errorResponse = new ErrorResponse(errorDetail);
         return ResponseEntity.status(exception.getHttpStatus().value()).body(errorResponse);
     }
 
@@ -57,14 +54,10 @@ public class GlobalExceptionHandler {
         details.put("fieldIssues", fieldIssues);
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "VALIDATION_ERROR",
-                        "Validation failed",
-                        HttpStatus.BAD_REQUEST.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        details
-                )
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation failed",
+                request.getDescription(false).replace("uri=", ""),
+                details
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
@@ -76,14 +69,10 @@ public class GlobalExceptionHandler {
         details.put("violations", violations);
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "CONSTRAINT_VIOLATION",
-                        "Constraint violation",
-                        HttpStatus.BAD_REQUEST.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        details
-                )
+                HttpStatus.BAD_REQUEST.value(),
+                "Constraint violation",
+                request.getDescription(false).replace("uri=", ""),
+                details
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
@@ -92,14 +81,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "HTTP_MESSAGE_NOT_READABLE",
-                        "Invalid request format",
-                        HttpStatus.BAD_REQUEST.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        null
-                )
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid request format",
+                request.getDescription(false).replace("uri=", ""),
+                null
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
@@ -108,14 +93,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "ACCESS_DENIED",
-                        "Access denied",
-                        HttpStatus.FORBIDDEN.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        null
-                )
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                request.getDescription(false).replace("uri=", ""),
+                null
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN.value()).body(errorResponse);
     }
@@ -124,14 +105,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "RUNTIME_EXCEPTION",
-                        "Internal server error: " + ex.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
-                )
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal server error: " + ex.getMessage(),
+                request.getDescription(false).replace("uri=", ""),
+                Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
     }
@@ -140,14 +117,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
         
         ErrorResponse errorResponse = new ErrorResponse(
-                new ErrorResponse.ErrorDetail(
-                        "INTERNAL_SERVER_ERROR",
-                        "Internal server error: " + ex.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        request.getDescription(false).replace("uri=", ""),
-                        OffsetDateTime.now(),
-                        Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
-                )
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal server error: " + ex.getMessage(),
+                request.getDescription(false).replace("uri=", ""),
+                Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
     }

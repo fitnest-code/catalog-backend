@@ -1,50 +1,65 @@
 package az.fitnest.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
 
-@Data
-@Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
+
+    private OffsetDateTime timestamp = OffsetDateTime.now();
+    private Integer status;
+    private String error;
+    private String path;
+    private Map<String, Object> details;
 
     public ErrorResponse() {}
 
-    public ErrorResponse(ErrorDetail error) {
+    public ErrorResponse(Integer status, String error, String path, Map<String, Object> details) {
+        this.status = status;
+        this.error = error;
+        this.path = path;
+        this.details = details;
+    }
+
+    public OffsetDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(OffsetDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
         this.error = error;
     }
 
-    private ErrorDetail error;
+    public String getPath() {
+        return path;
+    }
 
-    @Data
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class ErrorDetail {
-        private String code;
-        private String message;
-        private Integer status;
-        private String path;
-        private OffsetDateTime timestamp = OffsetDateTime.now();
-        private Map<String, Object> details;
+    public void setPath(String path) {
+        this.path = path;
+    }
 
-        public ErrorDetail() {}
+    public Map<String, Object> getDetails() {
+        return details;
+    }
 
-        public ErrorDetail(String code, String message, Integer status, String path, OffsetDateTime timestamp, Map<String, Object> details) {
-            this.code = code;
-            this.message = message;
-            this.status = status;
-            this.path = path;
-            this.timestamp = timestamp;
-            this.details = details;
-        }
-
-        public void setDetails(Map<String, Object> details) {
-            this.details = details;
-        }
+    public void setDetails(Map<String, Object> details) {
+        this.details = details;
     }
 }
