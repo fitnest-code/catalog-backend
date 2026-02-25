@@ -41,6 +41,18 @@ public class GymImageService {
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
+    public void deleteLogoUrl(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        if (gym.getLogoUrl() != null && !gym.getLogoUrl().isBlank()) {
+            safeDeleteFile(gym.getLogoUrl());
+            gym.setLogoUrl(null);
+            gymRepository.save(gym);
+        }
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public void updateCoverImageUrl(Long gymId, String url) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
@@ -49,6 +61,18 @@ public class GymImageService {
         }
         gym.setCoverImageUrl(url);
         gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
+    public void deleteCoverImageUrl(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        if (gym.getCoverImageUrl() != null && !gym.getCoverImageUrl().isBlank()) {
+            safeDeleteFile(gym.getCoverImageUrl());
+            gym.setCoverImageUrl(null);
+            gymRepository.save(gym);
+        }
     }
 
     @Transactional

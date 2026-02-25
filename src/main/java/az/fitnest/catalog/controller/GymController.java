@@ -251,12 +251,30 @@ public class GymController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping(value={"/admin/gyms/{gymId}/logo"})
+    @Operation(summary="Delete logo (Admin)", description="Removes the logo image for a gym. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteGymLogo(@PathVariable Long gymId) {
+        this.gymImageService.deleteLogoUrl(gymId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping(value={"/admin/gyms/{gymId}/cover"})
     @Operation(summary="Update cover image (Admin)", description="Updates the cover image URL for a gym. Requires ADMIN role.")
     @SecurityRequirement(name="bearerAuth")
     @PreAuthorize(value="hasRole('ADMIN')")
     public ResponseEntity<Void> updateGymCover(@PathVariable Long gymId, @RequestBody UpdateImageUrlRequest request) {
         this.gymImageService.updateCoverImageUrl(gymId, request.getUrl());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping(value={"/admin/gyms/{gymId}/cover"})
+    @Operation(summary="Delete cover image (Admin)", description="Removes the cover image for a gym. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteGymCover(@PathVariable Long gymId) {
+        this.gymImageService.deleteCoverImageUrl(gymId);
         return ResponseEntity.noContent().build();
     }
 

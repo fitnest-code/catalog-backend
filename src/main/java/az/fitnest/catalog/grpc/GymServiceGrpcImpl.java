@@ -311,7 +311,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         gymRequest.setName(request.getName());
         gymRequest.setDescription(request.getDescription());
         gymRequest.setStatus(request.getStatus());
-        gymRequest.setCoverImageUrl(request.getCoverImageUrl());
+
         
         az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();
         // support address provided as textual "lat, lon" in addressText or as separate latitude/longitude
@@ -350,7 +350,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
          gymRequest.setName(request.getName());
          gymRequest.setDescription(request.getDescription());
          gymRequest.setStatus(request.getStatus());
-         gymRequest.setCoverImageUrl(request.getCoverImageUrl());
+
 
          az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();
         if (request.hasAddress()) {

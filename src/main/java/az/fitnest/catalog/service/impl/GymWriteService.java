@@ -56,7 +56,7 @@ public class GymWriteService {
         } else {
             gym.setStatus(GymStatus.ACTIVE);
         }
-        gym.setCoverImageUrl(request.getCoverImageUrl());
+
         if (request.getAddress() != null) {
             Address address = new Address();
             Double lat = request.getAddress().getLatitude();
@@ -85,9 +85,7 @@ public class GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
-        if (request.getCoverImageUrl() != null && !request.getCoverImageUrl().equals(gym.getCoverImageUrl())) {
-            safeDeleteFile(gym.getCoverImageUrl());
-        }
+
 
         gym.setName(request.getName());
         gym.setDescription(request.getDescription());
@@ -98,7 +96,7 @@ public class GymWriteService {
                 throw new BadRequestException("INVALID_GYM_STATUS", "Invalid gym status: " + request.getStatus());
             }
         }
-        gym.setCoverImageUrl(request.getCoverImageUrl());
+
         if (request.getAddress() != null) {
             Address address = new Address();
             Double lat = request.getAddress().getLatitude();

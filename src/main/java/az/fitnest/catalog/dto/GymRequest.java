@@ -15,7 +15,6 @@ public class GymRequest {
     private String description;
     @Schema(description="Gym status", allowableValues={"ACTIVE", "INACTIVE"}, example="ACTIVE")
     private String status;
-    private String coverImageUrl;
     private AddressDto address;
     private String phone;
     private String email;
@@ -31,10 +30,6 @@ public class GymRequest {
 
     public String getStatus() {
         return this.status;
-    }
-
-    public String getCoverImageUrl() {
-        return this.coverImageUrl;
     }
 
     public AddressDto getAddress() {
@@ -63,10 +58,6 @@ public class GymRequest {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public void setCoverImageUrl(String coverImageUrl) {
-        this.coverImageUrl = coverImageUrl;
     }
 
     public void setAddress(AddressDto address) {
@@ -111,11 +102,6 @@ public class GymRequest {
         if (this$status == null ? other$status != null : !this$status.equals(other$status)) {
             return false;
         }
-        String this$coverImageUrl = this.getCoverImageUrl();
-        String other$coverImageUrl = other.getCoverImageUrl();
-        if (this$coverImageUrl == null ? other$coverImageUrl != null : !this$coverImageUrl.equals(other$coverImageUrl)) {
-            return false;
-        }
         AddressDto this$address = this.getAddress();
         AddressDto other$address = other.getAddress();
         if (this$address == null ? other$address != null : !((Object)this$address).equals(other$address)) {
@@ -149,8 +135,6 @@ public class GymRequest {
         result = result * 59 + ($description == null ? 43 : $description.hashCode());
         String $status = this.getStatus();
         result = result * 59 + ($status == null ? 43 : $status.hashCode());
-        String $coverImageUrl = this.getCoverImageUrl();
-        result = result * 59 + ($coverImageUrl == null ? 43 : $coverImageUrl.hashCode());
         AddressDto $address = this.getAddress();
         result = result * 59 + ($address == null ? 43 : ((Object)$address).hashCode());
         String $phone = this.getPhone();
@@ -163,7 +147,6 @@ public class GymRequest {
     }
 
     public String toString() {
-        return "GymRequest(name=" + this.getName() + ", description=" + this.getDescription() + ", status=" + this.getStatus() + ", coverImageUrl=" + this.getCoverImageUrl() + ", address=" + this.getAddress() + ", phone=" + this.getPhone() + ", email=" + this.getEmail() + ", categoryIds=" + this.getCategoryIds() + ")";
+        return "GymRequest(name=" + this.getName() + ", description=" + this.getDescription() + ", status=" + this.getStatus() + ", address=" + this.getAddress() + ", phone=" + this.getPhone() + ", email=" + this.getEmail() + ", categoryIds=" + this.getCategoryIds() + ")";
     }
 }
-
