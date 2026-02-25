@@ -278,21 +278,14 @@ public class GymController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value={"/admin/gyms/{gymId}/rooms/{imageName}/images"}, consumes={"multipart/form-data"})
-    @Operation(summary="Upload room images (Admin)", description="Bulk uploads multiple interior images for a gym. Requires ADMIN role.")
+    @PostMapping(value={"/admin/gyms/{gymId}/rooms/{roomName}/images"}, consumes={"multipart/form-data"})
+    @Operation(summary="Upload room image (Admin)", description="Uploads an interior image for a gym associated with a room. Requires ADMIN role.")
     @SecurityRequirement(name="bearerAuth")
     @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<List<GymImageDto>> uploadRoomImages(@PathVariable Long gymId, @PathVariable String imageName, @RequestParam(value="files") MultipartFile[] files) {
-        return ResponseEntity.ok(this.gymImageService.uploadRoomImages(gymId, imageName, files));
+    public ResponseEntity<GymImageDto> uploadRoomImage(@PathVariable Long gymId, @PathVariable String roomName, @RequestParam(value="file") MultipartFile file) {
+        return ResponseEntity.ok(this.gymImageService.uploadRoomImage(gymId, roomName, file));
     }
 
-    @PutMapping(value={"/admin/gyms/{gymId}/rooms/images/{imageId}"}, consumes={"multipart/form-data"})
-    @Operation(summary="Replace room image (Admin)", description="Replaces a specific interior image. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<GymImageDto> replaceRoomImage(@PathVariable Long gymId, @PathVariable Long imageId, @RequestParam(value="file") MultipartFile file) {
-        return ResponseEntity.ok(this.gymImageService.replaceRoomImage(gymId, imageId, file));
-    }
 
     @DeleteMapping(value={"/admin/gyms/{gymId}/rooms/images/{imageId}"})
     @Operation(summary="Delete room image (Admin)", description="Removes a specific interior image from a gym profile. Requires ADMIN role.")

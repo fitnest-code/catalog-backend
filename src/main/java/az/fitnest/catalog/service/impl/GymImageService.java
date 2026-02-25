@@ -107,51 +107,26 @@ public class GymImageService {
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
-    public List<GymImageDto> uploadRoomImages(Long gymId, String imageName, MultipartFile[] files) {
-        if (files == null || files.length == 0) return Collections.emptyList();
-        Arrays.stream(files).forEach(this::validateImageFile);
+    public GymImageDto uploadRoomImage(Long gymId, String roomName, MultipartFile file) {
+        validateImageFile(file);
 
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        List<GymImageDto> uploaded = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            String fsId = fileStorageService.saveFile(file, "/gyms/" + gymId);
-            String fullUrl = "/api/v1/media/stream/" + fsId;
-
-            GymImage gi = new GymImage();
-            gi.setGym(gym);
-            gi.setImageName(imageName);
-            gi.setUrl(fullUrl);
-            gi.setType("photo");
-            gi.setTitle(sanitizeFilename(file.getOriginalFilename()));
-            gi = gymImageRepository.save(gi);
-
-            uploaded.add(GymImageDto.builder().id(gi.getId()).gymId(gymId).name(gi.getImageName()).url(gi.getUrl()).build());
-        }
-        return uploaded;
-    }
-
-    @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
-    public GymImageDto replaceRoomImage(Long gymId, Long imageId, MultipartFile file) {
-        validateImageFile(file);
-        GymImage existing = gymImageRepository.findById(imageId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_IMAGE_NOT_FOUND", "Gym image not found"));
-        if (existing.getGym() == null || !existing.getGym().getId().equals(gymId)) {
-            throw new ResourceNotFoundException("GYM_IMAGE_MISMATCH", "Image does not belong to specified gym");
-        }
-        if (existing.getUrl() != null && !existing.getUrl().isBlank()) {
-            safeDeleteFile(existing.getUrl());
-        }
 
         String fsId = fileStorageService.saveFile(file, "/gyms/" + gymId);
-        existing.setUrl("/api/v1/media/stream/" + fsId);
-        existing.setTitle(sanitizeFilename(file.getOriginalFilename()));
-        GymImage saved = gymImageRepository.save(existing);
+        String fullUrl = "/api/v1/media/stream/" + fsId;
 
-        return GymImageDto.builder().id(saved.getId()).gymId(gymId).name(saved.getImageName()).url(saved.getUrl()).build();
+        GymImage gi = new GymImage();
+        gi.setGym(gym);
+        gi.setImageName(roomName); // The entity field is still 'imageName'
+        gi.setUrl(fullUrl);
+        gi.setType("photo");
+        gi.setTitle(sanitizeFilename(file.getOriginalFilename()));
+        gi = gymImageRepository.save(gi);
+
+        return GymImageDto.builder().id(gi.getId()).gymId(gymId).name(gi.getImageName()).url(gi.getUrl()).build();
     }
+
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
