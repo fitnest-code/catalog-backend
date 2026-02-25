@@ -8,6 +8,10 @@ import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
+import az.fitnest.catalog.model.entity.GymSubscription;
+import az.fitnest.catalog.model.entity.GymSubscriptionBenefit;
+import az.fitnest.catalog.dto.GymSubscriptionRequestDto;
+import az.fitnest.catalog.dto.GymSubscriptionBenefitRequestDto;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
@@ -63,6 +67,27 @@ public class GymWriteService {
         if (request.getCategoryIds() != null) {
             gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
         }
+
+        if (request.getSubscriptions() != null) {
+            for (GymSubscriptionRequestDto subDto : request.getSubscriptions()) {
+                if (!orderServiceGrpcClient.checkPlanExists(subDto.getPlanId())) {
+                    throw new BadRequestException("PLAN_NOT_FOUND", "Membership plan ID " + subDto.getPlanId() + " does not exist or is inactive.");
+                }
+                GymSubscription subscription = new GymSubscription();
+                subscription.setPlanId(subDto.getPlanId());
+                subscription.setGym(gym);
+                if (subDto.getBenefits() != null) {
+                    List<GymSubscriptionBenefit> benefits = subDto.getBenefits().stream().map(b -> {
+                        GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
+                        benefit.setBenefit(b.getBenefit());
+                        benefit.setBenefitLogo(b.getBenefitLogo());
+                        return benefit;
+                    }).toList();
+                    subscription.setBenefits(new java.util.ArrayList<>(benefits));
+                }
+                gym.getSubscriptions().add(subscription);
+            }
+        }
         
         Gym saved = gymRepository.save(gym);
         // Call it asynchronously to prevent blocking the HTTP request
@@ -96,6 +121,28 @@ public class GymWriteService {
         gym.setEmail(request.getEmail());
         if (request.getCategoryIds() != null) {
             gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
+        }
+
+        gym.getSubscriptions().clear();
+        if (request.getSubscriptions() != null) {
+            for (GymSubscriptionRequestDto subDto : request.getSubscriptions()) {
+                if (!orderServiceGrpcClient.checkPlanExists(subDto.getPlanId())) {
+                    throw new BadRequestException("PLAN_NOT_FOUND", "Membership plan ID " + subDto.getPlanId() + " does not exist or is inactive.");
+                }
+                GymSubscription subscription = new GymSubscription();
+                subscription.setPlanId(subDto.getPlanId());
+                subscription.setGym(gym);
+                if (subDto.getBenefits() != null) {
+                    List<GymSubscriptionBenefit> benefits = subDto.getBenefits().stream().map(b -> {
+                        GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
+                        benefit.setBenefit(b.getBenefit());
+                        benefit.setBenefitLogo(b.getBenefitLogo());
+                        return benefit;
+                    }).toList();
+                    subscription.setBenefits(new java.util.ArrayList<>(benefits));
+                }
+                gym.getSubscriptions().add(subscription);
+            }
         }
         gymRepository.save(gym);
     }

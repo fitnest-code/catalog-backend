@@ -7,8 +7,8 @@
 package az.fitnest.catalog.dto;
 
 import az.fitnest.catalog.dto.AddressDto;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Set;
+import java.util.List;
 
 @lombok.Data
 @lombok.Builder
@@ -21,6 +21,7 @@ public class GymRequest {
     private String phone;
     private String email;
     private Set<Long> categoryIds;
+    private List<GymSubscriptionRequestDto> subscriptions;
 
 
 }

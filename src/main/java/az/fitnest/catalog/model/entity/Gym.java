@@ -81,6 +81,8 @@ extends BaseAuditableEntity {
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="gym_id")
     private List<Review> reviews = new ArrayList<Review>();
+    @OneToMany(mappedBy="gym", cascade={CascadeType.ALL}, orphanRemoval=true)
+    private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
     @ManyToMany
     @JoinTable(name="gym_categories", joinColumns={@JoinColumn(name="gym_id")}, inverseJoinColumns={@JoinColumn(name="category_id")})
     private Set<Category> categories = new HashSet<Category>();
@@ -229,6 +231,14 @@ extends BaseAuditableEntity {
 
     public void setIsNew(Boolean isNew) {
         this.isNew = isNew;
+    }
+
+    public List<GymSubscription> getSubscriptions() {
+        return this.subscriptions;
+    }
+
+    public void setSubscriptions(List<GymSubscription> subscriptions) {
+        this.subscriptions = subscriptions;
     }
 
     public Gym() {

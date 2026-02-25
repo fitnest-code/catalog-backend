@@ -52,9 +52,35 @@ public class GymReadService {
             return GymRoomDto.builder().room_name(entry.getKey()).images(images).build();
         }).collect(Collectors.toList());
 
-        List<GymPlanItemDto> membershipPlans = List.of();
+        List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
         try {
-            membershipPlans = orderServiceGrpcClient.getGymPlans(gymId);
+            if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+                List<Long> planIds = gym.getSubscriptions().stream()
+                        .map(az.fitnest.catalog.model.entity.GymSubscription::getPlanId)
+                        .distinct()
+                        .toList();
+                List<az.fitnest.order.grpc.GymMembershipPlan> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
+                
+                membershipPlans = remotePlans.stream().map(remotePlan -> {
+                    // Find matching subscription to get benefits
+                    az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
+                            .filter(s -> s.getPlanId() == remotePlan.getPlanId())
+                            .findFirst().orElse(null);
+                            
+                    List<String> benefitsList = new java.util.ArrayList<>();
+                    if (matchingSub != null && matchingSub.getBenefits() != null) {
+                        benefitsList = matchingSub.getBenefits().stream()
+                                .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                                .toList();
+                    }
+                    
+                    return GymPlanItemDto.builder()
+                            .plan_id(String.valueOf(remotePlan.getPlanId()))
+                            .name(remotePlan.getName())
+                            .benefits(benefitsList)
+                            .build();
+                }).collect(java.util.stream.Collectors.toList());
+            }
         } catch (Exception e) {
             // Log error or ignore if unavailable (e.g. StatusRuntimeException)
             System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
@@ -111,26 +137,7 @@ public class GymReadService {
         return GymImageResponse.builder().items(items).build();
     }
 
-    @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "gymPackages", key = "#gymId")
-    public GymPackagesResponse getGymPackages(Long gymId) {
-        if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
-        }
-        List<GymPlanItemDto> items = orderServiceGrpcClient.getGymPlans(gymId);
-        return GymPackagesResponse.builder().items(items).build();
-    }
 
-    @Transactional(readOnly = true)
-    public GymPackageIncludesResponse getPackageIncludes(Long gymId, Long packageId) {
-        if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
-        }
-        return GymPackageIncludesResponse.builder()
-                .plan_id(String.valueOf(packageId))
-                .items(List.of())
-                .build();
-    }
 
     @Transactional(readOnly = true)
     public ReservationRulesResponse getReservationRules(Long gymId) {

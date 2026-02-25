@@ -18,12 +18,7 @@ import az.fitnest.catalog.grpc.GymImageItem;
 import az.fitnest.catalog.grpc.GymWorkHour;
 import az.fitnest.catalog.grpc.GetGymImagesRequest;
 import az.fitnest.catalog.grpc.GymImageResponse;
-import az.fitnest.catalog.grpc.GetGymPackagesRequest;
-import az.fitnest.catalog.grpc.GymPackagesResponse;
-import az.fitnest.catalog.grpc.GymPlanItem;
-import az.fitnest.catalog.grpc.GetPackageIncludesRequest;
-import az.fitnest.catalog.grpc.GymPackageIncludesResponse;
-import az.fitnest.catalog.grpc.GymPlanBenefit;
+
 import az.fitnest.catalog.grpc.GetTrainersRequest;
 import az.fitnest.catalog.grpc.GymTrainersResponse;
 import az.fitnest.catalog.grpc.GymTrainer;
@@ -125,45 +120,9 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         responseObserver.onCompleted();
     }
 
-    @Override
-    public void getGymPackages(GetGymPackagesRequest request, StreamObserver<GymPackagesResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymPackagesResponse dto = gymReadService.getGymPackages(request.getGymId());
-        GymPackagesResponse.Builder builder = GymPackagesResponse.newBuilder();
-        if (dto.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymPlanItemDto item : dto.getItems()) {
-                GymPlanItem.Builder itemBuilder = GymPlanItem.newBuilder()
-                        .setPlanId(item.getPlan_id() != null ? item.getPlan_id() : "")
-                        .setName(item.getName() != null ? item.getName() : "");
-                if (item.getBenefits() != null) {
-                    for (String benefit : item.getBenefits()) {
-                        itemBuilder.addBenefits(benefit != null ? benefit : "");
-                    }
-                }
-                builder.addItems(itemBuilder.build());
-            }
-        }
-        responseObserver.onNext(builder.build());
-        responseObserver.onCompleted();
-    }
 
-    @Override
-    public void getPackageIncludes(GetPackageIncludesRequest request, StreamObserver<GymPackageIncludesResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymPackageIncludesResponse dto = gymReadService.getPackageIncludes(request.getGymId(), request.getPackageId());
-        GymPackageIncludesResponse.Builder builder = GymPackageIncludesResponse.newBuilder();
-        builder.setPlanId(dto.getPlan_id() != null ? dto.getPlan_id() : "");
-        if (dto.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymPlanBenefitDto item : dto.getItems()) {
-                builder.addItems(GymPlanBenefit.newBuilder()
-                        .setLogo(item.getLogo())
-                        .setDescription(item.getDescription())
-                        .build());
-            }
-        }
-        responseObserver.onNext(builder.build());
-        responseObserver.onCompleted();
-    }
 
-    @Override
+
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
         az.fitnest.catalog.dto.GymTrainersResponse dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
         GymTrainersResponse.Builder builder = GymTrainersResponse.newBuilder();

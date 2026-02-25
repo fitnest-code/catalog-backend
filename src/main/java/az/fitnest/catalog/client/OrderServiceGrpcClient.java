@@ -20,31 +20,20 @@ public class OrderServiceGrpcClient {
     @GrpcClient("order-service")
     private MembershipPlanServiceGrpc.MembershipPlanServiceBlockingStub blockingStub;
 
-    public List<GymPlanItemDto> getGymPlans(Long gymId) {
-        GetGymPlansRequest request = GetGymPlansRequest.newBuilder()
-                .setGymId(gymId)
+    public boolean checkPlanExists(Long planId) {
+        az.fitnest.order.grpc.CheckPlanExistsRequest request = az.fitnest.order.grpc.CheckPlanExistsRequest.newBuilder()
+                .setPlanId(planId)
                 .build();
+        az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub.checkPlanExists(request);
+        return response.getExists() && response.getIsActive();
+    }
 
-        GetGymPlansResponse response = blockingStub.getGymPlans(request);
-
-        List<GymPlanItemDto> result = new ArrayList<>();
-        for (GymMembershipPlan plan : response.getPlansList()) {
-            // Collect all unique services from all duration options as benefits
-            List<String> benefits = new ArrayList<>(plan.getBenefitsList());
-            if (benefits.isEmpty()) {
-                benefits = plan.getOptionsList().stream()
-                        .flatMap(opt -> opt.getServicesList().stream())
-                        .distinct()
-                        .collect(Collectors.toList());
-            }
-
-            result.add(GymPlanItemDto.builder()
-                    .plan_id(String.valueOf(plan.getPlanId()))
-                    .name(plan.getName())
-                    .benefits(benefits)
-                    .build());
-        }
-        return result;
+    public List<az.fitnest.order.grpc.GymMembershipPlan> getPlansByIds(List<Long> planIds) {
+        az.fitnest.order.grpc.GetPlansByIdsRequest request = az.fitnest.order.grpc.GetPlansByIdsRequest.newBuilder()
+                .addAllPlanIds(planIds)
+                .build();
+        az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub.getPlansByIds(request);
+        return response.getPlansList();
     }
 
     public void checkIn(Long userId, Long gymId) {

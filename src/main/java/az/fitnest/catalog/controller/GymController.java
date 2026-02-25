@@ -33,8 +33,7 @@ import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.GymQrResponse;
 import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
-import az.fitnest.catalog.dto.GymPackageIncludesResponse;
-import az.fitnest.catalog.dto.GymPackagesResponse;
+
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.GymReviewsResponse;
 import az.fitnest.catalog.dto.GymTrainersResponse;
@@ -103,19 +102,7 @@ public class GymController {
         return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
     }
 
-    @GetMapping(value={"/gyms/{gymId}/packages"})
-    @Operation(summary="Get gym packages", description="Returns all subscription packages offered by the gym.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Packages retrieved successfully", content={@Content(schema=@Schema(implementation=GymPackagesResponse.class))})})
-    public ResponseEntity<GymPackagesResponse> getGymPackages(@PathVariable Long gymId) {
-        return ResponseEntity.ok(this.gymReadService.getGymPackages(gymId));
-    }
 
-    @GetMapping(value={"/gyms/{gymId}/packages/{packageId}/includes"})
-    @Operation(summary="Get package inclusions", description="Returns what is included in a specific gym package (e.g., crossfit, sauna, pool).")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Inclusions retrieved successfully")})
-    public ResponseEntity<GymPackageIncludesResponse> getPackageIncludes(@PathVariable Long gymId, @PathVariable Long packageId) {
-        return ResponseEntity.ok(this.gymReadService.getPackageIncludes(gymId, packageId));
-    }
 
     @GetMapping(value={"/gyms/{gymId}/trainers"})
     @Operation(summary="Get gym trainers", description="Returns a paginated list of trainers working at the gym.")

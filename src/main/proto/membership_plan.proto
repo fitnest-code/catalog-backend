@@ -7,12 +7,33 @@ option java_package = "az.fitnest.order.grpc";
 option java_outer_classname = "MembershipPlanProto";
 
 service MembershipPlanService {
-  rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse);
+  rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse); // Deprecated but kept for compatibility until full switch
   rpc CheckIn(CheckInRequest) returns (CheckInResponse);
+  
+  // New cross-service methods
+  rpc CheckPlanExists(CheckPlanExistsRequest) returns (CheckPlanExistsResponse);
+  rpc GetPlansByIds(GetPlansByIdsRequest) returns (GetPlansByIdsResponse);
 }
 
 message GetGymPlansRequest {
   int64 gym_id = 1;
+}
+
+message CheckPlanExistsRequest {
+  int64 plan_id = 1;
+}
+
+message CheckPlanExistsResponse {
+  bool exists = 1;
+  bool is_active = 2;
+}
+
+message GetPlansByIdsRequest {
+  repeated int64 plan_ids = 1;
+}
+
+message GetPlansByIdsResponse {
+  repeated GymMembershipPlan plans = 1;
 }
 
 message GetGymPlansResponse {
