@@ -8,6 +8,7 @@ option java_outer_classname = "MembershipPlanProto";
 
 service MembershipPlanService {
   rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse);
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse);
 }
 
 message GetGymPlansRequest {
@@ -34,4 +35,14 @@ message PlanDurationOption {
   int32 entry_limit = 4;
   int32 freeze_days = 5;
   repeated string services = 6;
+}
+
+message CheckInRequest {
+  int64 user_id = 1;
+  int64 gym_id = 2;
+}
+
+message CheckInResponse {
+  bool success = 1;
+  string message = 2;
 }

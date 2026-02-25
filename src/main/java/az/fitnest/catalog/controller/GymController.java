@@ -136,6 +136,26 @@ public class GymController {
         return ResponseEntity.status(201).build();
     }
 
+    @PostMapping(value={"/gyms/{gymId}/check-in"})
+    @Operation(summary="Check-in to a gym", description="Allows an authenticated user to check-in using the gym's QR code. Deducts one entry from the active subscription.")
+    @SecurityRequirement(name="bearerAuth")
+    @ApiResponses(value={
+            @ApiResponse(responseCode="200", description="Check-in successful", content={@Content(schema=@Schema(implementation=az.fitnest.catalog.dto.CheckInResponseDto.class))}),
+            @ApiResponse(responseCode="400", description="Check-in failed (e.g., no active subscription or expired)"),
+            @ApiResponse(responseCode="401", description="User not authenticated")
+    })
+    public ResponseEntity<az.fitnest.catalog.dto.CheckInResponseDto> checkIn(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
+        Long userId = this.extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(this.gymService.checkIn(userId, gymId));
+        } catch (Exception e) {
+            throw new az.fitnest.catalog.exception.BadRequestException("CHECKIN_FAILED", e.getMessage());
+        }
+    }
+
     @GetMapping(value={"/gyms/{gymId}/reservation-rules"})
     @Operation(summary="Get reservation rules", description="Returns specific rules for gym entry and reservation (e.g., time limits, cancellation policy).")
     public ResponseEntity<Object> getReservationRules(@PathVariable Long gymId) {

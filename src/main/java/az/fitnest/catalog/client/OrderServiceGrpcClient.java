@@ -46,4 +46,17 @@ public class OrderServiceGrpcClient {
         }
         return result;
     }
+
+    public void checkIn(Long userId, Long gymId) {
+        az.fitnest.order.grpc.CheckInRequest request = az.fitnest.order.grpc.CheckInRequest.newBuilder()
+                .setUserId(userId)
+                .setGymId(gymId)
+                .build();
+
+        az.fitnest.order.grpc.CheckInResponse response = blockingStub.checkIn(request);
+
+        if (!response.getSuccess()) {
+            throw new RuntimeException("Check-in failed: " + response.getMessage());
+        }
+    }
 }

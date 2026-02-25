@@ -615,6 +615,23 @@ implements GymService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public az.fitnest.catalog.dto.CheckInResponseDto checkIn(Long userId, Long gymId) {
+        Gym gym = (Gym)this.gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        
+        this.orderServiceGrpcClient.checkIn(userId, gymId);
+
+        String addressText = gym.getAddress() != null ? gym.getAddress().getAddressText() : null;
+        LocalDateTime now = LocalDateTime.now();
+
+        return az.fitnest.catalog.dto.CheckInResponseDto.builder()
+                .addressText(addressText)
+                .visitDate(now.toLocalDate())
+                .visitHour(now.toLocalTime())
+                .build();
+    }
+
     public GymServiceImpl(GymRepository gymRepository, ReviewRepository reviewRepository, TrainerRepository trainerRepository, CategoryRepository categoryRepository, GymImageRepository gymImageRepository, FileStorageService fileStorageService, ReverseGeocodingService reverseGeocodingService, az.fitnest.catalog.client.OrderServiceGrpcClient orderServiceGrpcClient) {
         this.gymRepository = gymRepository;
         this.reviewRepository = reviewRepository;

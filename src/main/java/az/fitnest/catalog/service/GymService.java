@@ -73,4 +73,6 @@ public interface GymService {
 
     // New: return address (lat/lng and resolved address text) for a gym
     public AddressDto getGymLocation(Long gymId);
+
+    public az.fitnest.catalog.dto.CheckInResponseDto checkIn(Long userId, Long gymId);
 }
