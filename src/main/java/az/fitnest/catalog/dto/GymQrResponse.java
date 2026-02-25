@@ -7,8 +7,12 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class GymQrResponse {
     private String qrCodeUrl;
+
+    public GymQrResponse() {}
+
+    public GymQrResponse(String qrCodeUrl) {
+        this.qrCodeUrl = qrCodeUrl;
+    }
 }

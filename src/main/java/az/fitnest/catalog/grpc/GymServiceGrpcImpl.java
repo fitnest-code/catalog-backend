@@ -1,6 +1,10 @@
 package az.fitnest.catalog.grpc;
 
-import az.fitnest.catalog.service.GymService;
+import az.fitnest.catalog.service.impl.GymImageService;
+import az.fitnest.catalog.service.impl.GymReadService;
+import az.fitnest.catalog.service.impl.GymReviewService;
+import az.fitnest.catalog.service.impl.GymTrainerService;
+import az.fitnest.catalog.service.impl.GymWriteService;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -48,16 +52,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @GrpcService
 public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
-    private final GymService gymService;
+    private final GymReadService gymReadService;
+    private final GymWriteService gymWriteService;
+    private final GymImageService gymImageService;
+    private final GymReviewService gymReviewService;
+    private final GymTrainerService gymTrainerService;
 
     @Autowired
-    public GymServiceGrpcImpl(GymService gymService) {
-        this.gymService = gymService;
+    public GymServiceGrpcImpl(GymReadService gymReadService, GymWriteService gymWriteService, GymImageService gymImageService, GymReviewService gymReviewService, GymTrainerService gymTrainerService) {
+        this.gymReadService = gymReadService;
+        this.gymWriteService = gymWriteService;
+        this.gymImageService = gymImageService;
+        this.gymReviewService = gymReviewService;
+        this.gymTrainerService = gymTrainerService;
     }
 
     @Override
     public void getGymDetail(GetGymDetailRequest request, StreamObserver<GymDetailResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymDetailResponse dto = gymService.getGymDetail(request.getUserId(), request.getGymId());
+        az.fitnest.catalog.dto.GymDetailResponse dto = gymReadService.getGymDetail(request.getUserId(), request.getGymId());
         
         // Build proto response while avoiding fields removed from the internal DTO.
         // For removed/missing fields we provide safe defaults so the proto contract is satisfied.
@@ -98,7 +110,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getGymImages(GetGymImagesRequest request, StreamObserver<GymImageResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymImageResponse dto = gymService.getGymImages(request.getGymId());
+        az.fitnest.catalog.dto.GymImageResponse dto = gymReadService.getGymImages(request.getGymId());
         GymImageResponse.Builder builder = GymImageResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymImageItemDto item : dto.getItems()) {
@@ -116,7 +128,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getGymPackages(GetGymPackagesRequest request, StreamObserver<GymPackagesResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymPackagesResponse dto = gymService.getGymPackages(request.getGymId());
+        az.fitnest.catalog.dto.GymPackagesResponse dto = gymReadService.getGymPackages(request.getGymId());
         GymPackagesResponse.Builder builder = GymPackagesResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymPlanItemDto item : dto.getItems()) {
@@ -137,7 +149,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getPackageIncludes(GetPackageIncludesRequest request, StreamObserver<GymPackageIncludesResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymPackageIncludesResponse dto = gymService.getPackageIncludes(request.getGymId(), request.getPackageId());
+        az.fitnest.catalog.dto.GymPackageIncludesResponse dto = gymReadService.getPackageIncludes(request.getGymId(), request.getPackageId());
         GymPackageIncludesResponse.Builder builder = GymPackageIncludesResponse.newBuilder();
         builder.setPlanId(dto.getPlan_id() != null ? dto.getPlan_id() : "");
         if (dto.getItems() != null) {
@@ -154,7 +166,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymTrainersResponse dto = gymService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
+        az.fitnest.catalog.dto.GymTrainersResponse dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
         GymTrainersResponse.Builder builder = GymTrainersResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymTrainerDto item : dto.getItems()) {
@@ -172,7 +184,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getReviews(GetReviewsRequest request, StreamObserver<GymReviewsResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymReviewsResponse dto = gymService.getReviews(request.getGymId(), request.getPage(), request.getPageSize(), request.getSort());
+        az.fitnest.catalog.dto.GymReviewsResponse dto = gymReviewService.getReviews(request.getGymId(), request.getPage(), request.getPageSize(), request.getSort());
         GymReviewsResponse.Builder builder = GymReviewsResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymReviewDto item : dto.getItems()) {
@@ -200,7 +212,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         az.fitnest.catalog.dto.ReviewRequest dto = new az.fitnest.catalog.dto.ReviewRequest();
         dto.setRating(request.getRating());
         dto.setComment(request.getComment());
-        gymService.addReview(request.getUserId(), request.getGymId(), dto);
+        gymReviewService.addReview(request.getUserId(), request.getGymId(), dto);
         responseObserver.onNext(AddReviewResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
@@ -218,7 +230,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         // Proto doesn't include q/pagination — use defaults and delegate to new service signature
         double lat = request.getLat();
         double lng = request.getLng();
-        List<az.fitnest.catalog.dto.GymMainPageDto> dtos = gymService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
+        List<az.fitnest.catalog.dto.GymMainPageDto> dtos = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
         GetMainPageGymsResponse.Builder builder = GetMainPageGymsResponse.newBuilder();
         for (az.fitnest.catalog.dto.GymMainPageDto dto : dtos) {
             builder.addItems(GymMainPage.newBuilder()
@@ -237,7 +249,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void putGymImage(PutGymImageRequest request, StreamObserver<PutGymImageResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymImageDto dto = gymService.putGymImage(request.getGymId(), request.getImageName(), request.getUrl());
+        az.fitnest.catalog.dto.GymImageDto dto = gymImageService.putGymImage(request.getGymId(), request.getImageName(), request.getUrl());
         GymImageItem item = GymImageItem.newBuilder()
                 .setImageId(dto.getId() != null ? dto.getId().toString() : "")
                 .setUrl(dto.getUrl())
@@ -256,7 +268,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         trainerRequest.setSpecialization(request.getSpecialization());
         trainerRequest.setImageUrl(request.getImageUrl());
         
-        gymService.addTrainer(request.getGymId(), trainerRequest);
+        gymTrainerService.addTrainer(request.getGymId(), trainerRequest);
         responseObserver.onNext(AddTrainerResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
@@ -268,28 +280,28 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         trainerRequest.setSpecialization(request.getSpecialization());
         trainerRequest.setImageUrl(request.getImageUrl());
         
-        gymService.updateTrainer(request.getGymId(), request.getTrainerId(), trainerRequest);
+        gymTrainerService.updateTrainer(request.getGymId(), request.getTrainerId(), trainerRequest);
         responseObserver.onNext(UpdateTrainerResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void deleteTrainer(DeleteTrainerRequest request, StreamObserver<DeleteTrainerResponse> responseObserver) {
-        gymService.deleteTrainer(request.getGymId(), request.getTrainerId());
+        gymTrainerService.deleteTrainer(request.getGymId(), request.getTrainerId());
         responseObserver.onNext(DeleteTrainerResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void createGym(CreateGymRequest request, StreamObserver<CreateGymResponse> responseObserver) {
-        gymService.createGym(mapToGymRequest(request));
+        gymWriteService.createGym(mapToGymRequest(request));
         responseObserver.onNext(CreateGymResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void updateGym(UpdateGymRequest request, StreamObserver<UpdateGymResponse> responseObserver) {
-        gymService.updateGym(request.getGymId(), mapToGymRequest(request));
+        gymWriteService.updateGym(request.getGymId(), mapToGymRequest(request));
         responseObserver.onNext(UpdateGymResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }

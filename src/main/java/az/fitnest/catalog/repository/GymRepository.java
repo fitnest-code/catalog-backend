@@ -8,6 +8,7 @@
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.Gym;
+import java.util.Optional;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -25,5 +26,11 @@ extends JpaRepository<Gym, Long> {
 
     @org.springframework.data.jpa.repository.Query("SELECT w FROM Gym g JOIN g.workHours w WHERE g.id = :gymId")
     public List<az.fitnest.catalog.model.entity.GymWorkHour> findWorkHoursByGymId(@org.springframework.data.repository.query.Param("gymId") Long gymId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "categories"})
+    public Optional<Gym> findWithDetailsById(Long id);
+
+    @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')))")
+    public org.springframework.data.domain.Page<Gym> findByNameOrDescriptionContainingIgnoreCase(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
 }
 
