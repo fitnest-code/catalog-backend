@@ -124,7 +124,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
 
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymTrainersResponse dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
+        az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymTrainerDto> dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
         GymTrainersResponse.Builder builder = GymTrainersResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymTrainerDto item : dto.getItems()) {
@@ -142,7 +142,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void getReviews(GetReviewsRequest request, StreamObserver<GymReviewsResponse> responseObserver) {
-        az.fitnest.catalog.dto.GymReviewsResponse dto = gymReviewService.getReviews(request.getGymId(), request.getPage(), request.getPageSize(), request.getSort());
+        az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymReviewDto> dto = gymReviewService.getReviews(request.getGymId(), request.getPage(), request.getPageSize(), request.getSort());
         GymReviewsResponse.Builder builder = GymReviewsResponse.newBuilder();
         if (dto.getItems() != null) {
             for (az.fitnest.catalog.dto.GymReviewDto item : dto.getItems()) {
@@ -188,7 +188,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         // Proto doesn't include q/pagination — use defaults and delegate to new service signature
         double lat = request.getLat();
         double lng = request.getLng();
-        az.fitnest.catalog.dto.GymMainPageResponseDto resp = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
+        az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymMainPageDto> resp = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
         GetMainPageGymsResponse.Builder builder = GetMainPageGymsResponse.newBuilder();
         if (resp.getItems() != null) {
             for (az.fitnest.catalog.dto.GymMainPageDto dto : resp.getItems()) {

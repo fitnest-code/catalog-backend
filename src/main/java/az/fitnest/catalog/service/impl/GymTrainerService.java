@@ -1,7 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.GymTrainerDto;
-import az.fitnest.catalog.dto.GymTrainersResponse;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Trainer;
@@ -29,7 +29,7 @@ public class GymTrainerService {
     private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
-    public GymTrainersResponse getTrainers(Long gymId, int page, int pageSize) {
+    public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
@@ -38,7 +38,7 @@ public class GymTrainerService {
                 .map(this::toGymTrainerDto)
                 .collect(Collectors.toList());
 
-        return GymTrainersResponse.builder()
+        return PaginatedResponse.<GymTrainerDto>builder()
                 .items(items)
                 .total(trainerPage.getTotalElements())
                 .page(page)

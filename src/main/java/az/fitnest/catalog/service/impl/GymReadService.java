@@ -177,7 +177,7 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    public GymMainPageResponseDto getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
+    public PaginatedResponse<GymMainPageDto> getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
         Page<Gym> gymPage;
         Pageable pageable = pageable(page, pageSize, Sort.unsorted());
         
@@ -216,7 +216,7 @@ public class GymReadService {
                     .build();
         }).collect(Collectors.toList());
 
-        return GymMainPageResponseDto.builder()
+        return PaginatedResponse.<GymMainPageDto>builder()
                 .items(items)
                 .total(gymPage.getTotalElements())
                 .page(page)

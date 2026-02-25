@@ -24,7 +24,7 @@ import az.fitnest.catalog.dto.StoreListResponseDto;
 import az.fitnest.catalog.dto.StoreMainPageDto;
 import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.StoreRequest;
-import az.fitnest.catalog.dto.StoreResponseDto;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.StoreSearchItemDto;
 import az.fitnest.catalog.dto.StoreSearchResponseDto;
 import az.fitnest.catalog.dto.StoreSocialDto;
@@ -213,7 +213,7 @@ implements StoreService {
 
     @Override
     @Transactional(readOnly=true)
-    public StoreResponseDto getStoreMainPage(Long userId, String q, int page, int pageSize) {
+    public PaginatedResponse<StoreMainPageDto> getStoreMainPage(Long userId, String q, int page, int pageSize) {
         Page<Store> storePage;
         PageRequest pageable = PageRequest.of((int)(page - 1), (int)pageSize, (Sort)Sort.by((Sort.Direction)Sort.Direction.DESC, (String[])new String[]{"createdDate"}));
         if (q != null && !q.isBlank()) {
@@ -231,12 +231,12 @@ implements StoreService {
             HashSet<Long> savedStoreIds = new HashSet<Long>(this.savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, pageStoreIds));
             items.forEach(item -> item.setIsSaved(savedStoreIds.contains(Long.parseLong(item.getStoreId()))));
         }
-        return StoreResponseDto.builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
+        return PaginatedResponse.<StoreMainPageDto>builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
     }
 
     @Override
     @Transactional(readOnly=true)
-    public StoreResponseDto getClosestStores(Long userId, String q, int page, int pageSize, Double lat, Double lng) {
+    public PaginatedResponse<StoreMainPageDto> getClosestStores(Long userId, String q, int page, int pageSize, Double lat, Double lng) {
         List<Store> candidates;
         if (lat != null && lng != null) {
             double initialRadiusKm = 50.0;
@@ -291,7 +291,7 @@ implements StoreService {
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(all.size(), from + pageSize);
         List<StoreMainPageDto> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
-        return StoreResponseDto.builder().items(pageItems).total(all.size()).page(page).pageSize(pageSize).build();
+        return PaginatedResponse.<StoreMainPageDto>builder().items(pageItems).total(all.size()).page(page).pageSize(pageSize).build();
     }
 
     @Override
@@ -322,7 +322,7 @@ implements StoreService {
 
     @Override
     @Transactional(readOnly=true)
-    public StoreResponseDto getDiscountedStores(Long userId, String q, int page, int pageSize) {
+    public PaginatedResponse<StoreMainPageDto> getDiscountedStores(Long userId, String q, int page, int pageSize) {
         Page<Store> storePage;
         PageRequest pageable = PageRequest.of((int)Math.max(0, page - 1), (int)pageSize, (Sort)Sort.by((Sort.Direction)Sort.Direction.DESC, (String[])new String[]{"createdDate"}));
         if (q != null && !q.isBlank()) {
@@ -339,7 +339,7 @@ implements StoreService {
         } else {
             items.forEach(item -> item.setIsSaved(false));
         }
-        return StoreResponseDto.builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
+        return PaginatedResponse.<StoreMainPageDto>builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
     }
 
     @Override
@@ -371,7 +371,7 @@ implements StoreService {
 
     @Override
     @Transactional(readOnly=true)
-    public StoreResponseDto getNewStores(Long userId, String q, int page, int pageSize) {
+    public PaginatedResponse<StoreMainPageDto> getNewStores(Long userId, String q, int page, int pageSize) {
         Page<Store> storePage;
         PageRequest pageable = PageRequest.of((int)Math.max(0, page - 1), (int)pageSize, (Sort)Sort.by((Sort.Direction)Sort.Direction.DESC, (String[])new String[]{"createdDate"}));
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30L);
@@ -389,7 +389,7 @@ implements StoreService {
         } else {
             items.forEach(item -> item.setIsSaved(false));
         }
-        return StoreResponseDto.builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
+        return PaginatedResponse.<StoreMainPageDto>builder().items(items).total(storePage.getTotalElements()).page(page).pageSize(pageSize).build();
     }
 
     @Override

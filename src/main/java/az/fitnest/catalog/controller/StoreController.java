@@ -31,7 +31,7 @@ import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreMainPageDto;
 import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.StoreRequest;
-import az.fitnest.catalog.dto.StoreResponseDto;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -67,9 +67,9 @@ public class StoreController {
     @Operation(summary="Get catalog stores", description="Returns a paginated list of stores (same fields as /stores/closest but without distanceKm). Search (q) matches only store name and address; if q is empty, returns all stores paginated.")
     @PreAuthorize(value="isAuthenticated()")
     @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Stores retrieved successfully", content={@Content(schema=@Schema(implementation=StoreResponseDto.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Stores retrieved successfully", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
     @GetMapping(value={"/stores"})
-    public ResponseEntity<StoreResponseDto> getMarketStores(@Parameter(description="Search query (matches name or address)") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getMarketStores(@Parameter(description="Search query (matches name or address)") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreMainPage(userId, q, page, page_size));
     }
@@ -77,9 +77,9 @@ public class StoreController {
     @Operation(summary="Get closest stores", description="Returns paginated list of stores closest to provided coordinates. Returns address text and distance in kilometers.")
     @PreAuthorize(value="isAuthenticated()")
     @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest stores retrieved", content={@Content(schema=@Schema(implementation=StoreResponseDto.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
     @GetMapping(value={"/stores/closest"})
-    public ResponseEntity<StoreResponseDto> getClosestStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getClosestStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getClosestStores(userId, q, page, page_size, lat, lng));
     }
@@ -127,9 +127,9 @@ public class StoreController {
     @Operation(summary="Get discounted stores", description="Returns a paginated list of stores that currently have active discounts. Supports search with 'q'.")
     @PreAuthorize(value="isAuthenticated()")
     @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Discounted stores retrieved", content={@Content(schema=@Schema(implementation=StoreResponseDto.class))})})
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Discounted stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
     @GetMapping(value={"/stores/discounted"})
-    public ResponseEntity<StoreResponseDto> getDiscountedStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getDiscountedStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getDiscountedStores(userId, q, page, page_size));
     }
@@ -137,9 +137,9 @@ public class StoreController {
     @Operation(summary="Get new stores", description="Returns paginated list of stores created within the last 30 days. Supports search with 'q'.")
     @PreAuthorize(value="isAuthenticated()")
     @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="New stores retrieved", content={@Content(schema=@Schema(implementation=StoreResponseDto.class))})})
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="New stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
     @GetMapping(value={"/stores/new"})
-    public ResponseEntity<StoreResponseDto> getNewStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getNewStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getNewStores(userId, q, page, page_size));
     }

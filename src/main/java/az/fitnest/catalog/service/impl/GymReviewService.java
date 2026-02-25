@@ -2,7 +2,7 @@ package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.GymReviewAuthorDto;
 import az.fitnest.catalog.dto.GymReviewDto;
-import az.fitnest.catalog.dto.GymReviewsResponse;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Review;
@@ -27,7 +27,7 @@ public class GymReviewService {
     private final ReviewRepository reviewRepository;
 
     @Transactional(readOnly = true)
-    public GymReviewsResponse getReviews(Long gymId, int page, int pageSize, String sort) {
+    public PaginatedResponse<GymReviewDto> getReviews(Long gymId, int page, int pageSize, String sort) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
@@ -36,7 +36,7 @@ public class GymReviewService {
                 .map(this::toGymReviewDto)
                 .collect(Collectors.toList());
 
-        return GymReviewsResponse.builder()
+        return PaginatedResponse.<GymReviewDto>builder()
                 .items(items)
                 .total(reviewPage.getTotalElements())
                 .page(page)

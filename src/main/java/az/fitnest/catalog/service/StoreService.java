@@ -11,7 +11,7 @@ import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreListResponseDto;
 import az.fitnest.catalog.dto.StoreMainPageDto;
 import az.fitnest.catalog.dto.StoreRequest;
-import az.fitnest.catalog.dto.StoreResponseDto;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.StoreSearchResponseDto;
 import java.util.List;
@@ -34,15 +34,15 @@ public interface StoreService {
 
     public String uploadStoreImage(Long var1, MultipartFile var2);
 
-    public StoreResponseDto getStoreMainPage(Long var1, String var2, int var3, int var4);
+    public PaginatedResponse<StoreMainPageDto> getStoreMainPage(Long var1, String var2, int var3, int var4);
 
-    public StoreResponseDto getClosestStores(Long var1, String var2, int var3, int var4, Double var5, Double var6);
+    public PaginatedResponse<StoreMainPageDto> getClosestStores(Long var1, String var2, int var3, int var4, Double var5, Double var6);
 
     public List<StoreMainPageDto> getDiscountedStores(Long var1);
 
     public List<StoreMainPageDto> getDiscountedStores(Long var1, String var2);
 
-    public StoreResponseDto getDiscountedStores(Long var1, String var2, int var3, int var4);
+    public PaginatedResponse<StoreMainPageDto> getDiscountedStores(Long var1, String var2, int var3, int var4);
 
     public StoreListResponseDto getAllStores(Long var1);
 
@@ -52,7 +52,7 @@ public interface StoreService {
 
     public StoreSearchResponseDto searchStoresForQuery(Long var1, String var2, int var3, int var4);
 
-    public StoreResponseDto getNewStores(Long var1, String var2, int var3, int var4);
+    public PaginatedResponse<StoreMainPageDto> getNewStores(Long var1, String var2, int var3, int var4);
 
     public LocationDto getStoreLocation(Long storeId);
 

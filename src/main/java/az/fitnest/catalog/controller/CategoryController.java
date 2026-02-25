@@ -31,7 +31,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.CategoryDto;
 import az.fitnest.catalog.dto.CategoryRequest;
-import az.fitnest.catalog.dto.CategoryResponseDto;
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.exception.ValidationException;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.repository.CategoryRepository;
@@ -75,11 +75,11 @@ public class CategoryController {
     @Operation(summary="Get all categories", description="Returns a paginated list of all catalog categories.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Categories retrieved successfully")})
     @GetMapping(value={"/categories"})
-    public ResponseEntity<CategoryResponseDto> getAllCategories(@Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int size) {
+    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(@Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int size) {
         PageRequest pageable = PageRequest.of((int)Math.max(0, page - 1), (int)size);
         Page<Category> categories = this.categoryRepository.findAll((Pageable)pageable);
         List<CategoryDto> items = categories.getContent().stream().map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).build()).collect(Collectors.toList());
-        CategoryResponseDto resp = CategoryResponseDto.builder().items(items).total(categories.getTotalElements()).page(page).pageSize(size).build();
+        PaginatedResponse<CategoryDto> resp = PaginatedResponse.<CategoryDto>builder().items(items).total(categories.getTotalElements()).page(page).pageSize(size).build();
         return ResponseEntity.ok(resp);
     }
 

@@ -33,12 +33,12 @@ import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.GymQrResponse;
 import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
-import az.fitnest.catalog.dto.GymMainPageResponseDto;
+import az.fitnest.catalog.dto.PaginatedResponse;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
-import az.fitnest.catalog.dto.GymReviewsResponse;
-import az.fitnest.catalog.dto.GymTrainersResponse;
+import az.fitnest.catalog.dto.GymReviewDto;
+import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.dto.UpdateImageUrlRequest;
@@ -109,14 +109,14 @@ public class GymController {
     @GetMapping(value={"/gyms/{gymId}/trainers"})
     @Operation(summary="Get gym trainers", description="Returns a paginated list of trainers working at the gym.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Trainers retrieved successfully")})
-    public ResponseEntity<GymTrainersResponse> getTrainers(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
         return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size));
     }
 
     @GetMapping(value={"/gyms/{gymId}/reviews"})
     @Operation(summary="Get gym reviews", description="Returns a paginated list of user reviews for the gym.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Reviews retrieved successfully")})
-    public ResponseEntity<GymReviewsResponse> getReviews(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="Sort order (e.g., newest, highest_rating)") @RequestParam(required=false) String sort) {
+    public ResponseEntity<PaginatedResponse<GymReviewDto>> getReviews(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="Sort order (e.g., newest, highest_rating)") @RequestParam(required=false) String sort) {
         return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, page_size, sort));
     }
 
@@ -161,8 +161,8 @@ public class GymController {
 
     @GetMapping(value={"/gyms/closest"})
     @Operation(summary="Get closest gyms", description="Returns the list of gyms closest to the provided coordinates. Supports search and pagination. Returns address text (not latitude/longitude) and distance in kilometers.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=GymMainPageResponseDto.class))})})
-    public ResponseEntity<GymMainPageResponseDto> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
+    public ResponseEntity<PaginatedResponse<GymMainPageDto>> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         return ResponseEntity.ok(this.gymReadService.getClosestGyms(q, page, page_size, lat, lng));
     }
 
