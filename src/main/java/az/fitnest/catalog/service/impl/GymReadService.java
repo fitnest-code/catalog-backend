@@ -208,7 +208,7 @@ public class GymReadService {
             return GymMainPageDto.builder()
                     .gymId(gym.getId().toString())
                     .name(gym.getName())
-                    .imageUrl(gym.getCoverImageUrl())
+                    .coverImageUrl(gym.getCoverImageUrl())
                     .stars(stars)
                     .isNew(isNew)
                     .location(address != null ? address.getAddressText() : null)

@@ -111,19 +111,19 @@ public class CategoryController {
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Category updated successfully"), @ApiResponse(responseCode="404", description="Category not found")})
     @PutMapping(value={"/admin/categories/{id}"})
-    public ResponseEntity<CategoryDto> updateCategory(@Parameter(description="ID of the category") @PathVariable Long id, @RequestBody Category category) {
+    public ResponseEntity<CategoryDto> updateCategory(@Parameter(description="ID of the category") @PathVariable Long id, @RequestBody CategoryRequest request) {
         Category existing = (Category)this.categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
-        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(category, "category");
-        if (category.getName() == null || category.getName().isBlank()) {
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "categoryRequest");
+        if (request.getName() == null || request.getName().isBlank()) {
             bindingResult.rejectValue("name", "NotBlank", "Category name must not be blank");
         }
-        if (!existing.getName().equals(category.getName()) && this.categoryRepository.existsByName(category.getName())) {
+        if (!existing.getName().equals(request.getName()) && this.categoryRepository.existsByName(request.getName())) {
             bindingResult.rejectValue("name", "Duplicate", "Category with this name already exists");
         }
         if (bindingResult.hasErrors()) {
             throw new ValidationException("Validation failed", (BindingResult)bindingResult);
         }
-        existing.setName(category.getName());
+        existing.setName(request.getName());
         Category saved = this.categoryRepository.save(existing);
         CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
         return ResponseEntity.ok(dto);

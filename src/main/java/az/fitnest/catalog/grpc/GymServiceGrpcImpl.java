@@ -195,7 +195,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
                 builder.addItems(GymMainPage.newBuilder()
                     .setGymId(dto.getGymId())
                     .setName(dto.getName())
-                    .setImageUrl(dto.getImageUrl() != null ? dto.getImageUrl() : "")
+                    .setImageUrl(dto.getCoverImageUrl() != null ? dto.getCoverImageUrl() : "")
                     .setStars(dto.getStars())
                     .setIsNew(dto.isNew())
                     .setLocation(dto.getLocation())
