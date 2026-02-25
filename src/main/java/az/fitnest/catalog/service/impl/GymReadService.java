@@ -177,7 +177,7 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    public List<GymMainPageDto> getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
+    public GymMainPageResponseDto getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
         Page<Gym> gymPage;
         Pageable pageable = pageable(page, pageSize, Sort.unsorted());
         
@@ -197,7 +197,7 @@ public class GymReadService {
             }
         }
 
-        return gymPage.getContent().stream().map(gym -> {
+        List<GymMainPageDto> items = gymPage.getContent().stream().map(gym -> {
             double stars = gym.getRating() != null ? gym.getRating() : 0.0;
             boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
             Address address = gym.getAddress();
@@ -215,6 +215,13 @@ public class GymReadService {
                     .distanceKm(distanceKm)
                     .build();
         }).collect(Collectors.toList());
+
+        return GymMainPageResponseDto.builder()
+                .items(items)
+                .total(gymPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
     }
     
     @Transactional(readOnly = true)

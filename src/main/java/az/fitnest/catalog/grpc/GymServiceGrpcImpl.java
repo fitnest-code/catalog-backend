@@ -188,10 +188,11 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         // Proto doesn't include q/pagination — use defaults and delegate to new service signature
         double lat = request.getLat();
         double lng = request.getLng();
-        List<az.fitnest.catalog.dto.GymMainPageDto> dtos = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
+        az.fitnest.catalog.dto.GymMainPageResponseDto resp = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
         GetMainPageGymsResponse.Builder builder = GetMainPageGymsResponse.newBuilder();
-        for (az.fitnest.catalog.dto.GymMainPageDto dto : dtos) {
-            builder.addItems(GymMainPage.newBuilder()
+        if (resp.getItems() != null) {
+            for (az.fitnest.catalog.dto.GymMainPageDto dto : resp.getItems()) {
+                builder.addItems(GymMainPage.newBuilder()
                     .setGymId(dto.getGymId())
                     .setName(dto.getName())
                     .setImageUrl(dto.getImageUrl() != null ? dto.getImageUrl() : "")
@@ -200,6 +201,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
                     .setLocation(dto.getLocation())
                     .setDistanceKm(dto.getDistanceKm() != null ? dto.getDistanceKm() : 0.0)
                     .build());
+            }
         }
         responseObserver.onNext(builder.build());
         responseObserver.onCompleted();

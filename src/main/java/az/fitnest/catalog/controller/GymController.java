@@ -33,6 +33,7 @@ import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.GymQrResponse;
 import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
+import az.fitnest.catalog.dto.GymMainPageResponseDto;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
@@ -160,8 +161,8 @@ public class GymController {
 
     @GetMapping(value={"/gyms/closest"})
     @Operation(summary="Get closest gyms", description="Returns the list of gyms closest to the provided coordinates. Supports search and pagination. Returns address text (not latitude/longitude) and distance in kilometers.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=GymMainPageDto.class))})})
-    public ResponseEntity<List<GymMainPageDto>> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=GymMainPageResponseDto.class))})})
+    public ResponseEntity<GymMainPageResponseDto> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         return ResponseEntity.ok(this.gymReadService.getClosestGyms(q, page, page_size, lat, lng));
     }
 
