@@ -4,8 +4,10 @@ import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.model.entity.Profession;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class GymTrainerService {
 
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
+    private final ProfessionRepository professionRepository;
     private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
@@ -67,8 +70,8 @@ public class GymTrainerService {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
         }
         
-        if (request.getImageUrl() != null && !request.getImageUrl().equals(trainer.getImageUrl())) {
-            safeDeleteFile(trainer.getImageUrl());
+        if (request.getPicture() != null && !request.getPicture().equals(trainer.getPicture())) {
+            safeDeleteFile(trainer.getPicture());
         }
         
         updateTrainerFromRequest(trainer, request);
@@ -84,16 +87,23 @@ public class GymTrainerService {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
         }
         
-        if (trainerToDelete.getImageUrl() != null && !trainerToDelete.getImageUrl().isBlank()) {
-            safeDeleteFile(trainerToDelete.getImageUrl());
+        if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {
+            safeDeleteFile(trainerToDelete.getPicture());
         }
         trainerRepository.delete(trainerToDelete);
     }
 
     private void updateTrainerFromRequest(Trainer trainer, TrainerRequest request) {
-        trainer.setFullName(request.getFullName());
-        trainer.setSpecialization(request.getSpecialization());
-        trainer.setImageUrl(request.getImageUrl());
+        trainer.setName(request.getName());
+        trainer.setSurname(request.getSurname());
+        
+        Profession profession = professionRepository.findById(request.getProfessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Profession not found"));
+        trainer.setProfession(profession);
+        
+        trainer.setPicture(request.getPicture());
+        trainer.setPhone(request.getPhone());
+        trainer.setEmail(request.getEmail());
     }
 
     private void safeDeleteFile(String url) {
@@ -105,11 +115,22 @@ public class GymTrainerService {
     }
 
     private GymTrainerDto toGymTrainerDto(Trainer t) {
+        az.fitnest.catalog.dto.ProfessionDto professionDto = null;
+        if (t.getProfession() != null) {
+            professionDto = az.fitnest.catalog.dto.ProfessionDto.builder()
+                    .id(t.getProfession().getId())
+                    .name(t.getProfession().getName())
+                    .build();
+        }
+        
         return GymTrainerDto.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
-                .full_name(t.getFullName())
-                .specialization(t.getSpecialization())
-                .image_url(t.getImageUrl())
+                .name(t.getName())
+                .surname(t.getSurname())
+                .profession(professionDto)
+                .picture(t.getPicture())
+                .phone(t.getPhone())
+                .email(t.getEmail())
                 .build();
     }
 

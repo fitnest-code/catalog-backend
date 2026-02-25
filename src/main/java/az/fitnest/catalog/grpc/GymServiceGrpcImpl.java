@@ -130,9 +130,13 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
             for (az.fitnest.catalog.dto.GymTrainerDto item : dto.getItems()) {
                 builder.addItems(GymTrainer.newBuilder()
                         .setTrainerId(item.getTrainer_id() != null ? item.getTrainer_id() : "")
-                        .setFullName(item.getFull_name())
-                        .setSpecialization(item.getSpecialization())
-                        .setImageUrl(item.getImage_url() != null ? item.getImage_url() : "")
+                        .setName(item.getName())
+                        .setSurname(item.getSurname())
+                        .setProfessionId(item.getProfession() != null ? item.getProfession().getId() : 0)
+                        .setProfessionName(item.getProfession() != null ? item.getProfession().getName() : "")
+                        .setPicture(item.getPicture() != null ? item.getPicture() : "")
+                        .setPhone(item.getPhone() != null ? item.getPhone() : "")
+                        .setEmail(item.getEmail() != null ? item.getEmail() : "")
                         .build());
             }
         }
@@ -224,9 +228,12 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     @Override
     public void addTrainer(AddTrainerRequest request, StreamObserver<AddTrainerResponse> responseObserver) {
         az.fitnest.catalog.dto.TrainerRequest trainerRequest = new az.fitnest.catalog.dto.TrainerRequest();
-        trainerRequest.setFullName(request.getFullName());
-        trainerRequest.setSpecialization(request.getSpecialization());
-        trainerRequest.setImageUrl(request.getImageUrl());
+        trainerRequest.setName(request.getName());
+        trainerRequest.setSurname(request.getSurname());
+        trainerRequest.setProfessionId(request.getProfessionId());
+        trainerRequest.setPicture(request.getPicture());
+        trainerRequest.setPhone(request.getPhone());
+        trainerRequest.setEmail(request.getEmail());
         
         gymTrainerService.addTrainer(request.getGymId(), trainerRequest);
         responseObserver.onNext(AddTrainerResponse.newBuilder().setSuccess(true).build());
@@ -236,9 +243,12 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     @Override
     public void updateTrainer(UpdateTrainerRequest request, StreamObserver<UpdateTrainerResponse> responseObserver) {
         az.fitnest.catalog.dto.TrainerRequest trainerRequest = new az.fitnest.catalog.dto.TrainerRequest();
-        trainerRequest.setFullName(request.getFullName());
-        trainerRequest.setSpecialization(request.getSpecialization());
-        trainerRequest.setImageUrl(request.getImageUrl());
+        trainerRequest.setName(request.getName());
+        trainerRequest.setSurname(request.getSurname());
+        trainerRequest.setProfessionId(request.getProfessionId());
+        trainerRequest.setPicture(request.getPicture());
+        trainerRequest.setPhone(request.getPhone());
+        trainerRequest.setEmail(request.getEmail());
         
         gymTrainerService.updateTrainer(request.getGymId(), request.getTrainerId(), trainerRequest);
         responseObserver.onNext(UpdateTrainerResponse.newBuilder().setSuccess(true).build());

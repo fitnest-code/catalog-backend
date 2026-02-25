@@ -239,11 +239,22 @@ public class GymReadService {
     }
 
     private GymTrainerDto toGymTrainerDto(Trainer t) {
+        az.fitnest.catalog.dto.ProfessionDto professionDto = null;
+        if (t.getProfession() != null) {
+            professionDto = az.fitnest.catalog.dto.ProfessionDto.builder()
+                    .id(t.getProfession().getId())
+                    .name(t.getProfession().getName())
+                    .build();
+        }
+        
         return GymTrainerDto.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
-                .full_name(t.getFullName())
-                .specialization(t.getSpecialization())
-                .image_url(t.getImageUrl())
+                .name(t.getName())
+                .surname(t.getSurname())
+                .profession(professionDto)
+                .picture(t.getPicture())
+                .phone(t.getPhone())
+                .email(t.getEmail())
                 .build();
     }
 

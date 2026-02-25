@@ -10,13 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GymTrainerDto {
-    private String trainer_id;
+@Schema(description = "Profession details")
+public class ProfessionDto {
+    @Schema(description = "Unique ID of the profession")
+    private Long id;
+    
+    @Schema(description = "Name of the profession", example = "CrossFit Coach")
     private String name;
-    private String surname;
-    private ProfessionDto profession;
-    private String picture;
-    private String phone;
-    private String email;
 }
-

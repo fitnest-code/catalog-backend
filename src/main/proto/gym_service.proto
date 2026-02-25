@@ -89,9 +89,14 @@ message GymTrainersResponse {
 }
 message GymTrainer {
   string trainer_id = 1;
-  string full_name = 2;
-  string specialization = 3;
-  string image_url = 4;
+  string name = 2;
+  string surname = 3;
+  // ProfessionDto is represented inline here or via ID. Let's make it inline.
+  int64 profession_id = 4;
+  string profession_name = 5;
+  string picture = 6;
+  string phone = 7;
+  string email = 8;
 }
 message GetReviewsRequest {
   int64 gym_id = 1;
@@ -154,9 +159,12 @@ message GymMainPage {
 
 message AddTrainerRequest {
   int64 gym_id = 1;
-  string full_name = 2;
-  string specialization = 3;
-  string image_url = 4;
+  string name = 2;
+  string surname = 3;
+  int64 profession_id = 4;
+  string picture = 5;
+  string phone = 6;
+  string email = 7;
 }
 message AddTrainerResponse {
   bool success = 1;
@@ -164,9 +172,12 @@ message AddTrainerResponse {
 message UpdateTrainerRequest {
   int64 gym_id = 1;
   int64 trainer_id = 2;
-  string full_name = 3;
-  string specialization = 4;
-  string image_url = 5;
+  string name = 3;
+  string surname = 4;
+  int64 profession_id = 5;
+  string picture = 6;
+  string phone = 7;
+  string email = 8;
 }
 message UpdateTrainerResponse {
   bool success = 1;

@@ -1,93 +1,39 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  io.swagger.v3.oas.annotations.media.Schema
- *  jakarta.validation.constraints.NotBlank
- */
 package az.fitnest.catalog.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Schema(description="Request to create or update a trainer")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "Request to create or update a trainer")
 public class TrainerRequest {
-    @NotBlank
-    @Schema(description="Trainer's full name", example="John Doe")
-    private String fullName;
-    @Schema(description="Specialization", example="CrossFit, Yoga")
-    private String specialization;
-    @Schema(description="Profile image URL")
-    private String imageUrl;
 
-    public String getFullName() {
-        return this.fullName;
-    }
+    @NotBlank(message = "Trainer's name is required")
+    @Schema(description = "Trainer's first name", example = "John")
+    private String name;
 
-    public String getSpecialization() {
-        return this.specialization;
-    }
+    @NotBlank(message = "Trainer's surname is required")
+    @Schema(description = "Trainer's last name", example = "Doe")
+    private String surname;
 
-    public String getImageUrl() {
-        return this.imageUrl;
-    }
+    @NotNull(message = "Profession ID is required")
+    @Schema(description = "ID of the assigned Profession entity", example = "1")
+    private Long professionId;
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+    @Schema(description = "Profile image URL")
+    private String picture;
 
-    public void setSpecialization(String specialization) {
-        this.specialization = specialization;
-    }
+    @Schema(description = "Contact phone number", example = "+1234567890")
+    private String phone;
 
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        }
-        if (!(o instanceof TrainerRequest)) {
-            return false;
-        }
-        TrainerRequest other = (TrainerRequest)o;
-        if (!other.canEqual(this)) {
-            return false;
-        }
-        String this$fullName = this.getFullName();
-        String other$fullName = other.getFullName();
-        if (this$fullName == null ? other$fullName != null : !this$fullName.equals(other$fullName)) {
-            return false;
-        }
-        String this$specialization = this.getSpecialization();
-        String other$specialization = other.getSpecialization();
-        if (this$specialization == null ? other$specialization != null : !this$specialization.equals(other$specialization)) {
-            return false;
-        }
-        String this$imageUrl = this.getImageUrl();
-        String other$imageUrl = other.getImageUrl();
-        return !(this$imageUrl == null ? other$imageUrl != null : !this$imageUrl.equals(other$imageUrl));
-    }
-
-    protected boolean canEqual(Object other) {
-        return other instanceof TrainerRequest;
-    }
-
-    public int hashCode() {
-        int PRIME = 59;
-        int result = 1;
-        String $fullName = this.getFullName();
-        result = result * 59 + ($fullName == null ? 43 : $fullName.hashCode());
-        String $specialization = this.getSpecialization();
-        result = result * 59 + ($specialization == null ? 43 : $specialization.hashCode());
-        String $imageUrl = this.getImageUrl();
-        result = result * 59 + ($imageUrl == null ? 43 : $imageUrl.hashCode());
-        return result;
-    }
-
-    public String toString() {
-        return "TrainerRequest(fullName=" + this.getFullName() + ", specialization=" + this.getSpecialization() + ", imageUrl=" + this.getImageUrl() + ")";
-    }
+    @Schema(description = "Contact email address", example = "john.doe@example.com")
+    private String email;
 }
 

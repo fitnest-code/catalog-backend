@@ -56,6 +56,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -72,8 +73,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping(value={"/api/v1"})
-@Tag(name="Gyms", description="Endpoints for managing and exploring gyms, including packages, trainers, and user reviews")
+@RequestMapping("/api/v1/gyms")
+@RequiredArgsConstructor
+@Tag(name = "Gyms", description = "Endpoints for managing and exploring gyms, including packages, trainers, and user reviews")
 public class GymController {
     private final GymReadService gymReadService;
     private final GymWriteService gymWriteService;
@@ -81,7 +83,7 @@ public class GymController {
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
 
-    @GetMapping(value={"/gyms/{gymId:\\d+}"})
+    @GetMapping("/{gymId:\\d+}")
     @Operation(summary="Get gym details", description="Retrieves full details of a specific gym, including location, facilities, and user-specific favorite status.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Gym details retrieved successfully", content={@Content(schema=@Schema(implementation=GymDetailResponse.class))}), @ApiResponse(responseCode="404", description="Gym not found")})
     public ResponseEntity<GymDetailResponse> getGymDetail(@AuthenticationPrincipal Object principal, @Parameter(description="ID of the gym") @PathVariable Long gymId) {
@@ -89,14 +91,14 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymDetail(userId, gymId));
     }
 
-    @GetMapping(value={"/gyms/{gymId}/images"})
+    @GetMapping("/{gymId}/images")
     @Operation(summary="Get gym images", description="Returns a list of all images associated with the gym (logo, cover, interior).")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Images retrieved successfully", content={@Content(schema=@Schema(implementation=GymImageResponse.class))})})
     public ResponseEntity<GymImageResponse> getGymImages(@PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymImages(gymId));
     }
 
-    @GetMapping(value={"/gyms/{gymId}/qr"})
+    @GetMapping("/{gymId}/qr")
     @Operation(summary="Get gym QR code URL", description="Returns a stream URL for the gym's QR code image.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="QR code URL retrieved successfully", content={@Content(schema=@Schema(implementation=GymQrResponse.class))})})
     public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description="ID of the gym") @PathVariable Long gymId) {
@@ -106,21 +108,21 @@ public class GymController {
 
 
 
-    @GetMapping(value={"/gyms/{gymId}/trainers"})
+    @GetMapping("/{gymId}/trainers")
     @Operation(summary="Get gym trainers", description="Returns a paginated list of trainers working at the gym.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Trainers retrieved successfully")})
     public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
         return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size));
     }
 
-    @GetMapping(value={"/gyms/{gymId}/reviews"})
+    @GetMapping("/{gymId}/reviews")
     @Operation(summary="Get gym reviews", description="Returns a paginated list of user reviews for the gym.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Reviews retrieved successfully")})
     public ResponseEntity<PaginatedResponse<GymReviewDto>> getReviews(@PathVariable Long gymId, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="Sort order (e.g., newest, highest_rating)") @RequestParam(required=false) String sort) {
         return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, page_size, sort));
     }
 
-    @PostMapping(value={"/gyms/{gymId}/reviews"})
+    @PostMapping("/{gymId}/reviews")
     @Operation(summary="Submit a review", description="Allows an authenticated user to post a rating and comment for a gym.")
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={@ApiResponse(responseCode="201", description="Review submitted successfully"), @ApiResponse(responseCode="401", description="User not authenticated"), @ApiResponse(responseCode="400", description="Invalid rating scale (1-5)")})
@@ -133,7 +135,7 @@ public class GymController {
         return ResponseEntity.status(201).build();
     }
 
-    @PostMapping(value={"/gyms/{gymId}/check-in"})
+    @PostMapping("/{gymId}/check-in")
     @Operation(summary="Check-in to a gym", description="Allows an authenticated user to check-in using the gym's QR code. Deducts one entry from the active subscription.")
     @SecurityRequirement(name="bearerAuth")
     @ApiResponses(value={
@@ -153,163 +155,30 @@ public class GymController {
         }
     }
 
-    @GetMapping(value={"/gyms/{gymId}/reservation-rules"})
+    @GetMapping("/{gymId}/reservation-rules")
     @Operation(summary="Get reservation rules", description="Returns specific rules for gym entry and reservation (e.g., time limits, cancellation policy).")
     public ResponseEntity<Object> getReservationRules(@PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getReservationRules(gymId));
     }
 
-    @GetMapping(value={"/gyms/closest"})
+    @GetMapping("/closest")
     @Operation(summary="Get closest gyms", description="Returns the list of gyms closest to the provided coordinates. Supports search and pagination. Returns address text (not latitude/longitude) and distance in kilometers.")
     @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
     public ResponseEntity<PaginatedResponse<GymMainPageDto>> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         return ResponseEntity.ok(this.gymReadService.getClosestGyms(q, page, page_size, lat, lng));
     }
-
-
-
-    @PostMapping(value={"/admin/gyms"})
-    @Operation(summary="Create gym (Admin)", description="Creates a new gym profile. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="201", description="Gym created successfully"), @ApiResponse(responseCode="403", description="Insufficient permissions")})
-    public ResponseEntity<Void> createGym(@Valid @RequestBody GymRequest request) {
-        this.gymWriteService.createGym(request);
-        return ResponseEntity.status(201).build();
-    }
-
-    @PutMapping(value={"/admin/gyms/{gymId}"})
-    @Operation(summary="Update gym (Admin)", description="Updates basic information of an existing gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Gym updated successfully"), @ApiResponse(responseCode="404", description="Gym not found")})
-    public ResponseEntity<Void> updateGym(@PathVariable Long gymId, @Valid @RequestBody GymRequest request) {
-        this.gymWriteService.updateGym(gymId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping(value={"/admin/gyms/{gymId}/subscriptions"})
-    @Operation(summary="Update gym subscriptions (Admin)", description="Updates the subscription plans and benefits linked to a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Subscriptions updated successfully"), @ApiResponse(responseCode="404", description="Gym not found")})
-    public ResponseEntity<Void> updateGymSubscriptions(@PathVariable Long gymId, @RequestBody GymSubscriptionsUpdateRequest request) {
-        this.gymWriteService.updateGymSubscriptions(gymId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping(value={"/admin/gyms/{gymId}"})
-    @Operation(summary="Delete gym (Admin)", description="Deletes a gym profile and all associated data. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Gym deleted successfully")})
-    public ResponseEntity<Void> deleteGym(@PathVariable Long gymId) {
-        this.gymWriteService.deleteGym(gymId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value={"/admin/gyms/{gymId}/trainers"})
-    @Operation(summary="Add trainer (Admin)", description="Registers a new trainer for a specific gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="201", description="Trainer added successfully")})
-    public ResponseEntity<Void> addTrainer(@PathVariable Long gymId, @RequestBody TrainerRequest request) {
-        this.gymTrainerService.addTrainer(gymId, request);
-        return ResponseEntity.status(201).build();
-    }
-
-    @PutMapping(value={"/admin/gyms/{gymId}/trainers/{trainerId}"})
-    @Operation(summary="Update trainer (Admin)", description="Updates trainer information. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> updateTrainer(@PathVariable Long gymId, @PathVariable Long trainerId, @RequestBody TrainerRequest request) {
-        this.gymTrainerService.updateTrainer(gymId, trainerId, request);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping(value={"/admin/gyms/{gymId}/trainers/{trainerId}"})
-    @Operation(summary="Delete trainer (Admin)", description="Removes a trainer profile from a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteTrainer(@PathVariable Long gymId, @PathVariable Long trainerId) {
-        this.gymTrainerService.deleteTrainer(gymId, trainerId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping(value={"/admin/gyms/{gymId}/logo"})
-    @Operation(summary="Update logo (Admin)", description="Updates the logo image URL for a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> updateGymLogo(@PathVariable Long gymId, @RequestBody UpdateImageUrlRequest request) {
-        this.gymImageService.updateLogoUrl(gymId, request.getUrl());
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping(value={"/admin/gyms/{gymId}/logo"})
-    @Operation(summary="Delete logo (Admin)", description="Removes the logo image for a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGymLogo(@PathVariable Long gymId) {
-        this.gymImageService.deleteLogoUrl(gymId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping(value={"/admin/gyms/{gymId}/cover"})
-    @Operation(summary="Update cover image (Admin)", description="Updates the cover image URL for a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> updateGymCover(@PathVariable Long gymId, @RequestBody UpdateImageUrlRequest request) {
-        this.gymImageService.updateCoverImageUrl(gymId, request.getUrl());
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping(value={"/admin/gyms/{gymId}/cover"})
-    @Operation(summary="Delete cover image (Admin)", description="Removes the cover image for a gym. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGymCover(@PathVariable Long gymId) {
-        this.gymImageService.deleteCoverImageUrl(gymId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value={"/admin/gyms/{gymId}/rooms/{roomName}/images"}, consumes={"multipart/form-data"})
-    @Operation(summary="Upload room image (Admin)", description="Uploads an interior image for a gym associated with a room. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<GymImageDto> uploadRoomImage(@PathVariable Long gymId, @PathVariable String roomName, @RequestParam(value="file") MultipartFile file) {
-        return ResponseEntity.ok(this.gymImageService.uploadRoomImage(gymId, roomName, file));
-    }
-
-
-    @DeleteMapping(value={"/admin/gyms/{gymId}/rooms/images/{imageId}"})
-    @Operation(summary="Delete room image (Admin)", description="Removes a specific interior image from a gym profile. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteRoomImage(@PathVariable Long gymId, @PathVariable Long imageId) {
-        this.gymImageService.deleteRoomImage(gymId, imageId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value={"/gyms/{gymId}/location"})
-    @Operation(summary="Get gym location", description="Returns the resolved address text along with latitude and longitude for the gym.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Location retrieved successfully", content={@Content(schema=@Schema(implementation=LocationDto.class))}), @ApiResponse(responseCode="404", description="Gym not found")})
-    public ResponseEntity<LocationDto> getGymLocation(@Parameter(description="ID of the gym") @PathVariable Long gymId) {
+    @GetMapping("/{gymId}/location")
+    @Operation(summary = "Get gym location", description = "Returns the resolved address text along with latitude and longitude for the gym.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Location retrieved successfully", content = {@Content(schema = @Schema(implementation = LocationDto.class))}), @ApiResponse(responseCode = "404", description = "Gym not found")})
+    public ResponseEntity<LocationDto> getGymLocation(@Parameter(description = "ID of the gym") @PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymLocation(gymId));
     }
 
     private Long extractUserId(Object principal) {
         if (principal instanceof Long) {
-            return (Long)principal;
+            return (Long) principal;
         }
         return null;
-    }
-
-    public GymController(GymReadService gymReadService, GymWriteService gymWriteService, GymImageService gymImageService, GymReviewService gymReviewService, GymTrainerService gymTrainerService) {
-        this.gymReadService = gymReadService;
-        this.gymWriteService = gymWriteService;
-        this.gymImageService = gymImageService;
-        this.gymReviewService = gymReviewService;
-        this.gymTrainerService = gymTrainerService;
     }
 }
 

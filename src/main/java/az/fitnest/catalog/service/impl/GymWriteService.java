@@ -169,8 +169,8 @@ public class GymWriteService {
 
         if (gym.getTrainers() != null && !gym.getTrainers().isEmpty()) {
             for (Trainer trainer : gym.getTrainers()) {
-                if (trainer.getImageUrl() != null && !trainer.getImageUrl().isBlank()) {
-                    safeDeleteFile(trainer.getImageUrl());
+                if (trainer.getPicture() != null && !trainer.getPicture().isBlank()) {
+                    safeDeleteFile(trainer.getPicture());
                 }
             }
         }

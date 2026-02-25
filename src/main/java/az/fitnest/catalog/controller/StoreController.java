@@ -57,189 +57,102 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping(value={"/api/v1"})
-@Tag(name="Stores", description="Endpoints for managing catalog stores and user interactions with stores.")
+@RequestMapping("/api/v1/stores")
+@RequiredArgsConstructor
+@Tag(name = "Stores", description = "Endpoints for viewing catalog stores and user interactions with stores.")
 public class StoreController {
+
     private final StoreService storeService;
 
-    @Operation(summary="Get catalog stores", description="Returns a paginated list of stores (same fields as /stores/closest but without distanceKm). Search (q) matches only store name and address; if q is empty, returns all stores paginated.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Stores retrieved successfully", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
-    @GetMapping(value={"/stores"})
-    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getMarketStores(@Parameter(description="Search query (matches name or address)") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    @Operation(summary = "Get catalog stores", description = "Returns a paginated list of stores. Search (q) matches only store name and address.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Stores retrieved successfully", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}), @ApiResponse(responseCode = "401", description = "Authentication required")})
+    @GetMapping
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getMarketStores(@Parameter(description = "Search query (matches name or address)") @RequestParam(value = "q", required = false) String q, @Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreMainPage(userId, q, page, page_size));
     }
 
-    @Operation(summary="Get closest stores", description="Returns paginated list of stores closest to provided coordinates. Returns address text and distance in kilometers.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))}), @ApiResponse(responseCode="401", description="Authentication required")})
-    @GetMapping(value={"/stores/closest"})
-    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getClosestStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+    @Operation(summary = "Get closest stores", description = "Returns paginated list of stores closest to provided coordinates.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Closest stores retrieved", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}), @ApiResponse(responseCode = "401", description = "Authentication required")})
+    @GetMapping("/closest")
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getClosestStores(@Parameter(description = "Search query") @RequestParam(value = "q", required = false) String q, @Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "User latitude") @RequestParam(value = "lat", required = false) Double lat, @Parameter(description = "User longitude") @RequestParam(value = "lng", required = false) Double lng) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getClosestStores(userId, q, page, page_size, lat, lng));
     }
 
-    @Operation(summary="Get store details", description="Retrieves full details of a specific store, including products and distance from user.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Store details retrieved successfully", content={@Content(schema=@Schema(implementation=StoreDetailResponseDto.class))}), @ApiResponse(responseCode="404", description="Store not found")})
-    @GetMapping(value={"/stores/{storeId:\\d+}"})
-    public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description="ID of the store") @PathVariable Long storeId, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+    @Operation(summary = "Get store details", description = "Retrieves full details of a specific store, including products.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Store details retrieved successfully", content = {@Content(schema = @Schema(implementation = StoreDetailResponseDto.class))}), @ApiResponse(responseCode = "404", description = "Store not found")})
+    @GetMapping("/{storeId:\\d+}")
+    public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "ID of the store") @PathVariable Long storeId, @Parameter(description = "User latitude") @RequestParam(value = "lat", required = false) Double lat, @Parameter(description = "User longitude") @RequestParam(value = "lng", required = false) Double lng) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
     }
 
-    @Operation(summary="Get store location", description="Returns the structured latitude and longitude coordinates and text of a specific store.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Store location retrieved", content={@Content(schema=@Schema(implementation=LocationDto.class))}), @ApiResponse(responseCode="404", description="Store not found")})
-    @GetMapping(value={"/stores/{storeId:\\d+}/location"})
-    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description="ID of the store") @PathVariable Long storeId) {
+    @Operation(summary = "Get store location", description = "Returns the coordinates and text of a specific store.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Store location retrieved", content = {@Content(schema = @Schema(implementation = LocationDto.class))}), @ApiResponse(responseCode = "404", description = "Store not found")})
+    @GetMapping("/{storeId:\\d+}/location")
+    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description = "ID of the store") @PathVariable Long storeId) {
         return ResponseEntity.ok(this.storeService.getStoreLocation(storeId));
     }
 
-    @Operation(summary="Save/Unsave store", description="Toggles the 'saved' status of a store for the current user.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Toggle successful", content={@Content(examples={@ExampleObject(value="{\"is_saved\": true}")})}), @ApiResponse(responseCode="404", description="Store not found")})
-    @PostMapping(value={"/stores/{storeId}/save"})
+    @Operation(summary = "Save/Unsave store", description = "Toggles the 'saved' status of a store.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Toggle successful"), @ApiResponse(responseCode = "404", description = "Store not found")})
+    @PostMapping("/{storeId}/save")
     public ResponseEntity<Map<String, Boolean>> saveStore(@PathVariable Long storeId) {
         Long userId = this.getCurrentUserId();
         boolean isSaved = this.storeService.toggleSave(userId, storeId);
         return ResponseEntity.ok(Map.of("is_saved", isSaved));
     }
 
-    @Operation(summary="Get saved stores", description="Returns a list of all stores saved by the authenticated user.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Saved stores retrieved")})
-    @GetMapping(value={"/stores/saved"})
+    @Operation(summary = "Get saved stores", description = "Returns a list of all stores saved by the authenticated user.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Saved stores retrieved")})
+    @GetMapping("/saved")
     public ResponseEntity<List<StoreMainPageDto>> getSavedStores() {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getSavedStores(userId));
     }
 
-    @Operation(summary="Get discounted stores", description="Returns a paginated list of stores that currently have active discounts. Supports search with 'q'.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Discounted stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
-    @GetMapping(value={"/stores/discounted"})
-    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getDiscountedStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    @Operation(summary = "Get discounted stores", description = "Returns a paginated list of stores with active discounts.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Discounted stores retrieved", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))})})
+    @GetMapping("/discounted")
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getDiscountedStores(@Parameter(description = "Search query") @RequestParam(value = "q", required = false) String q, @Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getDiscountedStores(userId, q, page, page_size));
     }
 
-    @Operation(summary="Get new stores", description="Returns paginated list of stores created within the last 30 days. Supports search with 'q'.")
-    @PreAuthorize(value="isAuthenticated()")
-    @SecurityRequirement(name="bearerAuth")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="New stores retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
-    @GetMapping(value={"/stores/new"})
-    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getNewStores(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size) {
+    @Operation(summary = "Get new stores", description = "Returns paginated list of stores created recently.")
+    @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "New stores retrieved", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))})})
+    @GetMapping("/new")
+    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getNewStores(@Parameter(description = "Search query") @RequestParam(value = "q", required = false) String q, @Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getNewStores(userId, q, page, page_size));
-    }
-
-    @Operation(summary="Create store (Admin)", description="Creates a new store. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="201", description="Store created successfully"), @ApiResponse(responseCode="400", description="Invalid store data")})
-    @PostMapping(value={"/admin/stores"})
-    public ResponseEntity<StoreDetailResponseDto> createStoreAdmin(@RequestBody StoreRequest request) {
-        return ResponseEntity.status(201).body(this.storeService.createStore(request));
-    }
-
-    @Operation(summary="Update store (Admin)", description="Updates an existing store. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Store updated successfully"), @ApiResponse(responseCode="404", description="Store not found")})
-    @PutMapping(value={"/admin/stores/{storeId}"})
-    public ResponseEntity<StoreDetailResponseDto> updateStoreAdmin(@PathVariable Long storeId, @RequestBody StoreRequest request) {
-        return ResponseEntity.ok(this.storeService.updateStore(storeId, request));
-    }
-
-    @Operation(summary="Delete store (Admin)", description="Permanently deletes a store. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Store deleted successfully")})
-    @DeleteMapping(value={"/admin/stores/{storeId}"})
-    public ResponseEntity<Void> deleteStoreAdmin(@PathVariable Long storeId) {
-        this.storeService.deleteStore(storeId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary="Update store logo (Admin)", description="Uploads or replaces the store's logo image. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Logo updated successfully")})
-    @PutMapping(value={"/admin/stores/{storeId}/logo"}, consumes={"multipart/form-data"})
-    public ResponseEntity<Void> updateStoreLogo(@PathVariable Long storeId, @RequestParam(value="file") org.springframework.web.multipart.MultipartFile file) {
-        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
-             this.storeService.deleteFileSafely(store.getLogoUrl());
-        }
-        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
-        this.storeService.updateStoreLogoUrl(storeId, fullUrl);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary="Delete store logo (Admin)", description="Removes the store's logo image. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Logo deleted successfully")})
-    @DeleteMapping(value={"/admin/stores/{storeId}/logo"})
-    public ResponseEntity<Void> deleteStoreLogo(@PathVariable Long storeId) {
-        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
-             this.storeService.deleteFileSafely(store.getLogoUrl());
-             this.storeService.updateStoreLogoUrl(storeId, null);
-        }
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary="Update store cover image (Admin)", description="Uploads or replaces the store's cover image. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Cover image updated successfully")})
-    @PutMapping(value={"/admin/stores/{storeId}/cover"}, consumes={"multipart/form-data"})
-    public ResponseEntity<Void> updateStoreCover(@PathVariable Long storeId, @RequestParam(value="file") org.springframework.web.multipart.MultipartFile file) {
-        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
-             this.storeService.deleteFileSafely(store.getCoverImageUrl());
-        }
-        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
-        this.storeService.updateStoreCoverImageUrl(storeId, fullUrl);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary="Delete store cover image (Admin)", description="Removes the store's cover image. Requires ADMIN role.")
-    @SecurityRequirement(name="bearerAuth")
-    @PreAuthorize(value="hasRole('ADMIN')")
-    @ApiResponses(value={@ApiResponse(responseCode="204", description="Cover image deleted successfully")})
-    @DeleteMapping(value={"/admin/stores/{storeId}/cover"})
-    public ResponseEntity<Void> deleteStoreCover(@PathVariable Long storeId) {
-        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
-             this.storeService.deleteFileSafely(store.getCoverImageUrl());
-             this.storeService.updateStoreCoverImageUrl(storeId, null);
-        }
-        return ResponseEntity.noContent().build();
     }
 
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Long) {
-            return (Long)auth.getPrincipal();
+            return (Long) auth.getPrincipal();
         }
         return null;
-    }
-
-    public StoreController(StoreService storeService) {
-        this.storeService = storeService;
     }
 }
 
