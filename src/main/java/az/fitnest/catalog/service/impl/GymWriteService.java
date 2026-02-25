@@ -65,8 +65,12 @@ public class GymWriteService {
         }
         gym.setPhone(request.getPhone());
         gym.setEmail(request.getEmail());
-        if (request.getCategoryIds() != null) {
-            gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
+        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+            if (categories.size() != request.getCategoryIds().size()) {
+                throw new BadRequestException("INVALID_CATEGORIES", "One or more category IDs are invalid");
+            }
+            gym.setCategories(new HashSet<>(categories));
         }
 
 
@@ -100,8 +104,12 @@ public class GymWriteService {
         }
         gym.setPhone(request.getPhone());
         gym.setEmail(request.getEmail());
-        if (request.getCategoryIds() != null) {
-            gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
+        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+            if (categories.size() != request.getCategoryIds().size()) {
+                throw new BadRequestException("INVALID_CATEGORIES", "One or more category IDs are invalid");
+            }
+            gym.setCategories(new HashSet<>(categories));
         }
 
         gymRepository.save(gym);
