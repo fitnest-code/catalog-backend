@@ -5,16 +5,21 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
 
+    @lombok.Builder.Default
     private OffsetDateTime timestamp = OffsetDateTime.now();
     private Integer status;
     private String error;
     private String path;
     private Map<String, Object> details;
 
-    public ErrorResponse() {}
+
 
     public ErrorResponse(Integer status, String error, String path, Map<String, Object> details) {
         this.status = status;
@@ -23,43 +28,5 @@ public class ErrorResponse {
         this.details = details;
     }
 
-    public OffsetDateTime getTimestamp() {
-        return timestamp;
-    }
 
-    public void setTimestamp(OffsetDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public Integer getStatus() {
-        return status;
-    }
-
-    public void setStatus(Integer status) {
-        this.status = status;
-    }
-
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public Map<String, Object> getDetails() {
-        return details;
-    }
-
-    public void setDetails(Map<String, Object> details) {
-        this.details = details;
-    }
 }

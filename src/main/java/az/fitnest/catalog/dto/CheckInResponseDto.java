@@ -10,16 +10,12 @@ import java.time.LocalTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CheckInResponseDto {
     private String addressText;
     private LocalDate visitDate;
     private LocalTime visitHour;
 
-    public CheckInResponseDto() {}
 
-    public CheckInResponseDto(String addressText, LocalDate visitDate, LocalTime visitHour) {
-        this.addressText = addressText;
-        this.visitDate = visitDate;
-        this.visitHour = visitHour;
-    }
 }

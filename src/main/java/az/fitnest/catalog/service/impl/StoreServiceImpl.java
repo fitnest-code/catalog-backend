@@ -22,6 +22,7 @@ import az.fitnest.catalog.dto.StoreDiscountDto;
 import az.fitnest.catalog.dto.StoreListItemDto;
 import az.fitnest.catalog.dto.StoreListResponseDto;
 import az.fitnest.catalog.dto.StoreMainPageDto;
+import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.StoreRequest;
 import az.fitnest.catalog.dto.StoreResponseDto;
 import az.fitnest.catalog.dto.StoreSearchItemDto;
@@ -127,12 +128,6 @@ implements StoreService {
     @Transactional
     public StoreDetailResponseDto updateStore(Long storeId, StoreRequest request) {
         Store store = (Store)this.storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
-        if (request.getLogoUrl() != null && !request.getLogoUrl().equals(store.getLogoUrl()) && store.getLogoUrl() != null) {
-            this.fileStorageService.deleteFile(store.getLogoUrl());
-        }
-        if (request.getCoverImageUrl() != null && !request.getCoverImageUrl().equals(store.getCoverImageUrl()) && store.getCoverImageUrl() != null) {
-            this.fileStorageService.deleteFile(store.getCoverImageUrl());
-        }
         this.updateStoreFromRequest(store, request);
         Store saved = (Store)this.storeRepository.save(store);
         return this.getStoreDetail(null, saved.getId());
@@ -165,8 +160,6 @@ implements StoreService {
         boolean bl = coordsChanged = store.getAddress() == null || !Objects.equals(store.getAddress().getLatitude(), reqLat) || !Objects.equals(store.getAddress().getLongitude(), reqLng);
         store.setAddress(request.getAddress() != null ? new StoreAddress(coordsChanged ? this.resolveAddressText(reqLat, reqLng) : (store.getAddress() != null ? store.getAddress().getAddressText() : this.resolveAddressText(reqLat, reqLng)), reqLat, reqLng) : null);
         store.setPhone(request.getPhone());
-        store.setLogoUrl(request.getLogoUrl());
-        store.setCoverImageUrl(request.getCoverImageUrl());
         store.setCategory(request.getCategory());
         store.setStatus(request.getStatus());
         if (request.getWorkingHours() != null) {
@@ -448,6 +441,59 @@ implements StoreService {
         this.savedStoreRepository = savedStoreRepository;
         this.reverseGeocodingService = reverseGeocodingService;
         this.fileStorageService = fileStorageService;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LocationDto getStoreLocation(Long storeId) {
+        Store store = this.storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        StoreAddress addr = store.getAddress();
+        if (addr == null) {
+             return LocationDto.builder().build();
+        }
+        return LocationDto.builder()
+             .addressText(addr.getAddressText())
+             .latitude(addr.getLatitude())
+             .longitude(addr.getLongitude())
+             .build();
+    }
+
+    @Override
+    @Transactional(readOnly=true)
+    public Store getStoreEntityById(Long storeId) {
+        return this.storeRepository.findById(storeId)
+            .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+    }
+
+    @Override
+    public void deleteFileSafely(String url) {
+        try {
+            this.fileStorageService.deleteFile(url);
+        } catch (Exception e) {
+            // Log intentionally swallowed per design strategy
+        }
+    }
+
+    @Override
+    public String uploadFileDirectly(Long storeId, MultipartFile file) {
+        String fsId = this.fileStorageService.saveFile(file, "/stores/" + storeId);
+        return "/api/v1/media/stream/" + fsId;
+    }
+
+    @Override
+    @Transactional
+    public void updateStoreLogoUrl(Long storeId, String logoUrl) {
+        Store store = getStoreEntityById(storeId);
+        store.setLogoUrl(logoUrl);
+        this.storeRepository.save(store);
+    }
+
+    @Override
+    @Transactional
+    public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl) {
+        Store store = getStoreEntityById(storeId);
+        store.setCoverImageUrl(coverImageUrl);
+        this.storeRepository.save(store);
     }
 }
 

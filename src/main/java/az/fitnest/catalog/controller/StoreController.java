@@ -29,6 +29,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreMainPageDto;
+import az.fitnest.catalog.dto.LocationDto;
 import az.fitnest.catalog.dto.StoreRequest;
 import az.fitnest.catalog.dto.StoreResponseDto;
 import az.fitnest.catalog.service.StoreService;
@@ -91,6 +92,15 @@ public class StoreController {
     public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description="ID of the store") @PathVariable Long storeId, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
+    }
+
+    @Operation(summary="Get store location", description="Returns the structured latitude and longitude coordinates and text of a specific store.")
+    @PreAuthorize(value="isAuthenticated()")
+    @SecurityRequirement(name="bearerAuth")
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Store location retrieved", content={@Content(schema=@Schema(implementation=LocationDto.class))}), @ApiResponse(responseCode="404", description="Store not found")})
+    @GetMapping(value={"/stores/{storeId:\\d+}/location"})
+    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description="ID of the store") @PathVariable Long storeId) {
+        return ResponseEntity.ok(this.storeService.getStoreLocation(storeId));
     }
 
     @Operation(summary="Save/Unsave store", description="Toggles the 'saved' status of a store for the current user.")
@@ -159,6 +169,64 @@ public class StoreController {
     @DeleteMapping(value={"/admin/stores/{storeId}"})
     public ResponseEntity<Void> deleteStoreAdmin(@PathVariable Long storeId) {
         this.storeService.deleteStore(storeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary="Update store logo (Admin)", description="Uploads or replaces the store's logo image. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    @ApiResponses(value={@ApiResponse(responseCode="204", description="Logo updated successfully")})
+    @PutMapping(value={"/admin/stores/{storeId}/logo"}, consumes={"multipart/form-data"})
+    public ResponseEntity<Void> updateStoreLogo(@PathVariable Long storeId, @RequestParam(value="file") org.springframework.web.multipart.MultipartFile file) {
+        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
+        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
+             this.storeService.deleteFileSafely(store.getLogoUrl());
+        }
+        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
+        this.storeService.updateStoreLogoUrl(storeId, fullUrl);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary="Delete store logo (Admin)", description="Removes the store's logo image. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    @ApiResponses(value={@ApiResponse(responseCode="204", description="Logo deleted successfully")})
+    @DeleteMapping(value={"/admin/stores/{storeId}/logo"})
+    public ResponseEntity<Void> deleteStoreLogo(@PathVariable Long storeId) {
+        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
+        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
+             this.storeService.deleteFileSafely(store.getLogoUrl());
+             this.storeService.updateStoreLogoUrl(storeId, null);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary="Update store cover image (Admin)", description="Uploads or replaces the store's cover image. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    @ApiResponses(value={@ApiResponse(responseCode="204", description="Cover image updated successfully")})
+    @PutMapping(value={"/admin/stores/{storeId}/cover"}, consumes={"multipart/form-data"})
+    public ResponseEntity<Void> updateStoreCover(@PathVariable Long storeId, @RequestParam(value="file") org.springframework.web.multipart.MultipartFile file) {
+        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
+        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
+             this.storeService.deleteFileSafely(store.getCoverImageUrl());
+        }
+        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
+        this.storeService.updateStoreCoverImageUrl(storeId, fullUrl);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary="Delete store cover image (Admin)", description="Removes the store's cover image. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    @ApiResponses(value={@ApiResponse(responseCode="204", description="Cover image deleted successfully")})
+    @DeleteMapping(value={"/admin/stores/{storeId}/cover"})
+    public ResponseEntity<Void> deleteStoreCover(@PathVariable Long storeId) {
+        az.fitnest.catalog.model.entity.Store store = this.storeService.getStoreEntityById(storeId);
+        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
+             this.storeService.deleteFileSafely(store.getCoverImageUrl());
+             this.storeService.updateStoreCoverImageUrl(storeId, null);
+        }
         return ResponseEntity.noContent().build();
     }
 

@@ -202,13 +202,13 @@ public class GymReadService {
     }
     
     @Transactional(readOnly = true)
-    public AddressDto getGymLocation(Long gymId) {
+    public LocationDto getGymLocation(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
         Address addr = gym.getAddress();
         if (addr == null) {
-            return AddressDto.builder().build();
+            return LocationDto.builder().build();
         }
-        return AddressDto.builder()
+        return LocationDto.builder()
                 .addressText(addr.getAddressText())
                 .latitude(addr.getLatitude())
                 .longitude(addr.getLongitude())
