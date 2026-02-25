@@ -173,7 +173,7 @@ public class GymController {
     @SecurityRequirement(name="bearerAuth")
     @PreAuthorize(value="hasRole('ADMIN')")
     @ApiResponses(value={@ApiResponse(responseCode="201", description="Gym created successfully"), @ApiResponse(responseCode="403", description="Insufficient permissions")})
-    public ResponseEntity<Void> createGym(@RequestBody GymRequest request) {
+    public ResponseEntity<Void> createGym(@Valid @RequestBody GymRequest request) {
         this.gymWriteService.createGym(request);
         return ResponseEntity.status(201).build();
     }
@@ -183,7 +183,7 @@ public class GymController {
     @SecurityRequirement(name="bearerAuth")
     @PreAuthorize(value="hasRole('ADMIN')")
     @ApiResponses(value={@ApiResponse(responseCode="204", description="Gym updated successfully"), @ApiResponse(responseCode="404", description="Gym not found")})
-    public ResponseEntity<Void> updateGym(@PathVariable Long gymId, @RequestBody GymRequest request) {
+    public ResponseEntity<Void> updateGym(@PathVariable Long gymId, @Valid @RequestBody GymRequest request) {
         this.gymWriteService.updateGym(gymId, request);
         return ResponseEntity.noContent().build();
     }

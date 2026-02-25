@@ -14,6 +14,7 @@ import az.fitnest.catalog.dto.AddressDtoDeserializer;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 
 @JsonDeserialize(using=AddressDtoDeserializer.class)
 public class AddressDto {
@@ -22,9 +23,11 @@ public class AddressDto {
     private String addressText;
     @JsonProperty(access=JsonProperty.Access.WRITE_ONLY)
     @Schema(description="Latitude")
+    @NotNull(message = "Latitude cannot be null")
     private Double latitude;
     @JsonProperty(access=JsonProperty.Access.WRITE_ONLY)
     @Schema(description="Longitude")
+    @NotNull(message = "Longitude cannot be null")
     private Double longitude;
 
     public static AddressDtoBuilder builder() {
