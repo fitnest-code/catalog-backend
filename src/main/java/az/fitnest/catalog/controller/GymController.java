@@ -177,12 +177,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getClosestGyms(q, page, page_size, lat, lng));
     }
 
-    @PutMapping(value={"/gyms/{gymId}/images/upload"}, consumes={"multipart/form-data"})
-    @Operation(summary="Upload gym image", description="Uploads a new image for the gym. Requires partner or admin access.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Image uploaded successfully")})
-    public ResponseEntity<GymImageDto> uploadGymImage(@PathVariable Long gymId, @Parameter(description="Descriptive name for the image") @RequestParam String imageName, @Parameter(description="Image file to upload") @RequestParam(value="file") MultipartFile file) {
-        return ResponseEntity.ok(this.gymImageService.uploadGymImage(gymId, imageName, file));
-    }
+
 
     @PostMapping(value={"/admin/gyms"})
     @Operation(summary="Create gym (Admin)", description="Creates a new gym profile. Requires ADMIN role.")

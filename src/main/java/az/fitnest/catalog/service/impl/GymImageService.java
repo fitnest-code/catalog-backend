@@ -88,22 +88,6 @@ public class GymImageService {
         return GymImageDto.builder().id(gymImage.getId()).gymId(gymId).name(gymImage.getImageName()).url(gymImage.getUrl()).build();
     }
 
-    @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
-    public GymImageDto uploadGymImage(Long gymId, String imageName, MultipartFile file) {
-        validateImageFile(file);
-        
-        // This avoids fetching the entire images collection lazily, fixing the N+1 issue
-        GymImage existingImage = gymImageRepository.findFirstByGymIdAndImageName(gymId, imageName).orElse(null);
-        if (existingImage != null && existingImage.getUrl() != null && !existingImage.getUrl().isBlank()) {
-            safeDeleteFile(existingImage.getUrl());
-            gymImageRepository.delete(existingImage);
-        }
-        
-        String fsId = fileStorageService.saveFile(file, "/gyms/" + gymId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
-        return putGymImage(gymId, imageName, fullUrl);
-    }
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
