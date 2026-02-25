@@ -2,6 +2,7 @@ package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.CheckInResponseDto;
+import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
@@ -68,27 +69,7 @@ public class GymWriteService {
             gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
         }
 
-        if (request.getSubscriptions() != null) {
-            for (GymSubscriptionRequestDto subDto : request.getSubscriptions()) {
-                if (!orderServiceGrpcClient.checkPlanExists(subDto.getPlanId())) {
-                    throw new BadRequestException("PLAN_NOT_FOUND", "Membership plan ID " + subDto.getPlanId() + " does not exist or is inactive.");
-                }
-                GymSubscription subscription = new GymSubscription();
-                subscription.setPlanId(subDto.getPlanId());
-                subscription.setGym(gym);
-                if (subDto.getBenefits() != null) {
-                    List<GymSubscriptionBenefit> benefits = subDto.getBenefits().stream().map(b -> {
-                        GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
-                        benefit.setBenefit(b.getBenefit());
-                        benefit.setBenefitLogo(b.getBenefitLogo());
-                        return benefit;
-                    }).toList();
-                    subscription.setBenefits(new java.util.ArrayList<>(benefits));
-                }
-                gym.getSubscriptions().add(subscription);
-            }
-        }
-        
+
         Gym saved = gymRepository.save(gym);
         // Call it asynchronously to prevent blocking the HTTP request
         // Using @Async requires @EnableAsync on the main class
@@ -122,6 +103,15 @@ public class GymWriteService {
         if (request.getCategoryIds() != null) {
             gym.setCategories(new HashSet<>(categoryRepository.findAllById(request.getCategoryIds())));
         }
+
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    public void updateGymSubscriptions(Long gymId, GymSubscriptionsUpdateRequest request) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
         gym.getSubscriptions().clear();
         if (request.getSubscriptions() != null) {

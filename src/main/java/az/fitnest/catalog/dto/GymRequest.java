@@ -21,7 +21,6 @@ public class GymRequest {
     private String phone;
     private String email;
     private Set<Long> categoryIds;
-    private List<GymSubscriptionRequestDto> subscriptions;
 
 
 }

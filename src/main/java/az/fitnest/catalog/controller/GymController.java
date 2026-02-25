@@ -35,6 +35,7 @@ import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
 
 import az.fitnest.catalog.dto.GymRequest;
+import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
 import az.fitnest.catalog.dto.GymReviewsResponse;
 import az.fitnest.catalog.dto.GymTrainersResponse;
 import az.fitnest.catalog.dto.ReviewRequest;
@@ -183,6 +184,16 @@ public class GymController {
     @ApiResponses(value={@ApiResponse(responseCode="204", description="Gym updated successfully"), @ApiResponse(responseCode="404", description="Gym not found")})
     public ResponseEntity<Void> updateGym(@PathVariable Long gymId, @RequestBody GymRequest request) {
         this.gymWriteService.updateGym(gymId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value={"/admin/gyms/{gymId}/subscriptions"})
+    @Operation(summary="Update gym subscriptions (Admin)", description="Updates the subscription plans and benefits linked to a gym. Requires ADMIN role.")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize(value="hasRole('ADMIN')")
+    @ApiResponses(value={@ApiResponse(responseCode="204", description="Subscriptions updated successfully"), @ApiResponse(responseCode="404", description="Gym not found")})
+    public ResponseEntity<Void> updateGymSubscriptions(@PathVariable Long gymId, @RequestBody GymSubscriptionsUpdateRequest request) {
+        this.gymWriteService.updateGymSubscriptions(gymId, request);
         return ResponseEntity.noContent().build();
     }
 
