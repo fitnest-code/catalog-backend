@@ -99,7 +99,7 @@ implements StoreService {
             List<Long> found = this.savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId()));
             isSaved = !found.isEmpty();
         }
-        return StoreDetailResponseDto.builder().storeId(store.getId().toString()).name(store.getName()).description(store.getDescription()).address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null).phone(store.getPhone()).category(store.getCategory()).status(store.getStatus()).workingHours(store.getWorkHours() != null ? store.getWorkHours().stream().map(wh -> new StoreWorkHourDto(wh.getDay(), wh.getFromTime(), wh.getToTime())).collect(Collectors.toList()) : new ArrayList<StoreWorkHourDto>()).discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).collect(Collectors.toList()) : new ArrayList<StoreDiscountDto>()).social(store.getSocial() != null ? StoreSocialDto.builder().instagramUrl(store.getSocial().getInstagramUrl()).facebookUrl(store.getSocial().getFacebookUrl()).websiteUrl(store.getSocial().getWebsiteUrl()).build() : null).images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).collect(Collectors.toList()) : new ArrayList<String>()).isSaved(isSaved).isNew(this.isNew(store)).build();
+        return StoreDetailResponseDto.builder().storeId(store.getId().toString()).name(store.getName()).description(store.getDescription()).address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null).phone(store.getPhone()).category(store.getCategory()).status(store.getStatus()).workingHours(store.getWorkHours() != null ? store.getWorkHours().stream().map(wh -> new StoreWorkHourDto(wh.getDay(), wh.getFromTime(), wh.getToTime())).collect(Collectors.toList()) : new ArrayList<StoreWorkHourDto>()).discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).collect(Collectors.toList()) : new ArrayList<StoreDiscountDto>()).social(store.getSocialLinks() != null ? StoreSocialDto.builder().links(new ArrayList<>(store.getSocialLinks())).build() : null).images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).collect(Collectors.toList()) : new ArrayList<String>()).isSaved(isSaved).isNew(this.isNew(store)).build();
     }
 
     @Override
@@ -167,6 +167,9 @@ implements StoreService {
         }
         if (request.getBadges() != null) {
             store.setBadges(new ArrayList<String>(request.getBadges()));
+        }
+        if (request.getSocial() != null && request.getSocial().getLinks() != null) {
+            store.setSocialLinks(new ArrayList<>(request.getSocial().getLinks()));
         }
     }
 

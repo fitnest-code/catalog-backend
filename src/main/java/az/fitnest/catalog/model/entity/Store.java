@@ -23,7 +23,7 @@ import az.fitnest.catalog.model.entity.BaseAuditableEntity;
 import az.fitnest.catalog.model.entity.StoreAddress;
 import az.fitnest.catalog.model.entity.StoreDiscount;
 import az.fitnest.catalog.model.entity.StoreImage;
-import az.fitnest.catalog.model.entity.StoreSocial;
+import az.fitnest.catalog.model.entity.StoreSocialLink;
 import az.fitnest.catalog.model.entity.StoreWorkHours;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
@@ -80,9 +80,9 @@ extends BaseAuditableEntity {
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="store_id")
     private Set<StoreImage> images = new LinkedHashSet<StoreImage>();
-    @OneToOne(cascade={CascadeType.ALL}, orphanRemoval=true)
-    @PrimaryKeyJoinColumn
-    private StoreSocial social;
+    @ElementCollection
+    @CollectionTable(name = "store_social_links", joinColumns = @JoinColumn(name = "store_id"))
+    private List<StoreSocialLink> socialLinks = new ArrayList<>();
 
     public String getName() {
         return this.name;
@@ -136,8 +136,8 @@ extends BaseAuditableEntity {
         return this.images;
     }
 
-    public StoreSocial getSocial() {
-        return this.social;
+    public List<StoreSocialLink> getSocialLinks() {
+        return this.socialLinks;
     }
 
     public void setName(String name) {
@@ -192,14 +192,14 @@ extends BaseAuditableEntity {
         this.images = images;
     }
 
-    public void setSocial(StoreSocial social) {
-        this.social = social;
+    public void setSocialLinks(List<StoreSocialLink> socialLinks) {
+        this.socialLinks = socialLinks;
     }
 
     public Store() {
     }
 
-    public Store(String name, String description, String category, String status, StoreAddress address, String phone, List<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, List<String> badges, Set<StoreDiscount> discounts, Set<StoreImage> images, StoreSocial social) {
+    public Store(String name, String description, String category, String status, StoreAddress address, String phone, List<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, List<String> badges, Set<StoreDiscount> discounts, Set<StoreImage> images, List<StoreSocialLink> socialLinks) {
         this.name = name;
         this.description = description;
         this.category = category;
@@ -213,7 +213,7 @@ extends BaseAuditableEntity {
         this.badges = badges;
         this.discounts = discounts;
         this.images = images;
-        this.social = social;
+        this.socialLinks = socialLinks;
     }
 }
 

@@ -37,5 +37,6 @@ public class StoreRequest {
     @Schema(description="List of badges")
     private List<String> badges;
 
-
+    @Schema(description="Store social media links")
+    private StoreSocialDto social;
 }
