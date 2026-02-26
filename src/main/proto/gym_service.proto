@@ -46,6 +46,7 @@ message GymDetailResponse {
 }
 message Address {
   string address_text = 1;
+  string city = 4;
   double latitude = 2;
   double longitude = 3;
 }
@@ -153,6 +154,7 @@ message GymMainPage {
   double stars = 4;
   bool is_new = 5;
   string location = 6;
+  string city = 8;
   double distance_km = 7;
 }
 // Admin requests and responses
