@@ -50,8 +50,6 @@ public class Store
 extends BaseAuditableEntity {
     @Column(name="name", nullable=false)
     private String name;
-    @Column(name="description", columnDefinition="TEXT")
-    private String description;
     @Column(name="category")
     private String category;
     @Column(name="status")
@@ -82,10 +80,6 @@ extends BaseAuditableEntity {
 
     public String getName() {
         return this.name;
-    }
-
-    public String getDescription() {
-        return this.description;
     }
 
     public String getCategory() {
@@ -137,10 +131,6 @@ extends BaseAuditableEntity {
         this.name = name;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public void setCategory(String category) {
         this.category = category;
     }
@@ -189,9 +179,8 @@ extends BaseAuditableEntity {
     public Store() {
     }
 
-    public Store(String name, String description, String category, String status, StoreAddress address, String phone, Set<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, Set<StoreDiscount> discounts, Set<StoreImage> images, Set<StoreSocialLink> socialLinks) {
+    public Store(String name, String category, String status, StoreAddress address, String phone, Set<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, Set<StoreDiscount> discounts, Set<StoreImage> images, Set<StoreSocialLink> socialLinks) {
         this.name = name;
-        this.description = description;
         this.category = category;
         this.status = status;
         this.address = address;

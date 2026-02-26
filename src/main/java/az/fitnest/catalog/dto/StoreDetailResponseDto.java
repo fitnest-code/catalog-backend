@@ -12,7 +12,6 @@ import java.util.List;
 public class StoreDetailResponseDto {
     private String storeId;
     private String name;
-    private String description;
     private AddressDto address;
     private String phone;
     private String category;
@@ -34,10 +33,6 @@ public class StoreDetailResponseDto {
 
     public String getName() {
         return this.name;
-    }
-
-    public String getDescription() {
-        return this.description;
     }
 
     public AddressDto getAddress() {
@@ -86,10 +81,6 @@ public class StoreDetailResponseDto {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public void setAddress(AddressDto address) {
@@ -163,11 +154,6 @@ public class StoreDetailResponseDto {
         if (this$name == null ? other$name != null : !this$name.equals(other$name)) {
             return false;
         }
-        String this$description = this.getDescription();
-        String other$description = other.getDescription();
-        if (this$description == null ? other$description != null : !this$description.equals(other$description)) {
-            return false;
-        }
         AddressDto this$address = this.getAddress();
         AddressDto other$address = other.getAddress();
         if (this$address == null ? other$address != null : !((Object)this$address).equals(other$address)) {
@@ -223,8 +209,6 @@ public class StoreDetailResponseDto {
         result = result * 59 + ($storeId == null ? 43 : $storeId.hashCode());
         String $name = this.getName();
         result = result * 59 + ($name == null ? 43 : $name.hashCode());
-        String $description = this.getDescription();
-        result = result * 59 + ($description == null ? 43 : $description.hashCode());
         AddressDto $address = this.getAddress();
         result = result * 59 + ($address == null ? 43 : ((Object)$address).hashCode());
         String $phone = this.getPhone();
@@ -245,16 +229,15 @@ public class StoreDetailResponseDto {
     }
 
     public String toString() {
-        return "StoreDetailResponseDto(storeId=" + this.getStoreId() + ", name=" + this.getName() + ", description=" + this.getDescription() + ", address=" + this.getAddress() + ", phone=" + this.getPhone() + ", category=" + this.getCategory() + ", status=" + this.getStatus() + ", workingHours=" + this.getWorkingHours() + ", discounts=" + this.getDiscounts() + ", social=" + this.getSocial() + ", images=" + this.getImages() + ", isSaved=" + this.getIsSaved() + ", isNew=" + this.getIsNew() + ")";
+        return "StoreDetailResponseDto(storeId=" + this.getStoreId() + ", name=" + this.getName() + ", address=" + this.getAddress() + ", phone=" + this.getPhone() + ", category=" + this.getCategory() + ", status=" + this.getStatus() + ", workingHours=" + this.getWorkingHours() + ", discounts=" + this.getDiscounts() + ", social=" + this.getSocial() + ", images=" + this.getImages() + ", isSaved=" + this.getIsSaved() + ", isNew=" + this.getIsNew() + ")";
     }
 
     public StoreDetailResponseDto() {
     }
 
-    public StoreDetailResponseDto(String storeId, String name, String description, AddressDto address, String phone, String category, String status, List<StoreWorkHourDto> workingHours, List<StoreDiscountDto> discounts, StoreSocialDto social, List<String> images, Boolean isSaved, Boolean isNew) {
+    public StoreDetailResponseDto(String storeId, String name, AddressDto address, String phone, String category, String status, List<StoreWorkHourDto> workingHours, List<StoreDiscountDto> discounts, StoreSocialDto social, List<String> images, Boolean isSaved, Boolean isNew) {
         this.storeId = storeId;
         this.name = name;
-        this.description = description;
         this.address = address;
         this.phone = phone;
         this.category = category;
@@ -270,7 +253,6 @@ public class StoreDetailResponseDto {
     public static class StoreDetailResponseDtoBuilder {
         private String storeId;
         private String name;
-        private String description;
         private AddressDto address;
         private String phone;
         private String category;
@@ -292,11 +274,6 @@ public class StoreDetailResponseDto {
 
         public StoreDetailResponseDtoBuilder name(String name) {
             this.name = name;
-            return this;
-        }
-
-        public StoreDetailResponseDtoBuilder description(String description) {
-            this.description = description;
             return this;
         }
 
@@ -351,11 +328,11 @@ public class StoreDetailResponseDto {
         }
 
         public StoreDetailResponseDto build() {
-            return new StoreDetailResponseDto(this.storeId, this.name, this.description, this.address, this.phone, this.category, this.status, this.workingHours, this.discounts, this.social, this.images, this.isSaved, this.isNew);
+            return new StoreDetailResponseDto(this.storeId, this.name, this.address, this.phone, this.category, this.status, this.workingHours, this.discounts, this.social, this.images, this.isSaved, this.isNew);
         }
 
         public String toString() {
-            return "StoreDetailResponseDto.StoreDetailResponseDtoBuilder(storeId=" + this.storeId + ", name=" + this.name + ", description=" + this.description + ", address=" + this.address + ", phone=" + this.phone + ", category=" + this.category + ", status=" + this.status + ", workingHours=" + this.workingHours + ", discounts=" + this.discounts + ", social=" + this.social + ", images=" + this.images + ", isSaved=" + this.isSaved + ", isNew=" + this.isNew + ")";
+            return "StoreDetailResponseDto.StoreDetailResponseDtoBuilder(storeId=" + this.storeId + ", name=" + this.name + ", address=" + this.address + ", phone=" + this.phone + ", category=" + this.category + ", status=" + this.status + ", workingHours=" + this.workingHours + ", discounts=" + this.discounts + ", social=" + this.social + ", images=" + this.images + ", isSaved=" + this.isSaved + ", isNew=" + this.isNew + ")";
         }
     }
 }

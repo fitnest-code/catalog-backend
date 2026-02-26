@@ -16,9 +16,6 @@ public class StoreRequest {
     @Schema(description="Store name", example="Fit Market")
     private String name;
     
-    @Schema(description="Store description")
-    private String description;
-    
     @Schema(description="Store address")
     private AddressDto address;
     

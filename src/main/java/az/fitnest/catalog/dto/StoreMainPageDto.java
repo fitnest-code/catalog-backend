@@ -14,7 +14,6 @@ import java.util.List;
 public class StoreMainPageDto {
     private String storeId;
     private String name;
-    private String description;
     private String address;
     private String logoUrl;
     private String coverImageUrl;

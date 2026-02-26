@@ -127,7 +127,6 @@ public class StoreServiceImpl implements StoreService {
         return StoreMainPageDto.builder()
                 .storeId(store.getId().toString())
                 .name(store.getName())
-                .description(store.getDescription())
                 .address(store.getAddress() != null ? store.getAddress().getAddressText() : null)
                 .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
@@ -154,7 +153,6 @@ public class StoreServiceImpl implements StoreService {
         return StoreDetailResponseDto.builder()
                 .storeId(store.getId().toString())
                 .name(store.getName())
-                .description(store.getDescription())
                 .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
                 .phone(store.getPhone())
                 .category(store.getCategory())
@@ -228,7 +226,6 @@ public class StoreServiceImpl implements StoreService {
 
     private void updateStoreFromRequest(Store store, StoreRequest request) {
         store.setName(request.getName());
-        store.setDescription(request.getDescription());
         Double reqLat = request.getAddress() != null ? request.getAddress().getLatitude() : null;
         Double reqLng = request.getAddress() != null ? request.getAddress().getLongitude() : null;
         
