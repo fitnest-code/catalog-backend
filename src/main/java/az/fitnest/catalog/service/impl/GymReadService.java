@@ -218,11 +218,16 @@ public class GymReadService {
                     .build();
         }).collect(Collectors.toList());
 
+        String message = null;
+        if (items.isEmpty()) {
+            message = "There are no gyms close to your location.";
+        }
         return PaginatedResponse.<GymMainPageDto>builder()
                 .items(items)
                 .total(gymPage.getTotalElements())
                 .page(page)
                 .pageSize(pageSize)
+                .message(message)
                 .build();
     }
     

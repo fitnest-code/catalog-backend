@@ -17,6 +17,7 @@ public class PaginatedResponse<T> {
     private long total;
     private int page;
     private int pageSize;
+    private String message; // Optional message for empty or special cases
 
     public static <T> PaginatedResponse<T> of(Page<T> pageResult) {
         int pageNumber = pageResult.getNumber() + 1;
