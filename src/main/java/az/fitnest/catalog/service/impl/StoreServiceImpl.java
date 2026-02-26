@@ -125,7 +125,7 @@ public class StoreServiceImpl implements StoreService {
         }
 
         return StoreMainPageDto.builder()
-                .storeId(store.getId().toString())
+                .storeId(store.getId())
                 .name(store.getName())
                 .address(store.getAddress() != null ? store.getAddress().getAddressText() : null)
                 .logoUrl(store.getLogoUrl())
@@ -151,7 +151,7 @@ public class StoreServiceImpl implements StoreService {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
         }
         return StoreDetailResponseDto.builder()
-                .storeId(store.getId().toString())
+                .storeId(store.getId())
                 .name(store.getName())
                 .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
                 .phone(store.getPhone())
