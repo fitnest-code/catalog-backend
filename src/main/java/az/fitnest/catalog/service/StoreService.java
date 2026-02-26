@@ -18,7 +18,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StoreService {
-    public StoreListResponseDto getStores(Long var1, int var2, int var3);
+    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize);
 
     public StoreDetailResponseDto getStoreDetail(Long var1, Long var2);
 
@@ -30,29 +30,11 @@ public interface StoreService {
 
     public void deleteStore(Long var1);
 
-    public List<StoreMainPageDto> getMainPageStores();
 
-    public String uploadStoreImage(Long var1, MultipartFile var2);
-
-    public PaginatedResponse<StoreMainPageDto> getStoreMainPage(Long var1, String var2, int var3, int var4);
-
-    public PaginatedResponse<StoreMainPageDto> getClosestStores(Long var1, String var2, int var3, int var4, Double var5, Double var6);
-
-    public List<StoreMainPageDto> getDiscountedStores(Long var1);
-
-    public List<StoreMainPageDto> getDiscountedStores(Long var1, String var2);
-
-    public PaginatedResponse<StoreMainPageDto> getDiscountedStores(Long var1, String var2, int var3, int var4);
-
-    public StoreListResponseDto getAllStores(Long var1);
-
-    public List<StoreMainPageDto> getSavedStores(Long var1);
 
     public boolean toggleSave(Long var1, Long var2);
 
-    public StoreSearchResponseDto searchStoresForQuery(Long var1, String var2, int var3, int var4);
-
-    public PaginatedResponse<StoreMainPageDto> getNewStores(Long var1, String var2, int var3, int var4);
+    public String uploadStoreImage(Long storeId, MultipartFile file);
 
     public LocationDto getStoreLocation(Long storeId);
 
