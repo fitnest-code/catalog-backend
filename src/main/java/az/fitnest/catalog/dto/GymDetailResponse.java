@@ -30,7 +30,8 @@ public class GymDetailResponse {
     private List<GymTrainerDto> trainers;
     private List<GymReviewDto> recent_reviews;
     private String qr_code_url;
+    private String responsiblePerson;
+    private az.fitnest.catalog.model.enums.GymStatus status;
 
 
 }
-

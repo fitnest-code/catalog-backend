@@ -72,7 +72,8 @@ public class GymWriteService {
             }
             gym.setCategories(new HashSet<>(categories));
         }
-
+        gym.setResponsiblePerson(request.getResponsiblePerson());
+        gym.setStatus(request.getStatus() != null ? request.getStatus() : GymStatus.ACTIVE);
 
         Gym saved = gymRepository.save(gym);
         // Call it asynchronously to prevent blocking the HTTP request
@@ -111,6 +112,8 @@ public class GymWriteService {
             }
             gym.setCategories(new HashSet<>(categories));
         }
+        gym.setResponsiblePerson(request.getResponsiblePerson());
+        gym.setStatus(request.getStatus() != null ? request.getStatus() : GymStatus.ACTIVE);
 
         gymRepository.save(gym);
     }

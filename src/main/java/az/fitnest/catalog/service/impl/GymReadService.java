@@ -122,6 +122,8 @@ public class GymReadService {
                 .trainers(trainerDtos)
                 .recent_reviews(recentReviews)
                 .qr_code_url(gym.getQrCodeUrl())
+                .responsiblePerson(gym.getResponsiblePerson())
+                .status(gym.getStatus())
                 .build();
     }
 

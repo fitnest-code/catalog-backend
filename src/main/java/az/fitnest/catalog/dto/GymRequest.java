@@ -41,5 +41,9 @@ public class GymRequest {
     @NotEmpty(message = "Categories cannot be empty")
     private Set<Long> categoryIds;
 
+    private String responsiblePerson;
+    @NotNull(message = "Status cannot be null")
+    private az.fitnest.catalog.model.enums.GymStatus status;
+
 
 }

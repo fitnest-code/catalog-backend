@@ -92,6 +92,11 @@ extends BaseAuditableEntity {
     private Integer reviewsCount = 0;
     @Column(name="is_new")
     private Boolean isNew = false;
+    @Column(name="responsible_person")
+    private String responsiblePerson;
+    @Enumerated(EnumType.STRING)
+    @Column(name="status", nullable = false)
+    private GymStatus status = GymStatus.ACTIVE;
 
     public String getName() {
         return this.name;
@@ -161,6 +166,14 @@ extends BaseAuditableEntity {
 
     public Boolean getIsNew() {
         return this.isNew;
+    }
+
+    public String getResponsiblePerson() {
+        return this.responsiblePerson;
+    }
+
+    public GymStatus getStatus() {
+        return this.status;
     }
 
     public void setName(String name) {
@@ -233,6 +246,14 @@ extends BaseAuditableEntity {
         this.isNew = isNew;
     }
 
+    public void setResponsiblePerson(String responsiblePerson) {
+        this.responsiblePerson = responsiblePerson;
+    }
+
+    public void setStatus(GymStatus status) {
+        this.status = status;
+    }
+
     public List<GymSubscription> getSubscriptions() {
         return this.subscriptions;
     }
@@ -243,7 +264,7 @@ extends BaseAuditableEntity {
 
     public Gym() {
     }
-    public Gym(String name, String description, String coverImageUrl, String logoUrl, Address address, String phone, String email, List<GymSocialLink> socialLinks, List<GymWorkHour> workHours, List<GymImage> images, List<Trainer> trainers, List<Review> reviews, Set<Category> categories, Double rating, Integer reviewsCount, Boolean isNew) {
+    public Gym(String name, String description, String coverImageUrl, String logoUrl, Address address, String phone, String email, List<GymSocialLink> socialLinks, List<GymWorkHour> workHours, List<GymImage> images, List<Trainer> trainers, List<Review> reviews, Set<Category> categories, Double rating, Integer reviewsCount, Boolean isNew, String responsiblePerson, GymStatus status) {
         this.name = name;
         this.description = description;
         this.coverImageUrl = coverImageUrl;
@@ -260,6 +281,7 @@ extends BaseAuditableEntity {
         this.rating = rating;
         this.reviewsCount = reviewsCount;
         this.isNew = isNew;
+        this.responsiblePerson = responsiblePerson;
+        this.status = status;
     }
 }
-
