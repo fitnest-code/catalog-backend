@@ -21,6 +21,5 @@ public class StoreMainPageDto {
     private List<StoreDiscountDto> discounts;
     private Boolean isSaved;
     private Double distanceKm;
-    private List<String> badges;
     private Boolean isNew;
 }

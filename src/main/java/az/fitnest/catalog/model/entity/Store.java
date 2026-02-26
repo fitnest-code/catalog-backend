@@ -63,17 +63,13 @@ extends BaseAuditableEntity {
     private String phone;
     @ElementCollection
     @CollectionTable(name="store_work_hours", joinColumns={@JoinColumn(name="store_id")})
-    private List<StoreWorkHours> workHours = new ArrayList<StoreWorkHours>();
+    private Set<StoreWorkHours> workHours = new LinkedHashSet<>();
     @Column(name="logo_url")
     private String logoUrl;
     @Column(name="cover_image_url")
     private String coverImageUrl;
     @Column(name="popular_score")
     private Double popularScore = 0.0;
-    @ElementCollection
-    @CollectionTable(name="store_badges", joinColumns={@JoinColumn(name="store_id")})
-    @Column(name="badge")
-    private List<String> badges = new ArrayList<String>();
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="store_id")
     private Set<StoreDiscount> discounts = new LinkedHashSet<StoreDiscount>();
@@ -82,7 +78,7 @@ extends BaseAuditableEntity {
     private Set<StoreImage> images = new LinkedHashSet<StoreImage>();
     @ElementCollection
     @CollectionTable(name = "store_social_links", joinColumns = @JoinColumn(name = "store_id"))
-    private List<StoreSocialLink> socialLinks = new ArrayList<>();
+    private Set<StoreSocialLink> socialLinks = new LinkedHashSet<>();
 
     public String getName() {
         return this.name;
@@ -108,7 +104,7 @@ extends BaseAuditableEntity {
         return this.phone;
     }
 
-    public List<StoreWorkHours> getWorkHours() {
+    public Set<StoreWorkHours> getWorkHours() {
         return this.workHours;
     }
 
@@ -124,9 +120,6 @@ extends BaseAuditableEntity {
         return this.popularScore;
     }
 
-    public List<String> getBadges() {
-        return this.badges;
-    }
 
     public Set<StoreDiscount> getDiscounts() {
         return this.discounts;
@@ -136,7 +129,7 @@ extends BaseAuditableEntity {
         return this.images;
     }
 
-    public List<StoreSocialLink> getSocialLinks() {
+    public Set<StoreSocialLink> getSocialLinks() {
         return this.socialLinks;
     }
 
@@ -164,7 +157,7 @@ extends BaseAuditableEntity {
         this.phone = phone;
     }
 
-    public void setWorkHours(List<StoreWorkHours> workHours) {
+    public void setWorkHours(Set<StoreWorkHours> workHours) {
         this.workHours = workHours;
     }
 
@@ -180,9 +173,6 @@ extends BaseAuditableEntity {
         this.popularScore = popularScore;
     }
 
-    public void setBadges(List<String> badges) {
-        this.badges = badges;
-    }
 
     public void setDiscounts(Set<StoreDiscount> discounts) {
         this.discounts = discounts;
@@ -192,14 +182,14 @@ extends BaseAuditableEntity {
         this.images = images;
     }
 
-    public void setSocialLinks(List<StoreSocialLink> socialLinks) {
+    public void setSocialLinks(Set<StoreSocialLink> socialLinks) {
         this.socialLinks = socialLinks;
     }
 
     public Store() {
     }
 
-    public Store(String name, String description, String category, String status, StoreAddress address, String phone, List<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, List<String> badges, Set<StoreDiscount> discounts, Set<StoreImage> images, List<StoreSocialLink> socialLinks) {
+    public Store(String name, String description, String category, String status, StoreAddress address, String phone, Set<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, Set<StoreDiscount> discounts, Set<StoreImage> images, Set<StoreSocialLink> socialLinks) {
         this.name = name;
         this.description = description;
         this.category = category;
@@ -210,7 +200,6 @@ extends BaseAuditableEntity {
         this.logoUrl = logoUrl;
         this.coverImageUrl = coverImageUrl;
         this.popularScore = popularScore;
-        this.badges = badges;
         this.discounts = discounts;
         this.images = images;
         this.socialLinks = socialLinks;

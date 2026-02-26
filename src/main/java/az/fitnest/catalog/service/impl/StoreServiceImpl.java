@@ -134,7 +134,6 @@ public class StoreServiceImpl implements StoreService {
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .isSaved(isSaved)
                 .distanceKm(distance)
-                .badges(store.getBadges() != null ? new ArrayList<>(store.getBadges()) : Collections.emptyList())
                 .isNew(isNew(store))
                 .build();
     }
@@ -242,13 +241,10 @@ public class StoreServiceImpl implements StoreService {
         store.setStatus(request.getStatus());
         
         if (request.getWorkingHours() != null) {
-            store.setWorkHours(request.getWorkingHours().stream().map(dto -> new StoreWorkHours(dto.getDay(), dto.getFrom(), dto.getTo())).collect(Collectors.toList()));
-        }
-        if (request.getBadges() != null) {
-            store.setBadges(new ArrayList<>(request.getBadges()));
+            store.setWorkHours(request.getWorkingHours().stream().map(dto -> new StoreWorkHours(dto.getDay(), dto.getFrom(), dto.getTo())).collect(Collectors.toCollection(LinkedHashSet::new)));
         }
         if (request.getSocial() != null && request.getSocial().getLinks() != null) {
-            store.setSocialLinks(new ArrayList<>(request.getSocial().getLinks()));
+            store.setSocialLinks(new LinkedHashSet<>(request.getSocial().getLinks()));
         }
     }
 
