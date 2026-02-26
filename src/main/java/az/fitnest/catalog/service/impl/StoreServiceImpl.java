@@ -134,6 +134,7 @@ public class StoreServiceImpl implements StoreService {
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .isSaved(isSaved)
                 .distanceKm(distance)
+                .social(store.getSocialLinks() != null ? StoreSocialDto.builder().links(new ArrayList<>(store.getSocialLinks())).build() : null)
                 .isNew(isNew(store))
                 .build();
     }
