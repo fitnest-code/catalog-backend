@@ -13,6 +13,7 @@
  */
 package az.fitnest.catalog.service;
 
+import az.fitnest.catalog.dto.GeocodingResponse;
 import java.net.URI;
 import java.util.Map;
 import org.springframework.http.HttpEntity;
@@ -30,26 +31,48 @@ public class ReverseGeocodingService {
     private static final String USER_AGENT = "fitnest-catalog-service";
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String reverseGeocode(Double latitude, Double longitude) {
+    public GeocodingResponse reverseGeocode(Double latitude, Double longitude) {
         if (latitude == null || longitude == null) {
             return null;
         }
-        URI uri = UriComponentsBuilder.fromHttpUrl((String)BASE_URL).path("/reverse").queryParam("format", new Object[]{"json"}).queryParam("lat", new Object[]{latitude}).queryParam("lon", new Object[]{longitude}).queryParam("zoom", new Object[]{"18"}).queryParam("addressdetails", new Object[]{"0"}).build(true).toUri();
+        URI uri = UriComponentsBuilder.fromHttpUrl((String)BASE_URL)
+                .path("/reverse")
+                .queryParam("format", "json")
+                .queryParam("lat", latitude)
+                .queryParam("lon", longitude)
+                .queryParam("zoom", 18)
+                .queryParam("addressdetails", 1)
+                .build(true).toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         HttpEntity entity = new HttpEntity((MultiValueMap)headers);
         try {
-            Object displayName;
-            ResponseEntity response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
-            Object object = displayName = response.getBody() != null ? (Object)((Map)response.getBody()).get("display_name") : null;
-            if (displayName != null) {
-                return displayName.toString();
+            ResponseEntity<Map> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+            Map<String, Object> body = response.getBody();
+            if (body != null) {
+                String displayName = (String) body.get("display_name");
+                String city = null;
+                Object addressObj = body.get("address");
+                if (addressObj instanceof Map) {
+                    Map<String, String> address = (Map<String, String>) addressObj;
+                    city = address.get("city");
+                    if (city == null) city = address.get("town");
+                    if (city == null) city = address.get("village");
+                    if (city == null) city = address.get("hamlet");
+                    if (city == null) city = address.get("suburb");
+                }
+                return GeocodingResponse.builder()
+                        .addressText(displayName)
+                        .city(city)
+                        .build();
             }
         }
         catch (Exception exception) {
             // empty catch block
         }
-        return String.format("%.5f, %.5f", latitude, longitude);
+        return GeocodingResponse.builder()
+                .addressText(String.format("%.5f, %.5f", latitude, longitude))
+                .build();
     }
 }
 

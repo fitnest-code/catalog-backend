@@ -11,6 +11,7 @@ import jakarta.persistence.Embeddable;
 @Embeddable
 public class Address {
     private String addressText;
+    private String city;
     private Double latitude;
     private Double longitude;
 
@@ -20,6 +21,10 @@ public class Address {
 
     public String getAddressText() {
         return this.addressText;
+    }
+
+    public String getCity() {
+        return this.city;
     }
 
     public Double getLatitude() {
@@ -32,6 +37,10 @@ public class Address {
 
     public void setAddressText(String addressText) {
         this.addressText = addressText;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
     }
 
     public void setLatitude(Double latitude) {
@@ -85,20 +94,22 @@ public class Address {
     }
 
     public String toString() {
-        return "Address(addressText=" + this.getAddressText() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
+        return "Address(addressText=" + this.getAddressText() + ", city=" + this.getCity() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
     }
 
     public Address() {
     }
 
-    public Address(String addressText, Double latitude, Double longitude) {
+    public Address(String addressText, String city, Double latitude, Double longitude) {
         this.addressText = addressText;
+        this.city = city;
         this.latitude = latitude;
         this.longitude = longitude;
     }
 
     public static class AddressBuilder {
         private String addressText;
+        private String city;
         private Double latitude;
         private Double longitude;
 
@@ -107,6 +118,11 @@ public class Address {
 
         public AddressBuilder addressText(String addressText) {
             this.addressText = addressText;
+            return this;
+        }
+
+        public AddressBuilder city(String city) {
+            this.city = city;
             return this;
         }
 
@@ -121,7 +137,7 @@ public class Address {
         }
 
         public Address build() {
-            return new Address(this.addressText, this.latitude, this.longitude);
+            return new Address(this.addressText, this.city, this.latitude, this.longitude);
         }
 
         public String toString() {

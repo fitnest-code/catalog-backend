@@ -13,4 +13,5 @@ public class LocationDto {
     private Double latitude;
     private Double longitude;
     private String addressText;
+    private String city;
 }

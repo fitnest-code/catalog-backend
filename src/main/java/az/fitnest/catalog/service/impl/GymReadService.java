@@ -111,6 +111,7 @@ public class GymReadService {
                 .isSaved(false)
                 .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
                         .addressText(gym.getAddress().getAddressText())
+                        .city(gym.getAddress().getCity())
                         .latitude(gym.getAddress().getLatitude())
                         .longitude(gym.getAddress().getLongitude())
                         .build() : null)
@@ -214,6 +215,7 @@ public class GymReadService {
                     .stars(stars)
                     .isNew(isNew)
                     .location(address != null ? address.getAddressText() : null)
+                    .city(address != null ? address.getCity() : null)
                     .distanceKm(distanceKm)
                     .build();
         }).collect(Collectors.toList());

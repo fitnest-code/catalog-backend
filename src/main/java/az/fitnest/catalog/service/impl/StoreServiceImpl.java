@@ -128,6 +128,7 @@ public class StoreServiceImpl implements StoreService {
                 .storeId(store.getId())
                 .name(store.getName())
                 .address(store.getAddress() != null ? store.getAddress().getAddressText() : null)
+                .city(store.getAddress() != null ? store.getAddress().getCity() : null)
                 .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
@@ -153,7 +154,7 @@ public class StoreServiceImpl implements StoreService {
         return StoreDetailResponseDto.builder()
                 .storeId(store.getId())
                 .name(store.getName())
-                .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
+                .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
                 .phone(store.getPhone())
                 .category(store.getCategory())
                 .status(store.getStatus())
@@ -231,8 +232,11 @@ public class StoreServiceImpl implements StoreService {
         
         boolean coordsChanged = store.getAddress() == null || !Objects.equals(store.getAddress().getLatitude(), reqLat) || !Objects.equals(store.getAddress().getLongitude(), reqLng);
         
-        String addressText = (store.getAddress() != null && !coordsChanged) ? store.getAddress().getAddressText() : resolveAddressText(reqLat, reqLng);
-        store.setAddress(request.getAddress() != null ? new StoreAddress(addressText, reqLat, reqLng) : null);
+        GeocodingResponse geocoding = (store.getAddress() != null && !coordsChanged) 
+                ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
+                : resolveGeocoding(reqLat, reqLng);
+                
+        store.setAddress(request.getAddress() != null ? new StoreAddress(geocoding.getAddressText(), geocoding.getCity(), reqLat, reqLng) : null);
         
         store.setPhone(request.getPhone());
         store.setCategory(request.getCategory());
@@ -246,8 +250,8 @@ public class StoreServiceImpl implements StoreService {
         }
     }
 
-    private String resolveAddressText(Double latitude, Double longitude) {
-        if (latitude == null || longitude == null) return null;
+    private GeocodingResponse resolveGeocoding(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) return GeocodingResponse.builder().build();
         return reverseGeocodingService.reverseGeocode(latitude, longitude);
     }
 

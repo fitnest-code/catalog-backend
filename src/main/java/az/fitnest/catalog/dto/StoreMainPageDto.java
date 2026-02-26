@@ -15,6 +15,7 @@ public class StoreMainPageDto {
     private Long storeId;
     private String name;
     private String address;
+    private String city;
     private String logoUrl;
     private String coverImageUrl;
     private List<StoreDiscountDto> discounts;

@@ -11,11 +11,16 @@ import jakarta.persistence.Embeddable;
 @Embeddable
 public class StoreAddress {
     private String addressText;
+    private String city;
     private Double latitude;
     private Double longitude;
 
     public String getAddressText() {
         return this.addressText;
+    }
+
+    public String getCity() {
+        return this.city;
     }
 
     public Double getLatitude() {
@@ -28,6 +33,10 @@ public class StoreAddress {
 
     public void setAddressText(String addressText) {
         this.addressText = addressText;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
     }
 
     public void setLatitude(Double latitude) {
@@ -81,14 +90,15 @@ public class StoreAddress {
     }
 
     public String toString() {
-        return "StoreAddress(addressText=" + this.getAddressText() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
+        return "StoreAddress(addressText=" + this.getAddressText() + ", city=" + this.getCity() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
     }
 
     public StoreAddress() {
     }
 
-    public StoreAddress(String addressText, Double latitude, Double longitude) {
+    public StoreAddress(String addressText, String city, Double latitude, Double longitude) {
         this.addressText = addressText;
+        this.city = city;
         this.latitude = latitude;
         this.longitude = longitude;
     }

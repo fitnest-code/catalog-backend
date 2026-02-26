@@ -19,6 +19,7 @@ public class GymMainPageDto {
     private double stars;
     private boolean isNew;
     private String location;
+    private String city;
     private Double distanceKm;
 }
 

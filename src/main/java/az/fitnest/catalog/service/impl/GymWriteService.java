@@ -1,5 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.dto.GeocodingResponse;
+
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.CheckInResponseDto;
 import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
@@ -60,7 +62,11 @@ public class GymWriteService {
             Double lng = request.getAddress().getLongitude();
             address.setLatitude(lat);
             address.setLongitude(lng);
-            address.setAddressText(reverseGeocodingService.reverseGeocode(lat, lng));
+            GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
+            if (geocoding != null) {
+                address.setAddressText(geocoding.getAddressText());
+                address.setCity(geocoding.getCity());
+            }
             gym.setAddress(address);
         }
         gym.setPhone(request.getPhone());
@@ -100,7 +106,11 @@ public class GymWriteService {
             Double lng = request.getAddress().getLongitude();
             address.setLatitude(lat);
             address.setLongitude(lng);
-            address.setAddressText(reverseGeocodingService.reverseGeocode(lat, lng));
+            GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
+            if (geocoding != null) {
+                address.setAddressText(geocoding.getAddressText());
+                address.setCity(geocoding.getCity());
+            }
             gym.setAddress(address);
         }
         gym.setPhone(request.getPhone());

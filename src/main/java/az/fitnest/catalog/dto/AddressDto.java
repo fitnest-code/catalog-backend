@@ -21,6 +21,9 @@ public class AddressDto {
     @JsonProperty(access=JsonProperty.Access.READ_ONLY)
     @Schema(description="Resolved address text", example="Baku, 28 May str. 12", accessMode=Schema.AccessMode.READ_ONLY)
     private String addressText;
+    @JsonProperty(access=JsonProperty.Access.READ_ONLY)
+    @Schema(description="City", example="Baku", accessMode=Schema.AccessMode.READ_ONLY)
+    private String city;
     @JsonProperty(access=JsonProperty.Access.WRITE_ONLY)
     @Schema(description="Latitude")
     @NotNull(message = "Latitude cannot be null")
@@ -38,6 +41,10 @@ public class AddressDto {
         return this.addressText;
     }
 
+    public String getCity() {
+        return this.city;
+    }
+
     public Double getLatitude() {
         return this.latitude;
     }
@@ -49,6 +56,11 @@ public class AddressDto {
     @JsonProperty(access=JsonProperty.Access.READ_ONLY)
     public void setAddressText(String addressText) {
         this.addressText = addressText;
+    }
+
+    @JsonProperty(access=JsonProperty.Access.READ_ONLY)
+    public void setCity(String city) {
+        this.city = city;
     }
 
     @JsonProperty(access=JsonProperty.Access.WRITE_ONLY)
@@ -104,20 +116,22 @@ public class AddressDto {
     }
 
     public String toString() {
-        return "AddressDto(addressText=" + this.getAddressText() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
+        return "AddressDto(addressText=" + this.getAddressText() + ", city=" + this.getCity() + ", latitude=" + this.getLatitude() + ", longitude=" + this.getLongitude() + ")";
     }
 
     public AddressDto() {
     }
 
-    public AddressDto(String addressText, Double latitude, Double longitude) {
+    public AddressDto(String addressText, String city, Double latitude, Double longitude) {
         this.addressText = addressText;
+        this.city = city;
         this.latitude = latitude;
         this.longitude = longitude;
     }
 
     public static class AddressDtoBuilder {
         private String addressText;
+        private String city;
         private Double latitude;
         private Double longitude;
 
@@ -127,6 +141,12 @@ public class AddressDto {
         @JsonProperty(access=JsonProperty.Access.READ_ONLY)
         public AddressDtoBuilder addressText(String addressText) {
             this.addressText = addressText;
+            return this;
+        }
+
+        @JsonProperty(access=JsonProperty.Access.READ_ONLY)
+        public AddressDtoBuilder city(String city) {
+            this.city = city;
             return this;
         }
 
@@ -143,7 +163,7 @@ public class AddressDto {
         }
 
         public AddressDto build() {
-            return new AddressDto(this.addressText, this.latitude, this.longitude);
+            return new AddressDto(this.addressText, this.city, this.latitude, this.longitude);
         }
 
         public String toString() {
