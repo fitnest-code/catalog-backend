@@ -83,9 +83,9 @@ public class GymAdminController {
     }
 
     @PutMapping("/{gymId}/logo")
-    @Operation(summary = "Update logo (Admin)", description = "Updates the logo image URL for a gym. Requires ADMIN role.")
-    public ResponseEntity<Void> updateGymLogo(@PathVariable Long gymId, @RequestBody UpdateImageUrlRequest request) {
-        this.gymImageService.updateLogoUrl(gymId, request.getUrl());
+    @Operation(summary = "Update logo (Admin)", description = "Uploads a new logo for the gym. Replaces the old one if it exists.")
+    public ResponseEntity<Void> updateGymLogo(@PathVariable Long gymId, @RequestParam("file") MultipartFile file) {
+        this.gymWriteService.updateLogo(gymId, file);
         return ResponseEntity.noContent().build();
     }
 
@@ -97,9 +97,9 @@ public class GymAdminController {
     }
 
     @PutMapping("/{gymId}/cover")
-    @Operation(summary = "Update cover image (Admin)", description = "Updates the cover image URL for a gym. Requires ADMIN role.")
-    public ResponseEntity<Void> updateGymCover(@PathVariable Long gymId, @RequestBody UpdateImageUrlRequest request) {
-        this.gymImageService.updateCoverImageUrl(gymId, request.getUrl());
+    @Operation(summary = "Update cover image (Admin)", description = "Uploads a new cover image for the gym. Replaces the old one if it exists.")
+    public ResponseEntity<Void> updateGymCover(@PathVariable Long gymId, @RequestParam("file") MultipartFile file) {
+        this.gymWriteService.updateCoverImage(gymId, file);
         return ResponseEntity.noContent().build();
     }
 

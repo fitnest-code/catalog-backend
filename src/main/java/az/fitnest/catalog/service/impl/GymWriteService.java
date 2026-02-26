@@ -32,6 +32,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
@@ -244,6 +245,28 @@ public class GymWriteService {
                 gymRepository.save(g);
             });
         }
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    public void updateLogo(Long gymId, MultipartFile file) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+
+        String fsId = fileStorageService.saveFile(file, "/gyms/logos", gym.getLogoUrl());
+        gym.setLogoUrl("/api/v1/media/stream/" + fsId);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    public void updateCoverImage(Long gymId, MultipartFile file) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+
+        String fsId = fileStorageService.saveFile(file, "/gyms/covers", gym.getCoverImageUrl());
+        gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
+        gymRepository.save(gym);
     }
 
     private String sanitizeFilename(String filename) {
