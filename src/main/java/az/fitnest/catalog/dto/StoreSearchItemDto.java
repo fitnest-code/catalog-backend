@@ -4,17 +4,17 @@
 package az.fitnest.catalog.dto;
 
 public class StoreSearchItemDto {
-    private String storeId;
+    private Long storeId;
 
     public static StoreSearchItemDtoBuilder builder() {
         return new StoreSearchItemDtoBuilder();
     }
 
-    public String getStoreId() {
+    public Long getStoreId() {
         return this.storeId;
     }
 
-    public void setStoreId(String storeId) {
+    public void setStoreId(Long storeId) {
         this.storeId = storeId;
     }
 
@@ -29,8 +29,8 @@ public class StoreSearchItemDto {
         if (!other.canEqual(this)) {
             return false;
         }
-        String this$storeId = this.getStoreId();
-        String other$storeId = other.getStoreId();
+        Long this$storeId = this.getStoreId();
+        Long other$storeId = other.getStoreId();
         return !(this$storeId == null ? other$storeId != null : !this$storeId.equals(other$storeId));
     }
 
@@ -41,7 +41,7 @@ public class StoreSearchItemDto {
     public int hashCode() {
         int PRIME = 59;
         int result = 1;
-        String $storeId = this.getStoreId();
+        Long $storeId = this.getStoreId();
         result = result * 59 + ($storeId == null ? 43 : $storeId.hashCode());
         return result;
     }
@@ -53,17 +53,17 @@ public class StoreSearchItemDto {
     public StoreSearchItemDto() {
     }
 
-    public StoreSearchItemDto(String storeId) {
+    public StoreSearchItemDto(Long storeId) {
         this.storeId = storeId;
     }
 
     public static class StoreSearchItemDtoBuilder {
-        private String storeId;
+        private Long storeId;
 
         StoreSearchItemDtoBuilder() {
         }
 
-        public StoreSearchItemDtoBuilder storeId(String storeId) {
+        public StoreSearchItemDtoBuilder storeId(Long storeId) {
             this.storeId = storeId;
             return this;
         }
@@ -77,4 +77,3 @@ public class StoreSearchItemDto {
         }
     }
 }
-

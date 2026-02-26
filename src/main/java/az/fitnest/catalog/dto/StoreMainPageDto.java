@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StoreMainPageDto {
-    private String storeId;
+    private Long storeId;
     private String name;
     private String address;
     private String logoUrl;

@@ -10,7 +10,7 @@ import az.fitnest.catalog.dto.StoreWorkHourDto;
 import java.util.List;
 
 public class StoreDetailResponseDto {
-    private String storeId;
+    private Long storeId;
     private String name;
     private AddressDto address;
     private String phone;
@@ -27,7 +27,7 @@ public class StoreDetailResponseDto {
         return new StoreDetailResponseDtoBuilder();
     }
 
-    public String getStoreId() {
+    public Long getStoreId() {
         return this.storeId;
     }
 
@@ -75,7 +75,7 @@ public class StoreDetailResponseDto {
         return this.isNew;
     }
 
-    public void setStoreId(String storeId) {
+    public void setStoreId(Long storeId) {
         this.storeId = storeId;
     }
 
@@ -144,8 +144,8 @@ public class StoreDetailResponseDto {
         if (this$isNew == null ? other$isNew != null : !((Object)this$isNew).equals(other$isNew)) {
             return false;
         }
-        String this$storeId = this.getStoreId();
-        String other$storeId = other.getStoreId();
+        Long this$storeId = this.getStoreId();
+        Long other$storeId = other.getStoreId();
         if (this$storeId == null ? other$storeId != null : !this$storeId.equals(other$storeId)) {
             return false;
         }
@@ -205,7 +205,7 @@ public class StoreDetailResponseDto {
         result = result * 59 + ($isSaved == null ? 43 : ((Object)$isSaved).hashCode());
         Boolean $isNew = this.getIsNew();
         result = result * 59 + ($isNew == null ? 43 : ((Object)$isNew).hashCode());
-        String $storeId = this.getStoreId();
+        Long $storeId = this.getStoreId();
         result = result * 59 + ($storeId == null ? 43 : $storeId.hashCode());
         String $name = this.getName();
         result = result * 59 + ($name == null ? 43 : $name.hashCode());
@@ -235,7 +235,7 @@ public class StoreDetailResponseDto {
     public StoreDetailResponseDto() {
     }
 
-    public StoreDetailResponseDto(String storeId, String name, AddressDto address, String phone, String category, String status, List<StoreWorkHourDto> workingHours, List<StoreDiscountDto> discounts, StoreSocialDto social, List<String> images, Boolean isSaved, Boolean isNew) {
+    public StoreDetailResponseDto(Long storeId, String name, AddressDto address, String phone, String category, String status, List<StoreWorkHourDto> workingHours, List<StoreDiscountDto> discounts, StoreSocialDto social, List<String> images, Boolean isSaved, Boolean isNew) {
         this.storeId = storeId;
         this.name = name;
         this.address = address;
@@ -251,7 +251,7 @@ public class StoreDetailResponseDto {
     }
 
     public static class StoreDetailResponseDtoBuilder {
-        private String storeId;
+        private Long storeId;
         private String name;
         private AddressDto address;
         private String phone;
@@ -267,7 +267,7 @@ public class StoreDetailResponseDto {
         StoreDetailResponseDtoBuilder() {
         }
 
-        public StoreDetailResponseDtoBuilder storeId(String storeId) {
+        public StoreDetailResponseDtoBuilder storeId(Long storeId) {
             this.storeId = storeId;
             return this;
         }
