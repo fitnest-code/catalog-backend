@@ -63,6 +63,11 @@ public class ProfessionService {
         professionRepository.delete(p);
     }
 
+    @Transactional
+    public void deleteAllProfessions() {
+        professionRepository.deleteAll();
+    }
+
     private ProfessionDto toDto(Profession profession) {
         return ProfessionDto.builder()
                 .id(profession.getId())

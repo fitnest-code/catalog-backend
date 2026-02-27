@@ -328,4 +328,13 @@ public class StoreServiceImpl implements StoreService {
         store.setCoverImageUrl(coverImageUrl);
         storeRepository.save(store);
     }
+
+    @Override
+    @Transactional
+    public void deleteAllStores() {
+        List<Store> stores = storeRepository.findAll();
+        for (Store store : stores) {
+            deleteStore(store.getId());
+        }
+    }
 }

@@ -269,6 +269,14 @@ public class GymWriteService {
         gymRepository.save(gym);
     }
 
+    @Transactional
+    public void deleteAllGyms() {
+        List<Gym> gyms = gymRepository.findAll();
+        for (Gym gym : gyms) {
+            deleteGym(gym.getId());
+        }
+    }
+
     private String sanitizeFilename(String filename) {
         if (filename == null || filename.isBlank()) return "unnamed";
         return filename.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
