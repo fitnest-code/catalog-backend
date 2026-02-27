@@ -216,6 +216,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional
     public void deleteStore(Long storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        storeRepository.deleteStoreBadgesByStoreId(storeId);
         savedStoreRepository.deleteByStoreId(storeId);
         if (store.getLogoUrl() != null) fileStorageService.deleteFile(store.getLogoUrl());
         if (store.getCoverImageUrl() != null) fileStorageService.deleteFile(store.getCoverImageUrl());
