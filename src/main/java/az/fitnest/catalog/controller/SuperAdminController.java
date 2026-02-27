@@ -2,6 +2,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.service.StoreService;
+import az.fitnest.catalog.service.impl.CategoryService;
 import az.fitnest.catalog.service.impl.GymWriteService;
 import az.fitnest.catalog.service.impl.ProfessionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +27,7 @@ public class SuperAdminController {
 
     private final GymWriteService gymWriteService;
     private final StoreService storeService;
-    private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final ProfessionService professionService;
 
     @DeleteMapping("/gyms/all")
@@ -58,7 +59,7 @@ public class SuperAdminController {
             @ApiResponse(responseCode = "403", description = "Insufficient permissions")
     })
     public ResponseEntity<Void> deleteAllCategories() {
-        categoryRepository.deleteAll();
+        categoryService.deleteAllCategories();
         return ResponseEntity.noContent().build();
     }
 

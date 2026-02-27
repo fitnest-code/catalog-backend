@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.ProfessionRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Profession;
 import az.fitnest.catalog.repository.ProfessionRepository;
+import az.fitnest.catalog.repository.TrainerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 public class ProfessionService {
 
     private final ProfessionRepository professionRepository;
+    private final TrainerRepository trainerRepository;
 
     @Transactional(readOnly = true)
     public List<ProfessionDto> getAllProfessions() {
@@ -65,6 +67,9 @@ public class ProfessionService {
 
     @Transactional
     public void deleteAllProfessions() {
+        // Clear all trainer-profession associations first
+        trainerRepository.clearAllProfessions();
+        // Now delete all professions
         professionRepository.deleteAll();
     }
 

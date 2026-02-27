@@ -11,7 +11,10 @@ import az.fitnest.catalog.model.entity.Gym;
 import java.util.Optional;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface GymRepository
@@ -32,5 +35,10 @@ extends JpaRepository<Gym, Long> {
 
     @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')))")
     public org.springframework.data.domain.Page<Gym> findByNameOrDescriptionContainingIgnoreCase(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM gym_categories", nativeQuery = true)
+    void truncateGymCategories();
 }
 
