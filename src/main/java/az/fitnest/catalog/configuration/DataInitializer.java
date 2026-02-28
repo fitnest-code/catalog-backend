@@ -12,7 +12,12 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.ArrayList;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.Arrays;
 
 @Configuration
 @RequiredArgsConstructor
@@ -146,12 +151,65 @@ public class DataInitializer {
             gym.setRating(4.5);
             gym.setReviewsCount(10);
             gym.setIsNew(true);
-            
+            gym.setResponsiblePerson("Eli Quliyev");
+
+            // Work Hours
+            List<GymWorkHour> workHours = new ArrayList<>();
+            for (DayOfWeek day : DayOfWeek.values()) {
+                workHours.add(new GymWorkHour(day, LocalTime.of(8, 0), LocalTime.of(22, 0)));
+            }
+            gym.setWorkHours(workHours);
+
+            // Social Links
+            List<GymSocialLink> socialLinks = new ArrayList<>();
+            socialLinks.add(new GymSocialLink("Instagram", "https://instagram.com/premiumfitness"));
+            socialLinks.add(new GymSocialLink("Facebook", "https://facebook.com/premiumfitness"));
+            gym.setSocialLinks(socialLinks);
+
+            // Images
+            List<GymImage> images = new ArrayList<>();
+            images.add(GymImage.builder()
+                    .gym(gym)
+                    .imageName("Main Hall")
+                    .url("https://picsum.photos/seed/gym1/1200/800")
+                    .type("interior")
+                    .title("Main Training Hall")
+                    .build());
+            images.add(GymImage.builder()
+                    .gym(gym)
+                    .imageName("Pool")
+                    .url("https://picsum.photos/seed/gympool1/1200/800")
+                    .type("swimming_pool")
+                    .title("Olympic Swimming Pool")
+                    .build());
+            gym.setImages(images);
+
             if (fitnessCategory != null) {
                 gym.setCategories(new HashSet<>(Collections.singletonList(fitnessCategory)));
             }
 
             gym = gymRepository.save(gym);
+
+            // Add Trainers
+            Trainer trainer1 = new Trainer();
+            trainer1.setFirstName("Eli");
+            trainer1.setLastName("Memmedov");
+            trainer1.setSpecialization("Fitness");
+            trainer1.setExperienceYears(5);
+            trainer1.setRating(4.8);
+            trainer1.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer1");
+            
+            Trainer trainer2 = new Trainer();
+            trainer2.setFirstName("Lale");
+            trainer2.setLastName("Resulova");
+            trainer2.setSpecialization("Yoga");
+            trainer2.setExperienceYears(3);
+            trainer2.setRating(4.9);
+            trainer2.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer2");
+            
+            gym.getTrainers().add(trainer1);
+            gym.getTrainers().add(trainer2);
+            gymRepository.save(gym);
 
             String gymId = gym.getGymId().toString();
             createTranslationIfNotFound("Gym", gymId, "AZ", "name", "Premium Fitnes Mərkəzi");

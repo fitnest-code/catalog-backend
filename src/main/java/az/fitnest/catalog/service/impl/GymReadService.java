@@ -108,6 +108,10 @@ public class GymReadService {
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList());
 
+        List<CategoryDto> categoryDtos = gym.getCategories() != null ? gym.getCategories().stream()
+                .map(GymMapper::toCategoryDto)
+                .collect(Collectors.toList()) : null;
+
         return GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
                 .name(gym.getName())
@@ -126,6 +130,11 @@ public class GymReadService {
                 .membership_plans(membershipPlans)
                 .trainers(trainerDtos)
                 .recent_reviews(recentReviews)
+                .categories(categoryDtos)
+                .coverImageUrl(gym.getCoverImageUrl())
+                .logoUrl(gym.getLogoUrl())
+                .rating(gym.getRating())
+                .reviewsCount(gym.getReviewsCount())
                 .qr_code_url(gym.getQrCodeUrl())
                 .responsiblePerson(gym.getResponsiblePerson())
                 .status(gym.getStatus())

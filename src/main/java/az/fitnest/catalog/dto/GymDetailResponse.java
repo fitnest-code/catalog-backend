@@ -1,6 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package az.fitnest.catalog.dto;
 
 import az.fitnest.catalog.dto.GymPlanItemDto;
@@ -15,7 +12,6 @@ import java.util.List;
 @lombok.Builder
 @lombok.NoArgsConstructor
 @lombok.AllArgsConstructor
-
 public class GymDetailResponse {
     private String gym_id;
     private String name;
@@ -29,9 +25,12 @@ public class GymDetailResponse {
     private List<GymPlanItemDto> membership_plans;
     private List<GymTrainerDto> trainers;
     private List<GymReviewDto> recent_reviews;
+    private List<CategoryDto> categories;
+    private String coverImageUrl;
+    private String logoUrl;
+    private Double rating;
+    private Integer reviewsCount;
     private String qr_code_url;
     private String responsiblePerson;
     private az.fitnest.catalog.model.enums.GymStatus status;
-
-
 }

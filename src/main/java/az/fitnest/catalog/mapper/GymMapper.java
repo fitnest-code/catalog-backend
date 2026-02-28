@@ -72,4 +72,13 @@ public final class GymMapper {
                 .to(wh.getToTime())
                 .build();
     }
+
+    public static CategoryDto toCategoryDto(Category category) {
+        if (category == null) return null;
+        return CategoryDto.builder()
+                .id(category.getCategoryId())
+                .name(category.getName())
+                .photoUrl(category.getPhotoUrl())
+                .build();
+    }
 }
