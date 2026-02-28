@@ -19,9 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/admin/gyms")
 @RequiredArgsConstructor
-@RestController
-@RequestMapping("/api/v1/admin/gyms")
-@RequiredArgsConstructor
 @Tag(name = "Gym Admin", description = "İdman zallarını və məşqçiləri idarə etmək üçün administrativ ucluqlar")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ADMIN')")
