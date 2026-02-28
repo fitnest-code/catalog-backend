@@ -29,13 +29,13 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 @RestController
 @RequestMapping(value={"/api/v1/media"})
-@Tag(name="Media", description="Endpoints for streaming media content")
+@Tag(name="Media", description="Media məzmununu yayımlamaq üçün ucluqlar")
 public class MediaController {
     private final StorageGrpcClient storageGrpcClient;
 
-    @Operation(summary="Stream media file", description="Streams a media file (image) directly from storage.")
+    @Operation(summary="Media faylını yayımlayın", description="Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
     @GetMapping(value={"/stream/{fsId}"}, produces={"image/jpeg", "image/png", "application/octet-stream"})
-    public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description="File system ID of the media") @PathVariable String fsId) {
+    public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description="Medianın fayl sistemi ID-si") @PathVariable String fsId) {
         return ((ResponseEntity.BodyBuilder)((ResponseEntity.BodyBuilder)ResponseEntity.ok().header("Content-Disposition", new String[]{"inline"})).header("Cache-Control", new String[]{"public, max-age=31536000, immutable"})).body(outputStream -> {
             this.storageGrpcClient.downloadFile(fsId, response -> {
                 if (response.hasFileData()) {

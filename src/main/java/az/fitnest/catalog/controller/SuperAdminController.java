@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/super-admin")
 @RequiredArgsConstructor
-@Tag(name = "Super Admin", description = "Endpoints for super-administrative tasks")
+@Tag(name = "Super Admin", description = "Super-administrativ tapşırıqlar üçün ucluqlar")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
 public class SuperAdminController {
@@ -31,10 +31,10 @@ public class SuperAdminController {
     private final ProfessionService professionService;
 
     @DeleteMapping("/gyms/all")
-    @Operation(summary = "Delete all gyms", description = "Permanently deletes all gyms and associated data. Requires SUPER_ADMIN role.")
+    @Operation(summary = "Bütün idman zallarını silin", description = "Bütün idman zallarını və onlarla əlaqəli məlumatları həmişəlik silir. SUPER_ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "All gyms deleted successfully"),
-            @ApiResponse(responseCode = "403", description = "Insufficient permissions")
+            @ApiResponse(responseCode = "204", description = "Bütün idman zalları uğurla silindi"),
+            @ApiResponse(responseCode = "403", description = "Kifayət qədər icazə yoxdur")
     })
     public ResponseEntity<Void> deleteAllGyms() {
         gymWriteService.deleteAllGyms();
@@ -42,10 +42,10 @@ public class SuperAdminController {
     }
 
     @DeleteMapping("/stores/all")
-    @Operation(summary = "Delete all stores", description = "Permanently deletes all stores and associated data. Requires SUPER_ADMIN role.")
+    @Operation(summary = "Bütün mağazaları silin", description = "Bütün mağazaları və onlarla əlaqəli məlumatları həmişəlik silir. SUPER_ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "All stores deleted successfully"),
-            @ApiResponse(responseCode = "403", description = "Insufficient permissions")
+            @ApiResponse(responseCode = "204", description = "Bütün mağazalar uğurla silindi"),
+            @ApiResponse(responseCode = "403", description = "Kifayət qədər icazə yoxdur")
     })
     public ResponseEntity<Void> deleteAllStores() {
         storeService.deleteAllStores();
@@ -53,10 +53,10 @@ public class SuperAdminController {
     }
 
     @DeleteMapping("/categories/all")
-    @Operation(summary = "Delete all categories", description = "Permanently deletes all categories. Requires SUPER_ADMIN role.")
+    @Operation(summary = "Bütün kateqoriyaları silin", description = "Bütün kateqoriyaları həmişəlik silir. SUPER_ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "All categories deleted successfully"),
-            @ApiResponse(responseCode = "403", description = "Insufficient permissions")
+            @ApiResponse(responseCode = "204", description = "Bütün kateqoriyalar uğurla silindi"),
+            @ApiResponse(responseCode = "403", description = "Kifayət qədər icazə yoxdur")
     })
     public ResponseEntity<Void> deleteAllCategories() {
         categoryService.deleteAllCategories();
@@ -64,10 +64,10 @@ public class SuperAdminController {
     }
 
     @DeleteMapping("/professions/all")
-    @Operation(summary = "Delete all professions", description = "Permanently deletes all professions. Requires SUPER_ADMIN role.")
+    @Operation(summary = "Bütün ixtisasları silin", description = "Bütün ixtisasları həmişəlik silir. SUPER_ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "All professions deleted successfully"),
-            @ApiResponse(responseCode = "403", description = "Insufficient permissions")
+            @ApiResponse(responseCode = "204", description = "Bütün ixtisaslar uğurla silindi"),
+            @ApiResponse(responseCode = "403", description = "Kifayət qədər icazə yoxdur")
     })
     public ResponseEntity<Void> deleteAllProfessions() {
         professionService.deleteAllProfessions();

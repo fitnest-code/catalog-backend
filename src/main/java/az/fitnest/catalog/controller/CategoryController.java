@@ -67,15 +67,15 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
-@Tag(name = "Categories", description = "Endpoints for viewing fitness catalog categories")
+@Tag(name = "Categories", description = "Fitnes kataloqu kateqoriyalarına baxmaq üçün ucluqlar")
 public class CategoryController {
 
     private final CategoryRepository categoryRepository;
 
-    @Operation(summary = "Get all categories", description = "Returns a paginated list of all catalog categories.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Categories retrieved successfully")})
+    @Operation(summary = "Bütün kateqoriyaları əldə edin", description = "Bütün kataloq kateqoriyalarının səhifələnmiş siyahısını qaytarır.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriyalar uğurla əldə edildi")})
     @GetMapping
-    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(@Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(@Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size) {
         PageRequest pageable = PageRequest.of(Math.max(0, page - 1), size);
         Page<Category> categories = this.categoryRepository.findAll(pageable);
         List<CategoryDto> items = categories.getContent().stream().map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).build()).collect(Collectors.toList());

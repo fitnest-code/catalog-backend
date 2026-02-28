@@ -23,61 +23,61 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor
-@Tag(name = "Stores", description = "Endpoints for viewing catalog stores and user interactions with stores.")
+@Tag(name = "Stores", description = "Kataloq mağazalarına baxmaq və istifadəçilərin mağazalarla qarşılıqlı əlaqəsi üçün ucluqlar.")
 public class StoreController {
 
     private final StoreService storeService;
 
-    @Operation(summary = "Get catalog stores", description = "Consolidated endpoint for all store listings (All, Closest, New, Discounted, Saved). Use 'type' parameter to switch views.")
+    @Operation(summary = "Kataloq mağazalarını əldə edin", description = "Bütün mağaza siyahıları üçün birləşdirilmiş ucluq (Hamısı, Ən yaxın, Yeni, Endirimlilər, Saxlanılanlar). Görünüşləri dəyişmək üçün 'type' parametrindən istifadə edin.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Stores retrieved successfully", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}),
-            @ApiResponse(responseCode = "401", description = "Authentication required")
+            @ApiResponse(responseCode = "200", description = "Mağazalar uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}),
+            @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur")
     })
     @GetMapping
     public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getStores(
-            @Parameter(description = "Search query (matches name or address)") @RequestParam(value = "q", required = false) String q,
-            @Parameter(description = "Filter type (ALL, NEW, DISCOUNTED, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
-            @Parameter(description = "User latitude (required for CLOSEST type)") @RequestParam(value = "lat", required = false) Double lat,
-            @Parameter(description = "User longitude (required for CLOSEST type)") @RequestParam(value = "lng", required = false) Double lng,
-            @Parameter(description = "Page index (1-based)") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Items per page") @RequestParam(defaultValue = "10") int page_size) {
+            @Parameter(description = "Axtarış sorğusu (ad və ya ünvana görə)") @RequestParam(value = "q", required = false) String q,
+            @Parameter(description = "Filtr növü (ALL, NEW, DISCOUNTED, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
+            @Parameter(description = "İstifadəçinin enliyi (CLOSEST növü üçün tələb olunur)") @RequestParam(value = "lat", required = false) Double lat,
+            @Parameter(description = "İstifadəçinin uzunluğu (CLOSEST növü üçün tələb olunur)") @RequestParam(value = "lng", required = false) Double lng,
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size));
     }
 
-    @Operation(summary = "Get store details", description = "Retrieves full details of a specific store.")
+    @Operation(summary = "Mağaza təfərrüatlarını əldə edin", description = "Xüsusi bir mağazanın tam təfərrüatlarını əldə edir.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Store details retrieved successfully", content = {@Content(schema = @Schema(implementation = StoreDetailResponseDto.class))}),
-            @ApiResponse(responseCode = "404", description = "Store not found")
+            @ApiResponse(responseCode = "200", description = "Mağaza təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = StoreDetailResponseDto.class))}),
+            @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")
     })
     @GetMapping("/{storeId:\\d+}")
-    public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "ID of the store") @PathVariable Long storeId) {
+    public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
         Long userId = this.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
     }
 
-    @Operation(summary = "Get store location", description = "Returns the coordinates and text of a specific store.")
+    @Operation(summary = "Mağaza məkanını əldə edin", description = "Xüsusi mağazanın koordinatlarını və ünvan mətnini qaytarır.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Store location retrieved", content = {@Content(schema = @Schema(implementation = LocationDto.class))}),
-            @ApiResponse(responseCode = "404", description = "Store not found")
+            @ApiResponse(responseCode = "200", description = "Mağaza məkanı əldə edildi", content = {@Content(schema = @Schema(implementation = LocationDto.class))}),
+            @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")
     })
     @GetMapping("/{storeId:\\d+}/location")
-    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description = "ID of the store") @PathVariable Long storeId) {
+    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
         return ResponseEntity.ok(this.storeService.getStoreLocation(storeId));
     }
 
-    @Operation(summary = "Save/Unsave store", description = "Toggles the 'saved' status of a store.")
+    @Operation(summary = "Mağazanı saxla/sil", description = "Mağazanın 'saxlanılanlar' statusunu dəyişir.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Toggle successful"),
-            @ApiResponse(responseCode = "404", description = "Store not found")
+            @ApiResponse(responseCode = "200", description = "Dəyişiklik uğurludur"),
+            @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")
     })
     @PostMapping("/{storeId}/save")
     public ResponseEntity<Map<String, Boolean>> saveStore(@PathVariable Long storeId) {

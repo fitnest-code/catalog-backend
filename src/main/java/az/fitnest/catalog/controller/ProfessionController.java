@@ -18,18 +18,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/professions")
 @RequiredArgsConstructor
-@Tag(name = "Profession API", description = "Endpoints for viewing trainer professions")
+@Tag(name = "Profession API", description = "Məşqçi ixtisaslarına baxmaq üçün ucluqlar")
 public class ProfessionController {
 
     private final ProfessionService professionService;
 
-    @Operation(summary = "Get all professions", description = "Retrieves a list of all defined professions. Publicly accessible.")
+    @Operation(summary = "Bütün ixtisasları əldə edin", description = "Müəyyən edilmiş bütün ixtisasların siyahısını əldə edir. Hər kəs üçün əlçatandır.")
     @GetMapping
     public ResponseEntity<List<ProfessionDto>> getAllProfessions() {
         return ResponseEntity.ok(professionService.getAllProfessions());
     }
 
-    @Operation(summary = "Get profession by ID")
+    @Operation(summary = "İxtisası ID vasitəsilə əldə edin")
     @GetMapping("/{id}")
     public ResponseEntity<ProfessionDto> getProfessionById(@PathVariable Long id) {
         return ResponseEntity.ok(professionService.getProfessionById(id));

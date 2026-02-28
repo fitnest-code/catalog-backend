@@ -18,36 +18,36 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/admin/stores")
 @RequiredArgsConstructor
-@Tag(name = "Store Admin", description = "Administrative endpoints for managing stores")
+@Tag(name = "Store Admin", description = "Mağazaları idarə etmək üçün administrativ ucluqlar")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ADMIN')")
 public class StoreAdminController {
 
     private final StoreService storeService;
 
-    @Operation(summary = "Create store (Admin)", description = "Creates a new store. Requires ADMIN role.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Store created successfully"), @ApiResponse(responseCode = "400", description = "Invalid store data")})
+    @Operation(summary = "Mağaza yaradın (Admin)", description = "Yeni mağaza yaradır. ADMIN rolu tələb olunur.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Mağaza uğurla yaradıldı"), @ApiResponse(responseCode = "400", description = "Yanlış mağaza məlumatı")})
     @PostMapping
     public ResponseEntity<StoreDetailResponseDto> createStoreAdmin(@RequestBody StoreRequest request) {
         return ResponseEntity.status(201).body(this.storeService.createStore(request));
     }
 
-    @Operation(summary = "Update store (Admin)", description = "Updates an existing store. Requires ADMIN role.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Store updated successfully"), @ApiResponse(responseCode = "404", description = "Store not found")})
+    @Operation(summary = "Mağazanı yeniləyin (Admin)", description = "Mövcud mağazanı yeniləyir. ADMIN rolu tələb olunur.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Mağaza uğurla yeniləndi"), @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")})
     @PutMapping("/{storeId}")
     public ResponseEntity<StoreDetailResponseDto> updateStoreAdmin(@PathVariable Long storeId, @RequestBody StoreRequest request) {
         return ResponseEntity.ok(this.storeService.updateStore(storeId, request));
     }
 
-    @Operation(summary = "Delete store (Admin)", description = "Permanently deletes a store. Requires ADMIN role.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "204", description = "Store deleted successfully")})
+    @Operation(summary = "Mağazanı silin (Admin)", description = "Mağazanı həmişəlik silir. ADMIN rolu tələb olunur.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "204", description = "Mağaza uğurla silindi")})
     @DeleteMapping("/{storeId}")
     public ResponseEntity<Void> deleteStoreAdmin(@PathVariable Long storeId) {
         this.storeService.deleteStore(storeId);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Update store logo (Admin)", description = "Uploads or replaces the store's logo image. Requires ADMIN role.")
+    @Operation(summary = "Mağaza loqosunu yeniləyin (Admin)", description = "Mağazanın loqo şəklini yükləyir və ya əvəz edir. ADMIN rolu tələb olunur.")
     @PutMapping(value = "/{storeId}/logo", consumes = {"multipart/form-data"})
     public ResponseEntity<Void> updateStoreLogo(@PathVariable Long storeId, @RequestParam(value = "file") MultipartFile file) {
         Store store = this.storeService.getStoreEntityById(storeId);
@@ -59,7 +59,7 @@ public class StoreAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Delete store logo (Admin)", description = "Removes the store's logo image. Requires ADMIN role.")
+    @Operation(summary = "Mağaza loqosunu silin (Admin)", description = "Mağazanın loqo şəklini silir. ADMIN rolu tələb olunur.")
     @DeleteMapping("/{storeId}/logo")
     public ResponseEntity<Void> deleteStoreLogo(@PathVariable Long storeId) {
         Store store = this.storeService.getStoreEntityById(storeId);
@@ -70,7 +70,7 @@ public class StoreAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Update store cover image (Admin)", description = "Uploads or replaces the store's cover image. Requires ADMIN role.")
+    @Operation(summary = "Mağazanın üz qabığı şəklini yeniləyin (Admin)", description = "Mağazanın üz qabığı şəklini yükləyir və ya əvəz edir. ADMIN rolu tələb olunur.")
     @PutMapping(value = "/{storeId}/cover", consumes = {"multipart/form-data"})
     public ResponseEntity<Void> updateStoreCover(@PathVariable Long storeId, @RequestParam(value = "file") MultipartFile file) {
         Store store = this.storeService.getStoreEntityById(storeId);
@@ -82,7 +82,7 @@ public class StoreAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Delete store cover image (Admin)", description = "Removes the store's cover image. Requires ADMIN role.")
+    @Operation(summary = "Mağazanın üz qabığı şəklini silin (Admin)", description = "Mağazanın üz qabığı şəklini silir. ADMIN rolu tələb olunur.")
     @DeleteMapping("/{storeId}/cover")
     public ResponseEntity<Void> deleteStoreCover(@PathVariable Long storeId) {
         Store store = this.storeService.getStoreEntityById(storeId);

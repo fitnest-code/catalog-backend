@@ -23,7 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/admin/categories")
 @RequiredArgsConstructor
-@Tag(name = "Categories Admin", description = "Administrative endpoints for managing fitness catalog categories")
+@Tag(name = "Categories Admin", description = "Fitnes kataloqu kateqoriyalarını idarə etmək üçün administrativ ucluqlar")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ADMIN')")
 public class CategoryAdminController {
@@ -31,10 +31,10 @@ public class CategoryAdminController {
     private final CategoryRepository categoryRepository;
     private final FileStorageService fileStorageService;
 
-    @Operation(summary = "Create category (Admin)", description = "Creates a new category for products or services. Requires ADMIN role.")
+    @Operation(summary = "Kateqoriya yaradın (Admin)", description = "Məhsullar və ya xidmətlər üçün yeni kateqoriya yaradır. ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Category created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid category name or duplicate")
+            @ApiResponse(responseCode = "201", description = "Kateqoriya uğurla yaradıldı"),
+            @ApiResponse(responseCode = "400", description = "Yanlış kateqoriya adı və ya dublikat")
     })
     @PostMapping
     public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
@@ -55,13 +55,13 @@ public class CategoryAdminController {
         return ResponseEntity.status(201).body(dto);
     }
 
-    @Operation(summary = "Update category (Admin)", description = "Updates an existing category. Requires ADMIN role.")
+    @Operation(summary = "Kateqoriyanı yeniləyin (Admin)", description = "Mövcud kateqoriyanı yeniləyir. ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Category updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Kateqoriya uğurla yeniləndi"),
+            @ApiResponse(responseCode = "404", description = "Kateqoriya tapılmadı")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDto> updateCategory(@Parameter(description = "ID of the category") @PathVariable Long id, @RequestBody CategoryRequest request) {
+    public ResponseEntity<CategoryDto> updateCategory(@Parameter(description = "Kateqoriyanın ID-si") @PathVariable Long id, @RequestBody CategoryRequest request) {
         Category existing = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "categoryRequest");
         if (request.getName() == null || request.getName().isBlank()) {
@@ -79,13 +79,13 @@ public class CategoryAdminController {
         return ResponseEntity.ok(dto);
     }
 
-    @Operation(summary = "Delete category (Admin)", description = "Deletes a category and its associated photo. Requires ADMIN role.")
+    @Operation(summary = "Kateqoriyanı silin (Admin)", description = "Kateqoriyanı və onunla əlaqəli şəkli silir. ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Category deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "204", description = "Kateqoriya uğurla silindi"),
+            @ApiResponse(responseCode = "404", description = "Kateqoriya tapılmadı")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@Parameter(description = "ID of the category to delete") @PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategory(@Parameter(description = "Silinəcək kateqoriyanın ID-si") @PathVariable Long id) {
         Category category = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         if (category.getPhotoUrl() != null && !category.getPhotoUrl().isBlank()) {
             fileStorageService.deleteFile(category.getPhotoUrl());
@@ -94,13 +94,13 @@ public class CategoryAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Upload category image (Admin)", description = "Uploads a new image for a category, replacing the old one. Requires ADMIN role.")
+    @Operation(summary = "Kateqoriya şəkli yükləyin (Admin)", description = "Kateqoriya üçün yeni şəkil yükləyir və köhnəsini əvəz edir. ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Image uploaded successfully"),
-            @ApiResponse(responseCode = "404", description = "Category not found")
+            @ApiResponse(responseCode = "200", description = "Şəkil uğurla yükləndi"),
+            @ApiResponse(responseCode = "404", description = "Kateqoriya tapılmadı")
     })
     @PutMapping(value = "/{id}/image", consumes = {"multipart/form-data"})
-    public ResponseEntity<CategoryDto> uploadCategoryImage(@Parameter(description = "ID of the category") @PathVariable Long id, @Parameter(description = "Image file to upload") @RequestParam(value = "file") MultipartFile file) {
+    public ResponseEntity<CategoryDto> uploadCategoryImage(@Parameter(description = "Kateqoriyanın ID-si") @PathVariable Long id, @Parameter(description = "Yüklənəcək şəkil faylı") @RequestParam(value = "file") MultipartFile file) {
         Category category = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         String fsId = fileStorageService.saveFile(file, "/categories", category.getPhotoUrl());
         String fullUrl = "/api/v1/media/stream/" + fsId;
