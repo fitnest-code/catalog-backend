@@ -20,4 +20,8 @@ public class Profession extends BaseAuditableEntity {
     
     @Column(name = "name", nullable = false, unique = true)
     private String name;
+
+    public Long getProfessionId() {
+        return getId();
+    }
 }

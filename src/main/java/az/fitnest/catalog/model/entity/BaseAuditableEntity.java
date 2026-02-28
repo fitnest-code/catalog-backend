@@ -19,9 +19,12 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.*;
 
 @MappedSuperclass
 @EntityListeners(value={AuditingEntityListener.class})
+@Data
+@EqualsAndHashCode(callSuper = true)
 public abstract class BaseAuditableEntity
 extends BaseEntity {
     @CreatedDate
@@ -34,37 +37,5 @@ extends BaseEntity {
     private String createdBy;
     @Column(name="last_modified_by")
     private String lastModifiedBy;
-
-    public LocalDateTime getCreatedDate() {
-        return this.createdDate;
-    }
-
-    public LocalDateTime getLastModifiedDate() {
-        return this.lastModifiedDate;
-    }
-
-    public String getCreatedBy() {
-        return this.createdBy;
-    }
-
-    public String getLastModifiedBy() {
-        return this.lastModifiedBy;
-    }
-
-    public void setCreatedDate(LocalDateTime createdDate) {
-        this.createdDate = createdDate;
-    }
-
-    public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
-        this.lastModifiedDate = lastModifiedDate;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public void setLastModifiedBy(String lastModifiedBy) {
-        this.lastModifiedBy = lastModifiedBy;
-    }
 }
 

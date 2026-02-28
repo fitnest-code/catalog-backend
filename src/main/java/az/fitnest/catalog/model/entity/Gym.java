@@ -27,19 +27,8 @@ import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.model.entity.Review;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.GymStatus;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +36,11 @@ import java.util.Set;
 
 @Entity
 @Table(name="gyms")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(callSuper = true)
 public class Gym
 extends BaseAuditableEntity {
     @Column(name="name", nullable=false)
@@ -68,220 +62,48 @@ extends BaseAuditableEntity {
     private String email;
     @ElementCollection
     @CollectionTable(name="gym_social_links", joinColumns={@JoinColumn(name="gym_id")})
+    @Builder.Default
     private List<GymSocialLink> socialLinks = new ArrayList<GymSocialLink>();
     @ElementCollection
     @CollectionTable(name="gym_work_hours", joinColumns={@JoinColumn(name="gym_id")})
+    @Builder.Default
     private List<GymWorkHour> workHours = new ArrayList<GymWorkHour>();
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="gym_id")
+    @Builder.Default
     private List<GymImage> images = new ArrayList<GymImage>();
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="gym_id")
+    @Builder.Default
     private List<Trainer> trainers = new ArrayList<Trainer>();
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="gym_id")
+    @Builder.Default
     private List<Review> reviews = new ArrayList<Review>();
     @OneToMany(mappedBy="gym", cascade={CascadeType.ALL}, orphanRemoval=true)
+    @Builder.Default
     private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
     @ManyToMany
     @JoinTable(name="gym_categories", joinColumns={@JoinColumn(name="gym_id")}, inverseJoinColumns={@JoinColumn(name="category_id")})
+    @Builder.Default
     private Set<Category> categories = new HashSet<Category>();
     @Column(name="rating")
+    @Builder.Default
     private Double rating = 0.0;
     @Column(name="reviews_count")
+    @Builder.Default
     private Integer reviewsCount = 0;
     @Column(name="is_new")
+    @Builder.Default
     private Boolean isNew = false;
     @Column(name="responsible_person")
     private String responsiblePerson;
     @Enumerated(EnumType.STRING)
     @Column(name="status", nullable = false)
+    @Builder.Default
     private GymStatus status = GymStatus.ACTIVE;
 
-    public String getName() {
-        return this.name;
-    }
-
-    public String getDescription() {
-        return this.description;
-    }
-
-
-
-    public String getCoverImageUrl() {
-        return this.coverImageUrl;
-    }
-
-    public String getLogoUrl() {
-        return this.logoUrl;
-    }
-
-    public String getQrCodeUrl() {
-        return this.qrCodeUrl;
-    }
-
-    public Address getAddress() {
-        return this.address;
-    }
-
-    public String getPhone() {
-        return this.phone;
-    }
-
-    public String getEmail() {
-        return this.email;
-    }
-
-    public List<GymSocialLink> getSocialLinks() {
-        return this.socialLinks;
-    }
-
-    public List<GymWorkHour> getWorkHours() {
-        return this.workHours;
-    }
-
-    public List<GymImage> getImages() {
-        return this.images;
-    }
-
-    public List<Trainer> getTrainers() {
-        return this.trainers;
-    }
-
-    public List<Review> getReviews() {
-        return this.reviews;
-    }
-
-    public Set<Category> getCategories() {
-        return this.categories;
-    }
-
-    public Double getRating() {
-        return this.rating;
-    }
-
-    public Integer getReviewsCount() {
-        return this.reviewsCount;
-    }
-
-    public Boolean getIsNew() {
-        return this.isNew;
-    }
-
-    public String getResponsiblePerson() {
-        return this.responsiblePerson;
-    }
-
-    public GymStatus getStatus() {
-        return this.status;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-
-
-    public void setCoverImageUrl(String coverImageUrl) {
-        this.coverImageUrl = coverImageUrl;
-    }
-
-    public void setLogoUrl(String logoUrl) {
-        this.logoUrl = logoUrl;
-    }
-
-    public void setQrCodeUrl(String qrCodeUrl) {
-        this.qrCodeUrl = qrCodeUrl;
-    }
-
-    public void setAddress(Address address) {
-        this.address = address;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setSocialLinks(List<GymSocialLink> socialLinks) {
-        this.socialLinks = socialLinks;
-    }
-
-    public void setWorkHours(List<GymWorkHour> workHours) {
-        this.workHours = workHours;
-    }
-
-    public void setImages(List<GymImage> images) {
-        this.images = images;
-    }
-
-    public void setTrainers(List<Trainer> trainers) {
-        this.trainers = trainers;
-    }
-
-    public void setReviews(List<Review> reviews) {
-        this.reviews = reviews;
-    }
-
-    public void setCategories(Set<Category> categories) {
-        this.categories = categories;
-    }
-
-    public void setRating(Double rating) {
-        this.rating = rating;
-    }
-
-    public void setReviewsCount(Integer reviewsCount) {
-        this.reviewsCount = reviewsCount;
-    }
-
-    public void setIsNew(Boolean isNew) {
-        this.isNew = isNew;
-    }
-
-    public void setResponsiblePerson(String responsiblePerson) {
-        this.responsiblePerson = responsiblePerson;
-    }
-
-    public void setStatus(GymStatus status) {
-        this.status = status;
-    }
-
-    public List<GymSubscription> getSubscriptions() {
-        return this.subscriptions;
-    }
-
-    public void setSubscriptions(List<GymSubscription> subscriptions) {
-        this.subscriptions = subscriptions;
-    }
-
-    public Gym() {
-    }
-    public Gym(String name, String description, String coverImageUrl, String logoUrl, Address address, String phone, String email, List<GymSocialLink> socialLinks, List<GymWorkHour> workHours, List<GymImage> images, List<Trainer> trainers, List<Review> reviews, Set<Category> categories, Double rating, Integer reviewsCount, Boolean isNew, String responsiblePerson, GymStatus status) {
-        this.name = name;
-        this.description = description;
-        this.coverImageUrl = coverImageUrl;
-        this.logoUrl = logoUrl;
-        this.address = address;
-        this.phone = phone;
-        this.email = email;
-        this.socialLinks = socialLinks;
-        this.workHours = workHours;
-        this.images = images;
-        this.trainers = trainers;
-        this.reviews = reviews;
-        this.categories = categories;
-        this.rating = rating;
-        this.reviewsCount = reviewsCount;
-        this.isNew = isNew;
-        this.responsiblePerson = responsiblePerson;
-        this.status = status;
+    public Long getGymId() {
+        return getId();
     }
 }

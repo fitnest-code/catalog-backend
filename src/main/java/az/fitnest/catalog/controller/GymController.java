@@ -161,11 +161,37 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getReservationRules(gymId));
     }
 
-    @GetMapping("/closest")
-    @Operation(summary="Get closest gyms", description="Returns the list of gyms closest to the provided coordinates. Supports search and pagination. Returns address text (not latitude/longitude) and distance in kilometers.")
-    @ApiResponses(value={@ApiResponse(responseCode="200", description="Closest gyms retrieved", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
-    public ResponseEntity<PaginatedResponse<GymMainPageDto>> getClosestGyms(@Parameter(description="Search query") @RequestParam(value="q", required=false) String q, @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page, @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size, @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat, @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
-        return ResponseEntity.ok(this.gymReadService.getClosestGyms(q, page, page_size, lat, lng));
+    @GetMapping
+    @Operation(summary="Get gyms", description="Consolidated endpoint for all gym listings (All, Closest, New, Saved). Use 'type' parameter to switch views.")
+    @ApiResponses(value={@ApiResponse(responseCode="200", description="Gyms retrieved successfully", content={@Content(schema=@Schema(implementation=PaginatedResponse.class))})})
+    public ResponseEntity<PaginatedResponse<GymMainPageDto>> getGyms(
+            @AuthenticationPrincipal Object principal,
+            @Parameter(description="Search query") @RequestParam(value="q", required=false) String q,
+            @Parameter(description="Filter type (ALL, NEW, CLOSEST, SAVED)") @RequestParam(value="type", defaultValue="ALL") String type,
+            @Parameter(description="Page index (1-based)") @RequestParam(defaultValue="1") int page,
+            @Parameter(description="Items per page") @RequestParam(defaultValue="10") int page_size,
+            @Parameter(description="User latitude") @RequestParam(value="lat", required=false) Double lat,
+            @Parameter(description="User longitude") @RequestParam(value="lng", required=false) Double lng) {
+        Long userId = this.extractUserId(principal);
+        return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, page, page_size, lat, lng));
+    }
+
+    @PostMapping("/{gymId}/save")
+    @Operation(summary = "Save/Unsave gym", description = "Toggles the 'saved' status of a gym for the authenticated user.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Toggle successful"),
+            @ApiResponse(responseCode = "404", description = "Gym not found"),
+            @ApiResponse(responseCode = "401", description = "User not authenticated")
+    })
+    public ResponseEntity<java.util.Map<String, Boolean>> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
+        Long userId = this.extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        boolean isSaved = this.gymWriteService.toggleSave(userId, gymId);
+        return ResponseEntity.ok(java.util.Map.of("is_saved", isSaved));
     }
     @GetMapping("/{gymId}/location")
     @Operation(summary = "Get gym location", description = "Returns the resolved address text along with latitude and longitude for the gym.")

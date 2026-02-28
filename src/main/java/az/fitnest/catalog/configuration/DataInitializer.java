@@ -1,6 +1,7 @@
 package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.model.entity.*;
+import java.util.Optional;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.StoreStatus;
 import az.fitnest.catalog.repository.*;

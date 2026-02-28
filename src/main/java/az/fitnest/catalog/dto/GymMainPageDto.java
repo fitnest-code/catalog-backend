@@ -21,5 +21,6 @@ public class GymMainPageDto {
     private String location;
     private String city;
     private Double distanceKm;
+    private boolean isSaved;
 }
 

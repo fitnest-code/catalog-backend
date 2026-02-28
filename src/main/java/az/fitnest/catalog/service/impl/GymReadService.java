@@ -5,6 +5,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
+import az.fitnest.catalog.model.entity.SavedGym;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GymReadService {
     private final GymRepository gymRepository;
+    private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
     private final GymImageRepository gymImageRepository;
     private final TrainerRepository trainerRepository;
     private final ReviewRepository reviewRepository;
@@ -41,6 +43,11 @@ public class GymReadService {
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         Gym gym = gymRepository.findWithDetailsById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
+
+        boolean isSaved = false;
+        if (userId != null) {
+            isSaved = savedGymRepository.findByUserIdAndGymId(userId, gymId).isPresent();
+        }
 
         Map<String, List<GymImage>> grouped = gymImageRepository.findByGymId(gymId)
                 .stream()
@@ -108,7 +115,7 @@ public class GymReadService {
                 .gym_id(gym.getId().toString())
                 .name(gym.getName())
                 .description(gym.getDescription())
-                .isSaved(false)
+                .isSaved(isSaved)
                 .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
                         .addressText(gym.getAddress().getAddressText())
                         .city(gym.getAddress().getCity())
@@ -180,17 +187,31 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymMainPageDto> getClosestGyms(String q, int page, int pageSize, Double userLat, Double userLng) {
+    public PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
+        return getGyms(userId, null, "CLOSEST", page, pageSize, userLat, userLng);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, int page, int pageSize, Double userLat, Double userLng) {
         Page<Gym> gymPage;
-        Pageable pageable = pageable(page, pageSize, Sort.unsorted());
+        Pageable pageable = pageable(page, pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+
+        if ("SAVED".equalsIgnoreCase(type)) {
+            if (userId == null) return emptyPaginatedResponse(page, pageSize);
+            List<SavedGym> saved = savedGymRepository.findByUserId(userId);
+            List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
+            return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q);
+        }
         
         if (userLat != null && userLng != null) {
             double initialRadiusKm = 50.0;
             double[] bbox = boundingBox(userLat, userLng, initialRadiusKm);
             if (q != null && !q.isBlank()) {
                 gymPage = gymRepository.findClosestGymsWithQuery(q, bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
-            } else {
+            } else if ("CLOSEST".equalsIgnoreCase(type)) {
                 gymPage = gymRepository.findClosestGyms(bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+            } else {
+                gymPage = gymRepository.findAll(pageable);
             }
         } else {
             if (q != null && !q.isBlank()) {
@@ -200,29 +221,21 @@ public class GymReadService {
             }
         }
 
-        List<GymMainPageDto> items = gymPage.getContent().stream().map(gym -> {
-            double stars = gym.getRating() != null ? gym.getRating() : 0.0;
-            boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
-            Address address = gym.getAddress();
-            Double distanceKm = null;
-            if (userLat != null && userLng != null && address != null && address.getLatitude() != null && address.getLongitude() != null) {
-                distanceKm = Math.round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0) / 10.0;
+        List<Long> savedGymIds = new java.util.ArrayList<>();
+        if (userId != null) {
+            List<Long> gymIds = gymPage.getContent().stream().map(Gym::getId).toList();
+            if (!gymIds.isEmpty()) {
+                savedGymIds = savedGymRepository.findGymIdsByUserIdAndGymIdIn(userId, gymIds);
             }
-            return GymMainPageDto.builder()
-                    .gymId(gym.getId().toString())
-                    .name(gym.getName())
-                    .coverImageUrl(gym.getCoverImageUrl())
-                    .stars(stars)
-                    .isNew(isNew)
-                    .location(address != null ? address.getAddressText() : null)
-                    .city(address != null ? address.getCity() : null)
-                    .distanceKm(distanceKm)
-                    .build();
-        }).collect(Collectors.toList());
+        }
+
+        final List<Long> finalSavedIds = savedGymIds;
+        List<GymMainPageDto> items = gymPage.getContent().stream().map(gym -> mapToGymMainPageDto(gym, userId, userLat, userLng, finalSavedIds.contains(gym.getId())))
+                .collect(Collectors.toList());
 
         String message = null;
         if (items.isEmpty()) {
-            message = "Məkanınıza yaxın idman zalı yoxdur.";
+            message = "İdman zalı tapılmadı.";
         }
         return PaginatedResponse.<GymMainPageDto>builder()
                 .items(items)
@@ -231,6 +244,57 @@ public class GymReadService {
                 .pageSize(pageSize)
                 .message(message)
                 .build();
+    }
+
+    private PaginatedResponse<GymMainPageDto> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
+        java.util.stream.Stream<Gym> stream = candidates.stream();
+        if (q != null && !q.isBlank()) {
+            String lowerQ = q.toLowerCase();
+            stream = stream.filter(g -> (g.getName() != null && g.getName().toLowerCase().contains(lowerQ)) ||
+                    (g.getAddress() != null && g.getAddress().getAddressText() != null && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
+        }
+
+        List<GymMainPageDto> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true)).collect(Collectors.toList());
+
+        if (lat != null && lng != null) {
+            all.sort(Comparator.comparing(GymMainPageDto::getDistanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+        }
+
+        int from = Math.max(0, (page - 1) * pageSize);
+        int to = Math.min(all.size(), from + pageSize);
+        List<GymMainPageDto> pageItems = from >= all.size() ? new java.util.ArrayList<>() : new java.util.ArrayList<>(all.subList(from, to));
+
+        return PaginatedResponse.<GymMainPageDto>builder()
+                .items(pageItems)
+                .total(all.size())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    private GymMainPageDto mapToGymMainPageDto(Gym gym, Long userId, Double userLat, Double userLng, boolean isSaved) {
+        double stars = gym.getRating() != null ? gym.getRating() : 0.0;
+        boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
+        Address address = gym.getAddress();
+        Double distanceKm = null;
+        if (userLat != null && userLng != null && address != null && address.getLatitude() != null && address.getLongitude() != null) {
+            distanceKm = Math.round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0) / 10.0;
+        }
+        return GymMainPageDto.builder()
+                .gymId(gym.getId().toString())
+                .name(gym.getName())
+                .coverImageUrl(gym.getCoverImageUrl())
+                .stars(stars)
+                .isNew(isNew)
+                .location(address != null ? address.getAddressText() : null)
+                .city(address != null ? address.getCity() : null)
+                .distanceKm(distanceKm)
+                .isSaved(isSaved)
+                .build();
+    }
+
+    private PaginatedResponse<GymMainPageDto> emptyPaginatedResponse(int page, int pageSize) {
+        return PaginatedResponse.<GymMainPageDto>builder().items(java.util.Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
     }
     
     @Transactional(readOnly = true)

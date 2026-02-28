@@ -27,18 +27,8 @@ import az.fitnest.catalog.model.entity.StoreSocialLink;
 import az.fitnest.catalog.model.entity.StoreWorkHours;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrimaryKeyJoinColumn;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +36,11 @@ import java.util.Set;
 
 @Entity
 @Table(name="stores", indexes={@Index(name="idx_stores_status", columnList="status"), @Index(name="idx_stores_category", columnList="category")})
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(callSuper = true)
 public class Store
 extends BaseAuditableEntity {
     @Column(name="name", nullable=false)
@@ -61,137 +56,30 @@ extends BaseAuditableEntity {
     private String phone;
     @ElementCollection
     @CollectionTable(name="store_work_hours", joinColumns={@JoinColumn(name="store_id")})
+    @Builder.Default
     private Set<StoreWorkHours> workHours = new LinkedHashSet<>();
     @Column(name="logo_url")
     private String logoUrl;
     @Column(name="cover_image_url")
     private String coverImageUrl;
     @Column(name="popular_score")
+    @Builder.Default
     private Double popularScore = 0.0;
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="store_id")
+    @Builder.Default
     private Set<StoreDiscount> discounts = new LinkedHashSet<StoreDiscount>();
     @OneToMany(cascade={CascadeType.ALL}, orphanRemoval=true)
     @JoinColumn(name="store_id")
+    @Builder.Default
     private Set<StoreImage> images = new LinkedHashSet<StoreImage>();
     @ElementCollection
     @CollectionTable(name = "store_social_links", joinColumns = @JoinColumn(name = "store_id"))
+    @Builder.Default
     private Set<StoreSocialLink> socialLinks = new LinkedHashSet<>();
 
-    public String getName() {
-        return this.name;
-    }
-
-    public String getCategory() {
-        return this.category;
-    }
-
-    public String getStatus() {
-        return this.status;
-    }
-
-    public StoreAddress getAddress() {
-        return this.address;
-    }
-
-    public String getPhone() {
-        return this.phone;
-    }
-
-    public Set<StoreWorkHours> getWorkHours() {
-        return this.workHours;
-    }
-
-    public String getLogoUrl() {
-        return this.logoUrl;
-    }
-
-    public String getCoverImageUrl() {
-        return this.coverImageUrl;
-    }
-
-    public Double getPopularScore() {
-        return this.popularScore;
-    }
-
-
-    public Set<StoreDiscount> getDiscounts() {
-        return this.discounts;
-    }
-
-    public Set<StoreImage> getImages() {
-        return this.images;
-    }
-
-    public Set<StoreSocialLink> getSocialLinks() {
-        return this.socialLinks;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public void setAddress(StoreAddress address) {
-        this.address = address;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public void setWorkHours(Set<StoreWorkHours> workHours) {
-        this.workHours = workHours;
-    }
-
-    public void setLogoUrl(String logoUrl) {
-        this.logoUrl = logoUrl;
-    }
-
-    public void setCoverImageUrl(String coverImageUrl) {
-        this.coverImageUrl = coverImageUrl;
-    }
-
-    public void setPopularScore(Double popularScore) {
-        this.popularScore = popularScore;
-    }
-
-
-    public void setDiscounts(Set<StoreDiscount> discounts) {
-        this.discounts = discounts;
-    }
-
-    public void setImages(Set<StoreImage> images) {
-        this.images = images;
-    }
-
-    public void setSocialLinks(Set<StoreSocialLink> socialLinks) {
-        this.socialLinks = socialLinks;
-    }
-
-    public Store() {
-    }
-
-    public Store(String name, String category, String status, StoreAddress address, String phone, Set<StoreWorkHours> workHours, String logoUrl, String coverImageUrl, Double popularScore, Set<StoreDiscount> discounts, Set<StoreImage> images, Set<StoreSocialLink> socialLinks) {
-        this.name = name;
-        this.category = category;
-        this.status = status;
-        this.address = address;
-        this.phone = phone;
-        this.workHours = workHours;
-        this.logoUrl = logoUrl;
-        this.coverImageUrl = coverImageUrl;
-        this.popularScore = popularScore;
-        this.discounts = discounts;
-        this.images = images;
-        this.socialLinks = socialLinks;
+    public Long getStoreId() {
+        return getId();
     }
 }
 

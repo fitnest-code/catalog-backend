@@ -11,6 +11,7 @@ import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
+import az.fitnest.catalog.model.entity.SavedGym;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymSubscriptionBenefit;
 import az.fitnest.catalog.dto.GymSubscriptionRequestDto;
@@ -19,6 +20,7 @@ import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.repository.SavedGymRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
@@ -45,6 +47,7 @@ import java.util.Locale;
 public class GymWriteService {
 
     private final GymRepository gymRepository;
+    private final SavedGymRepository savedGymRepository;
     private final CategoryRepository categoryRepository;
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
@@ -188,7 +191,24 @@ public class GymWriteService {
                 }
             }
         }
+        savedGymRepository.deleteByGymId(gymId);
         gymRepository.delete(gym);
+    }
+
+    @Transactional
+    public boolean toggleSave(Long userId, Long gymId) {
+        java.util.Optional<az.fitnest.catalog.model.entity.SavedGym> existing = savedGymRepository.findByUserIdAndGymId(userId, gymId);
+        if (existing.isPresent()) {
+            savedGymRepository.delete(existing.get());
+            return false;
+        } else {
+            Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
+            az.fitnest.catalog.model.entity.SavedGym saved = new az.fitnest.catalog.model.entity.SavedGym();
+            saved.setUserId(userId);
+            saved.setGym(gym);
+            savedGymRepository.save(saved);
+            return true;
+        }
     }
 
     @Transactional
