@@ -82,6 +82,8 @@ public class DataInitializer {
             Gym gym = new Gym();
             gym.setName("Premium Fitness Center");
             gym.setDescription("High-quality fitness center with modern equipment and professional trainers");
+            gym.setCoverImageUrl("https://picsum.photos/seed/gym1/800/600");
+            gym.setLogoUrl("https://picsum.photos/seed/gymlogo1/200/200");
             gym.setAddress(address);
             gym.setPhone("+994500000000");
             gym.setEmail("info@premiumfitness.az");
@@ -106,6 +108,8 @@ public class DataInitializer {
             store.setName("Sports World");
             store.setCategory("Equipment");
             store.setStatus(StoreStatus.ACTIVE.name());
+            store.setCoverImageUrl("https://picsum.photos/seed/store1/800/600");
+            store.setLogoUrl("https://picsum.photos/seed/storelogo1/200/200");
             store.setAddress(address);
             store.setPhone("+994510000000");
             store.setPopularScore(9.8);
