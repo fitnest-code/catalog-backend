@@ -21,28 +21,28 @@ import jakarta.validation.constraints.Pattern;
 @lombok.NoArgsConstructor
 @lombok.AllArgsConstructor
 public class GymRequest {
-    @NotBlank(message = "Name cannot be empty")
+    @NotBlank(message = "Ad boş ola bilməz")
     private String name;
     
     private String description;
     
-    @NotNull(message = "Address cannot be null")
+    @NotNull(message = "Ünvan boş ola bilməz")
     @Valid
     private AddressDto address;
     
-    @NotBlank(message = "Phone cannot be empty")
-    @Pattern(regexp = "^(050|051|010|055|099|070|077|060)\\d{7}$", message = "Invalid mobile number format. Must start with 050, 051, 010, 055, 099, 070, 077, or 060 and follow with 7 digits.")
+    @NotBlank(message = "Telefon boş ola bilməz")
+    @Pattern(regexp = "^(050|051|010|055|099|070|077|060)\\d{7}$", message = "Yanlış mobil nömrə formatı. 050, 051, 010, 055, 099, 070, 077 və ya 060 ilə başlamalı və 7 rəqəmlə davam etməlidir.")
     private String phone;
     
-    @NotBlank(message = "Email cannot be empty")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email boş ola bilməz")
+    @Email(message = "Yanlış email formatı")
     private String email;
     
-    @NotEmpty(message = "Categories cannot be empty")
+    @NotEmpty(message = "Kateqoriyalar boş ola bilməz")
     private Set<Long> categoryIds;
 
     private String responsiblePerson;
-    @NotNull(message = "Status cannot be null")
+    @NotNull(message = "Status boş ola bilməz")
     private az.fitnest.catalog.model.enums.GymStatus status;
 
 

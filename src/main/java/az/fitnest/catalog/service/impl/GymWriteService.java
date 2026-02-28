@@ -75,7 +75,7 @@ public class GymWriteService {
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
             if (categories.size() != request.getCategoryIds().size()) {
-                throw new BadRequestException("INVALID_CATEGORIES", "One or more category IDs are invalid");
+                throw new BadRequestException("INVALID_CATEGORIES", "Bir və ya daha çox kateqoriya ID-si yanlışdır");
             }
             gym.setCategories(new HashSet<>(categories));
         }
@@ -139,7 +139,7 @@ public class GymWriteService {
         if (request.getSubscriptions() != null) {
             for (GymSubscriptionRequestDto subDto : request.getSubscriptions()) {
                 if (!orderServiceGrpcClient.checkPlanExists(subDto.getPlanId())) {
-                    throw new BadRequestException("PLAN_NOT_FOUND", "Membership plan ID " + subDto.getPlanId() + " does not exist or is inactive.");
+                    throw new BadRequestException("PLAN_NOT_FOUND", "Üzvlük planı ID " + subDto.getPlanId() + " mövcud deyil və ya deaktivdir.");
                 }
                 GymSubscription subscription = new GymSubscription();
                 subscription.setPlanId(subDto.getPlanId());

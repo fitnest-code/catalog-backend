@@ -40,7 +40,7 @@ public class GymReadService {
     @Cacheable(cacheNames = "gyms", key = "#gymId")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         Gym gym = gymRepository.findWithDetailsById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
 
         Map<String, List<GymImage>> grouped = gymImageRepository.findByGymId(gymId)
                 .stream()
@@ -222,7 +222,7 @@ public class GymReadService {
 
         String message = null;
         if (items.isEmpty()) {
-            message = "There are no gyms close to your location.";
+            message = "Məkanınıza yaxın idman zalı yoxdur.";
         }
         return PaginatedResponse.<GymMainPageDto>builder()
                 .items(items)
@@ -235,7 +235,7 @@ public class GymReadService {
     
     @Transactional(readOnly = true)
     public LocationDto getGymLocation(Long gymId) {
-        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
         Address addr = gym.getAddress();
         if (addr == null) {
             return LocationDto.builder().build();

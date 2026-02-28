@@ -65,9 +65,9 @@ public class GymTrainerService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request) {
         Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı"));
         if (!gymId.equals(trainer.getGymId())) {
-            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
         
         if (request.getPicture() != null && !request.getPicture().equals(trainer.getPicture())) {
@@ -82,9 +82,9 @@ public class GymTrainerService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void deleteTrainer(Long gymId, Long trainerId) {
         Trainer trainerToDelete = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı"));
         if (!gymId.equals(trainerToDelete.getGymId())) {
-            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Trainer not found");
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
         
         if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {
@@ -98,7 +98,7 @@ public class GymTrainerService {
         trainer.setSurname(request.getSurname());
         
         Profession profession = professionRepository.findById(request.getProfessionId())
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Profession not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
         trainer.setProfession(profession);
         
         trainer.setPicture(request.getPicture());

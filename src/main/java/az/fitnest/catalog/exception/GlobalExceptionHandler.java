@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                "Validation failed",
+                "Doğrulama xətası",
                 request.getDescription(false).replace("uri=", ""),
                 details
         );
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                "Constraint violation",
+                "Məhdudiyyət pozuntusu",
                 request.getDescription(false).replace("uri=", ""),
                 details
         );
@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                "Invalid request format",
+                "Yanlış sorğu formatı",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
-                "Forbidden",
+                "Giriş qadağandır",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
@@ -106,7 +106,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal server error: " + ex.getMessage(),
+                "Daxili server xətası: " + ex.getMessage(),
                 request.getDescription(false).replace("uri=", ""),
                 Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
         );
@@ -118,7 +118,7 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal server error: " + ex.getMessage(),
+                "Daxili server xətası: " + ex.getMessage(),
                 request.getDescription(false).replace("uri=", ""),
                 Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
         );

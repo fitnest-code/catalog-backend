@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Schema(description = "Request to create or update a profession")
 public class ProfessionRequest {
-    @NotBlank(message = "Profession name cannot be blank")
+    @NotBlank(message = "Peşə adı boş ola bilməz")
     @Schema(description = "Name of the profession", example = "CrossFit Coach")
     private String name;
 }

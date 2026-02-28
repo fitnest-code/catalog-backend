@@ -15,15 +15,15 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Request to create or update a trainer")
 public class TrainerRequest {
 
-    @NotBlank(message = "Trainer's name is required")
+    @NotBlank(message = "Məşqçinin adı tələb olunur")
     @Schema(description = "Trainer's first name", example = "John")
     private String name;
 
-    @NotBlank(message = "Trainer's surname is required")
+    @NotBlank(message = "Məşqçinin soyadı tələb olunur")
     @Schema(description = "Trainer's last name", example = "Doe")
     private String surname;
 
-    @NotNull(message = "Profession ID is required")
+    @NotNull(message = "Peşə ID-si tələb olunur")
     @Schema(description = "ID of the assigned Profession entity", example = "1")
     private Long professionId;
 

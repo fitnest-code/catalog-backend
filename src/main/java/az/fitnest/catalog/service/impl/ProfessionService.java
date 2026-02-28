@@ -30,14 +30,14 @@ public class ProfessionService {
     @Transactional(readOnly = true)
     public ProfessionDto getProfessionById(Long id) {
         Profession p = professionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Profession not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
         return toDto(p);
     }
 
     @Transactional
     public ProfessionDto createProfession(ProfessionRequest request) {
         if (professionRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Profession with this name already exists");
+            throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
         }
         Profession p = Profession.builder()
                 .name(request.getName())
@@ -48,10 +48,10 @@ public class ProfessionService {
     @Transactional
     public ProfessionDto updateProfession(Long id, ProfessionRequest request) {
         Profession p = professionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Profession not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
                 
         if (!p.getName().equals(request.getName()) && professionRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Profession with this name already exists");
+            throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
         }
         
         p.setName(request.getName());
@@ -61,7 +61,7 @@ public class ProfessionService {
     @Transactional
     public void deleteProfession(Long id) {
         Profession p = professionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Profession not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
         professionRepository.delete(p);
     }
 
