@@ -22,6 +22,7 @@ public class DataInitializer {
     private final GymRepository gymRepository;
     private final StoreRepository storeRepository;
     private final TrainerRepository trainerRepository;
+    private final TranslationRepository translationRepository;
 
     @Bean
     public CommandLineRunner initCatalogData() {
@@ -30,6 +31,7 @@ public class DataInitializer {
             initProfessions();
             initGyms();
             initStores();
+            initTrainers();
         };
     }
 
@@ -45,8 +47,34 @@ public class DataInitializer {
         if (!categoryRepository.existsByName(name)) {
             Category category = new Category();
             category.setName(name);
-            categoryRepository.save(category);
+            category = categoryRepository.save(category);
+            
+            // Seed translations (assuming original is EN)
+            createTranslationIfNotFound("Category", category.getCategoryId().toString(), "AZ", "name", translateCategoryToAz(name));
+            createTranslationIfNotFound("Category", category.getCategoryId().toString(), "RU", "name", translateCategoryToRu(name));
         }
+    }
+
+    private String translateCategoryToAz(String name) {
+        return switch (name) {
+            case "Fitness" -> "Fitnes";
+            case "Yoga" -> "Yoqa";
+            case "Boxing" -> "Boks";
+            case "Swimming" -> "Üzgüçülük";
+            case "Crossfit" -> "Krossfit";
+            default -> name;
+        };
+    }
+
+    private String translateCategoryToRu(String name) {
+        return switch (name) {
+            case "Fitness" -> "Фитнес";
+            case "Yoga" -> "Йога";
+            case "Boxing" -> "Бокс";
+            case "Swimming" -> "Плавание";
+            case "Crossfit" -> "Кроссфит";
+            default -> name;
+        };
     }
 
     private void initProfessions() {
@@ -57,12 +85,38 @@ public class DataInitializer {
     }
 
     private void createProfessionIfNotFound(String name) {
-        // Assuming ProfessionRepository has existsByName or similar, checking findByName
-        if (professionRepository.findAll().stream().noneMatch(p -> p.getName().equals(name))) {
+        Optional<Profession> existing = professionRepository.findAll().stream()
+                .filter(p -> p.getName().equals(name))
+                .findFirst();
+        
+        if (existing.isEmpty()) {
             Profession profession = new Profession();
             profession.setName(name);
-            professionRepository.save(profession);
+            profession = professionRepository.save(profession);
+            
+            createTranslationIfNotFound("Profession", profession.getProfessionId().toString(), "AZ", "name", translateProfessionToAz(name));
+            createTranslationIfNotFound("Profession", profession.getProfessionId().toString(), "RU", "name", translateProfessionToRu(name));
         }
+    }
+
+    private String translateProfessionToAz(String name) {
+        return switch (name) {
+            case "Fitness Trainer" -> "Fitnes Məşqçisi";
+            case "Yoga Instructor" -> "Yoqa Təlimatçısı";
+            case "Boxing Coach" -> "Boks Məşqçisi";
+            case "Nutritionist" -> "Nutrisioloq";
+            default -> name;
+        };
+    }
+
+    private String translateProfessionToRu(String name) {
+        return switch (name) {
+            case "Fitness Trainer" -> "Фитнес-тренер";
+            case "Yoga Instructor" -> "Инструктор по йоге";
+            case "Boxing Coach" -> "Тренер по боксу";
+            case "Nutritionist" -> "Нутрициолог";
+            default -> name;
+        };
     }
 
     private void initGyms() {
@@ -96,7 +150,13 @@ public class DataInitializer {
                 gym.setCategories(new HashSet<>(Collections.singletonList(fitnessCategory)));
             }
 
-            gymRepository.save(gym);
+            gym = gymRepository.save(gym);
+
+            String gymId = gym.getGymId().toString();
+            createTranslationIfNotFound("Gym", gymId, "AZ", "name", "Premium Fitnes Mərkəzi");
+            createTranslationIfNotFound("Gym", gymId, "RU", "name", "Премиум Фитнес Центр");
+            createTranslationIfNotFound("Gym", gymId, "AZ", "description", "Müasir avadanlıq və peşəkar məşqçilər ilə yüksək keyfiyyətli fitnes mərkəzi");
+            createTranslationIfNotFound("Gym", gymId, "RU", "description", "Высококачественный фитнес-центр с современным оборудованием и профессиональными тренерами");
         }
     }
 
@@ -114,7 +174,44 @@ public class DataInitializer {
             store.setPhone("+994510000000");
             store.setPopularScore(9.8);
 
-            storeRepository.save(store);
+            store = storeRepository.save(store);
+
+            String storeId = store.getStoreId().toString();
+            createTranslationIfNotFound("Store", storeId, "AZ", "name", "İdman Dünyası");
+            createTranslationIfNotFound("Store", storeId, "RU", "name", "Мир Спорта");
+            createTranslationIfNotFound("Store", storeId, "AZ", "category", "Avadanlıq");
+            createTranslationIfNotFound("Store", storeId, "RU", "category", "Оборудование");
+        }
+    }
+
+    private void initTrainers() {
+        if (trainerRepository.count() == 0) {
+            Trainer trainer = new Trainer();
+            trainer.setFirstName("John");
+            trainer.setLastName("Doe");
+            trainer.setSpecialization("Fitness");
+            trainer.setExperienceYears(10);
+            trainer.setRating(4.9);
+            trainer.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer1");
+            
+            trainer = trainerRepository.save(trainer);
+            
+            String trainerId = trainer.getTrainerId().toString();
+            createTranslationIfNotFound("Trainer", trainerId, "AZ", "specialization", "Fitnes");
+            createTranslationIfNotFound("Trainer", trainerId, "RU", "specialization", "Фитнес");
+        }
+    }
+
+    private void createTranslationIfNotFound(String entityType, String entityId, String languageCode, String fieldName, String fieldValue) {
+        if (!translationRepository.existsByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(entityType, entityId, languageCode, fieldName)) {
+            Translation translation = Translation.builder()
+                    .entityType(entityType)
+                    .entityId(entityId)
+                    .languageCode(languageCode)
+                    .fieldName(fieldName)
+                    .fieldValue(fieldValue)
+                    .build();
+            translationRepository.save(translation);
         }
     }
 }
