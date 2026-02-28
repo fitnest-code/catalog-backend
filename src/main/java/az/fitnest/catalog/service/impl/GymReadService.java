@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
@@ -55,7 +56,7 @@ public class GymReadService {
                 .collect(Collectors.groupingBy(GymImage::getImageName));
 
         List<GymRoomDto> rooms = grouped.entrySet().stream().map(entry -> {
-            List<GymImageDto> images = entry.getValue().stream().map(this::toGymImageDto).collect(Collectors.toList());
+            List<GymImageDto> images = entry.getValue().stream().map(GymMapper::toImageDto).collect(Collectors.toList());
             return GymRoomDto.builder().room_name(entry.getKey()).images(images).build();
         }).collect(Collectors.toList());
 
@@ -95,20 +96,16 @@ public class GymReadService {
 
         List<GymTrainerDto> trainerDtos = trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
                 .getContent().stream()
-                .map(this::toGymTrainerDto)
+                .map(GymMapper::toTrainerDto)
                 .collect(Collectors.toList());
 
         List<GymReviewDto> recentReviews = reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
                 .getContent().stream()
-                .map(this::toGymReviewDto)
+                .map(GymMapper::toReviewDto)
                 .collect(Collectors.toList());
 
         List<GymWorkHourDto> workHours = gymRepository.findWorkHoursByGymId(gymId).stream()
-                .map(wh -> GymWorkHourDto.builder()
-                        .day(wh.getDay())
-                        .from(wh.getFromTime())
-                        .to(wh.getToTime())
-                        .build())
+                .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList());
 
         return GymDetailResponse.builder()
@@ -142,7 +139,7 @@ public class GymReadService {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
         List<GymImageItemDto> items = gymImageRepository.findByGymId(gymId).stream()
-                .map(this::toGymImageItemDto)
+                .map(GymMapper::toImageItemDto)
                 .collect(Collectors.toList());
         return GymImageResponse.builder().items(items).build();
     }
@@ -311,56 +308,6 @@ public class GymReadService {
                 .build();
     }
 
-    private GymTrainerDto toGymTrainerDto(Trainer t) {
-        az.fitnest.catalog.dto.ProfessionDto professionDto = null;
-        if (t.getProfession() != null) {
-            professionDto = az.fitnest.catalog.dto.ProfessionDto.builder()
-                    .id(t.getProfession().getId())
-                    .name(t.getProfession().getName())
-                    .build();
-        }
-        
-        return GymTrainerDto.builder()
-                .trainer_id(t.getId() != null ? t.getId().toString() : null)
-                .name(t.getName())
-                .surname(t.getSurname())
-                .profession(professionDto)
-                .picture(t.getPicture())
-                .phone(t.getPhone())
-                .email(t.getEmail())
-                .build();
-    }
-
-    private GymReviewDto toGymReviewDto(az.fitnest.catalog.model.entity.Review r) {
-        return GymReviewDto.builder()
-                .review_id(r.getId() != null ? r.getId().toString() : null)
-                .rating(r.getRating())
-                .comment(r.getComment())
-                .created_at(r.getCreatedDate())
-                .author(GymReviewAuthorDto.builder()
-                        .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
-                        .full_name("User " + r.getUserId())
-                        .build())
-                .build();
-    }
-
-    private GymImageDto toGymImageDto(GymImage img) {
-        return GymImageDto.builder()
-                .id(img.getId())
-                .gymId(img.getGym() != null ? img.getGym().getId() : null)
-                .name(img.getImageName())
-                .url(img.getUrl())
-                .build();
-    }
-
-    private GymImageItemDto toGymImageItemDto(GymImage img) {
-        return GymImageItemDto.builder()
-                .image_id(img.getId() != null ? img.getId().toString() : "img_" + System.identityHashCode(img))
-                .url(img.getUrl())
-                .type(img.getType() != null ? img.getType() : "other")
-                .title(img.getTitle())
-                .build();
-    }
 
     private Pageable pageable(int page, int size, Sort sort) {
         int safePage = Math.max(page, 1) - 1;
