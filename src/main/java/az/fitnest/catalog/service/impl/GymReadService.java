@@ -68,20 +68,20 @@ public class GymReadService {
                         .distinct()
                         .toList();
                 List<az.fitnest.order.grpc.GymMembershipPlan> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
-                
+
                 membershipPlans = remotePlans.stream().map(remotePlan -> {
                     // Find matching subscription to get benefits
                     az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
                             .filter(s -> s.getPlanId() == remotePlan.getPlanId())
                             .findFirst().orElse(null);
-                            
+
                     List<String> benefitsList = new java.util.ArrayList<>();
                     if (matchingSub != null && matchingSub.getBenefits() != null) {
                         benefitsList = matchingSub.getBenefits().stream()
                                 .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
                                 .toList();
                     }
-                    
+
                     return GymPlanItemDto.builder()
                             .plan_id(String.valueOf(remotePlan.getPlanId()))
                             .name(remotePlan.getName())
@@ -154,7 +154,6 @@ public class GymReadService {
     }
 
 
-
     @Transactional(readOnly = true)
     public ReservationRulesResponse getReservationRules(Long gymId) {
         if (!gymRepository.existsById(gymId)) {
@@ -208,7 +207,7 @@ public class GymReadService {
             List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
             return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q);
         }
-        
+
         if (userLat != null && userLng != null) {
             double initialRadiusKm = 50.0;
             double[] bbox = boundingBox(userLat, userLng, initialRadiusKm);
@@ -302,7 +301,7 @@ public class GymReadService {
     private PaginatedResponse<GymMainPageDto> emptyPaginatedResponse(int page, int pageSize) {
         return PaginatedResponse.<GymMainPageDto>builder().items(java.util.Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
     }
-    
+
     @Transactional(readOnly = true)
     public LocationDto getGymLocation(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
@@ -336,8 +335,8 @@ public class GymReadService {
         double latDistance = Math.toRadians(lat2 - lat1);
         double lonDistance = Math.toRadians(lng2 - lng1);
         double a = Math.sin(latDistance / 2.0) * Math.sin(latDistance / 2.0) +
-                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                   Math.sin(lonDistance / 2.0) * Math.sin(lonDistance / 2.0);
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                        Math.sin(lonDistance / 2.0) * Math.sin(lonDistance / 2.0);
         return 6371.0 * 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
     }
 }

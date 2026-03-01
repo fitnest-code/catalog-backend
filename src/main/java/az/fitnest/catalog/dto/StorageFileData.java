@@ -13,28 +13,28 @@ public class StorageFileData {
         return this.path;
     }
 
-    public long getSize() {
-        return this.size;
-    }
-
-    public String getMd5() {
-        return this.md5;
-    }
-
-    public long getFsId() {
-        return this.fsId;
-    }
-
     public void setPath(String path) {
         this.path = path;
+    }
+
+    public long getSize() {
+        return this.size;
     }
 
     public void setSize(long size) {
         this.size = size;
     }
 
+    public String getMd5() {
+        return this.md5;
+    }
+
     public void setMd5(String md5) {
         this.md5 = md5;
+    }
+
+    public long getFsId() {
+        return this.fsId;
     }
 
     public void setFsId(long fsId) {
@@ -48,7 +48,7 @@ public class StorageFileData {
         if (!(o instanceof StorageFileData)) {
             return false;
         }
-        StorageFileData other = (StorageFileData)o;
+        StorageFileData other = (StorageFileData) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -76,9 +76,9 @@ public class StorageFileData {
         int PRIME = 59;
         int result = 1;
         long $size = this.getSize();
-        result = result * 59 + (int)($size >>> 32 ^ $size);
+        result = result * 59 + (int) ($size >>> 32 ^ $size);
         long $fsId = this.getFsId();
-        result = result * 59 + (int)($fsId >>> 32 ^ $fsId);
+        result = result * 59 + (int) ($fsId >>> 32 ^ $fsId);
         String $path = this.getPath();
         result = result * 59 + ($path == null ? 43 : $path.hashCode());
         String $md5 = this.getMd5();

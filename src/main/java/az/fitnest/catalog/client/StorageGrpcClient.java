@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  com.google.protobuf.ByteString
  *  io.grpc.stub.StreamObserver
@@ -23,6 +23,7 @@ import az.fitnest.storage.grpc.UploadFileRequest;
 import az.fitnest.storage.grpc.UploadFileResponse;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -30,15 +31,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class StorageGrpcClient {
-    @GrpcClient(value="storage-service")
+    @GrpcClient(value = "storage-service")
     private StorageServiceGrpc.StorageServiceStub asyncStub;
-    @GrpcClient(value="storage-service")
+    @GrpcClient(value = "storage-service")
     private StorageServiceGrpc.StorageServiceBlockingStub blockingStub;
 
     public StorageFileData uploadFile(MultipartFile file, String directory) {
@@ -49,7 +51,7 @@ public class StorageGrpcClient {
         final CountDownLatch finishLatch = new CountDownLatch(1);
         final AtomicReference responseData = new AtomicReference();
         final AtomicReference error = new AtomicReference();
-        StreamObserver<UploadFileResponse> responseObserver = new StreamObserver<UploadFileResponse>(){
+        StreamObserver<UploadFileResponse> responseObserver = new StreamObserver<UploadFileResponse>() {
 
             public void onNext(UploadFileResponse response) {
                 if (response.getSuccess()) {
@@ -80,10 +82,10 @@ public class StorageGrpcClient {
             }
             requestObserver.onNext(UploadFileRequest.newBuilder().setMetadata(metadataBuilder.build()).build());
             byte[] buffer = new byte[65536];
-            try (InputStream inputStream = file.getInputStream();){
+            try (InputStream inputStream = file.getInputStream();) {
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    requestObserver.onNext(UploadFileRequest.newBuilder().setChunkData(ByteString.copyFrom((byte[])buffer, (int)0, (int)bytesRead)).build());
+                    requestObserver.onNext(UploadFileRequest.newBuilder().setChunkData(ByteString.copyFrom((byte[]) buffer, (int) 0, (int) bytesRead)).build());
                 }
             }
             requestObserver.onCompleted();
@@ -91,11 +93,10 @@ public class StorageGrpcClient {
                 throw new RuntimeException("Upload timed out");
             }
             if (error.get() != null) {
-                throw new RuntimeException("Upload failed: " + ((Throwable)error.get()).getMessage(), (Throwable)error.get());
+                throw new RuntimeException("Upload failed: " + ((Throwable) error.get()).getMessage(), (Throwable) error.get());
             }
-            return (StorageFileData)responseData.get();
-        }
-        catch (IOException | InterruptedException e) {
+            return (StorageFileData) responseData.get();
+        } catch (IOException | InterruptedException e) {
             requestObserver.onError(e);
             throw new RuntimeException("Upload interrupted or failed", e);
         }

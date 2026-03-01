@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Column
  *  jakarta.persistence.Entity
@@ -16,23 +16,24 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.*;
+
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name="categories")
+@Table(name = "categories")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = true)
 public class Category
-extends BaseAuditableEntity {
-    @Column(name="name", nullable=false, unique=true)
+        extends BaseAuditableEntity {
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
-    @Column(name="photo_url")
+    @Column(name = "photo_url")
     private String photoUrl;
-    @ManyToMany(mappedBy="categories")
+    @ManyToMany(mappedBy = "categories")
     @Builder.Default
     private Set<Gym> gyms = new HashSet<Gym>();
 

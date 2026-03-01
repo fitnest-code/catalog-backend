@@ -50,12 +50,12 @@ public class StoreServiceImpl implements StoreService {
         }
 
         if (lat != null && lng != null && "CLOSEST".equalsIgnoreCase(type)) {
-             double[] bbox = boundingBox(lat, lng, 50.0);
-             storePage = storeRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1], bbox[2], bbox[3], pageable);
-             // For CLOSEST, we might need manual sorting/filtering if search query is present
-             if (q != null && !q.isBlank()) {
-                 return manualPaginate(storePage.getContent(), userId, lat, lng, page, pageSize, q);
-             }
+            double[] bbox = boundingBox(lat, lng, 50.0);
+            storePage = storeRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1], bbox[2], bbox[3], pageable);
+            // For CLOSEST, we might need manual sorting/filtering if search query is present
+            if (q != null && !q.isBlank()) {
+                return manualPaginate(storePage.getContent(), userId, lat, lng, page, pageSize, q);
+            }
         } else if ("DISCOUNTED".equalsIgnoreCase(type)) {
             storePage = (q != null && !q.isBlank()) ? storeRepository.findDiscountedStoresByQuery("%" + q.toLowerCase() + "%", pageable) : storeRepository.findDiscountedStores(pageable);
         } else if ("NEW".equalsIgnoreCase(type)) {
@@ -230,19 +230,19 @@ public class StoreServiceImpl implements StoreService {
         store.setName(request.getName());
         Double reqLat = request.getAddress() != null ? request.getAddress().getLatitude() : null;
         Double reqLng = request.getAddress() != null ? request.getAddress().getLongitude() : null;
-        
+
         boolean coordsChanged = store.getAddress() == null || !Objects.equals(store.getAddress().getLatitude(), reqLat) || !Objects.equals(store.getAddress().getLongitude(), reqLng);
-        
-        GeocodingResponse geocoding = (store.getAddress() != null && !coordsChanged) 
+
+        GeocodingResponse geocoding = (store.getAddress() != null && !coordsChanged)
                 ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
                 : resolveGeocoding(reqLat, reqLng);
-                
+
         store.setAddress(request.getAddress() != null ? new StoreAddress(geocoding.getAddressText(), geocoding.getCity(), reqLat, reqLng) : null);
-        
+
         store.setPhone(request.getPhone());
         store.setCategory(request.getCategory());
         store.setStatus(request.getStatus());
-        
+
         if (request.getWorkingHours() != null) {
             store.setWorkHours(request.getWorkingHours().stream().map(dto -> new StoreWorkHours(dto.getDay(), dto.getFrom(), dto.getTo())).collect(Collectors.toCollection(LinkedHashSet::new)));
         }
@@ -306,7 +306,10 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public void deleteFileSafely(String url) {
-        try { fileStorageService.deleteFile(url); } catch (Exception ignored) {}
+        try {
+            fileStorageService.deleteFile(url);
+        } catch (Exception ignored) {
+        }
     }
 
     @Override

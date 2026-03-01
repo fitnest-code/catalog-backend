@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.data.jpa.repository.JpaRepository
  *  org.springframework.stereotype.Repository
@@ -8,8 +8,10 @@
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.Gym;
+
 import java.util.Optional;
 import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface GymRepository
-extends JpaRepository<Gym, Long> {
+        extends JpaRepository<Gym, Long> {
     public List<Gym> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4);
 
     @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE g.address.latitude BETWEEN :minLat AND :maxLat AND g.address.longitude BETWEEN :minLng AND :maxLng ORDER BY ((g.address.latitude - :userLat) * (g.address.latitude - :userLat) + (g.address.longitude - :userLng) * (g.address.longitude - :userLng)) ASC")

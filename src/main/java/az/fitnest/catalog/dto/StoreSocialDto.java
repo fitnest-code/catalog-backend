@@ -1,10 +1,18 @@
 package az.fitnest.catalog.dto;
 
 import az.fitnest.catalog.model.entity.StoreSocialLink;
+
 import java.util.List;
 
 public class StoreSocialDto {
     private List<StoreSocialLink> links;
+
+    public StoreSocialDto() {
+    }
+
+    public StoreSocialDto(List<StoreSocialLink> links) {
+        this.links = links;
+    }
 
     public static StoreSocialDtoBuilder builder() {
         return new StoreSocialDtoBuilder();
@@ -34,13 +42,6 @@ public class StoreSocialDto {
     @Override
     public String toString() {
         return "StoreSocialDto(links=" + links + ")";
-    }
-
-    public StoreSocialDto() {
-    }
-
-    public StoreSocialDto(List<StoreSocialLink> links) {
-        this.links = links;
     }
 
     public static class StoreSocialDtoBuilder {

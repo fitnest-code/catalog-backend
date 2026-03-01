@@ -10,6 +10,15 @@ public class FilterResponseDto {
     private List<String> sortOptions;
     private int defaultRadiusKm;
 
+    public FilterResponseDto() {
+    }
+
+    public FilterResponseDto(List<TabDto> tabs, List<String> sortOptions, int defaultRadiusKm) {
+        this.tabs = tabs;
+        this.sortOptions = sortOptions;
+        this.defaultRadiusKm = defaultRadiusKm;
+    }
+
     public static FilterResponseDtoBuilder builder() {
         return new FilterResponseDtoBuilder();
     }
@@ -18,20 +27,20 @@ public class FilterResponseDto {
         return this.tabs;
     }
 
-    public List<String> getSortOptions() {
-        return this.sortOptions;
-    }
-
-    public int getDefaultRadiusKm() {
-        return this.defaultRadiusKm;
-    }
-
     public void setTabs(List<TabDto> tabs) {
         this.tabs = tabs;
     }
 
+    public List<String> getSortOptions() {
+        return this.sortOptions;
+    }
+
     public void setSortOptions(List<String> sortOptions) {
         this.sortOptions = sortOptions;
+    }
+
+    public int getDefaultRadiusKm() {
+        return this.defaultRadiusKm;
     }
 
     public void setDefaultRadiusKm(int defaultRadiusKm) {
@@ -45,7 +54,7 @@ public class FilterResponseDto {
         if (!(o instanceof FilterResponseDto)) {
             return false;
         }
-        FilterResponseDto other = (FilterResponseDto)o;
+        FilterResponseDto other = (FilterResponseDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -54,12 +63,12 @@ public class FilterResponseDto {
         }
         List<TabDto> this$tabs = this.getTabs();
         List<TabDto> other$tabs = other.getTabs();
-        if (this$tabs == null ? other$tabs != null : !((Object)this$tabs).equals(other$tabs)) {
+        if (this$tabs == null ? other$tabs != null : !((Object) this$tabs).equals(other$tabs)) {
             return false;
         }
         List<String> this$sortOptions = this.getSortOptions();
         List<String> other$sortOptions = other.getSortOptions();
-        return !(this$sortOptions == null ? other$sortOptions != null : !((Object)this$sortOptions).equals(other$sortOptions));
+        return !(this$sortOptions == null ? other$sortOptions != null : !((Object) this$sortOptions).equals(other$sortOptions));
     }
 
     protected boolean canEqual(Object other) {
@@ -71,23 +80,14 @@ public class FilterResponseDto {
         int result = 1;
         result = result * 59 + this.getDefaultRadiusKm();
         List<TabDto> $tabs = this.getTabs();
-        result = result * 59 + ($tabs == null ? 43 : ((Object)$tabs).hashCode());
+        result = result * 59 + ($tabs == null ? 43 : ((Object) $tabs).hashCode());
         List<String> $sortOptions = this.getSortOptions();
-        result = result * 59 + ($sortOptions == null ? 43 : ((Object)$sortOptions).hashCode());
+        result = result * 59 + ($sortOptions == null ? 43 : ((Object) $sortOptions).hashCode());
         return result;
     }
 
     public String toString() {
         return "FilterResponseDto(tabs=" + this.getTabs() + ", sortOptions=" + this.getSortOptions() + ", defaultRadiusKm=" + this.getDefaultRadiusKm() + ")";
-    }
-
-    public FilterResponseDto() {
-    }
-
-    public FilterResponseDto(List<TabDto> tabs, List<String> sortOptions, int defaultRadiusKm) {
-        this.tabs = tabs;
-        this.sortOptions = sortOptions;
-        this.defaultRadiusKm = defaultRadiusKm;
     }
 
     public static class FilterResponseDtoBuilder {
@@ -126,6 +126,14 @@ public class FilterResponseDto {
         private String code;
         private String title;
 
+        public TabDto() {
+        }
+
+        public TabDto(String code, String title) {
+            this.code = code;
+            this.title = title;
+        }
+
         public static TabDtoBuilder builder() {
             return new TabDtoBuilder();
         }
@@ -134,12 +142,12 @@ public class FilterResponseDto {
             return this.code;
         }
 
-        public String getTitle() {
-            return this.title;
-        }
-
         public void setCode(String code) {
             this.code = code;
+        }
+
+        public String getTitle() {
+            return this.title;
         }
 
         public void setTitle(String title) {
@@ -153,7 +161,7 @@ public class FilterResponseDto {
             if (!(o instanceof TabDto)) {
                 return false;
             }
-            TabDto other = (TabDto)o;
+            TabDto other = (TabDto) o;
             if (!other.canEqual(this)) {
                 return false;
             }
@@ -183,14 +191,6 @@ public class FilterResponseDto {
 
         public String toString() {
             return "FilterResponseDto.TabDto(code=" + this.getCode() + ", title=" + this.getTitle() + ")";
-        }
-
-        public TabDto() {
-        }
-
-        public TabDto(String code, String title) {
-            this.code = code;
-            this.title = title;
         }
 
         public static class TabDtoBuilder {

@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Column
  *  jakarta.persistence.Entity
@@ -26,22 +26,34 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name="gym_images")
+@Table(name = "gym_images")
 public class GymImage {
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="gym_id", nullable=false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gym_id", nullable = false)
     private Gym gym;
-    @Column(name="image_name", nullable=false)
+    @Column(name = "image_name", nullable = false)
     private String imageName;
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String url;
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String type;
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String title;
+
+    public GymImage() {
+    }
+
+    public GymImage(Long id, Gym gym, String imageName, String url, String type, String title) {
+        this.id = id;
+        this.gym = gym;
+        this.imageName = imageName;
+        this.url = url;
+        this.type = type;
+        this.title = title;
+    }
 
     public static GymImageBuilder builder() {
         return new GymImageBuilder();
@@ -51,44 +63,44 @@ public class GymImage {
         return this.id;
     }
 
-    public Gym getGym() {
-        return this.gym;
-    }
-
-    public String getImageName() {
-        return this.imageName;
-    }
-
-    public String getUrl() {
-        return this.url;
-    }
-
-    public String getType() {
-        return this.type;
-    }
-
-    public String getTitle() {
-        return this.title;
-    }
-
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Gym getGym() {
+        return this.gym;
     }
 
     public void setGym(Gym gym) {
         this.gym = gym;
     }
 
+    public String getImageName() {
+        return this.imageName;
+    }
+
     public void setImageName(String imageName) {
         this.imageName = imageName;
+    }
+
+    public String getUrl() {
+        return this.url;
     }
 
     public void setUrl(String url) {
         this.url = url;
     }
 
+    public String getType() {
+        return this.type;
+    }
+
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getTitle() {
+        return this.title;
     }
 
     public void setTitle(String title) {
@@ -102,13 +114,13 @@ public class GymImage {
         if (!(o instanceof GymImage)) {
             return false;
         }
-        GymImage other = (GymImage)o;
+        GymImage other = (GymImage) o;
         if (!other.canEqual(this)) {
             return false;
         }
         Long this$id = this.getId();
         Long other$id = other.getId();
-        if (this$id == null ? other$id != null : !((Object)this$id).equals(other$id)) {
+        if (this$id == null ? other$id != null : !((Object) this$id).equals(other$id)) {
             return false;
         }
         Gym this$gym = this.getGym();
@@ -144,7 +156,7 @@ public class GymImage {
         int PRIME = 59;
         int result = 1;
         Long $id = this.getId();
-        result = result * 59 + ($id == null ? 43 : ((Object)$id).hashCode());
+        result = result * 59 + ($id == null ? 43 : ((Object) $id).hashCode());
         Gym $gym = this.getGym();
         result = result * 59 + ($gym == null ? 43 : $gym.hashCode());
         String $imageName = this.getImageName();
@@ -160,18 +172,6 @@ public class GymImage {
 
     public String toString() {
         return "GymImage(id=" + this.getId() + ", gym=" + this.getGym() + ", imageName=" + this.getImageName() + ", url=" + this.getUrl() + ", type=" + this.getType() + ", title=" + this.getTitle() + ")";
-    }
-
-    public GymImage() {
-    }
-
-    public GymImage(Long id, Gym gym, String imageName, String url, String type, String title) {
-        this.id = id;
-        this.gym = gym;
-        this.imageName = imageName;
-        this.url = url;
-        this.type = type;
-        this.title = title;
     }
 
     public static class GymImageBuilder {

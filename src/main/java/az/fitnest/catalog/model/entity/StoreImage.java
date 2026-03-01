@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Column
  *  jakarta.persistence.Entity
@@ -14,39 +14,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name="store_images")
+@Table(name = "store_images")
 public class StoreImage
-extends BaseEntity {
-    @Column(name="type")
+        extends BaseEntity {
+    @Column(name = "type")
     private String type;
-    @Column(name="title")
+    @Column(name = "title")
     private String title;
-    @Column(name="url", nullable=false)
+    @Column(name = "url", nullable = false)
     private String url;
-
-    public String getType() {
-        return this.type;
-    }
-
-    public String getTitle() {
-        return this.title;
-    }
-
-    public String getUrl() {
-        return this.url;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
 
     public StoreImage() {
     }
@@ -54,6 +30,30 @@ extends BaseEntity {
     public StoreImage(String type, String title, String url) {
         this.type = type;
         this.title = title;
+        this.url = url;
+    }
+
+    public String getType() {
+        return this.type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getTitle() {
+        return this.title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getUrl() {
+        return this.url;
+    }
+
+    public void setUrl(String url) {
         this.url = url;
     }
 }

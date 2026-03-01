@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Column
  *  jakarta.persistence.Entity
@@ -14,35 +14,35 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name="store_discounts")
+@Table(name = "store_discounts")
 public class StoreDiscount
-extends BaseEntity {
-    @Column(name="percent")
+        extends BaseEntity {
+    @Column(name = "percent")
     private Integer percent;
-    @Column(name="applies_to", columnDefinition="TEXT")
+    @Column(name = "applies_to", columnDefinition = "TEXT")
     private String appliesTo;
-
-    public Integer getPercent() {
-        return this.percent;
-    }
-
-    public String getAppliesTo() {
-        return this.appliesTo;
-    }
-
-    public void setPercent(Integer percent) {
-        this.percent = percent;
-    }
-
-    public void setAppliesTo(String appliesTo) {
-        this.appliesTo = appliesTo;
-    }
 
     public StoreDiscount() {
     }
 
     public StoreDiscount(Integer percent, String appliesTo) {
         this.percent = percent;
+        this.appliesTo = appliesTo;
+    }
+
+    public Integer getPercent() {
+        return this.percent;
+    }
+
+    public void setPercent(Integer percent) {
+        this.percent = percent;
+    }
+
+    public String getAppliesTo() {
+        return this.appliesTo;
+    }
+
+    public void setAppliesTo(String appliesTo) {
         this.appliesTo = appliesTo;
     }
 }

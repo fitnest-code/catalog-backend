@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Column
  *  jakarta.persistence.Entity
@@ -32,25 +32,37 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+
 import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name="saved_stores", indexes={@Index(name="idx_saved_stores_user_id", columnList="user_id")}, uniqueConstraints={@UniqueConstraint(columnNames={"user_id", "store_id"})})
-@EntityListeners(value={AuditingEntityListener.class})
+@Table(name = "saved_stores", indexes = {@Index(name = "idx_saved_stores_user_id", columnList = "user_id")}, uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "store_id"})})
+@EntityListeners(value = {AuditingEntityListener.class})
 public class SavedStore {
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name="user_id", nullable=false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
-    @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name="store_id", nullable=false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
     private Store store;
     @CreatedDate
-    @Column(name="created_date", updatable=false)
+    @Column(name = "created_date", updatable = false)
     private LocalDateTime createdDate;
+
+    public SavedStore() {
+    }
+
+    public SavedStore(Long id, Long userId, Store store, LocalDateTime createdDate) {
+        this.id = id;
+        this.userId = userId;
+        this.store = store;
+        this.createdDate = createdDate;
+    }
 
     public static SavedStoreBuilder builder() {
         return new SavedStoreBuilder();
@@ -60,41 +72,31 @@ public class SavedStore {
         return this.id;
     }
 
-    public Long getUserId() {
-        return this.userId;
-    }
-
-    public Store getStore() {
-        return this.store;
-    }
-
-    public LocalDateTime getCreatedDate() {
-        return this.createdDate;
-    }
-
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return this.userId;
     }
 
     public void setUserId(Long userId) {
         this.userId = userId;
     }
 
+    public Store getStore() {
+        return this.store;
+    }
+
     public void setStore(Store store) {
         this.store = store;
     }
 
+    public LocalDateTime getCreatedDate() {
+        return this.createdDate;
+    }
+
     public void setCreatedDate(LocalDateTime createdDate) {
-        this.createdDate = createdDate;
-    }
-
-    public SavedStore() {
-    }
-
-    public SavedStore(Long id, Long userId, Store store, LocalDateTime createdDate) {
-        this.id = id;
-        this.userId = userId;
-        this.store = store;
         this.createdDate = createdDate;
     }
 

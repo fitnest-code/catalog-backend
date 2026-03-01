@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.GeneratedValue
  *  jakarta.persistence.GenerationType
@@ -21,7 +21,7 @@ import lombok.*;
 @AllArgsConstructor
 public abstract class BaseEntity {
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 }
 

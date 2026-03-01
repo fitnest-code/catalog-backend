@@ -49,11 +49,11 @@ public class ProfessionService {
     public ProfessionDto updateProfession(Long id, ProfessionRequest request) {
         Profession p = professionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
-                
+
         if (!p.getName().equals(request.getName()) && professionRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
         }
-        
+
         p.setName(request.getName());
         return toDto(professionRepository.save(p));
     }

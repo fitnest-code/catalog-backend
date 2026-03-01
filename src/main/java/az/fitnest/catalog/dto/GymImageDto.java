@@ -9,6 +9,16 @@ public class GymImageDto {
     private String name;
     private String url;
 
+    public GymImageDto() {
+    }
+
+    public GymImageDto(Long id, Long gymId, String name, String url) {
+        this.id = id;
+        this.gymId = gymId;
+        this.name = name;
+        this.url = url;
+    }
+
     public static GymImageDtoBuilder builder() {
         return new GymImageDtoBuilder();
     }
@@ -17,28 +27,28 @@ public class GymImageDto {
         return this.id;
     }
 
-    public Long getGymId() {
-        return this.gymId;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public String getUrl() {
-        return this.url;
-    }
-
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getGymId() {
+        return this.gymId;
     }
 
     public void setGymId(Long gymId) {
         this.gymId = gymId;
     }
 
+    public String getName() {
+        return this.name;
+    }
+
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getUrl() {
+        return this.url;
     }
 
     public void setUrl(String url) {
@@ -52,18 +62,18 @@ public class GymImageDto {
         if (!(o instanceof GymImageDto)) {
             return false;
         }
-        GymImageDto other = (GymImageDto)o;
+        GymImageDto other = (GymImageDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
         Long this$id = this.getId();
         Long other$id = other.getId();
-        if (this$id == null ? other$id != null : !((Object)this$id).equals(other$id)) {
+        if (this$id == null ? other$id != null : !((Object) this$id).equals(other$id)) {
             return false;
         }
         Long this$gymId = this.getGymId();
         Long other$gymId = other.getGymId();
-        if (this$gymId == null ? other$gymId != null : !((Object)this$gymId).equals(other$gymId)) {
+        if (this$gymId == null ? other$gymId != null : !((Object) this$gymId).equals(other$gymId)) {
             return false;
         }
         String this$name = this.getName();
@@ -84,9 +94,9 @@ public class GymImageDto {
         int PRIME = 59;
         int result = 1;
         Long $id = this.getId();
-        result = result * 59 + ($id == null ? 43 : ((Object)$id).hashCode());
+        result = result * 59 + ($id == null ? 43 : ((Object) $id).hashCode());
         Long $gymId = this.getGymId();
-        result = result * 59 + ($gymId == null ? 43 : ((Object)$gymId).hashCode());
+        result = result * 59 + ($gymId == null ? 43 : ((Object) $gymId).hashCode());
         String $name = this.getName();
         result = result * 59 + ($name == null ? 43 : $name.hashCode());
         String $url = this.getUrl();
@@ -96,16 +106,6 @@ public class GymImageDto {
 
     public String toString() {
         return "GymImageDto(id=" + this.getId() + ", gymId=" + this.getGymId() + ", name=" + this.getName() + ", url=" + this.getUrl() + ")";
-    }
-
-    public GymImageDto() {
-    }
-
-    public GymImageDto(Long id, Long gymId, String name, String url) {
-        this.id = id;
-        this.gymId = gymId;
-        this.name = name;
-        this.url = url;
     }
 
     public static class GymImageDtoBuilder {

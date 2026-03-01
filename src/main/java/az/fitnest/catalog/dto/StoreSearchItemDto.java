@@ -6,6 +6,13 @@ package az.fitnest.catalog.dto;
 public class StoreSearchItemDto {
     private Long storeId;
 
+    public StoreSearchItemDto() {
+    }
+
+    public StoreSearchItemDto(Long storeId) {
+        this.storeId = storeId;
+    }
+
     public static StoreSearchItemDtoBuilder builder() {
         return new StoreSearchItemDtoBuilder();
     }
@@ -25,7 +32,7 @@ public class StoreSearchItemDto {
         if (!(o instanceof StoreSearchItemDto)) {
             return false;
         }
-        StoreSearchItemDto other = (StoreSearchItemDto)o;
+        StoreSearchItemDto other = (StoreSearchItemDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -48,13 +55,6 @@ public class StoreSearchItemDto {
 
     public String toString() {
         return "StoreSearchItemDto(storeId=" + this.getStoreId() + ")";
-    }
-
-    public StoreSearchItemDto() {
-    }
-
-    public StoreSearchItemDto(Long storeId) {
-        this.storeId = storeId;
     }
 
     public static class StoreSearchItemDtoBuilder {

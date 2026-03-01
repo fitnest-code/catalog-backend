@@ -20,7 +20,6 @@ public class ErrorResponse {
     private Map<String, Object> details;
 
 
-
     public ErrorResponse(Integer status, String error, String path, Map<String, Object> details) {
         this.status = status;
         this.error = error;

@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.servlet.Filter
  *  org.springframework.context.annotation.Bean
@@ -22,7 +22,9 @@ package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.security.FitnestSecurityFilter;
 import jakarta.servlet.Filter;
+
 import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -48,9 +50,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
     private final FitnestSecurityFilter securityFilter;
 
+    public SecurityConfig(FitnestSecurityFilter securityFilter) {
+        this.securityFilter = securityFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return (SecurityFilterChain)http.csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).headers(headers -> headers.cacheControl(HeadersConfigurer.CacheControlConfig::disable)).authorizeHttpRequests(auth -> ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)auth.requestMatchers(new String[]{"/api/v1/internal/**"})).hasRole("INTERNAL").requestMatchers(new String[]{"/api/v1/stores/admin/**"})).hasRole("ADMIN").requestMatchers(new String[]{"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"})).permitAll().requestMatchers(new String[]{"/actuator/**", "/health/**"})).permitAll().requestMatchers(new String[]{"/error"})).permitAll().anyRequest()).authenticated()).addFilterBefore((Filter)this.securityFilter, UsernamePasswordAuthenticationFilter.class).build();
+        return (SecurityFilterChain) http.csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).headers(headers -> headers.cacheControl(HeadersConfigurer.CacheControlConfig::disable)).authorizeHttpRequests(auth -> ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) auth.requestMatchers(new String[]{"/api/v1/internal/**"})).hasRole("INTERNAL").requestMatchers(new String[]{"/api/v1/stores/admin/**"})).hasRole("ADMIN").requestMatchers(new String[]{"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"})).permitAll().requestMatchers(new String[]{"/actuator/**", "/health/**"})).permitAll().requestMatchers(new String[]{"/error"})).permitAll().anyRequest()).authenticated()).addFilterBefore((Filter) this.securityFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
 
     @Bean
@@ -77,10 +83,6 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
-
-    public SecurityConfig(FitnestSecurityFilter securityFilter) {
-        this.securityFilter = securityFilter;
     }
 }
 

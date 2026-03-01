@@ -12,6 +12,17 @@ public class GymReviewDto {
     private GymReviewAuthorDto author;
     private java.time.LocalDateTime created_at;
 
+    public GymReviewDto() {
+    }
+
+    public GymReviewDto(String review_id, Integer rating, String comment, GymReviewAuthorDto author, java.time.LocalDateTime created_at) {
+        this.review_id = review_id;
+        this.rating = rating;
+        this.comment = comment;
+        this.author = author;
+        this.created_at = created_at;
+    }
+
     public static GymReviewDtoBuilder builder() {
         return new GymReviewDtoBuilder();
     }
@@ -20,36 +31,36 @@ public class GymReviewDto {
         return this.review_id;
     }
 
-    public Integer getRating() {
-        return this.rating;
-    }
-
-    public String getComment() {
-        return this.comment;
-    }
-
-    public GymReviewAuthorDto getAuthor() {
-        return this.author;
-    }
-
-    public java.time.LocalDateTime getCreated_at() {
-        return this.created_at;
-    }
-
     public void setReview_id(String review_id) {
         this.review_id = review_id;
+    }
+
+    public Integer getRating() {
+        return this.rating;
     }
 
     public void setRating(Integer rating) {
         this.rating = rating;
     }
 
+    public String getComment() {
+        return this.comment;
+    }
+
     public void setComment(String comment) {
         this.comment = comment;
     }
 
+    public GymReviewAuthorDto getAuthor() {
+        return this.author;
+    }
+
     public void setAuthor(GymReviewAuthorDto author) {
         this.author = author;
+    }
+
+    public java.time.LocalDateTime getCreated_at() {
+        return this.created_at;
     }
 
     public void setCreated_at(java.time.LocalDateTime created_at) {
@@ -63,13 +74,13 @@ public class GymReviewDto {
         if (!(o instanceof GymReviewDto)) {
             return false;
         }
-        GymReviewDto other = (GymReviewDto)o;
+        GymReviewDto other = (GymReviewDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
         Integer this$rating = this.getRating();
         Integer other$rating = other.getRating();
-        if (this$rating == null ? other$rating != null : !((Object)this$rating).equals(other$rating)) {
+        if (this$rating == null ? other$rating != null : !((Object) this$rating).equals(other$rating)) {
             return false;
         }
         String this$review_id = this.getReview_id();
@@ -84,7 +95,7 @@ public class GymReviewDto {
         }
         GymReviewAuthorDto this$author = this.getAuthor();
         GymReviewAuthorDto other$author = other.getAuthor();
-        if (this$author == null ? other$author != null : !((Object)this$author).equals(other$author)) {
+        if (this$author == null ? other$author != null : !((Object) this$author).equals(other$author)) {
             return false;
         }
         java.time.LocalDateTime this$created_at = this.getCreated_at();
@@ -100,13 +111,13 @@ public class GymReviewDto {
         int PRIME = 59;
         int result = 1;
         Integer $rating = this.getRating();
-        result = result * 59 + ($rating == null ? 43 : ((Object)$rating).hashCode());
+        result = result * 59 + ($rating == null ? 43 : ((Object) $rating).hashCode());
         String $review_id = this.getReview_id();
         result = result * 59 + ($review_id == null ? 43 : $review_id.hashCode());
         String $comment = this.getComment();
         result = result * 59 + ($comment == null ? 43 : $comment.hashCode());
         GymReviewAuthorDto $author = this.getAuthor();
-        result = result * 59 + ($author == null ? 43 : ((Object)$author).hashCode());
+        result = result * 59 + ($author == null ? 43 : ((Object) $author).hashCode());
         java.time.LocalDateTime $created_at = this.getCreated_at();
         result = result * 59 + ($created_at == null ? 43 : $created_at.hashCode());
         return result;
@@ -114,17 +125,6 @@ public class GymReviewDto {
 
     public String toString() {
         return "GymReviewDto(review_id=" + this.getReview_id() + ", rating=" + this.getRating() + ", comment=" + this.getComment() + ", author=" + this.getAuthor() + ", created_at=" + this.getCreated_at() + ")";
-    }
-
-    public GymReviewDto() {
-    }
-
-    public GymReviewDto(String review_id, Integer rating, String comment, GymReviewAuthorDto author, java.time.LocalDateTime created_at) {
-        this.review_id = review_id;
-        this.rating = rating;
-        this.comment = comment;
-        this.author = author;
-        this.created_at = created_at;
     }
 
     public static class GymReviewDtoBuilder {

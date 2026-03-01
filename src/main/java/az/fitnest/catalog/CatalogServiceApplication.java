@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.boot.SpringApplication
  *  org.springframework.boot.autoconfigure.SpringBootApplication
@@ -24,7 +24,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableJpaRepositories(basePackages = "az.fitnest.catalog.repository")
 public class CatalogServiceApplication {
     public static void main(String[] args) {
-        SpringApplication.run(CatalogServiceApplication.class, (String[])args);
+        SpringApplication.run(CatalogServiceApplication.class, (String[]) args);
     }
 }
 

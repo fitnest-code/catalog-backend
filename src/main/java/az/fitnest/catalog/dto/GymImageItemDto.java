@@ -9,6 +9,16 @@ public class GymImageItemDto {
     private String title;
     private String url;
 
+    public GymImageItemDto() {
+    }
+
+    public GymImageItemDto(String image_id, String type, String title, String url) {
+        this.image_id = image_id;
+        this.type = type;
+        this.title = title;
+        this.url = url;
+    }
+
     public static GymImageItemDtoBuilder builder() {
         return new GymImageItemDtoBuilder();
     }
@@ -17,28 +27,28 @@ public class GymImageItemDto {
         return this.image_id;
     }
 
-    public String getType() {
-        return this.type;
-    }
-
-    public String getTitle() {
-        return this.title;
-    }
-
-    public String getUrl() {
-        return this.url;
-    }
-
     public void setImage_id(String image_id) {
         this.image_id = image_id;
+    }
+
+    public String getType() {
+        return this.type;
     }
 
     public void setType(String type) {
         this.type = type;
     }
 
+    public String getTitle() {
+        return this.title;
+    }
+
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getUrl() {
+        return this.url;
     }
 
     public void setUrl(String url) {
@@ -52,7 +62,7 @@ public class GymImageItemDto {
         if (!(o instanceof GymImageItemDto)) {
             return false;
         }
-        GymImageItemDto other = (GymImageItemDto)o;
+        GymImageItemDto other = (GymImageItemDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -96,16 +106,6 @@ public class GymImageItemDto {
 
     public String toString() {
         return "GymImageItemDto(image_id=" + this.getImage_id() + ", type=" + this.getType() + ", title=" + this.getTitle() + ", url=" + this.getUrl() + ")";
-    }
-
-    public GymImageItemDto() {
-    }
-
-    public GymImageItemDto(String image_id, String type, String title, String url) {
-        this.image_id = image_id;
-        this.type = type;
-        this.title = title;
-        this.url = url;
     }
 
     public static class GymImageItemDtoBuilder {

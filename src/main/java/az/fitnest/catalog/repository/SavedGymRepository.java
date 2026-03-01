@@ -12,9 +12,9 @@ import java.util.Optional;
 @Repository
 public interface SavedGymRepository extends JpaRepository<SavedGym, Long> {
     Optional<SavedGym> findByUserIdAndGymId(Long userId, Long gymId);
-    
+
     List<SavedGym> findByUserId(Long userId);
-    
+
     void deleteByGymId(Long gymId);
 
     @Query("SELECT s.gym.id FROM SavedGym s WHERE s.userId = :userId AND s.gym.id IN :gymIds")

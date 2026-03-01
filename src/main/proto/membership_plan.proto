@@ -9,7 +9,7 @@ option java_outer_classname = "MembershipPlanProto";
 service MembershipPlanService {
   rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse); // Deprecated but kept for compatibility until full switch
   rpc CheckIn(CheckInRequest) returns (CheckInResponse);
-  
+
   // New cross-service methods
   rpc CheckPlanExists(CheckPlanExistsRequest) returns (CheckPlanExistsResponse);
   rpc GetPlansByIds(GetPlansByIdsRequest) returns (GetPlansByIdsResponse);

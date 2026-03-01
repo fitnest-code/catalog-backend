@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.data.jpa.repository.JpaRepository
  */
@@ -10,7 +10,7 @@ import az.fitnest.catalog.model.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CategoryRepository
-extends JpaRepository<Category, Long> {
+        extends JpaRepository<Category, Long> {
     public boolean existsByName(String var1);
 }
 

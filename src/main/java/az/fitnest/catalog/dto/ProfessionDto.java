@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class ProfessionDto {
     @Schema(description = "Unique ID of the profession")
     private Long id;
-    
+
     @Schema(description = "Name of the profession", example = "CrossFit Coach")
     private String name;
 }

@@ -99,7 +99,6 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
 
-
         gym.setName(request.getName());
         gym.setDescription(request.getDescription());
 

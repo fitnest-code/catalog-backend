@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.slf4j.Logger
  *  org.slf4j.LoggerFactory
@@ -23,13 +23,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnBean(value={JdbcTemplate.class})
-@ConditionalOnProperty(prefix="app.warmup", name={"enabled"}, havingValue="true", matchIfMissing=true)
+@ConditionalOnBean(value = {JdbcTemplate.class})
+@ConditionalOnProperty(prefix = "app.warmup", name = {"enabled"}, havingValue = "true", matchIfMissing = true)
 public class StartupWarmupListener {
     private static final Logger log = LoggerFactory.getLogger(StartupWarmupListener.class);
     private final JdbcTemplate jdbcTemplate;
 
-    @EventListener(value={ApplicationReadyEvent.class})
+    public StartupWarmupListener(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @EventListener(value = {ApplicationReadyEvent.class})
     public void onApplicationReady() {
         log.info("Starting database warmup...");
         this.warmupDatabase();
@@ -39,14 +43,9 @@ public class StartupWarmupListener {
         try {
             this.jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             log.info("Database warmup completed successfully.");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.warn("Database warmup failed: {}", e.getMessage());
         }
-    }
-
-    public StartupWarmupListener(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
     }
 }
 

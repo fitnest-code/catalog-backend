@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.stereotype.Service
  *  org.springframework.web.multipart.MultipartFile
@@ -11,17 +11,23 @@ import az.fitnest.catalog.client.StorageGrpcClient;
 import az.fitnest.catalog.dto.StorageFileData;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.service.FileStorageService;
+
 import java.util.Arrays;
 import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileStorageServiceImpl
-implements FileStorageService {
+        implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png");
     private final StorageGrpcClient storageGrpcClient;
+
+    public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
+        this.storageGrpcClient = storageGrpcClient;
+    }
 
     @Override
     public String saveFile(MultipartFile file) {
@@ -43,8 +49,7 @@ implements FileStorageService {
             String extractedOldPath = this.extractIdFromUrl(oldPath);
             StorageFileData data = this.storageGrpcClient.uploadFile(file, directory, extractedOldPath);
             return String.valueOf(data.getFsId());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new BadRequestException("Failed to upload image: " + e.getMessage());
         }
     }
@@ -77,8 +82,7 @@ implements FileStorageService {
             if (!ids.isEmpty()) {
                 this.storageGrpcClient.deleteFiles(ids);
             }
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
             // empty catch block
         }
     }
@@ -92,10 +96,6 @@ implements FileStorageService {
             return parts[parts.length - 1];
         }
         return url;
-    }
-
-    public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
-        this.storageGrpcClient = storageGrpcClient;
     }
 }
 

@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  com.fasterxml.jackson.annotation.JsonTypeInfo$As
  *  com.fasterxml.jackson.databind.DeserializationFeature
@@ -34,7 +34,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import java.time.Duration;
+
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -56,25 +58,25 @@ public class RedisConfig {
         RedisTemplate template = new RedisTemplate();
         template.setConnectionFactory(redisConnectionFactory);
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(this.redisObjectMapper());
-        template.setKeySerializer((RedisSerializer)new StringRedisSerializer());
-        template.setValueSerializer((RedisSerializer)serializer);
-        template.setHashKeySerializer((RedisSerializer)new StringRedisSerializer());
-        template.setHashValueSerializer((RedisSerializer)serializer);
+        template.setKeySerializer((RedisSerializer) new StringRedisSerializer());
+        template.setValueSerializer((RedisSerializer) serializer);
+        template.setHashKeySerializer((RedisSerializer) new StringRedisSerializer());
+        template.setHashValueSerializer((RedisSerializer) serializer);
         return template;
     }
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10L)).serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer((RedisSerializer)new GenericJackson2JsonRedisSerializer(this.redisObjectMapper())));
-        return RedisCacheManager.builder((RedisConnectionFactory)connectionFactory).cacheDefaults(config).build();
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10L)).serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer((RedisSerializer) new GenericJackson2JsonRedisSerializer(this.redisObjectMapper())));
+        return RedisCacheManager.builder((RedisConnectionFactory) connectionFactory).cacheDefaults(config).build();
     }
 
     private ObjectMapper redisObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule((Module)new JavaTimeModule());
+        objectMapper.registerModule((Module) new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.activateDefaultTyping((PolymorphicTypeValidator)BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(), ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+        objectMapper.activateDefaultTyping((PolymorphicTypeValidator) BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(), ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
         return objectMapper;
     }
 }

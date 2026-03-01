@@ -20,13 +20,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Trainer extends BaseAuditableEntity {
-    
+
     @Column(name = "gym_id", insertable = false, updatable = false)
     private Long gymId;
-    
+
     @Column(name = "first_name")
     private String firstName;
-    
+
     @Column(name = "last_name")
     private String lastName;
 
@@ -39,27 +39,47 @@ public class Trainer extends BaseAuditableEntity {
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profession_id")
     private Profession profession;
-    
+
     @Column(name = "profile_image_url")
     private String profileImageUrl;
-    
+
     @Column(name = "phone")
     private String phone;
-    
+
     @Column(name = "email")
     private String email;
 
     // Aliases for compatibility
-    public String getName() { return firstName; }
-    public void setName(String name) { this.firstName = name; }
-    public String getSurname() { return lastName; }
-    public void setSurname(String surname) { this.lastName = surname; }
-    public String getPicture() { return profileImageUrl; }
-    public void setPicture(String picture) { this.profileImageUrl = picture; }
-    public Long getTrainerId() { return getId(); }
+    public String getName() {
+        return firstName;
+    }
+
+    public void setName(String name) {
+        this.firstName = name;
+    }
+
+    public String getSurname() {
+        return lastName;
+    }
+
+    public void setSurname(String surname) {
+        this.lastName = surname;
+    }
+
+    public String getPicture() {
+        return profileImageUrl;
+    }
+
+    public void setPicture(String picture) {
+        this.profileImageUrl = picture;
+    }
+
+    public Long getTrainerId() {
+        return getId();
+    }
 }
 

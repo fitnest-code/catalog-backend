@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  com.fasterxml.jackson.annotation.JsonFormat
  *  com.fasterxml.jackson.annotation.JsonFormat$Shape
@@ -10,18 +10,28 @@ package az.fitnest.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 
 public class GymWorkHourDto {
-    @Schema(description="Day of week", example="MONDAY")
+    @Schema(description = "Day of week", example = "MONDAY")
     private DayOfWeek day;
-    @Schema(description="Start time", example="09:00")
-    @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
+    @Schema(description = "Start time", example = "09:00")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime from;
-    @Schema(description="End time", example="21:00")
-    @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
+    @Schema(description = "End time", example = "21:00")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime to;
+
+    public GymWorkHourDto() {
+    }
+
+    public GymWorkHourDto(DayOfWeek day, LocalTime from, LocalTime to) {
+        this.day = day;
+        this.from = from;
+        this.to = to;
+    }
 
     public static GymWorkHourDtoBuilder builder() {
         return new GymWorkHourDtoBuilder();
@@ -31,24 +41,24 @@ public class GymWorkHourDto {
         return this.day;
     }
 
+    public void setDay(DayOfWeek day) {
+        this.day = day;
+    }
+
     public LocalTime getFrom() {
         return this.from;
+    }
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    public void setFrom(LocalTime from) {
+        this.from = from;
     }
 
     public LocalTime getTo() {
         return this.to;
     }
 
-    public void setDay(DayOfWeek day) {
-        this.day = day;
-    }
-
-    @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
-    public void setFrom(LocalTime from) {
-        this.from = from;
-    }
-
-    @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     public void setTo(LocalTime to) {
         this.to = to;
     }
@@ -60,7 +70,7 @@ public class GymWorkHourDto {
         if (!(o instanceof GymWorkHourDto)) {
             return false;
         }
-        GymWorkHourDto other = (GymWorkHourDto)o;
+        GymWorkHourDto other = (GymWorkHourDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -71,12 +81,12 @@ public class GymWorkHourDto {
         }
         LocalTime this$from = this.getFrom();
         LocalTime other$from = other.getFrom();
-        if (this$from == null ? other$from != null : !((Object)this$from).equals(other$from)) {
+        if (this$from == null ? other$from != null : !((Object) this$from).equals(other$from)) {
             return false;
         }
         LocalTime this$to = this.getTo();
         LocalTime other$to = other.getTo();
-        return !(this$to == null ? other$to != null : !((Object)this$to).equals(other$to));
+        return !(this$to == null ? other$to != null : !((Object) this$to).equals(other$to));
     }
 
     protected boolean canEqual(Object other) {
@@ -89,23 +99,14 @@ public class GymWorkHourDto {
         DayOfWeek $day = this.getDay();
         result = result * 59 + ($day == null ? 43 : $day.hashCode());
         LocalTime $from = this.getFrom();
-        result = result * 59 + ($from == null ? 43 : ((Object)$from).hashCode());
+        result = result * 59 + ($from == null ? 43 : ((Object) $from).hashCode());
         LocalTime $to = this.getTo();
-        result = result * 59 + ($to == null ? 43 : ((Object)$to).hashCode());
+        result = result * 59 + ($to == null ? 43 : ((Object) $to).hashCode());
         return result;
     }
 
     public String toString() {
         return "GymWorkHourDto(day=" + this.getDay() + ", from=" + this.getFrom() + ", to=" + this.getTo() + ")";
-    }
-
-    public GymWorkHourDto() {
-    }
-
-    public GymWorkHourDto(DayOfWeek day, LocalTime from, LocalTime to) {
-        this.day = day;
-        this.from = from;
-        this.to = to;
     }
 
     public static class GymWorkHourDtoBuilder {
@@ -121,13 +122,13 @@ public class GymWorkHourDto {
             return this;
         }
 
-        @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
         public GymWorkHourDtoBuilder from(LocalTime from) {
             this.from = from;
             return this;
         }
 
-        @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="HH:mm")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
         public GymWorkHourDtoBuilder to(LocalTime to) {
             this.to = to;
             return this;

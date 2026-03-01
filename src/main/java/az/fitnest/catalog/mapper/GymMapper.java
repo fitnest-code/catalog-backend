@@ -2,12 +2,14 @@ package az.fitnest.catalog.mapper;
 
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.model.entity.*;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
 public final class GymMapper {
 
-    private GymMapper() {}
+    private GymMapper() {
+    }
 
     public static GymTrainerDto toTrainerDto(Trainer t) {
         if (t == null) return null;
@@ -18,7 +20,7 @@ public final class GymMapper {
                     .name(t.getProfession().getName())
                     .build();
         }
-        
+
         return GymTrainerDto.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
                 .name(t.getName())

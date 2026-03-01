@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.validation.constraints.NotBlank
  */
@@ -11,6 +11,13 @@ import jakarta.validation.constraints.NotBlank;
 public class CategoryRequest {
     @NotBlank
     private String name;
+
+    public CategoryRequest() {
+    }
+
+    public CategoryRequest(String name) {
+        this.name = name;
+    }
 
     public static CategoryRequestBuilder builder() {
         return new CategoryRequestBuilder();
@@ -31,7 +38,7 @@ public class CategoryRequest {
         if (!(o instanceof CategoryRequest)) {
             return false;
         }
-        CategoryRequest other = (CategoryRequest)o;
+        CategoryRequest other = (CategoryRequest) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -54,13 +61,6 @@ public class CategoryRequest {
 
     public String toString() {
         return "CategoryRequest(name=" + this.getName() + ")";
-    }
-
-    public CategoryRequest() {
-    }
-
-    public CategoryRequest(String name) {
-        this.name = name;
     }
 
     public static class CategoryRequestBuilder {

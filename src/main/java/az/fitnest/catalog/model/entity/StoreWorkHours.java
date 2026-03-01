@@ -1,12 +1,13 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.persistence.Embeddable
  */
 package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.Embeddable;
+
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 
@@ -16,24 +17,33 @@ public class StoreWorkHours {
     private LocalTime fromTime;
     private LocalTime toTime;
 
+    public StoreWorkHours() {
+    }
+
+    public StoreWorkHours(DayOfWeek day, LocalTime fromTime, LocalTime toTime) {
+        this.day = day;
+        this.fromTime = fromTime;
+        this.toTime = toTime;
+    }
+
     public DayOfWeek getDay() {
         return this.day;
-    }
-
-    public LocalTime getFromTime() {
-        return this.fromTime;
-    }
-
-    public LocalTime getToTime() {
-        return this.toTime;
     }
 
     public void setDay(DayOfWeek day) {
         this.day = day;
     }
 
+    public LocalTime getFromTime() {
+        return this.fromTime;
+    }
+
     public void setFromTime(LocalTime fromTime) {
         this.fromTime = fromTime;
+    }
+
+    public LocalTime getToTime() {
+        return this.toTime;
     }
 
     public void setToTime(LocalTime toTime) {
@@ -47,7 +57,7 @@ public class StoreWorkHours {
         if (!(o instanceof StoreWorkHours)) {
             return false;
         }
-        StoreWorkHours other = (StoreWorkHours)o;
+        StoreWorkHours other = (StoreWorkHours) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -58,12 +68,12 @@ public class StoreWorkHours {
         }
         LocalTime this$fromTime = this.getFromTime();
         LocalTime other$fromTime = other.getFromTime();
-        if (this$fromTime == null ? other$fromTime != null : !((Object)this$fromTime).equals(other$fromTime)) {
+        if (this$fromTime == null ? other$fromTime != null : !((Object) this$fromTime).equals(other$fromTime)) {
             return false;
         }
         LocalTime this$toTime = this.getToTime();
         LocalTime other$toTime = other.getToTime();
-        return !(this$toTime == null ? other$toTime != null : !((Object)this$toTime).equals(other$toTime));
+        return !(this$toTime == null ? other$toTime != null : !((Object) this$toTime).equals(other$toTime));
     }
 
     protected boolean canEqual(Object other) {
@@ -76,23 +86,14 @@ public class StoreWorkHours {
         DayOfWeek $day = this.getDay();
         result = result * 59 + ($day == null ? 43 : $day.hashCode());
         LocalTime $fromTime = this.getFromTime();
-        result = result * 59 + ($fromTime == null ? 43 : ((Object)$fromTime).hashCode());
+        result = result * 59 + ($fromTime == null ? 43 : ((Object) $fromTime).hashCode());
         LocalTime $toTime = this.getToTime();
-        result = result * 59 + ($toTime == null ? 43 : ((Object)$toTime).hashCode());
+        result = result * 59 + ($toTime == null ? 43 : ((Object) $toTime).hashCode());
         return result;
     }
 
     public String toString() {
         return "StoreWorkHours(day=" + this.getDay() + ", fromTime=" + this.getFromTime() + ", toTime=" + this.getToTime() + ")";
-    }
-
-    public StoreWorkHours() {
-    }
-
-    public StoreWorkHours(DayOfWeek day, LocalTime fromTime, LocalTime toTime) {
-        this.day = day;
-        this.fromTime = fromTime;
-        this.toTime = toTime;
     }
 }
 

@@ -6,6 +6,7 @@ import az.fitnest.catalog.dto.GymRoomDto;
 import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.GymWorkHourDto;
 import az.fitnest.catalog.dto.LocationDto;
+
 import java.util.List;
 
 @lombok.Data

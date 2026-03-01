@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Profession extends BaseAuditableEntity {
-    
+
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 

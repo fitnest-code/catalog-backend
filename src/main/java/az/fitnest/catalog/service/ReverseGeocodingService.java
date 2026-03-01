@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.http.HttpEntity
  *  org.springframework.http.HttpHeaders
@@ -14,8 +14,10 @@
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.GeocodingResponse;
+
 import java.net.URI;
 import java.util.Map;
+
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -35,7 +37,7 @@ public class ReverseGeocodingService {
         if (latitude == null || longitude == null) {
             return null;
         }
-        URI uri = UriComponentsBuilder.fromHttpUrl((String)BASE_URL)
+        URI uri = UriComponentsBuilder.fromHttpUrl((String) BASE_URL)
                 .path("/reverse")
                 .queryParam("format", "json")
                 .queryParam("lat", latitude)
@@ -45,7 +47,7 @@ public class ReverseGeocodingService {
                 .build(true).toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
-        HttpEntity entity = new HttpEntity((MultiValueMap)headers);
+        HttpEntity entity = new HttpEntity((MultiValueMap) headers);
         try {
             ResponseEntity<Map> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
             Map<String, Object> body = response.getBody();
@@ -66,8 +68,7 @@ public class ReverseGeocodingService {
                         .city(city)
                         .build();
             }
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
             // empty catch block
         }
         return GeocodingResponse.builder()

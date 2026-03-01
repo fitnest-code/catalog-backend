@@ -14,6 +14,10 @@ public class ReservationRulesResponse {
         this.rules = rules;
     }
 
+    public static ReservationRulesResponseBuilder builder() {
+        return new ReservationRulesResponseBuilder();
+    }
+
     public boolean isReservation_required() {
         return reservation_required;
     }
@@ -28,10 +32,6 @@ public class ReservationRulesResponse {
 
     public void setRules(Map<String, Object> rules) {
         this.rules = rules;
-    }
-
-    public static ReservationRulesResponseBuilder builder() {
-        return new ReservationRulesResponseBuilder();
     }
 
     public static class ReservationRulesResponseBuilder {

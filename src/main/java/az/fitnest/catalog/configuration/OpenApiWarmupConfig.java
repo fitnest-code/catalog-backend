@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springdoc.core.properties.SpringDocConfigProperties
  *  org.springdoc.webmvc.api.OpenApiWebMvcResource
@@ -16,6 +16,7 @@ package az.fitnest.catalog.configuration;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Locale;
+
 import org.springdoc.core.properties.SpringDocConfigProperties;
 import org.springdoc.webmvc.api.OpenApiWebMvcResource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,16 +30,16 @@ import org.springframework.scheduling.annotation.Async;
 public class OpenApiWarmupConfig {
     private final SpringDocConfigProperties springDocConfigProperties;
     private final OpenApiWebMvcResource openApiResource;
-    @Value(value="${server.port:8080}")
+    @Value(value = "${server.port:8080}")
     private int serverPort;
 
     @Autowired
-    public OpenApiWarmupConfig(SpringDocConfigProperties springDocConfigProperties, @Autowired(required=false) OpenApiWebMvcResource openApiResource) {
+    public OpenApiWarmupConfig(SpringDocConfigProperties springDocConfigProperties, @Autowired(required = false) OpenApiWebMvcResource openApiResource) {
         this.springDocConfigProperties = springDocConfigProperties;
         this.openApiResource = openApiResource;
     }
 
-    @EventListener(value={ApplicationReadyEvent.class})
+    @EventListener(value = {ApplicationReadyEvent.class})
     @Async
     public void warmUpOpenApi() {
         if (!this.springDocConfigProperties.getApiDocs().isEnabled()) {
@@ -49,14 +50,12 @@ public class OpenApiWarmupConfig {
                 try {
                     this.openApiResource.openapiJson(null, "", Locale.getDefault());
                     return;
-                }
-                catch (Exception exception) {
+                } catch (Exception exception) {
                     // empty catch block
                 }
             }
             this.warmupViaHttp();
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
             // empty catch block
         }
     }
@@ -68,7 +67,7 @@ public class OpenApiWarmupConfig {
                 apiDocsPath = "/v3/api-docs";
             }
             URL url = new URL("http://localhost:" + this.serverPort + apiDocsPath);
-            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(30000);
@@ -77,8 +76,7 @@ public class OpenApiWarmupConfig {
                 connection.getInputStream().readAllBytes();
             }
             connection.disconnect();
-        }
-        catch (Exception exception) {
+        } catch (Exception exception) {
             // empty catch block
         }
     }

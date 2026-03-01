@@ -8,6 +8,15 @@ public class GymReviewAuthorDto {
     private String full_name;
     private String avatar_url;
 
+    public GymReviewAuthorDto() {
+    }
+
+    public GymReviewAuthorDto(String user_id, String full_name, String avatar_url) {
+        this.user_id = user_id;
+        this.full_name = full_name;
+        this.avatar_url = avatar_url;
+    }
+
     public static GymReviewAuthorDtoBuilder builder() {
         return new GymReviewAuthorDtoBuilder();
     }
@@ -16,20 +25,20 @@ public class GymReviewAuthorDto {
         return this.user_id;
     }
 
-    public String getFull_name() {
-        return this.full_name;
-    }
-
-    public String getAvatar_url() {
-        return this.avatar_url;
-    }
-
     public void setUser_id(String user_id) {
         this.user_id = user_id;
     }
 
+    public String getFull_name() {
+        return this.full_name;
+    }
+
     public void setFull_name(String full_name) {
         this.full_name = full_name;
+    }
+
+    public String getAvatar_url() {
+        return this.avatar_url;
     }
 
     public void setAvatar_url(String avatar_url) {
@@ -43,7 +52,7 @@ public class GymReviewAuthorDto {
         if (!(o instanceof GymReviewAuthorDto)) {
             return false;
         }
-        GymReviewAuthorDto other = (GymReviewAuthorDto)o;
+        GymReviewAuthorDto other = (GymReviewAuthorDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -80,15 +89,6 @@ public class GymReviewAuthorDto {
 
     public String toString() {
         return "GymReviewAuthorDto(user_id=" + this.getUser_id() + ", full_name=" + this.getFull_name() + ", avatar_url=" + this.getAvatar_url() + ")";
-    }
-
-    public GymReviewAuthorDto() {
-    }
-
-    public GymReviewAuthorDto(String user_id, String full_name, String avatar_url) {
-        this.user_id = user_id;
-        this.full_name = full_name;
-        this.avatar_url = avatar_url;
     }
 
     public static class GymReviewAuthorDtoBuilder {

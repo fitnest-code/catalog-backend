@@ -21,7 +21,7 @@ public class UpdateImageUrlRequest {
         if (!(o instanceof UpdateImageUrlRequest)) {
             return false;
         }
-        UpdateImageUrlRequest other = (UpdateImageUrlRequest)o;
+        UpdateImageUrlRequest other = (UpdateImageUrlRequest) o;
         if (!other.canEqual(this)) {
             return false;
         }

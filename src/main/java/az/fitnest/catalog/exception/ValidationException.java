@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  org.springframework.http.HttpStatus
  *  org.springframework.validation.BindingResult
@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
 
 public class ValidationException
-extends BaseException {
+        extends BaseException {
     private static final long serialVersionUID = 1L;
     private final BindingResult bindingResult;
 

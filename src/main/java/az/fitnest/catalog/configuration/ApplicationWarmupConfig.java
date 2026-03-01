@@ -1,15 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  org.slf4j.Logger
- *  org.slf4j.LoggerFactory
- *  org.springframework.beans.factory.annotation.Value
- *  org.springframework.boot.context.event.ApplicationReadyEvent
- *  org.springframework.context.annotation.Configuration
- *  org.springframework.context.event.EventListener
- *  org.springframework.scheduling.annotation.Async
- */
 package az.fitnest.catalog.configuration;
 
 import java.sql.Connection;
@@ -18,6 +6,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,16 +19,16 @@ import org.springframework.scheduling.annotation.Async;
 public class ApplicationWarmupConfig {
     private static final Logger log = LoggerFactory.getLogger(ApplicationWarmupConfig.class);
     private final DataSource dataSource;
-    @Value(value="${app.warmup.enabled:true}")
+    @Value(value = "${app.warmup.enabled:true}")
     private boolean warmupEnabled;
-    @Value(value="${app.warmup.db:true}")
+    @Value(value = "${app.warmup.db:true}")
     private boolean warmupDb;
 
     public ApplicationWarmupConfig(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-    @EventListener(value={ApplicationReadyEvent.class})
+    @EventListener(value = {ApplicationReadyEvent.class})
     @Async
     public void warmupApplication() {
         if (!this.warmupEnabled) {
@@ -57,15 +46,14 @@ public class ApplicationWarmupConfig {
             for (int i = 0; i < 3; ++i) {
                 try (Connection conn = this.dataSource.getConnection();
                      PreparedStatement stmt = conn.prepareStatement("SELECT 1");
-                     ResultSet rs = stmt.executeQuery();){
+                     ResultSet rs = stmt.executeQuery();) {
                     if (!rs.next()) continue;
                     rs.getInt(1);
                     continue;
                 }
             }
             log.debug("Database warmup completed in {}ms", System.currentTimeMillis() - start);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.warn("Failed to warm up database: {}", e.getMessage());
         }
     }
@@ -85,8 +73,7 @@ public class ApplicationWarmupConfig {
             map.put("key", "value");
             map.get("key");
             log.debug("JIT warmup completed in {}ms", System.currentTimeMillis() - start);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.warn("Failed JIT warmup: {}", e.getMessage());
         }
     }

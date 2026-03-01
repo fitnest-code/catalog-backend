@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  com.fasterxml.jackson.databind.ObjectMapper
  *  com.google.protobuf.Empty
@@ -31,9 +31,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @GrpcService
 public class StoreGrpcServiceImpl
-extends StoreServiceGrpc.StoreServiceImplBase {
+        extends StoreServiceGrpc.StoreServiceImplBase {
     private final StoreService storeService;
     private final ObjectMapper objectMapper;
+
+    public StoreGrpcServiceImpl(StoreService storeService, ObjectMapper objectMapper) {
+        this.storeService = storeService;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void getMarketStores(GetStoresRequest request, StreamObserver<StoreListResponse> responseObserver) {
@@ -46,8 +51,7 @@ extends StoreServiceGrpc.StoreServiceImplBase {
             String json = this.objectMapper.writeValueAsString(response);
             responseObserver.onNext(StoreListResponse.newBuilder().setJsonPayload(json).build());
             responseObserver.onCompleted();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             responseObserver.onError(e);
         }
     }
@@ -61,8 +65,7 @@ extends StoreServiceGrpc.StoreServiceImplBase {
             this.storeService.toggleSave(userId, storeId);
             responseObserver.onNext(ToggleFavoriteResponse.newBuilder().setSuccess(true).build());
             responseObserver.onCompleted();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             responseObserver.onError(e);
         }
     }
@@ -71,13 +74,12 @@ extends StoreServiceGrpc.StoreServiceImplBase {
     @Transactional
     public void createStoreAdmin(CreateStoreAdminRequest request, StreamObserver<StoreDetailResponse> responseObserver) {
         try {
-            StoreRequest storeReq = (StoreRequest)this.objectMapper.readValue(request.getJsonPayload(), StoreRequest.class);
+            StoreRequest storeReq = (StoreRequest) this.objectMapper.readValue(request.getJsonPayload(), StoreRequest.class);
             StoreDetailResponseDto responseDto = this.storeService.createStore(storeReq);
             String json = this.objectMapper.writeValueAsString(responseDto);
             responseObserver.onNext(StoreDetailResponse.newBuilder().setJsonPayload(json).build());
             responseObserver.onCompleted();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             responseObserver.onError(e);
         }
     }
@@ -87,13 +89,12 @@ extends StoreServiceGrpc.StoreServiceImplBase {
     public void updateStoreAdmin(UpdateStoreAdminRequest request, StreamObserver<StoreDetailResponse> responseObserver) {
         try {
             Long storeId = Long.parseLong(request.getStoreId());
-            StoreRequest storeReq = (StoreRequest)this.objectMapper.readValue(request.getJsonPayload(), StoreRequest.class);
+            StoreRequest storeReq = (StoreRequest) this.objectMapper.readValue(request.getJsonPayload(), StoreRequest.class);
             StoreDetailResponseDto responseDto = this.storeService.updateStore(storeId, storeReq);
             String json = this.objectMapper.writeValueAsString(responseDto);
             responseObserver.onNext(StoreDetailResponse.newBuilder().setJsonPayload(json).build());
             responseObserver.onCompleted();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             responseObserver.onError(e);
         }
     }
@@ -106,15 +107,9 @@ extends StoreServiceGrpc.StoreServiceImplBase {
             this.storeService.deleteStore(storeId);
             responseObserver.onNext(Empty.newBuilder().build());
             responseObserver.onCompleted();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             responseObserver.onError(e);
         }
-    }
-
-    public StoreGrpcServiceImpl(StoreService storeService, ObjectMapper objectMapper) {
-        this.storeService = storeService;
-        this.objectMapper = objectMapper;
     }
 }
 

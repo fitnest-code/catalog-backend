@@ -69,11 +69,11 @@ public class GymTrainerService {
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
-        
+
         if (request.getPicture() != null && !request.getPicture().equals(trainer.getPicture())) {
             safeDeleteFile(trainer.getPicture());
         }
-        
+
         updateTrainerFromRequest(trainer, request);
         trainerRepository.save(trainer);
     }
@@ -86,7 +86,7 @@ public class GymTrainerService {
         if (!gymId.equals(trainerToDelete.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
-        
+
         if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {
             safeDeleteFile(trainerToDelete.getPicture());
         }
@@ -96,11 +96,11 @@ public class GymTrainerService {
     private void updateTrainerFromRequest(Trainer trainer, TrainerRequest request) {
         trainer.setName(request.getName());
         trainer.setSurname(request.getSurname());
-        
+
         Profession profession = professionRepository.findById(request.getProfessionId())
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
         trainer.setProfession(profession);
-        
+
         trainer.setPicture(request.getPicture());
         trainer.setPhone(request.getPhone());
         trainer.setEmail(request.getEmail());
@@ -122,7 +122,7 @@ public class GymTrainerService {
                     .name(t.getProfession().getName())
                     .build();
         }
-        
+
         return GymTrainerDto.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
                 .name(t.getName())

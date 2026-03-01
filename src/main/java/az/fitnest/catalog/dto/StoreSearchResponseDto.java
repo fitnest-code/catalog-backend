@@ -4,6 +4,7 @@
 package az.fitnest.catalog.dto;
 
 import az.fitnest.catalog.dto.StoreSearchItemDto;
+
 import java.util.List;
 
 public class StoreSearchResponseDto {
@@ -11,6 +12,16 @@ public class StoreSearchResponseDto {
     private long total;
     private int page;
     private int pageSize;
+
+    public StoreSearchResponseDto() {
+    }
+
+    public StoreSearchResponseDto(List<StoreSearchItemDto> items, long total, int page, int pageSize) {
+        this.items = items;
+        this.total = total;
+        this.page = page;
+        this.pageSize = pageSize;
+    }
 
     public static StoreSearchResponseDtoBuilder builder() {
         return new StoreSearchResponseDtoBuilder();
@@ -20,28 +31,28 @@ public class StoreSearchResponseDto {
         return this.items;
     }
 
-    public long getTotal() {
-        return this.total;
-    }
-
-    public int getPage() {
-        return this.page;
-    }
-
-    public int getPageSize() {
-        return this.pageSize;
-    }
-
     public void setItems(List<StoreSearchItemDto> items) {
         this.items = items;
+    }
+
+    public long getTotal() {
+        return this.total;
     }
 
     public void setTotal(long total) {
         this.total = total;
     }
 
+    public int getPage() {
+        return this.page;
+    }
+
     public void setPage(int page) {
         this.page = page;
+    }
+
+    public int getPageSize() {
+        return this.pageSize;
     }
 
     public void setPageSize(int pageSize) {
@@ -55,7 +66,7 @@ public class StoreSearchResponseDto {
         if (!(o instanceof StoreSearchResponseDto)) {
             return false;
         }
-        StoreSearchResponseDto other = (StoreSearchResponseDto)o;
+        StoreSearchResponseDto other = (StoreSearchResponseDto) o;
         if (!other.canEqual(this)) {
             return false;
         }
@@ -70,7 +81,7 @@ public class StoreSearchResponseDto {
         }
         List<StoreSearchItemDto> this$items = this.getItems();
         List<StoreSearchItemDto> other$items = other.getItems();
-        return !(this$items == null ? other$items != null : !((Object)this$items).equals(other$items));
+        return !(this$items == null ? other$items != null : !((Object) this$items).equals(other$items));
     }
 
     protected boolean canEqual(Object other) {
@@ -81,26 +92,16 @@ public class StoreSearchResponseDto {
         int PRIME = 59;
         int result = 1;
         long $total = this.getTotal();
-        result = result * 59 + (int)($total >>> 32 ^ $total);
+        result = result * 59 + (int) ($total >>> 32 ^ $total);
         result = result * 59 + this.getPage();
         result = result * 59 + this.getPageSize();
         List<StoreSearchItemDto> $items = this.getItems();
-        result = result * 59 + ($items == null ? 43 : ((Object)$items).hashCode());
+        result = result * 59 + ($items == null ? 43 : ((Object) $items).hashCode());
         return result;
     }
 
     public String toString() {
         return "StoreSearchResponseDto(items=" + this.getItems() + ", total=" + this.getTotal() + ", page=" + this.getPage() + ", pageSize=" + this.getPageSize() + ")";
-    }
-
-    public StoreSearchResponseDto() {
-    }
-
-    public StoreSearchResponseDto(List<StoreSearchItemDto> items, long total, int page, int pageSize) {
-        this.items = items;
-        this.total = total;
-        this.page = page;
-        this.pageSize = pageSize;
     }
 
     public static class StoreSearchResponseDtoBuilder {

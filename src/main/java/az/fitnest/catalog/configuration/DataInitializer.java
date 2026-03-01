@@ -1,7 +1,9 @@
 package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.model.entity.*;
+
 import java.util.Optional;
+
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.StoreStatus;
 import az.fitnest.catalog.repository.*;
@@ -54,7 +56,7 @@ public class DataInitializer {
             Category category = new Category();
             category.setName(name);
             category = categoryRepository.save(category);
-            
+
             // Seed translations (assuming original is EN)
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "AZ", "name", translateCategoryToAz(name));
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "RU", "name", translateCategoryToRu(name));
@@ -94,12 +96,12 @@ public class DataInitializer {
         Optional<Profession> existing = professionRepository.findAll().stream()
                 .filter(p -> p.getName().equals(name))
                 .findFirst();
-        
+
         if (existing.isEmpty()) {
             Profession profession = new Profession();
             profession.setName(name);
             profession = professionRepository.save(profession);
-            
+
             createTranslationIfNotFound("Profession", profession.getProfessionId().toString(), "AZ", "name", translateProfessionToAz(name));
             createTranslationIfNotFound("Profession", profession.getProfessionId().toString(), "RU", "name", translateProfessionToRu(name));
         }
@@ -198,7 +200,7 @@ public class DataInitializer {
             trainer1.setExperienceYears(5);
             trainer1.setRating(4.8);
             trainer1.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer1");
-            
+
             Trainer trainer2 = new Trainer();
             trainer2.setFirstName("Lale");
             trainer2.setLastName("Resulova");
@@ -206,7 +208,7 @@ public class DataInitializer {
             trainer2.setExperienceYears(3);
             trainer2.setRating(4.9);
             trainer2.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer2");
-            
+
             gym.getTrainers().add(trainer1);
             gym.getTrainers().add(trainer2);
             gymRepository.save(gym);
@@ -252,9 +254,9 @@ public class DataInitializer {
             trainer.setExperienceYears(10);
             trainer.setRating(4.9);
             trainer.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer1");
-            
+
             trainer = trainerRepository.save(trainer);
-            
+
             String trainerId = trainer.getTrainerId().toString();
             createTranslationIfNotFound("Trainer", trainerId, "AZ", "specialization", "Fitnes");
             createTranslationIfNotFound("Trainer", trainerId, "RU", "specialization", "Фитнес");

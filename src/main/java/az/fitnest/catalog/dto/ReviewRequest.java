@@ -1,6 +1,6 @@
 /*
  * Decompiled with CFR 0.152.
- * 
+ *
  * Could not load the following classes:
  *  jakarta.validation.constraints.Max
  *  jakarta.validation.constraints.Min
@@ -16,11 +16,21 @@ import jakarta.validation.constraints.Size;
 
 public class ReviewRequest {
     @NotNull
-    @Min(value=1L)
-    @Max(value=5L)
-    private @NotNull @Min(value=1L) @Max(value=5L) Integer rating;
-    @Size(max=1000)
-    private @Size(max=1000) String comment;
+    @Min(value = 1L)
+    @Max(value = 5L)
+    private @NotNull
+    @Min(value = 1L)
+    @Max(value = 5L) Integer rating;
+    @Size(max = 1000)
+    private @Size(max = 1000) String comment;
+
+    public ReviewRequest() {
+    }
+
+    public ReviewRequest(Integer rating, String comment) {
+        this.rating = rating;
+        this.comment = comment;
+    }
 
     public static ReviewRequestBuilder builder() {
         return new ReviewRequestBuilder();
@@ -30,12 +40,12 @@ public class ReviewRequest {
         return this.rating;
     }
 
-    public String getComment() {
-        return this.comment;
-    }
-
     public void setRating(Integer rating) {
         this.rating = rating;
+    }
+
+    public String getComment() {
+        return this.comment;
     }
 
     public void setComment(String comment) {
@@ -49,13 +59,13 @@ public class ReviewRequest {
         if (!(o instanceof ReviewRequest)) {
             return false;
         }
-        ReviewRequest other = (ReviewRequest)o;
+        ReviewRequest other = (ReviewRequest) o;
         if (!other.canEqual(this)) {
             return false;
         }
         Integer this$rating = this.getRating();
         Integer other$rating = other.getRating();
-        if (this$rating == null ? other$rating != null : !((Object)this$rating).equals(other$rating)) {
+        if (this$rating == null ? other$rating != null : !((Object) this$rating).equals(other$rating)) {
             return false;
         }
         String this$comment = this.getComment();
@@ -71,7 +81,7 @@ public class ReviewRequest {
         int PRIME = 59;
         int result = 1;
         Integer $rating = this.getRating();
-        result = result * 59 + ($rating == null ? 43 : ((Object)$rating).hashCode());
+        result = result * 59 + ($rating == null ? 43 : ((Object) $rating).hashCode());
         String $comment = this.getComment();
         result = result * 59 + ($comment == null ? 43 : $comment.hashCode());
         return result;
@@ -79,14 +89,6 @@ public class ReviewRequest {
 
     public String toString() {
         return "ReviewRequest(rating=" + this.getRating() + ", comment=" + this.getComment() + ")";
-    }
-
-    public ReviewRequest() {
-    }
-
-    public ReviewRequest(Integer rating, String comment) {
-        this.rating = rating;
-        this.comment = comment;
     }
 
     public static class ReviewRequestBuilder {
