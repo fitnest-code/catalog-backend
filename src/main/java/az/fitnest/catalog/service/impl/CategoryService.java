@@ -15,9 +15,7 @@ public class CategoryService {
 
     @Transactional
     public void deleteAllCategories() {
-        // Clear all gym-category associations first to avoid FK violations
         gymRepository.truncateGymCategories();
-        // Now it's safe to delete all categories
         categoryRepository.deleteAll();
     }
 }
