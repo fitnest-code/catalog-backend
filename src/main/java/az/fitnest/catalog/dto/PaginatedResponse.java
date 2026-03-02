@@ -1,24 +1,17 @@
 package az.fitnest.catalog.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
-
 import java.util.List;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class PaginatedResponse<T> {
-    private List<T> items;
-    private long total;
-    private int page;
-    private int pageSize;
-    private String message; // Optional message for empty or special cases
-
+public record PaginatedResponse<T>(
+    List<T> items,
+    long total,
+    int page,
+    int pageSize,
+    String message
+) {
     public static <T> PaginatedResponse<T> of(Page<T> pageResult) {
         int pageNumber = pageResult.getNumber() + 1;
         return PaginatedResponse.<T>builder()

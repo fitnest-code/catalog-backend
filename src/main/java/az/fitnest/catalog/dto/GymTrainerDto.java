@@ -1,22 +1,14 @@
 package az.fitnest.catalog.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class GymTrainerDto {
-    private String trainer_id;
-    private String name;
-    private String surname;
-    private ProfessionDto profession;
-    private String picture;
-    private String phone;
-    private String email;
-}
-
+public record GymTrainerDto(
+    String trainer_id,
+    String name,
+    String surname,
+    ProfessionDto profession,
+    String picture,
+    String phone,
+    String email
+) {}

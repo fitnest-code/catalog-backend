@@ -104,7 +104,7 @@
         @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır.")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "QR kod URL-i uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymQrResponse.class))})})
         public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
-            String qrCodeUrl = this.gymReadService.getGymDetail(null, gymId).getQr_code_url();
+            String qrCodeUrl = this.gymReadService.getGymDetail(null, gymId).qr_code_url();
             return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
         }
 
@@ -124,9 +124,9 @@
         }
 
         @PostMapping("/{gymId}/reviews")
-        @Operation(summary = "Rəy bildirin", description = "Autentifikasiya olunmuş istifadəçiyə idman zalı üçün reytinq və şərh yazmağa imkan verir.")
+        @Operation(summary = "Rəy əlavə edin", description = "İdman zalı üçün yeni istifadəçi rəyi və reytinqi əlavə edir. Reytinq 1-5 arasında olmalıdır.")
         @SecurityRequirement(name = "bearerAuth")
-        @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Rəy uğurla göndərildi"), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb"), @ApiResponse(responseCode = "400", description = "Yanlış reytinq şkalası (1-5)")})
+        @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Rəy uğurla əlavə edildi"), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
         public ResponseEntity<Void> addReview(@AuthenticationPrincipal Object principal, @PathVariable Long gymId, @Valid @RequestBody ReviewRequest request) {
             Long userId = this.extractUserId(principal);
             if (userId == null) {

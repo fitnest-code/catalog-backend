@@ -12,15 +12,12 @@ package az.fitnest.catalog.service.impl;
 
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 @Service
 public class FavoritesEventListener {
-    private static final Logger log = LoggerFactory.getLogger(FavoritesEventListener.class);
     private final CacheManager cacheManager;
 
     public FavoritesEventListener(CacheManager cacheManager) {
@@ -34,7 +31,6 @@ public class FavoritesEventListener {
         String entityType = (String) event.get("entityType");
         if ("FAVORITE_ADDED".equals(eventType) || "FAVORITE_REMOVED".equals(eventType)) {
             this.cacheManager.getCache("favoriteBulkCheck").clear();
-            log.info("Cleared favorite cache due to {} event for user {} entityType {}", new Object[]{eventType, userId, entityType});
         }
     }
 }

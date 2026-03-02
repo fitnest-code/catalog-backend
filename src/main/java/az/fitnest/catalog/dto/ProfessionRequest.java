@@ -2,18 +2,12 @@ package az.fitnest.catalog.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Request to create or update a profession")
-public class ProfessionRequest {
+public record ProfessionRequest(
     @NotBlank(message = "Peşə adı boş ola bilməz")
     @Schema(description = "Name of the profession", example = "CrossFit Coach")
-    private String name;
-}
+    String name
+) {}

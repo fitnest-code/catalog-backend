@@ -3,10 +3,11 @@
  */
 package az.fitnest.catalog.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+
 import lombok.Data;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Data
 @Builder
@@ -15,4 +16,5 @@ import lombok.NoArgsConstructor;
 public class GymPlanBenefitDto {
     private String logo;
     private String description;
+
 }

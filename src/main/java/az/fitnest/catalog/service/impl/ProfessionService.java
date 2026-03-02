@@ -36,12 +36,11 @@ public class ProfessionService {
 
     @Transactional
     public ProfessionDto createProfession(ProfessionRequest request) {
-        if (professionRepository.existsByName(request.getName())) {
+        if (professionRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
         }
-        Profession p = Profession.builder()
-                .name(request.getName())
-                .build();
+        Profession p = new Profession();
+        p.setName(request.name());
         return toDto(professionRepository.save(p));
     }
 
@@ -50,11 +49,11 @@ public class ProfessionService {
         Profession p = professionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
 
-        if (!p.getName().equals(request.getName()) && professionRepository.existsByName(request.getName())) {
+        if (!p.getName().equals(request.name()) && professionRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
         }
 
-        p.setName(request.getName());
+        p.setName(request.name());
         return toDto(professionRepository.save(p));
     }
 

@@ -54,12 +54,12 @@ public class GymReviewService {
         Review review = new Review();
         review.setUserId(userId);
         review.setGymId(gymId);
-        review.setRating(request.getRating());
-        review.setComment(request.getComment());
+        review.setRating(request.rating());
+        review.setComment(request.comment());
         reviewRepository.save(review);
 
         // Atomic update of rating and reviewsCount avoids concurrency race condition bugs
-        reviewRepository.incrementReviewCountAndRating(gymId, (double) request.getRating());
+        reviewRepository.incrementReviewCountAndRating(gymId, (double) request.rating());
     }
 
     private GymReviewDto toGymReviewDto(Review r) {

@@ -26,23 +26,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = {BaseException.class})
     public ResponseEntity<ErrorResponse> handleBaseException(BaseException exception, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                exception.getHttpStatus().value(),
-                exception.getMessage(),
-                request.getDescription(false).replace("uri=", ""),
-                null
-        );
-
+        Map<String, Object> details = null;
         if (exception instanceof ValidationException) {
             ValidationException validationException = (ValidationException) exception;
             BindingResult result = validationException.getBindingResult();
             if (result != null) {
-                HashMap<String, Object> details = new HashMap<String, Object>();
-                List<Map<String, String>> fieldIssues = result.getFieldErrors().stream().map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage())).toList();
+                details = new HashMap<>();
+                List<Map<String, String>> fieldIssues = result.getFieldErrors().stream()
+                        .map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage()))
+                        .toList();
                 details.put("fieldIssues", fieldIssues);
-                errorResponse.setDetails(details);
             }
         }
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(exception.getHttpStatus().value())
+                .error(exception.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .details(details)
+                .build();
 
         return ResponseEntity.status(exception.getHttpStatus().value()).body(errorResponse);
     }
@@ -54,12 +56,12 @@ public class GlobalExceptionHandler {
         List<Map<String, String>> fieldIssues = result.getFieldErrors().stream().map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage())).toList();
         details.put("fieldIssues", fieldIssues);
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Doğrulama xətası",
-                request.getDescription(false).replace("uri=", ""),
-                details
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Doğrulama xətası")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .details(details)
+                .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
 
@@ -69,60 +71,58 @@ public class GlobalExceptionHandler {
         List<Map<String, String>> violations = exception.getConstraintViolations().stream().map(v -> Map.of("property", v.getPropertyPath().toString(), "issue", v.getMessage())).toList();
         details.put("violations", violations);
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Məhdudiyyət pozuntusu",
-                request.getDescription(false).replace("uri=", ""),
-                details
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Məhdudiyyət pozuntusu")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .details(details)
+                .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
 
     @ExceptionHandler(value = {HttpMessageNotReadableException.class})
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Yanlış sorğu formatı",
-                request.getDescription(false).replace("uri=", ""),
-                null
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Yanlış sorğu formatı")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
     }
 
     @ExceptionHandler(value = {AccessDeniedException.class})
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.FORBIDDEN.value(),
-                "Giriş qadağandır",
-                request.getDescription(false).replace("uri=", ""),
-                null
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Giriş qadağandır")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN.value()).body(errorResponse);
     }
 
     @ExceptionHandler(value = {RuntimeException.class})
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Daxili server xətası: " + ex.getMessage(),
-                request.getDescription(false).replace("uri=", ""),
-                Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Daxili server xətası: " + ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .details(Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null"))
+                .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
     }
 
     @ExceptionHandler(value = {Exception.class})
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Daxili server xətası: " + ex.getMessage(),
-                request.getDescription(false).replace("uri=", ""),
-                Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null")
-        );
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Daxili server xətası: " + ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .details(Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null"))
+                .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
     }
 }

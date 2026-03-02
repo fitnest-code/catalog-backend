@@ -19,8 +19,6 @@ import java.util.stream.Collectors;
 
 import net.devh.boot.grpc.client.interceptor.GrpcGlobalClientInterceptor;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,7 +33,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class PatternAGrpcInterceptor
         implements ServerInterceptor,
         ClientInterceptor {
-    private static final Logger log = LoggerFactory.getLogger(PatternAGrpcInterceptor.class);
     private static final Metadata.Key<String> X_USER_ID = Metadata.Key.of("x-user-id", Metadata.ASCII_STRING_MARSHALLER);
     private static final Metadata.Key<String> X_TENANT_ID = Metadata.Key.of("x-tenant-id", Metadata.ASCII_STRING_MARSHALLER);
     private static final Metadata.Key<String> X_SCOPES = Metadata.Key.of("x-scopes", Metadata.ASCII_STRING_MARSHALLER);
@@ -61,9 +58,7 @@ public class PatternAGrpcInterceptor
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 auth.setDetails("PatternA:gRPC:" + caller + ":" + requestId);
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                log.debug("Authenticated gRPC user {} via Pattern A from {}", userId, caller);
             } catch (Exception e) {
-                log.warn("Failed to parse Pattern A headers in gRPC call", e);
             }
         }
         return next.startCall(call, headers);

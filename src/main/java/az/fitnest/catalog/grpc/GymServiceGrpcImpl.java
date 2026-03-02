@@ -68,32 +68,26 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     public void getGymDetail(GetGymDetailRequest request, StreamObserver<GymDetailResponse> responseObserver) {
         az.fitnest.catalog.dto.GymDetailResponse dto = gymReadService.getGymDetail(request.getUserId(), request.getGymId());
 
-        // Build proto response while avoiding fields removed from the internal DTO.
-        // For removed/missing fields we provide safe defaults so the proto contract is satisfied.
         GymDetailResponse.Builder protoBuilder = GymDetailResponse.newBuilder()
-                .setGymId(dto.getGym_id() != null ? dto.getGym_id() : "")
-                .setName(dto.getName() != null ? dto.getName() : "")
-                .setDescription(dto.getDescription() != null ? dto.getDescription() : "")
-                // cover_image_url was removed from DTO; return empty string as default
+                .setGymId(dto.gym_id() != null ? dto.gym_id() : "")
+                .setName(dto.name() != null ? dto.name() : "")
+                .setDescription(dto.description() != null ? dto.description() : "")
                 .setCoverImageUrl("")
-                // Only return resolved address text for clients; do not expose lat/lng here
                 .setAddress(Address.newBuilder()
-                        .setAddressText(dto.getAddress() != null && dto.getAddress().getAddressText() != null ? dto.getAddress().getAddressText() : "")
+                        .setAddressText(dto.address() != null && dto.address().addressText() != null ? dto.address().addressText() : "")
                         .build())
-                .setPhone(dto.getPhone() != null ? dto.getPhone() : "")
-                .setEmail(dto.getEmail() != null ? dto.getEmail() : "")
-                // rating, reviews_count, is_saved were removed from DTO; default values
+                .setPhone(dto.phone() != null ? dto.phone() : "")
+                .setEmail(dto.email() != null ? dto.email() : "")
                 .setRating(0.0)
                 .setReviewsCount(0)
-                .setIsSaved(dto.getIsSaved() != null ? dto.getIsSaved() : false);
+                .setIsSaved(dto.isSaved() != null ? dto.isSaved() : false);
 
-        // Map work_hours if present
-        if (dto.getWork_hours() != null) {
-            for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.getWork_hours()) {
+        if (dto.work_hours() != null) {
+            for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.work_hours()) {
                 protoBuilder.addWorkHours(GymWorkHour.newBuilder()
-                        .setDay(wh.getDay() != null ? wh.getDay().name() : "")
-                        .setFrom(wh.getFrom() != null ? wh.getFrom().toString() : "")
-                        .setTo(wh.getTo() != null ? wh.getTo().toString() : "")
+                        .setDay(wh.day() != null ? wh.day().name() : "")
+                        .setFrom(wh.from() != null ? wh.from().toString() : "")
+                        .setTo(wh.to() != null ? wh.to().toString() : "")
                         .build());
             }
         }
@@ -108,13 +102,13 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     public void getGymImages(GetGymImagesRequest request, StreamObserver<GymImageResponse> responseObserver) {
         az.fitnest.catalog.dto.GymImageResponse dto = gymReadService.getGymImages(request.getGymId());
         GymImageResponse.Builder builder = GymImageResponse.newBuilder();
-        if (dto.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymImageItemDto item : dto.getItems()) {
+        if (dto.items() != null) {
+            for (az.fitnest.catalog.dto.GymImageItemDto item : dto.items()) {
                 builder.addItems(GymImageItem.newBuilder()
-                        .setImageId(item.getImage_id() != null ? item.getImage_id() : "")
-                        .setUrl(item.getUrl())
-                        .setType(item.getType())
-                        .setTitle(item.getTitle())
+                        .setImageId(item.image_id() != null ? item.image_id() : "")
+                        .setUrl(item.url())
+                        .setType(item.type())
+                        .setTitle(item.title())
                         .build());
             }
         }
@@ -126,17 +120,17 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
         az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymTrainerDto> dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
         GymTrainersResponse.Builder builder = GymTrainersResponse.newBuilder();
-        if (dto.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymTrainerDto item : dto.getItems()) {
+        if (dto.items() != null) {
+            for (az.fitnest.catalog.dto.GymTrainerDto item : dto.items()) {
                 builder.addItems(GymTrainer.newBuilder()
-                        .setTrainerId(item.getTrainer_id() != null ? item.getTrainer_id() : "")
-                        .setName(item.getName())
-                        .setSurname(item.getSurname())
-                        .setProfessionId(item.getProfession() != null ? item.getProfession().getId() : 0)
-                        .setProfessionName(item.getProfession() != null ? item.getProfession().getName() : "")
-                        .setPicture(item.getPicture() != null ? item.getPicture() : "")
-                        .setPhone(item.getPhone() != null ? item.getPhone() : "")
-                        .setEmail(item.getEmail() != null ? item.getEmail() : "")
+                        .setTrainerId(item.trainer_id() != null ? item.trainer_id() : "")
+                        .setName(item.name())
+                        .setSurname(item.surname())
+                        .setProfessionId(item.profession() != null ? item.profession().id() : 0)
+                        .setProfessionName(item.profession() != null ? item.profession().name() : "")
+                        .setPicture(item.picture() != null ? item.picture() : "")
+                        .setPhone(item.phone() != null ? item.phone() : "")
+                        .setEmail(item.email() != null ? item.email() : "")
                         .build());
             }
         }
@@ -148,18 +142,18 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     public void getReviews(GetReviewsRequest request, StreamObserver<GymReviewsResponse> responseObserver) {
         az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymReviewDto> dto = gymReviewService.getReviews(request.getGymId(), request.getPage(), request.getPageSize(), request.getSort());
         GymReviewsResponse.Builder builder = GymReviewsResponse.newBuilder();
-        if (dto.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymReviewDto item : dto.getItems()) {
+        if (dto.items() != null) {
+            for (az.fitnest.catalog.dto.GymReviewDto item : dto.items()) {
                 GymReview.Builder reviewBuilder = GymReview.newBuilder()
-                        .setReviewId(item.getReview_id() != null ? item.getReview_id() : "")
-                        .setRating(item.getRating() != null ? item.getRating() : 0)
-                        .setComment(item.getComment() != null ? item.getComment() : "")
-                        .setCreatedAt(item.getCreated_at() != null ? item.getCreated_at().format(java.time.format.DateTimeFormatter.ISO_DATE_TIME) : "");
-                if (item.getAuthor() != null) {
+                        .setReviewId(item.review_id() != null ? item.review_id() : "")
+                        .setRating(item.rating() != null ? item.rating() : 0)
+                        .setComment(item.comment() != null ? item.comment() : "")
+                        .setCreatedAt(item.created_at() != null ? item.created_at().format(java.time.format.DateTimeFormatter.ISO_DATE_TIME) : "");
+                if (item.author() != null) {
                     reviewBuilder.setAuthor(GymReviewAuthor.newBuilder()
-                            .setUserId(item.getAuthor().getUser_id())
-                            .setFullName(item.getAuthor().getFull_name())
-                            .setAvatarUrl(item.getAuthor().getAvatar_url() != null ? item.getAuthor().getAvatar_url() : "")
+                            .setUserId(item.author().user_id())
+                            .setFullName(item.author().full_name())
+                            .setAvatarUrl(item.author().avatar_url() != null ? item.author().avatar_url() : "")
                             .build());
                 }
                 builder.addItems(reviewBuilder.build());
@@ -171,9 +165,10 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void addReview(AddReviewRequest request, StreamObserver<AddReviewResponse> responseObserver) {
-        az.fitnest.catalog.dto.ReviewRequest dto = new az.fitnest.catalog.dto.ReviewRequest();
-        dto.setRating(request.getRating());
-        dto.setComment(request.getComment());
+        az.fitnest.catalog.dto.ReviewRequest dto = az.fitnest.catalog.dto.ReviewRequest.builder()
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .build();
         gymReviewService.addReview(request.getUserId(), request.getGymId(), dto);
         responseObserver.onNext(AddReviewResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
@@ -194,16 +189,16 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         double lng = request.getLng();
         az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymMainPageDto> resp = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
         GetMainPageGymsResponse.Builder builder = GetMainPageGymsResponse.newBuilder();
-        if (resp.getItems() != null) {
-            for (az.fitnest.catalog.dto.GymMainPageDto dto : resp.getItems()) {
+        if (resp.items() != null) {
+            for (az.fitnest.catalog.dto.GymMainPageDto dto : resp.items()) {
                 builder.addItems(GymMainPage.newBuilder()
-                        .setGymId(dto.getGymId())
-                        .setName(dto.getName())
-                        .setImageUrl(dto.getCoverImageUrl() != null ? dto.getCoverImageUrl() : "")
-                        .setStars(dto.getStars())
+                        .setGymId(dto.gymId())
+                        .setName(dto.name())
+                        .setImageUrl(dto.coverImageUrl() != null ? dto.coverImageUrl() : "")
+                        .setStars(dto.stars())
                         .setIsNew(dto.isNew())
-                        .setLocation(dto.getLocation())
-                        .setDistanceKm(dto.getDistanceKm() != null ? dto.getDistanceKm() : 0.0)
+                        .setLocation(dto.location())
+                        .setDistanceKm(dto.distanceKm() != null ? dto.distanceKm() : 0.0)
                         .build());
             }
         }
@@ -215,9 +210,9 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     public void putGymImage(PutGymImageRequest request, StreamObserver<PutGymImageResponse> responseObserver) {
         az.fitnest.catalog.dto.GymImageDto dto = gymImageService.putGymImage(request.getGymId(), request.getImageName(), request.getUrl());
         GymImageItem item = GymImageItem.newBuilder()
-                .setImageId(dto.getId() != null ? dto.getId().toString() : "")
-                .setUrl(dto.getUrl())
-                .setTitle(dto.getName())
+                .setImageId(dto.id() != null ? dto.id().toString() : "")
+                .setUrl(dto.url())
+                .setTitle(dto.name())
                 .build();
         responseObserver.onNext(PutGymImageResponse.newBuilder().setSuccess(true).setItem(item).build());
         responseObserver.onCompleted();
@@ -226,13 +221,14 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void addTrainer(AddTrainerRequest request, StreamObserver<AddTrainerResponse> responseObserver) {
-        az.fitnest.catalog.dto.TrainerRequest trainerRequest = new az.fitnest.catalog.dto.TrainerRequest();
-        trainerRequest.setName(request.getName());
-        trainerRequest.setSurname(request.getSurname());
-        trainerRequest.setProfessionId(request.getProfessionId());
-        trainerRequest.setPicture(request.getPicture());
-        trainerRequest.setPhone(request.getPhone());
-        trainerRequest.setEmail(request.getEmail());
+        az.fitnest.catalog.dto.TrainerRequest trainerRequest = az.fitnest.catalog.dto.TrainerRequest.builder()
+                .name(request.getName())
+                .surname(request.getSurname())
+                .professionId(request.getProfessionId())
+                .picture(request.getPicture())
+                .phone(request.getPhone())
+                .email(request.getEmail())
+                .build();
 
         gymTrainerService.addTrainer(request.getGymId(), trainerRequest);
         responseObserver.onNext(AddTrainerResponse.newBuilder().setSuccess(true).build());
@@ -241,13 +237,14 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void updateTrainer(UpdateTrainerRequest request, StreamObserver<UpdateTrainerResponse> responseObserver) {
-        az.fitnest.catalog.dto.TrainerRequest trainerRequest = new az.fitnest.catalog.dto.TrainerRequest();
-        trainerRequest.setName(request.getName());
-        trainerRequest.setSurname(request.getSurname());
-        trainerRequest.setProfessionId(request.getProfessionId());
-        trainerRequest.setPicture(request.getPicture());
-        trainerRequest.setPhone(request.getPhone());
-        trainerRequest.setEmail(request.getEmail());
+        az.fitnest.catalog.dto.TrainerRequest trainerRequest = az.fitnest.catalog.dto.TrainerRequest.builder()
+                .name(request.getName())
+                .surname(request.getSurname())
+                .professionId(request.getProfessionId())
+                .picture(request.getPicture())
+                .phone(request.getPhone())
+                .email(request.getEmail())
+                .build();
 
         gymTrainerService.updateTrainer(request.getGymId(), request.getTrainerId(), trainerRequest);
         responseObserver.onNext(UpdateTrainerResponse.newBuilder().setSuccess(true).build());
@@ -276,54 +273,52 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     }
 
     private az.fitnest.catalog.dto.GymRequest mapToGymRequest(CreateGymRequest request) {
-        az.fitnest.catalog.dto.GymRequest gymRequest = new az.fitnest.catalog.dto.GymRequest();
-        gymRequest.setName(request.getName());
-        gymRequest.setDescription(request.getDescription());
+        String addrText = null;
+        Double lat = null;
+        Double lng = null;
 
-
-        az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();
-        // support address provided as textual "lat, lon" in addressText or as separate latitude/longitude
         if (request.hasAddress()) {
-            String addrText = request.getAddress().getAddressText();
-            double lat = request.getAddress().getLatitude();
-            double lng = request.getAddress().getLongitude();
-            // If lat/lng are zero and addressText contains coordinates, try to parse them
+            addrText = request.getAddress().getAddressText();
+            lat = request.getAddress().getLatitude();
+            lng = request.getAddress().getLongitude();
             if ((lat == 0.0 && lng == 0.0) && addrText != null && addrText.contains(",")) {
                 String[] parts = addrText.split(",");
                 if (parts.length >= 2) {
                     try {
                         lat = Double.parseDouble(parts[0].trim());
                         lng = Double.parseDouble(parts[1].trim());
-                        // clear addressText so service will resolve it from coordinates
                         addrText = null;
-                    } catch (NumberFormatException ignored) {
-                    }
+                    } catch (NumberFormatException ignored) {}
                 }
             }
-            addressDto.setAddressText(addrText);
-            addressDto.setLatitude(lat == 0.0 ? null : lat);
-            addressDto.setLongitude(lng == 0.0 ? null : lng);
         }
-        gymRequest.setAddress(addressDto);
 
-        gymRequest.setPhone(request.getPhone());
-        gymRequest.setEmail(request.getEmail());
-        gymRequest.setCategoryIds(new java.util.HashSet<>(request.getCategoryIdsList().stream()
-                .map(Long::valueOf).collect(java.util.stream.Collectors.toList())));
-        return gymRequest;
+        az.fitnest.catalog.dto.AddressDto addressDto = az.fitnest.catalog.dto.AddressDto.builder()
+                .addressText(addrText)
+                .latitude(lat == 0.0 ? null : lat)
+                .longitude(lng == 0.0 ? null : lng)
+                .build();
+
+        return az.fitnest.catalog.dto.GymRequest.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .address(addressDto)
+                .phone(request.getPhone())
+                .email(request.getEmail())
+                .categoryIds(new java.util.HashSet<>(request.getCategoryIdsList().stream()
+                        .map(Long::valueOf).collect(java.util.stream.Collectors.toList())))
+                .build();
     }
 
     private az.fitnest.catalog.dto.GymRequest mapToGymRequest(UpdateGymRequest request) {
-        az.fitnest.catalog.dto.GymRequest gymRequest = new az.fitnest.catalog.dto.GymRequest();
-        gymRequest.setName(request.getName());
-        gymRequest.setDescription(request.getDescription());
+        String addrText = null;
+        Double lat = null;
+        Double lng = null;
 
-
-        az.fitnest.catalog.dto.AddressDto addressDto = new az.fitnest.catalog.dto.AddressDto();
         if (request.hasAddress()) {
-            String addrText = request.getAddress().getAddressText();
-            double lat = request.getAddress().getLatitude();
-            double lng = request.getAddress().getLongitude();
+            addrText = request.getAddress().getAddressText();
+            lat = request.getAddress().getLatitude();
+            lng = request.getAddress().getLongitude();
             if ((lat == 0.0 && lng == 0.0) && addrText != null && addrText.contains(",")) {
                 String[] parts = addrText.split(",");
                 if (parts.length >= 2) {
@@ -331,20 +326,25 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
                         lat = Double.parseDouble(parts[0].trim());
                         lng = Double.parseDouble(parts[1].trim());
                         addrText = null;
-                    } catch (NumberFormatException ignored) {
-                    }
+                    } catch (NumberFormatException ignored) {}
                 }
             }
-            addressDto.setAddressText(addrText);
-            addressDto.setLatitude(lat == 0.0 ? null : lat);
-            addressDto.setLongitude(lng == 0.0 ? null : lng);
         }
-        gymRequest.setAddress(addressDto);
 
-        gymRequest.setPhone(request.getPhone());
-        gymRequest.setEmail(request.getEmail());
-        gymRequest.setCategoryIds(new java.util.HashSet<>(request.getCategoryIdsList().stream()
-                .map(Long::valueOf).collect(java.util.stream.Collectors.toList())));
-        return gymRequest;
+        az.fitnest.catalog.dto.AddressDto addressDto = az.fitnest.catalog.dto.AddressDto.builder()
+                .addressText(addrText)
+                .latitude(lat == 0.0 ? null : lat)
+                .longitude(lng == 0.0 ? null : lng)
+                .build();
+
+        return az.fitnest.catalog.dto.GymRequest.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .address(addressDto)
+                .phone(request.getPhone())
+                .email(request.getEmail())
+                .categoryIds(new java.util.HashSet<>(request.getCategoryIdsList().stream()
+                        .map(Long::valueOf).collect(java.util.stream.Collectors.toList())))
+                .build();
     }
 }

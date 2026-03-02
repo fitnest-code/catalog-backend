@@ -39,17 +39,17 @@ public class CategoryAdminController {
     @PostMapping
     public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "categoryRequest");
-        if (request.getName() == null || request.getName().isBlank()) {
+        if (request.name() == null || request.name().isBlank()) {
             bindingResult.rejectValue("name", "NotBlank", "Category name must not be blank");
         }
-        if (categoryRepository.existsByName(request.getName())) {
+        if (categoryRepository.existsByName(request.name())) {
             bindingResult.rejectValue("name", "Duplicate", "Category with this name already exists");
         }
         if (bindingResult.hasErrors()) {
             throw new ValidationException("Validation failed", (BindingResult) bindingResult);
         }
         Category category = new Category();
-        category.setName(request.getName());
+        category.setName(request.name());
         Category saved = categoryRepository.save(category);
         CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
         return ResponseEntity.status(201).body(dto);
@@ -64,16 +64,16 @@ public class CategoryAdminController {
     public ResponseEntity<CategoryDto> updateCategory(@Parameter(description = "Kateqoriyanın ID-si") @PathVariable Long id, @RequestBody CategoryRequest request) {
         Category existing = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "categoryRequest");
-        if (request.getName() == null || request.getName().isBlank()) {
+        if (request.name() == null || request.name().isBlank()) {
             bindingResult.rejectValue("name", "NotBlank", "Category name must not be blank");
         }
-        if (!existing.getName().equals(request.getName()) && categoryRepository.existsByName(request.getName())) {
+        if (!existing.getName().equals(request.name()) && categoryRepository.existsByName(request.name())) {
             bindingResult.rejectValue("name", "Duplicate", "Category with this name already exists");
         }
         if (bindingResult.hasErrors()) {
             throw new ValidationException("Validation failed", (BindingResult) bindingResult);
         }
-        existing.setName(request.getName());
+        existing.setName(request.name());
         Category saved = categoryRepository.save(existing);
         CategoryDto dto = CategoryDto.builder().id(saved.getId()).name(saved.getName()).photoUrl(saved.getPhotoUrl()).build();
         return ResponseEntity.ok(dto);

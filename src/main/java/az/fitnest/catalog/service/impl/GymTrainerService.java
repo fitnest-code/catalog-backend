@@ -70,7 +70,7 @@ public class GymTrainerService {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
 
-        if (request.getPicture() != null && !request.getPicture().equals(trainer.getPicture())) {
+        if (request.picture() != null && !request.picture().equals(trainer.getPicture())) {
             safeDeleteFile(trainer.getPicture());
         }
 
@@ -94,16 +94,16 @@ public class GymTrainerService {
     }
 
     private void updateTrainerFromRequest(Trainer trainer, TrainerRequest request) {
-        trainer.setName(request.getName());
-        trainer.setSurname(request.getSurname());
+        trainer.setName(request.name());
+        trainer.setSurname(request.surname());
 
-        Profession profession = professionRepository.findById(request.getProfessionId())
+        Profession profession = professionRepository.findById(request.professionId())
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
         trainer.setProfession(profession);
 
-        trainer.setPicture(request.getPicture());
-        trainer.setPhone(request.getPhone());
-        trainer.setEmail(request.getEmail());
+        trainer.setPicture(request.picture());
+        trainer.setPhone(request.phone());
+        trainer.setEmail(request.email());
     }
 
     private void safeDeleteFile(String url) {

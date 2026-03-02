@@ -56,34 +56,34 @@ public class GymWriteService {
     @Transactional
     public void createGym(GymRequest request) {
         Gym gym = new Gym();
-        gym.setName(request.getName());
-        gym.setDescription(request.getDescription());
+        gym.setName(request.name());
+        gym.setDescription(request.description());
 
 
-        if (request.getAddress() != null) {
+        if (request.address() != null) {
             Address address = new Address();
-            Double lat = request.getAddress().getLatitude();
-            Double lng = request.getAddress().getLongitude();
+            Double lat = request.address().latitude();
+            Double lng = request.address().longitude();
             address.setLatitude(lat);
             address.setLongitude(lng);
             GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
             if (geocoding != null) {
-                address.setAddressText(geocoding.getAddressText());
-                address.setCity(geocoding.getCity());
+                address.setAddressText(geocoding.addressText());
+                address.setCity(geocoding.city());
             }
             gym.setAddress(address);
         }
-        gym.setPhone(request.getPhone());
-        gym.setEmail(request.getEmail());
-        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
-            if (categories.size() != request.getCategoryIds().size()) {
+        gym.setPhone(request.phone());
+        gym.setEmail(request.email());
+        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+            if (categories.size() != request.categoryIds().size()) {
                 throw new BadRequestException("INVALID_CATEGORIES", "Bir və ya daha çox kateqoriya ID-si yanlışdır");
             }
             gym.setCategories(new HashSet<>(categories));
         }
-        gym.setResponsiblePerson(request.getResponsiblePerson());
-        gym.setStatus(request.getStatus() != null ? request.getStatus() : GymStatus.ACTIVE);
+        gym.setResponsiblePerson(request.responsiblePerson());
+        gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         Gym saved = gymRepository.save(gym);
         // Call it asynchronously to prevent blocking the HTTP request
@@ -99,34 +99,34 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
 
-        gym.setName(request.getName());
-        gym.setDescription(request.getDescription());
+        gym.setName(request.name());
+        gym.setDescription(request.description());
 
 
-        if (request.getAddress() != null) {
+        if (request.address() != null) {
             Address address = new Address();
-            Double lat = request.getAddress().getLatitude();
-            Double lng = request.getAddress().getLongitude();
+            Double lat = request.address().latitude();
+            Double lng = request.address().longitude();
             address.setLatitude(lat);
             address.setLongitude(lng);
             GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
             if (geocoding != null) {
-                address.setAddressText(geocoding.getAddressText());
-                address.setCity(geocoding.getCity());
+                address.setAddressText(geocoding.addressText());
+                address.setCity(geocoding.city());
             }
             gym.setAddress(address);
         }
-        gym.setPhone(request.getPhone());
-        gym.setEmail(request.getEmail());
-        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
-            if (categories.size() != request.getCategoryIds().size()) {
+        gym.setPhone(request.phone());
+        gym.setEmail(request.email());
+        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+            if (categories.size() != request.categoryIds().size()) {
                 throw new BadRequestException("INVALID_CATEGORIES", "One or more category IDs are invalid");
             }
             gym.setCategories(new HashSet<>(categories));
         }
-        gym.setResponsiblePerson(request.getResponsiblePerson());
-        gym.setStatus(request.getStatus() != null ? request.getStatus() : GymStatus.ACTIVE);
+        gym.setResponsiblePerson(request.responsiblePerson());
+        gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         gymRepository.save(gym);
     }
@@ -138,19 +138,19 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
         gym.getSubscriptions().clear();
-        if (request.getSubscriptions() != null) {
-            for (GymSubscriptionRequestDto subDto : request.getSubscriptions()) {
-                if (!orderServiceGrpcClient.checkPlanExists(subDto.getPlanId())) {
-                    throw new BadRequestException("PLAN_NOT_FOUND", "Üzvlük planı ID " + subDto.getPlanId() + " mövcud deyil və ya deaktivdir.");
+        if (request.subscriptions() != null) {
+            for (GymSubscriptionRequestDto subDto : request.subscriptions()) {
+                if (!orderServiceGrpcClient.checkPlanExists(subDto.planId())) {
+                    throw new BadRequestException("PLAN_NOT_FOUND", "Üzvlük planı ID " + subDto.planId() + " mövcud deyil və ya deaktivdir.");
                 }
                 GymSubscription subscription = new GymSubscription();
-                subscription.setPlanId(subDto.getPlanId());
+                subscription.setPlanId(subDto.planId());
                 subscription.setGym(gym);
-                if (subDto.getBenefits() != null) {
-                    List<GymSubscriptionBenefit> benefits = subDto.getBenefits().stream().map(b -> {
+                if (subDto.benefits() != null) {
+                    List<GymSubscriptionBenefit> benefits = subDto.benefits().stream().map(b -> {
                         GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
-                        benefit.setBenefit(b.getBenefit());
-                        benefit.setBenefitLogo(b.getBenefitLogo());
+                        benefit.setBenefit(b.benefit());
+                        benefit.setBenefitLogo(b.benefitLogo());
                         return benefit;
                     }).toList();
                     subscription.setBenefits(new java.util.ArrayList<>(benefits));

@@ -1,12 +1,13 @@
 package az.fitnest.catalog.dto;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+
+import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Data
 @Builder
@@ -16,6 +17,7 @@ public class CheckInResponseDto {
     private String addressText;
     private LocalDate visitDate;
     private LocalTime visitHour;
+
 
 
 }

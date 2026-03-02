@@ -262,7 +262,7 @@ public class GymReadService {
         List<GymMainPageDto> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true)).collect(Collectors.toList());
 
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(GymMainPageDto::getDistanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            all.sort(Comparator.comparing(GymMainPageDto::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
         }
 
         int from = Math.max(0, (page - 1) * pageSize);

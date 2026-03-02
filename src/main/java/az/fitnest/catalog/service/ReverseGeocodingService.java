@@ -37,7 +37,7 @@ public class ReverseGeocodingService {
         if (latitude == null || longitude == null) {
             return null;
         }
-        URI uri = UriComponentsBuilder.fromHttpUrl((String) BASE_URL)
+        URI uri = UriComponentsBuilder.fromUriString((String) BASE_URL)
                 .path("/reverse")
                 .queryParam("format", "json")
                 .queryParam("lat", latitude)

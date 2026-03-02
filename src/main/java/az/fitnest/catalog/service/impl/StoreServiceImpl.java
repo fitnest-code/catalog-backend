@@ -94,7 +94,7 @@ public class StoreServiceImpl implements StoreService {
         List<StoreMainPageDto> all = stream.map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
 
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(StoreMainPageDto::getDistanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            all.sort(Comparator.comparing(StoreMainPageDto::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
         }
 
         int from = Math.max(0, (page - 1) * pageSize);
@@ -227,9 +227,9 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private void updateStoreFromRequest(Store store, StoreRequest request) {
-        store.setName(request.getName());
-        Double reqLat = request.getAddress() != null ? request.getAddress().getLatitude() : null;
-        Double reqLng = request.getAddress() != null ? request.getAddress().getLongitude() : null;
+        store.setName(request.name());
+        Double reqLat = request.address() != null ? request.address().latitude() : null;
+        Double reqLng = request.address() != null ? request.address().longitude() : null;
 
         boolean coordsChanged = store.getAddress() == null || !Objects.equals(store.getAddress().getLatitude(), reqLat) || !Objects.equals(store.getAddress().getLongitude(), reqLng);
 
@@ -237,17 +237,17 @@ public class StoreServiceImpl implements StoreService {
                 ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
                 : resolveGeocoding(reqLat, reqLng);
 
-        store.setAddress(request.getAddress() != null ? new StoreAddress(geocoding.getAddressText(), geocoding.getCity(), reqLat, reqLng) : null);
+        store.setAddress(request.address() != null ? new StoreAddress(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
 
-        store.setPhone(request.getPhone());
-        store.setCategory(request.getCategory());
-        store.setStatus(request.getStatus());
+        store.setPhone(request.phone());
+        store.setCategory(request.category());
+        store.setStatus(request.status());
 
-        if (request.getWorkingHours() != null) {
-            store.setWorkHours(request.getWorkingHours().stream().map(dto -> new StoreWorkHours(dto.getDay(), dto.getFrom(), dto.getTo())).collect(Collectors.toCollection(LinkedHashSet::new)));
+        if (request.workingHours() != null) {
+            store.setWorkHours(request.workingHours().stream().map(dto -> new StoreWorkHours(dto.day(), dto.from(), dto.to())).collect(Collectors.toCollection(LinkedHashSet::new)));
         }
-        if (request.getSocial() != null && request.getSocial().getLinks() != null) {
-            store.setSocialLinks(new LinkedHashSet<>(request.getSocial().getLinks()));
+        if (request.social() != null && request.social().links() != null) {
+            store.setSocialLinks(new LinkedHashSet<>(request.social().links()));
         }
     }
 
