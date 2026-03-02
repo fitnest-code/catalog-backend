@@ -213,6 +213,27 @@ public class DataInitializer {
             gym.getTrainers().add(trainer2);
             gymRepository.save(gym);
 
+            // Add Subscriptions for Gym 1
+            GymSubscription sub1_1 = new GymSubscription();
+            sub1_1.setGym(gym);
+            sub1_1.setPlanId(1L); // Bronze
+            sub1_1.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
+                    new GymSubscriptionBenefit("Basic equipment usage", "https://img.icons8.com/color/96/dumbbell.png")
+            ));
+
+            GymSubscription sub1_2 = new GymSubscription();
+            sub1_2.setGym(gym);
+            sub1_2.setPlanId(2L); // Silver
+            sub1_2.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
+                    new GymSubscriptionBenefit("Sauna access", "https://img.icons8.com/color/96/sauna.png"),
+                    new GymSubscriptionBenefit("Group classes", "https://img.icons8.com/color/96/conference-call.png")
+            ));
+
+            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2)));
+            gymRepository.save(gym);
+
             String gymId = gym.getGymId().toString();
             createTranslationIfNotFound("Gym", gymId, "AZ", "name", "Premium Fitnes Mərkəzi");
             createTranslationIfNotFound("Gym", gymId, "RU", "name", "Премиум Фитнес Центр");
@@ -228,18 +249,18 @@ public class DataInitializer {
                     .build();
 
             Gym gym2 = new Gym();
-            gym2.setName("FitLife Studio");
-            gym2.setDescription("Boutique fitness studio for focused workouts");
+            gym2.setName("Peak Performance");
+            gym2.setDescription("The ultimate training ground for athletes and fitness enthusiasts.");
             gym2.setCoverImageUrl("https://picsum.photos/seed/gym2/800/600");
             gym2.setLogoUrl("https://picsum.photos/seed/gymlogo2/200/200");
             gym2.setAddress(address2);
             gym2.setPhone("+994500000001");
-            gym2.setEmail("info@fitlifestudio.az");
+            gym2.setEmail("info@peakperformance.az");
             gym2.setStatus(GymStatus.ACTIVE);
-            gym2.setRating(4.8);
-            gym2.setReviewsCount(25);
-            gym2.setIsNew(false);
-            gym2.setResponsiblePerson("Aysel Memmedova");
+            gym2.setRating(4.9);
+            gym2.setReviewsCount(45);
+            gym2.setIsNew(true);
+            gym2.setResponsiblePerson("Tural Aliyev");
 
             List<GymWorkHour> workHours2 = new ArrayList<>();
             for (DayOfWeek day : DayOfWeek.values()) {
@@ -247,17 +268,60 @@ public class DataInitializer {
             }
             gym2.setWorkHours(workHours2);
 
+            List<GymImage> images2 = new ArrayList<>();
+            images2.add(GymImage.builder()
+                    .gym(gym2)
+                    .imageName("Crossfit Area")
+                    .url("https://picsum.photos/seed/gym2/1200/800")
+                    .type("interior")
+                    .title("Crossfit & Functional Zone")
+                    .build());
+            gym2.setImages(images2);
+
             if (fitnessCategory != null) {
                 gym2.setCategories(new HashSet<>(Collections.singletonList(fitnessCategory)));
             }
 
             gym2 = gymRepository.save(gym2);
 
+            // Add Trainers for Gym 2
+            Trainer trainer3 = new Trainer();
+            trainer3.setFirstName("Tural");
+            trainer3.setLastName("Aliyev");
+            trainer3.setSpecialization("Crossfit");
+            trainer3.setExperienceYears(7);
+            trainer3.setRating(5.0);
+            trainer3.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer3");
+
+            gym2.getTrainers().add(trainer3);
+
+            // Add Subscriptions for Gym 2
+            GymSubscription sub2_1 = new GymSubscription();
+            sub2_1.setGym(gym2);
+            sub2_1.setPlanId(3L); // Gold
+            sub2_1.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
+                    new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
+                    new GymSubscriptionBenefit("Spa access", "https://img.icons8.com/color/96/spa.png")
+            ));
+
+            GymSubscription sub2_2 = new GymSubscription();
+            sub2_2.setGym(gym2);
+            sub2_2.setPlanId(4L); // Platinum
+            sub2_2.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
+                    new GymSubscriptionBenefit("VIP lounge access", "https://img.icons8.com/color/96/vip.png"),
+                    new GymSubscriptionBenefit("Personal trainer weekly", "https://img.icons8.com/color/96/personal-trainer.png")
+            ));
+
+            gym2.setSubscriptions(new ArrayList<>(Arrays.asList(sub2_1, sub2_2)));
+            gymRepository.save(gym2);
+
             String gymId2 = gym2.getGymId().toString();
-            createTranslationIfNotFound("Gym", gymId2, "AZ", "name", "FitLife Studiyası");
-            createTranslationIfNotFound("Gym", gymId2, "RU", "name", "Студия FitLife");
-            createTranslationIfNotFound("Gym", gymId2, "AZ", "description", "Məqsədyönlü məşqlər üçün butik fitnes studiyası");
-            createTranslationIfNotFound("Gym", gymId2, "RU", "description", "Бутик-студия фитнеса для целенаправленных тренировок");
+            createTranslationIfNotFound("Gym", gymId2, "AZ", "name", "Peak Performance Mərkəzi");
+            createTranslationIfNotFound("Gym", gymId2, "RU", "name", "Центр Peak Performance");
+            createTranslationIfNotFound("Gym", gymId2, "AZ", "description", "İdmançılar və fitnes həvəskarları üçün son məşq meydançası.");
+            createTranslationIfNotFound("Gym", gymId2, "RU", "description", "Идеальная тренировочная площадка для спортсменов и любителей фитнеса.");
         }
     }
 
