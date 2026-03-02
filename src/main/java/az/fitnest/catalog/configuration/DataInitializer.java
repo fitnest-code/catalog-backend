@@ -218,6 +218,46 @@ public class DataInitializer {
             createTranslationIfNotFound("Gym", gymId, "RU", "name", "Премиум Фитнес Центр");
             createTranslationIfNotFound("Gym", gymId, "AZ", "description", "Müasir avadanlıq və peşəkar məşqçilər ilə yüksək keyfiyyətli fitnes mərkəzi");
             createTranslationIfNotFound("Gym", gymId, "RU", "description", "Высококачественный фитнес-центр с современным оборудованием и профессиональными тренерами");
+
+            // Second Gym
+            Address address2 = Address.builder()
+                    .addressText("456 Secondary St")
+                    .city("Baku")
+                    .latitude(40.3850)
+                    .longitude(49.8250)
+                    .build();
+
+            Gym gym2 = new Gym();
+            gym2.setName("FitLife Studio");
+            gym2.setDescription("Boutique fitness studio for focused workouts");
+            gym2.setCoverImageUrl("https://picsum.photos/seed/gym2/800/600");
+            gym2.setLogoUrl("https://picsum.photos/seed/gymlogo2/200/200");
+            gym2.setAddress(address2);
+            gym2.setPhone("+994500000001");
+            gym2.setEmail("info@fitlifestudio.az");
+            gym2.setStatus(GymStatus.ACTIVE);
+            gym2.setRating(4.8);
+            gym2.setReviewsCount(25);
+            gym2.setIsNew(false);
+            gym2.setResponsiblePerson("Aysel Memmedova");
+
+            List<GymWorkHour> workHours2 = new ArrayList<>();
+            for (DayOfWeek day : DayOfWeek.values()) {
+                workHours2.add(new GymWorkHour(day, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            }
+            gym2.setWorkHours(workHours2);
+
+            if (fitnessCategory != null) {
+                gym2.setCategories(new HashSet<>(Collections.singletonList(fitnessCategory)));
+            }
+
+            gym2 = gymRepository.save(gym2);
+
+            String gymId2 = gym2.getGymId().toString();
+            createTranslationIfNotFound("Gym", gymId2, "AZ", "name", "FitLife Studiyası");
+            createTranslationIfNotFound("Gym", gymId2, "RU", "name", "Студия FitLife");
+            createTranslationIfNotFound("Gym", gymId2, "AZ", "description", "Məqsədyönlü məşqlər üçün butik fitnes studiyası");
+            createTranslationIfNotFound("Gym", gymId2, "RU", "description", "Бутик-студия фитнеса для целенаправленных тренировок");
         }
     }
 
@@ -242,6 +282,27 @@ public class DataInitializer {
             createTranslationIfNotFound("Store", storeId, "RU", "name", "Мир Спорта");
             createTranslationIfNotFound("Store", storeId, "AZ", "category", "Avadanlıq");
             createTranslationIfNotFound("Store", storeId, "RU", "category", "Оборудование");
+
+            // Second Store
+            StoreAddress address2 = new StoreAddress("789 Fit St", "Baku", 40.3955, 49.8505);
+
+            Store store2 = new Store();
+            store2.setName("Nutrition Plus");
+            store2.setCategory("Supplements");
+            store2.setStatus(StoreStatus.ACTIVE.name());
+            store2.setCoverImageUrl("https://picsum.photos/seed/store2/800/600");
+            store2.setLogoUrl("https://picsum.photos/seed/storelogo2/200/200");
+            store2.setAddress(address2);
+            store2.setPhone("+994510000001");
+            store2.setPopularScore(8.5);
+
+            store2 = storeRepository.save(store2);
+
+            String storeId2 = store2.getStoreId().toString();
+            createTranslationIfNotFound("Store", storeId2, "AZ", "name", "Qidalanma Plus");
+            createTranslationIfNotFound("Store", storeId2, "RU", "name", "Питание Плюс");
+            createTranslationIfNotFound("Store", storeId2, "AZ", "category", "Əlavələr");
+            createTranslationIfNotFound("Store", storeId2, "RU", "category", "Добавки");
         }
     }
 
@@ -260,6 +321,21 @@ public class DataInitializer {
             String trainerId = trainer.getTrainerId().toString();
             createTranslationIfNotFound("Trainer", trainerId, "AZ", "specialization", "Fitnes");
             createTranslationIfNotFound("Trainer", trainerId, "RU", "specialization", "Фитнес");
+
+            // Second Trainer
+            Trainer trainer2 = new Trainer();
+            trainer2.setFirstName("Jane");
+            trainer2.setLastName("Smith");
+            trainer2.setSpecialization("Yoga");
+            trainer2.setExperienceYears(8);
+            trainer2.setRating(4.7);
+            trainer2.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer3");
+
+            trainer2 = trainerRepository.save(trainer2);
+
+            String trainerId2 = trainer2.getTrainerId().toString();
+            createTranslationIfNotFound("Trainer", trainerId2, "AZ", "specialization", "Yoqa");
+            createTranslationIfNotFound("Trainer", trainerId2, "RU", "specialization", "Йога");
         }
     }
 
