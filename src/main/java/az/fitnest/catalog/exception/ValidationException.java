@@ -17,7 +17,7 @@ public class ValidationException
     private final BindingResult bindingResult;
 
     public ValidationException(String message, BindingResult bindingResult) {
-        super(message, HttpStatus.BAD_REQUEST, "VALIDATION_ERROR");
+        super(message, "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
         this.bindingResult = bindingResult;
     }
 

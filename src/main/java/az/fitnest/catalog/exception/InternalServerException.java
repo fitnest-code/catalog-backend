@@ -14,7 +14,7 @@ public class InternalServerException
     private static final long serialVersionUID = 1L;
 
     public InternalServerException(String message) {
-        super(message, HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR");
+        super(message, "INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
 

@@ -14,11 +14,10 @@ public class ConflictException
     private static final long serialVersionUID = 1L;
 
     public ConflictException(String message) {
-        super(message, HttpStatus.CONFLICT, "CONFLICT");
+        super(message, "CONFLICT", HttpStatus.CONFLICT);
     }
 
     public ConflictException(String errorCode, String message) {
-        super(message, HttpStatus.CONFLICT, errorCode);
+        super(message, errorCode, HttpStatus.CONFLICT);
     }
 }
-

@@ -1,6 +1,6 @@
 package az.fitnest.catalog.exception;
 
-import az.fitnest.catalog.dto.ErrorResponse;
+import az.fitnest.catalog.dto.ApiError;
 import az.fitnest.catalog.exception.BaseException;
 import az.fitnest.catalog.exception.ValidationException;
 import jakarta.validation.ConstraintViolationException;
@@ -20,110 +20,171 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
     @ExceptionHandler(value = {BaseException.class})
-    public ResponseEntity<ErrorResponse> handleBaseException(BaseException exception, WebRequest request) {
+    public ResponseEntity<ApiError> handleBaseException(BaseException exception, WebRequest request) {
 
         Map<String, Object> details = null;
-        if (exception instanceof ValidationException) {
-            ValidationException validationException = (ValidationException) exception;
+        if (exception instanceof ValidationException validationException) {
             BindingResult result = validationException.getBindingResult();
             if (result != null) {
                 details = new HashMap<>();
                 List<Map<String, String>> fieldIssues = result.getFieldErrors().stream()
-                        .map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage()))
+                        .map(error -> Map.of("field", error.getField(), "issue", safeMessage(error.getDefaultMessage())))
                         .toList();
                 details.put("fieldIssues", fieldIssues);
             }
         }
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
+        ApiError apiError = ApiError.builder()
                 .status(exception.getHttpStatus().value())
-                .error(exception.getMessage())
+                .code(exception.getErrorCode())
+                .message(getLocalizedMessage(exception.getErrorCode(), exception.getMessage()))
                 .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(OffsetDateTime.now())
                 .details(details)
                 .build();
 
-        return ResponseEntity.status(exception.getHttpStatus().value()).body(errorResponse);
+        return ResponseEntity.status(exception.getHttpStatus()).body(apiError);
     }
 
     @ExceptionHandler(value = {MethodArgumentNotValidException.class})
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, WebRequest request) {
+    public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, WebRequest request) {
         BindingResult result = exception.getBindingResult();
-        HashMap<String, Object> details = new HashMap<String, Object>();
-        List<Map<String, String>> fieldIssues = result.getFieldErrors().stream().map(error -> Map.of("field", error.getField(), "issue", error.getDefaultMessage())).toList();
+        HashMap<String, Object> details = new HashMap<>();
+        List<Map<String, String>> fieldIssues = result.getFieldErrors().stream()
+                .map(error -> Map.of("field", error.getField(), "issue", safeMessage(error.getDefaultMessage())))
+                .toList();
         details.put("fieldIssues", fieldIssues);
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Doğrulama xətası")
+                .code("VALIDATION_ERROR")
+                .message(getMessage("error.validation"))
                 .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(OffsetDateTime.now())
                 .details(details)
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     @ExceptionHandler(value = {ConstraintViolationException.class})
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException exception, WebRequest request) {
-        HashMap<String, Object> details = new HashMap<String, Object>();
-        List<Map<String, String>> violations = exception.getConstraintViolations().stream().map(v -> Map.of("property", v.getPropertyPath().toString(), "issue", v.getMessage())).toList();
+    public ResponseEntity<ApiError> handleConstraintViolationException(ConstraintViolationException exception, WebRequest request) {
+        HashMap<String, Object> details = new HashMap<>();
+        List<Map<String, String>> violations = exception.getConstraintViolations().stream()
+                .map(v -> Map.of("property", v.getPropertyPath().toString(), "issue", safeMessage(v.getMessage())))
+                .toList();
         details.put("violations", violations);
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Məhdudiyyət pozuntusu")
+                .code("CONSTRAINT_VIOLATION")
+                .message(getMessage("error.constraint_violation"))
                 .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(OffsetDateTime.now())
                 .details(details)
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     @ExceptionHandler(value = {HttpMessageNotReadableException.class})
-    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
+    public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Yanlış sorğu formatı")
+                .code("BAD_REQUEST")
+                .message(getMessage("error.invalid_json_format"))
                 .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(OffsetDateTime.now())
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
     @ExceptionHandler(value = {AccessDeniedException.class})
-    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
+    public ResponseEntity<ApiError> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Giriş qadağandır")
+                .code("ACCESS_DENIED")
+                .message(getMessage("error.access_denied"))
                 .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(OffsetDateTime.now())
                 .build();
-        return ResponseEntity.status(HttpStatus.FORBIDDEN.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
     }
 
     @ExceptionHandler(value = {RuntimeException.class})
-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
+    public ResponseEntity<ApiError> handleRuntimeException(RuntimeException ex, WebRequest request) {
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Daxili server xətası: " + ex.getMessage())
+                .code("RUNTIME_EXCEPTION")
+                .message(getMessage("error.unexpected"))
                 .path(request.getDescription(false).replace("uri=", ""))
-                .details(Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null"))
+                .timestamp(OffsetDateTime.now())
+                .details(Map.of("exception", ex.getClass().getSimpleName()))
                 .build();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
     }
 
     @ExceptionHandler(value = {Exception.class})
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
+    public ResponseEntity<ApiError> handleGenericException(Exception ex, WebRequest request) {
+        ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Daxili server xətası: " + ex.getMessage())
+                .code("INTERNAL_SERVER_ERROR")
+                .message(getMessage("error.internal_server_error"))
                 .path(request.getDescription(false).replace("uri=", ""))
-                .details(Map.of("exception", ex.getClass().getSimpleName(), "message", ex.getMessage() != null ? ex.getMessage() : "null"))
+                .timestamp(OffsetDateTime.now())
+                .details(Map.of("exception", ex.getClass().getSimpleName()))
                 .build();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
+    }
+
+    private String getLocalizedMessage(String errorCode, String defaultMessage) {
+        String key = "error." + errorCode.toLowerCase();
+        String message = getMessage(key);
+        if (message.equals(key)) {
+            // Try resolving by original errorCode
+            message = getMessage(errorCode);
+            if (message.equals(errorCode)) {
+                return safeMessage(defaultMessage);
+            }
+        }
+        return message;
+    }
+
+    private String safeMessage(String msg) {
+        if (msg == null || msg.isBlank()) {
+            return getMessage("error.unexpected");
+        }
+        // If the message looks like a key, try to resolve it
+        if (msg.startsWith("error.")) {
+            String resolved = getMessage(msg);
+            if (!resolved.equals(msg)) {
+                return resolved;
+            }
+        }
+        return msg;
+    }
+
+    private String getMessage(String code) {
+        return getMessage(code, null);
+    }
+
+    private String getMessage(String code, String arg) {
+        try {
+            return messageSource.getMessage(code, arg != null ? new Object[]{arg} : null, LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            return code; // Fallback to code if message not found
+        }
     }
 }
 

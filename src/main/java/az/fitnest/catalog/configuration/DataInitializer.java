@@ -154,8 +154,8 @@ public class DataInitializer {
             gym.setPhone("+994500000000");
             gym.setEmail("info@premiumfitness.az");
             gym.setStatus(GymStatus.ACTIVE);
-            gym.setRating(4.5);
-            gym.setReviewsCount(10);
+            gym.setRating(3.8461538461538463);
+            gym.setReviewsCount(13);
             gym.setIsNew(true);
             gym.setResponsiblePerson("Eli Quliyev");
 
@@ -172,29 +172,30 @@ public class DataInitializer {
             socialLinks.add(new GymSocialLink("Facebook", "https://facebook.com/premiumfitness"));
             gym.setSocialLinks(socialLinks);
 
-            // Images
+            // Images (Grouped by Name to represent Rooms)
             List<GymImage> images = new ArrayList<>();
-            images.add(GymImage.builder()
-                    .gym(gym)
-                    .imageName("Main Hall")
-                    .url("https://picsum.photos/seed/gym1/1200/800")
-                    .type("interior")
-                    .title("Main Training Hall")
-                    .build());
-            images.add(GymImage.builder()
-                    .gym(gym)
-                    .imageName("Pool")
-                    .url("https://picsum.photos/seed/gympool1/1200/800")
-                    .type("swimming_pool")
-                    .title("Olympic Swimming Pool")
-                    .build());
+            // Main Hall Room
+            images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym1/1200/800").type("interior").title("Main Hall - Main View").build());
+            images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym2/1200/800").type("interior").title("Main Hall - Equipment").build());
+            // Cardio Zone Room
+            images.add(GymImage.builder().gym(gym).imageName("Cardio Zone").url("https://picsum.photos/seed/gym3/1200/800").type("interior").title("Cardio Room").build());
+            // Pool Room
+            images.add(GymImage.builder().gym(gym).imageName("Swimming Pool").url("https://picsum.photos/seed/pool1/1200/800").type("interior").title("Olympic Pool").build());
             gym.setImages(images);
 
             if (fitnessCategory != null) {
-                gym.setCategories(new HashSet<>(Collections.singletonList(fitnessCategory)));
+                Category yogaCategory = categoryRepository.findAll().stream().filter(c -> c.getName().equals("Yoga")).findFirst().orElse(null);
+                Set<Category> categories = new HashSet<>();
+                categories.add(fitnessCategory);
+                if (yogaCategory != null) categories.add(yogaCategory);
+                gym.setCategories(categories);
             }
 
             gym = gymRepository.save(gym);
+
+            Profession fitnessProfession = professionRepository.findAll().stream().filter(p -> p.getName().equals("Fitness Trainer")).findFirst().orElse(null);
+            Profession yogaProfession = professionRepository.findAll().stream().filter(p -> p.getName().equals("Yoga Instructor")).findFirst().orElse(null);
+            Profession crossfitProfession = professionRepository.findAll().stream().filter(p -> p.getName().equals("CrossFit Coach")).findFirst().orElse(null);
 
             Trainer trainer1 = new Trainer();
             trainer1.setFirstName("Eli");
@@ -205,8 +206,7 @@ public class DataInitializer {
             trainer1.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer1");
             trainer1.setPhone("+994501234567");
             trainer1.setEmail("eli@premiumfitness.az");
-            Profession profession1 = professionRepository.findAll().stream().filter(p -> p.getName().equals("Fitness Trainer")).findFirst().orElse(null);
-            trainer1.setProfession(profession1);
+            trainer1.setProfession(fitnessProfession);
 
             Trainer trainer2 = new Trainer();
             trainer2.setFirstName("Lale");
@@ -217,12 +217,42 @@ public class DataInitializer {
             trainer2.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer2");
             trainer2.setPhone("+994501234568");
             trainer2.setEmail("lale@premiumfitness.az");
-            Profession profession2 = professionRepository.findAll().stream().filter(p -> p.getName().equals("Yoga Instructor")).findFirst().orElse(null);
-            trainer2.setProfession(profession2);
+            trainer2.setProfession(yogaProfession);
+
+            Trainer trainer3 = new Trainer();
+            trainer3.setFirstName("Tural");
+            trainer3.setLastName("Aliyev");
+            trainer3.setSpecialization("Crossfit");
+            trainer3.setExperienceYears(7);
+            trainer3.setRating(5.0);
+            trainer3.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer3");
+            trainer3.setPhone("+994501234569");
+            trainer3.setEmail("tural@premiumfitness.az");
+            trainer3.setProfession(crossfitProfession);
 
             gym.getTrainers().add(trainer1);
             gym.getTrainers().add(trainer2);
-            gym.getReviews().add(new Review(1L, 5, "Amazing gym with great trainers!"));
+            gym.getTrainers().add(trainer3);
+
+            // Add 13 Reviews
+            String[] commonReviewTexts = {
+                    "Amazing gym with great trainers!",
+                    "Very clean and modern equipment.",
+                    "The pool is excellent.",
+                    "Best fitness center in Baku!",
+                    "Highly recommended for athletes.",
+                    "Professional atmosphere.",
+                    "Good value for membership.",
+                    "Friendly staff and great community.",
+                    "Love the yoga classes here.",
+                    "Modern and spacious.",
+                    "Great location and parking.",
+                    "High quality services.",
+                    "Excellent crossfit zone."
+            };
+            for (int i = 0; i < 13; i++) {
+                gym.getReviews().add(new Review((long)(i + 1), (i % 2 == 0 ? 4 : 5), commonReviewTexts[i]));
+            }
             gymRepository.save(gym);
 
             // Add Subscriptions for Gym 1
@@ -243,7 +273,17 @@ public class DataInitializer {
                     new GymSubscriptionBenefit("Group classes", "https://img.icons8.com/color/96/conference-call.png")
             ));
 
-            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2)));
+            GymSubscription sub1_3 = new GymSubscription();
+            sub1_3.setGym(gym);
+            sub1_3.setPlanId(3L); // Gold
+            sub1_3.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
+                    new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
+                    new GymSubscriptionBenefit("Spa access", "https://img.icons8.com/color/96/spa.png"),
+                    new GymSubscriptionBenefit("Personal trainer session", "https://img.icons8.com/color/96/personal-trainer.png")
+            ));
+
+            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2, sub1_3)));
             gymRepository.save(gym);
 
             String gymId = gym.getGymId().toString();
@@ -297,19 +337,19 @@ public class DataInitializer {
             gym2 = gymRepository.save(gym2);
 
             // Add Trainers for Gym 2
-            Trainer trainer3 = new Trainer();
-            trainer3.setFirstName("Tural");
-            trainer3.setLastName("Aliyev");
-            trainer3.setSpecialization("Crossfit");
-            trainer3.setExperienceYears(7);
-            trainer3.setRating(5.0);
-            trainer3.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer3");
-            trainer3.setPhone("+994501234569");
-            trainer3.setEmail("tural@peakperformance.az");
+            Trainer trainer4 = new Trainer();
+            trainer4.setFirstName("Tural");
+            trainer4.setLastName("Aliyev");
+            trainer4.setSpecialization("Crossfit");
+            trainer4.setExperienceYears(7);
+            trainer4.setRating(5.0);
+            trainer4.setProfileImageUrl("https://i.pravatar.cc/150?u=trainer3");
+            trainer4.setPhone("+994501234569");
+            trainer4.setEmail("tural@peakperformance.az");
             Profession profession3 = professionRepository.findAll().stream().filter(p -> p.getName().equals("CrossFit Coach")).findFirst().orElse(null);
-            trainer3.setProfession(profession3);
+            trainer4.setProfession(profession3);
 
-            gym2.getTrainers().add(trainer3);
+            gym2.getTrainers().add(trainer4);
 
             // Add Subscriptions for Gym 2
             GymSubscription sub2_1 = new GymSubscription();
