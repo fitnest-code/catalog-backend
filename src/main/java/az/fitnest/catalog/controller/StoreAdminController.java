@@ -2,14 +2,18 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreRequest;
-import az.fitnest.catalog.model.entity.Store;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,78 +22,57 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/admin/stores")
 @RequiredArgsConstructor
-@Tag(name = "Store Admin", description = "Mağazaları idarə etmək üçün administrativ ucluqlar")
+@Tag(name = "Store Admin", description = "Mağazaları idarə etmək üçün administrativ ucluqlar. Bu ucluqlar yalnız ADMIN və SUPER_ADMIN rollarına malik istifadəçilər tərəfindən istifadə edilə bilər.")
 @SecurityRequirement(name = "bearerAuth")
-@PreAuthorize("hasRole('ADMIN')")
 public class StoreAdminController {
 
     private final StoreService storeService;
 
-    @Operation(summary = "Mağaza yaradın (Admin)", description = "Yeni mağaza yaradır. ADMIN rolu tələb olunur.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Mağaza uğurla yaradıldı"), @ApiResponse(responseCode = "400", description = "Yanlış mağaza məlumatı")})
+    @Operation(summary = "Yeni mağaza yaradın", description = "Sistemə yeni mağaza əlavə edir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<StoreDetailResponseDto> createStoreAdmin(@RequestBody StoreRequest request) {
-        return ResponseEntity.status(201).body(this.storeService.createStore(request));
+    public ResponseEntity<StoreDetailResponseDto> createStore(@Valid @RequestBody StoreRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(storeService.createStore(request));
     }
 
-    @Operation(summary = "Mağazanı yeniləyin (Admin)", description = "Mövcud mağazanı yeniləyir. ADMIN rolu tələb olunur.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Mağaza uğurla yeniləndi"), @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")})
-    @PutMapping("/{storeId}")
-    public ResponseEntity<StoreDetailResponseDto> updateStoreAdmin(@PathVariable Long storeId, @RequestBody StoreRequest request) {
-        return ResponseEntity.ok(this.storeService.updateStore(storeId, request));
+    @Operation(summary = "Mağazanı yeniləyin", description = "Mövcud mağazanın məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<StoreDetailResponseDto> updateStore(@PathVariable Long id, @Valid @RequestBody StoreRequest request) {
+        return ResponseEntity.ok(storeService.updateStore(id, request));
     }
 
-    @Operation(summary = "Mağazanı silin (Admin)", description = "Mağazanı həmişəlik silir. ADMIN rolu tələb olunur.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "204", description = "Mağaza uğurla silindi")})
-    @DeleteMapping("/{storeId}")
-    public ResponseEntity<Void> deleteStoreAdmin(@PathVariable Long storeId) {
-        this.storeService.deleteStore(storeId);
+    @Operation(summary = "Mağazanı silin", description = "Mağazanı sistemdən silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStore(@PathVariable Long id) {
+        storeService.deleteStore(id);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Mağaza loqosunu yeniləyin (Admin)", description = "Mağazanın loqo şəklini yükləyir və ya əvəz edir. ADMIN rolu tələb olunur.")
-    @PutMapping(value = "/{storeId}/logo", consumes = {"multipart/form-data"})
-    public ResponseEntity<Void> updateStoreLogo(@PathVariable Long storeId, @RequestParam(value = "file") MultipartFile file) {
-        Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
-            this.storeService.deleteFileSafely(store.getLogoUrl());
-        }
-        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
-        this.storeService.updateStoreLogoUrl(storeId, fullUrl);
-        return ResponseEntity.noContent().build();
+    @Operation(summary = "Mağaza loqosunu yeniləyin", description = "Mağaza üçün loqo şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateLogo(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        String url = storeService.uploadFileDirectly(id, file);
+        storeService.updateStoreLogoUrl(id, url);
+        return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Mağaza loqosunu silin (Admin)", description = "Mağazanın loqo şəklini silir. ADMIN rolu tələb olunur.")
-    @DeleteMapping("/{storeId}/logo")
-    public ResponseEntity<Void> deleteStoreLogo(@PathVariable Long storeId) {
-        Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getLogoUrl() != null && !store.getLogoUrl().isBlank()) {
-            this.storeService.deleteFileSafely(store.getLogoUrl());
-            this.storeService.updateStoreLogoUrl(storeId, null);
-        }
-        return ResponseEntity.noContent().build();
+    @Operation(summary = "Mağaza üz qabığı şəklini yeniləyin", description = "Mağaza üçün əsas profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateCoverImage(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        String url = storeService.uploadFileDirectly(id, file);
+        storeService.updateStoreCoverImageUrl(id, url);
+        return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Mağazanın üz qabığı şəklini yeniləyin (Admin)", description = "Mağazanın üz qabığı şəklini yükləyir və ya əvəz edir. ADMIN rolu tələb olunur.")
-    @PutMapping(value = "/{storeId}/cover", consumes = {"multipart/form-data"})
-    public ResponseEntity<Void> updateStoreCover(@PathVariable Long storeId, @RequestParam(value = "file") MultipartFile file) {
-        Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
-            this.storeService.deleteFileSafely(store.getCoverImageUrl());
-        }
-        String fullUrl = this.storeService.uploadFileDirectly(storeId, file);
-        this.storeService.updateStoreCoverImageUrl(storeId, fullUrl);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Mağazanın üz qabığı şəklini silin (Admin)", description = "Mağazanın üz qabığı şəklini silir. ADMIN rolu tələb olunur.")
-    @DeleteMapping("/{storeId}/cover")
-    public ResponseEntity<Void> deleteStoreCover(@PathVariable Long storeId) {
-        Store store = this.storeService.getStoreEntityById(storeId);
-        if (store.getCoverImageUrl() != null && !store.getCoverImageUrl().isBlank()) {
-            this.storeService.deleteFileSafely(store.getCoverImageUrl());
-            this.storeService.updateStoreCoverImageUrl(storeId, null);
-        }
+    @Operation(summary = "Bütün mağazaları silin (Kritik)", description = "Sistemdəki BÜTÜN mağazaları silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @DeleteMapping("/all")
+    public ResponseEntity<Void> deleteAllStores() {
+        storeService.deleteAllStores();
         return ResponseEntity.noContent().build();
     }
 }
