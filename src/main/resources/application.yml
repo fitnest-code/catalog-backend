@@ -134,12 +134,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        enabled: true
 
 springdoc:
   api-docs:
     path: /v3/api-docs
     cache:
       enabled: true
+    pre-loading-enabled: true
   paths-to-exclude: /api/v1/internal/**
   swagger-ui:
     enabled: true
@@ -163,6 +166,9 @@ grpc:
     order-service:
       address: 'dns:///order-service.fitnest-dev.svc.cluster.local:9090'
       negotiation-type: plaintext
+      deadline-after: 10s
+      enable-keep-alive: true
+      keep-alive-time: 30s
 
 logging:
   level:
