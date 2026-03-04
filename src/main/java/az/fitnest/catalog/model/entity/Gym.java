@@ -62,34 +62,50 @@ public class Gym
     @ElementCollection
     @CollectionTable(name = "gym_social_links", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<GymSocialLink> socialLinks = new ArrayList<GymSocialLink>();
     @ElementCollection
     @CollectionTable(name = "gym_work_hours", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<GymWorkHour> workHours = new ArrayList<GymWorkHour>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<GymImage> images = new ArrayList<GymImage>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<Trainer> trainers = new ArrayList<Trainer>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<Review> reviews = new ArrayList<Review>();
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
     
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<GymAdmin> admins = new ArrayList<GymAdmin>();
     
     @ManyToMany
     @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Set<Category> categories = new HashSet<Category>();
     @Column(name = "rating")
     @Builder.Default

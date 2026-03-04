@@ -35,6 +35,8 @@ public class Category
     private String photoUrl;
     @ManyToMany(mappedBy = "categories")
     @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Set<Gym> gyms = new HashSet<Gym>();
 
     public Long getCategoryId() {
