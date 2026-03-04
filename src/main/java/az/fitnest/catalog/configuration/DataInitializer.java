@@ -270,7 +270,7 @@ public class DataInitializer {
             sub1_1.setPlanId(1L); // Bronze
             sub1_1.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
-                    new GymSubscriptionBenefit("Basic equipment usage", "https://img.icons8.com/color/96/dumbbell.png")
+                    new GymSubscriptionBenefit("Email support", "https://img.icons8.com/color/96/customer-support.png")
             ));
 
             GymSubscription sub1_2 = new GymSubscription();
@@ -278,8 +278,8 @@ public class DataInitializer {
             sub1_2.setPlanId(2L); // Silver
             sub1_2.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
-                    new GymSubscriptionBenefit("Sauna access", "https://img.icons8.com/color/96/sauna.png"),
-                    new GymSubscriptionBenefit("Group classes", "https://img.icons8.com/color/96/conference-call.png")
+                    new GymSubscriptionBenefit("Priority email support", "https://img.icons8.com/color/96/customer-support.png"),
+                    new GymSubscriptionBenefit("Sauna access", "https://img.icons8.com/color/96/sauna.png")
             ));
 
             GymSubscription sub1_3 = new GymSubscription();
@@ -287,12 +287,22 @@ public class DataInitializer {
             sub1_3.setPlanId(3L); // Gold
             sub1_3.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
+                    new GymSubscriptionBenefit("24/7 support", "https://img.icons8.com/color/96/customer-support.png"),
                     new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
-                    new GymSubscriptionBenefit("Spa access", "https://img.icons8.com/color/96/spa.png"),
-                    new GymSubscriptionBenefit("Personal trainer session", "https://img.icons8.com/color/96/personal-trainer.png")
+                    new GymSubscriptionBenefit("1 monthly personal trainer session", "https://img.icons8.com/color/96/personal-trainer.png")
             ));
 
-            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2, sub1_3)));
+            GymSubscription sub1_4 = new GymSubscription();
+            sub1_4.setGym(gym);
+            sub1_4.setPlanId(4L); // Platinum
+            sub1_4.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
+                    new GymSubscriptionBenefit("Dedicated account manager", "https://img.icons8.com/color/96/conference-call.png"),
+                    new GymSubscriptionBenefit("VIP lounge access", "https://img.icons8.com/color/96/vip.png"),
+                    new GymSubscriptionBenefit("Weekly personal trainer sessions", "https://img.icons8.com/color/96/personal-trainer.png")
+            ));
+
+            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2, sub1_3, sub1_4)));
             gymRepository.save(gym);
 
             String gymId = gym.getGymId().toString();
@@ -363,23 +373,39 @@ public class DataInitializer {
             // Add Subscriptions for Gym 2
             GymSubscription sub2_1 = new GymSubscription();
             sub2_1.setGym(gym2);
-            sub2_1.setPlanId(3L); // Gold
+            sub2_1.setPlanId(1L); // Bronze
             sub2_1.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
+                    new GymSubscriptionBenefit("Basic training support", "https://img.icons8.com/color/96/customer-support.png")
+            ));
+
+            GymSubscription sub2_2 = new GymSubscription();
+            sub2_2.setGym(gym2);
+            sub2_2.setPlanId(2L); // Silver
+            sub2_2.setBenefits(Arrays.asList(
+                    new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
+                    new GymSubscriptionBenefit("Sauna & Steam room", "https://img.icons8.com/color/96/sauna.png")
+            ));
+
+            GymSubscription sub2_3 = new GymSubscription();
+            sub2_3.setGym(gym2);
+            sub2_3.setPlanId(3L); // Gold
+            sub2_3.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
                     new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
                     new GymSubscriptionBenefit("Spa access", "https://img.icons8.com/color/96/spa.png")
             ));
 
-            GymSubscription sub2_2 = new GymSubscription();
-            sub2_2.setGym(gym2);
-            sub2_2.setPlanId(4L); // Platinum
-            sub2_2.setBenefits(Arrays.asList(
+            GymSubscription sub2_4 = new GymSubscription();
+            sub2_4.setGym(gym2);
+            sub2_4.setPlanId(4L); // Platinum
+            sub2_4.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
                     new GymSubscriptionBenefit("VIP lounge access", "https://img.icons8.com/color/96/vip.png"),
                     new GymSubscriptionBenefit("Personal trainer weekly", "https://img.icons8.com/color/96/personal-trainer.png")
             ));
 
-            gym2.setSubscriptions(new ArrayList<>(Arrays.asList(sub2_1, sub2_2)));
+            gym2.setSubscriptions(new ArrayList<>(Arrays.asList(sub2_1, sub2_2, sub2_3, sub2_4)));
             gymRepository.save(gym2);
 
             String gymId2 = gym2.getGymId().toString();
