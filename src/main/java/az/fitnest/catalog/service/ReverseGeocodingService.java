@@ -47,7 +47,7 @@ public class ReverseGeocodingService {
                 .build(true).toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
-        HttpEntity entity = new HttpEntity((MultiValueMap) headers);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
         try {
             ResponseEntity<Map> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
             Map<String, Object> body = response.getBody();
