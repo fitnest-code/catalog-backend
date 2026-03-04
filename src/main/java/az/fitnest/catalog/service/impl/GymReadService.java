@@ -50,15 +50,20 @@ public class GymReadService {
             isSaved = savedGymRepository.findByUserIdAndGymId(userId, gymId).isPresent();
         }
 
-        Map<String, List<GymImage>> grouped = gymImageRepository.findByGymId(gymId)
-                .stream()
-                .filter(img -> img.getImageName() != null)
-                .collect(Collectors.groupingBy(GymImage::getImageName));
-
-        List<GymRoomDto> rooms = grouped.entrySet().stream().map(entry -> {
-            List<GymImageDto> images = entry.getValue().stream().map(GymMapper::toImageDto).collect(Collectors.toList());
-            return GymRoomDto.builder().room_name(entry.getKey()).images(images).build();
-        }).collect(Collectors.toList());
+        List<GymRoomDto> rooms = new java.util.ArrayList<>();
+        if (gym.getRooms() != null) {
+            rooms = gym.getRooms().stream().map(room -> {
+                List<GymImageDto> images = room.getImages().stream().map(img ->
+                    GymImageDto.builder()
+                            .id(img.getId())
+                            .gymId(gym.getId())
+                            .name(room.getName())
+                            .url(img.getPictureUrl())
+                            .build()
+                ).collect(Collectors.toList());
+                return GymRoomDto.builder().room_name(room.getName()).images(images).build();
+            }).collect(Collectors.toList());
+        }
 
         List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
         try {
@@ -176,12 +181,26 @@ public class GymReadService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "gymImages", key = "#gymId")
     public GymImageResponse getGymImages(Long gymId) {
-        if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
-        }
+        Gym gym = gymRepository.findById(gymId)
+            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+            
         List<GymImageItemDto> items = gymImageRepository.findByGymId(gymId).stream()
                 .map(GymMapper::toImageItemDto)
                 .collect(Collectors.toList());
+                
+        if (gym.getRooms() != null) {
+            gym.getRooms().forEach(room -> {
+                room.getImages().forEach(img -> {
+                    items.add(GymImageItemDto.builder()
+                            .image_id(img.getId() != null ? img.getId().toString() : "room_" + room.getName())
+                            .url(img.getPictureUrl())
+                            .type("room")
+                            .title(room.getName())
+                            .build());
+                });
+            });
+        }
+        
         return GymImageResponse.builder().items(items).build();
     }
 

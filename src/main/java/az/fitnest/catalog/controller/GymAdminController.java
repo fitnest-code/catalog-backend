@@ -63,14 +63,17 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "İdman zalına otaq şəkli əlavə edin", description = "İdman zalı üçün otaq şəkli yükləyir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "İdman zalına otaq şəkli əlavə edin", description = "İdman zalı üçün otaq şəkilləri yükləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/{id}/rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> addRoomImage(
+    public ResponseEntity<Void> addRoomImages(
             @PathVariable Long id,
-            @RequestParam("roomName") String roomName,
-            @RequestParam("file") MultipartFile file) {
-        gymWriteService.addRoomImage(id, roomName, file);
+            @RequestParam("roomNames") java.util.List<String> roomNames,
+            @RequestParam("files") java.util.List<MultipartFile> files) {
+        if (roomNames == null || files == null || roomNames.size() != files.size()) {
+            return ResponseEntity.badRequest().build();
+        }
+        gymWriteService.addRoomImages(id, roomNames, files);
         return ResponseEntity.ok().build();
     }
 

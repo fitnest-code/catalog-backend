@@ -195,6 +195,19 @@ public class GymWriteService {
             }
         }
 
+        if (gym.getRooms() != null) {
+            List<String> roomImageUrls = gym.getRooms().stream()
+                    .flatMap(r -> r.getImages().stream())
+                    .map(az.fitnest.catalog.model.entity.RoomImage::getPictureUrl)
+                    .filter(url -> url != null && !url.isBlank())
+                    .toList();
+            if (!roomImageUrls.isEmpty()) {
+                try {
+                    fileStorageService.deleteFiles(roomImageUrls);
+                } catch (Exception e) {}
+            }
+        }
+
         if (gym.getTrainers() != null && !gym.getTrainers().isEmpty()) {
             for (Trainer trainer : gym.getTrainers()) {
                 if (trainer.getPicture() != null && !trainer.getPicture().isBlank()) {
@@ -280,22 +293,41 @@ public class GymWriteService {
 
     @Transactional
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
-    public void addRoomImage(Long gymId, String roomName, MultipartFile file) {
+    public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
-        String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
-        String url = "/api/v1/media/stream/" + fsId;
+        if (roomNames.size() != files.size()) {
+            throw new BadRequestException("INVALID_INPUT", "Otaq adlarının sayı və şəkillərin sayı eyni olmalıdır");
+        }
 
-        GymImage roomImage = GymImage.builder()
-                .gym(gym)
-                .imageName(roomName)
-                .url(url)
-                .type("room")
-                .title(roomName)
-                .build();
+        for (int i = 0; i < files.size(); i++) {
+            String roomName = roomNames.get(i);
+            MultipartFile file = files.get(i);
+            
+            String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
+            String url = "/api/v1/media/stream/" + fsId;
 
-        gym.getImages().add(roomImage);
+            az.fitnest.catalog.model.entity.Room room = gym.getRooms().stream()
+                    .filter(r -> r.getName().equals(roomName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        az.fitnest.catalog.model.entity.Room newRoom = az.fitnest.catalog.model.entity.Room.builder()
+                                .name(roomName)
+                                .gym(gym)
+                                .build();
+                        gym.getRooms().add(newRoom);
+                        return newRoom;
+                    });
+
+            az.fitnest.catalog.model.entity.RoomImage roomImage = az.fitnest.catalog.model.entity.RoomImage.builder()
+                    .room(room)
+                    .pictureUrl(url)
+                    .build();
+
+            room.getImages().add(roomImage);
+        }
+
         gymRepository.save(gym);
     }
 
