@@ -57,7 +57,7 @@ public class GymWriteService {
     private final GymWriteService self;
 
     @Transactional
-    public void createGym(GymRequest request) {
+    public void createGym(GymRequest request, MultipartFile cover) {
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
@@ -85,6 +85,19 @@ public class GymWriteService {
             }
             gym.setCategories(new HashSet<>(categories));
         }
+
+        if (request.workHours() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> workHours = request.workHours().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.setWorkHours(new java.util.ArrayList<>(workHours));
+        }
+
+        if (cover != null && !cover.isEmpty()) {
+            String fsId = fileStorageService.saveFile(cover, "/gyms/covers");
+            gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
+        }
+
         gym.setResponsiblePerson(request.responsiblePerson());
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
@@ -269,12 +282,22 @@ public class GymWriteService {
 
     @Transactional
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
-    public void updateLogo(Long gymId, MultipartFile file) {
+    public void addRoomImage(Long gymId, String roomName, MultipartFile file) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
-        String fsId = fileStorageService.saveFile(file, "/gyms/logos", gym.getLogoUrl());
-        gym.setLogoUrl("/api/v1/media/stream/" + fsId);
+        String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
+        String url = "/api/v1/media/stream/" + fsId;
+
+        GymImage roomImage = GymImage.builder()
+                .gym(gym)
+                .imageName(roomName)
+                .url(url)
+                .type("room")
+                .title(roomName)
+                .build();
+
+        gym.getImages().add(roomImage);
         gymRepository.save(gym);
     }
 

@@ -20,7 +20,6 @@ public record GymDetailResponse(
     List<GymReviewDto> recent_reviews,
     List<CategoryDto> categories,
     String coverImageUrl,
-    String logoUrl,
     Double rating,
     Integer reviewsCount,
     String qr_code_url,

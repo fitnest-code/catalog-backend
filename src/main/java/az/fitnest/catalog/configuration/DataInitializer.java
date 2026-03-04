@@ -148,7 +148,6 @@ public class DataInitializer {
             gym.setName("Premium Fitness Center");
             gym.setDescription("High-quality fitness center with modern equipment and professional trainers");
             gym.setCoverImageUrl("https://picsum.photos/seed/gym1/800/600");
-            gym.setLogoUrl("https://picsum.photos/seed/gymlogo1/200/200");
             gym.setQrCodeUrl("https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=gym1");
             gym.setAddress(address);
             gym.setPhone("+994500000000");
@@ -323,7 +322,6 @@ public class DataInitializer {
             gym2.setName("Peak Performance");
             gym2.setDescription("The ultimate training ground for athletes and fitness enthusiasts.");
             gym2.setCoverImageUrl("https://picsum.photos/seed/gym2/800/600");
-            gym2.setLogoUrl("https://picsum.photos/seed/gymlogo2/200/200");
             gym2.setAddress(address2);
             gym2.setPhone("+994500000001");
             gym2.setEmail("info@peakperformance.az");

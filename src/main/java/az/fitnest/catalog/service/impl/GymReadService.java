@@ -166,7 +166,6 @@ public class GymReadService {
                 .recent_reviews(recentReviews)
                 .categories(categoryDtos)
                 .coverImageUrl(gym.getCoverImageUrl())
-                .logoUrl(gym.getLogoUrl())
                 .rating(gym.getRating())
                 .reviewsCount(gym.getReviewsCount())
                 .qr_code_url(gym.getQrCodeUrl())

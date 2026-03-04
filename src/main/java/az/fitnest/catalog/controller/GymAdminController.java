@@ -30,11 +30,13 @@ public class GymAdminController {
     private final GymWriteService gymWriteService;
     private final GymReadService gymReadService;
 
-    @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir (üz qabığı şəkli ilə birlikdə). ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
-    public ResponseEntity<Void> createGym(@Valid @RequestBody GymRequest request) {
-        gymWriteService.createGym(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGym(
+            @RequestPart("cover") MultipartFile cover,
+            @Valid @RequestPart("request") GymRequest request) {
+        gymWriteService.createGym(request, cover);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -62,11 +64,14 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "İdman zalı loqosunu yeniləyin", description = "İdman zalı üçün loqo şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "İdman zalına otaq şəkli əlavə edin", description = "İdman zalı üçün otaq şəkli yükləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> updateLogo(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        gymWriteService.updateLogo(id, file);
+    @PostMapping(value = "/{id}/rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> addRoomImage(
+            @PathVariable Long id,
+            @RequestParam("roomName") String roomName,
+            @RequestParam("file") MultipartFile file) {
+        gymWriteService.addRoomImage(id, roomName, file);
         return ResponseEntity.ok().build();
     }
 

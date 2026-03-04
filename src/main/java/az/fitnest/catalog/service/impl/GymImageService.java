@@ -27,29 +27,6 @@ public class GymImageService {
     private final GymImageRepository gymImageRepository;
     private final FileStorageService fileStorageService;
 
-    @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
-    public void updateLogoUrl(Long gymId, String url) {
-        Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        if (gym.getLogoUrl() != null && !gym.getLogoUrl().equals(url)) {
-            safeDeleteFile(gym.getLogoUrl());
-        }
-        gym.setLogoUrl(url);
-        gymRepository.save(gym);
-    }
-
-    @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
-    public void deleteLogoUrl(Long gymId) {
-        Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
-        if (gym.getLogoUrl() != null && !gym.getLogoUrl().isBlank()) {
-            safeDeleteFile(gym.getLogoUrl());
-            gym.setLogoUrl(null);
-            gymRepository.save(gym);
-        }
-    }
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")

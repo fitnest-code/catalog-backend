@@ -38,5 +38,7 @@ public record GymRequest(
     String responsiblePerson,
 
     @NotNull(message = "Status boş ola bilməz")
-    GymStatus status
+    GymStatus status,
+
+    java.util.List<GymWorkHourDto> workHours
 ) {}
