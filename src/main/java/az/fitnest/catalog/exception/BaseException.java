@@ -14,4 +14,3 @@ public abstract class BaseException extends RuntimeException {
         this.httpStatus = httpStatus;
     }
 }
-

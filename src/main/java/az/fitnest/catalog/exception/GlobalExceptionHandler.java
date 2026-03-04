@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = {BaseException.class})
-    public ResponseEntity<ApiError> handleBaseException(BaseException exception, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleBaseException(BaseException exception, WebRequest request) {
 
         Map<String, Object> details = null;
         if (exception instanceof ValidationException validationException) {
@@ -56,11 +56,11 @@ public class GlobalExceptionHandler {
                 .details(details)
                 .build();
 
-        return ResponseEntity.status(exception.getHttpStatus()).body(apiError);
+        return ResponseEntity.status(exception.getHttpStatus()).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {MethodArgumentNotValidException.class})
-    public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, WebRequest request) {
         BindingResult result = exception.getBindingResult();
         HashMap<String, Object> details = new HashMap<>();
         List<Map<String, String>> fieldIssues = result.getFieldErrors().stream()
@@ -76,11 +76,11 @@ public class GlobalExceptionHandler {
                 .timestamp(OffsetDateTime.now())
                 .details(details)
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {ConstraintViolationException.class})
-    public ResponseEntity<ApiError> handleConstraintViolationException(ConstraintViolationException exception, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException exception, WebRequest request) {
         HashMap<String, Object> details = new HashMap<>();
         List<Map<String, String>> violations = exception.getConstraintViolations().stream()
                 .map(v -> Map.of("property", v.getPropertyPath().toString(), "issue", safeMessage(v.getMessage())))
@@ -95,11 +95,11 @@ public class GlobalExceptionHandler {
                 .timestamp(OffsetDateTime.now())
                 .details(details)
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {HttpMessageNotReadableException.class})
-    public ResponseEntity<ApiError> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .code("BAD_REQUEST")
@@ -107,11 +107,11 @@ public class GlobalExceptionHandler {
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
                 .build();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {AccessDeniedException.class})
-    public ResponseEntity<ApiError> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.FORBIDDEN.value())
                 .code("ACCESS_DENIED")
@@ -119,33 +119,31 @@ public class GlobalExceptionHandler {
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
                 .build();
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {RuntimeException.class})
-    public ResponseEntity<ApiError> handleRuntimeException(RuntimeException ex, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex, WebRequest request) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("RUNTIME_EXCEPTION")
                 .message(getMessage("error.unexpected"))
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
-                .details(Map.of("exception", ex.getClass().getSimpleName()))
                 .build();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(apiError));
     }
 
     @ExceptionHandler(value = {Exception.class})
-    public ResponseEntity<ApiError> handleGenericException(Exception ex, WebRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex, WebRequest request) {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("INTERNAL_SERVER_ERROR")
                 .message(getMessage("error.internal_server_error"))
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
-                .details(Map.of("exception", ex.getClass().getSimpleName()))
                 .build();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(apiError));
     }
 
     private String getLocalizedMessage(String errorCode, String defaultMessage) {
