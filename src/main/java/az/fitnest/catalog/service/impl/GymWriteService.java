@@ -30,6 +30,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import az.fitnest.catalog.util.ByteArrayMultipartFile;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GymWriteService {
 
     private final GymRepository gymRepository;
@@ -95,8 +97,17 @@ public class GymWriteService {
         }
 
         if (cover != null && !cover.isEmpty()) {
-            String fsId = fileStorageService.saveFile(cover, "/gyms/covers");
-            gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
+            log.info("Starting cover image upload to FileStorageService...");
+            try {
+                String fsId = fileStorageService.saveFile(cover, "/gyms/covers");
+                gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
+                log.info("Cover image uploaded successfully. File ID: {}", fsId);
+            } catch (Exception e) {
+                log.error("Failed to upload cover image. Error: {}", e.getMessage(), e);
+                throw new RuntimeException("Image upload failed", e); // Or a specific custom exception
+            }
+        } else {
+            log.info("No cover image provided in the request.");
         }
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);

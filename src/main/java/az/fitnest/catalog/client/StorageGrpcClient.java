@@ -10,6 +10,7 @@
  */
 package az.fitnest.catalog.client;
 
+import lombok.extern.slf4j.Slf4j;
 import az.fitnest.catalog.dto.StorageFileData;
 import az.fitnest.storage.grpc.DeleteFilesRequest;
 import az.fitnest.storage.grpc.DeleteFilesResponse;
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@Slf4j
 public class StorageGrpcClient {
     @GrpcClient(value = "storage-service")
     private StorageServiceGrpc.StorageServiceStub asyncStub;
@@ -48,12 +50,15 @@ public class StorageGrpcClient {
     }
 
     public StorageFileData uploadFile(MultipartFile file, String directory, String oldPath) {
+        log.info("Starting gRPC uploadFile for file: {}, directory: {}", file.getOriginalFilename(), directory);
         final CountDownLatch finishLatch = new CountDownLatch(1);
-        final AtomicReference responseData = new AtomicReference();
-        final AtomicReference error = new AtomicReference();
+        final AtomicReference<StorageFileData> responseData = new AtomicReference<>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
+        
         StreamObserver<UploadFileResponse> responseObserver = new StreamObserver<UploadFileResponse>() {
-
+            @Override
             public void onNext(UploadFileResponse response) {
+                log.info("gRPC responseObserver onNext received success={}", response.getSuccess());
                 if (response.getSuccess()) {
                     az.fitnest.storage.grpc.StorageFileData grpcData = response.getData();
                     StorageFileData data = new StorageFileData();
@@ -62,41 +67,68 @@ public class StorageGrpcClient {
                     data.setMd5(grpcData.getMd5());
                     data.setFsId(grpcData.getFsId());
                     responseData.set(data);
+                } else {
+                    log.error("gRPC upload response indicated failure: {}", response.getMessage());
                 }
             }
 
+            @Override
             public void onError(Throwable t) {
+                log.error("gRPC responseObserver onError triggered", t);
                 error.set(t);
                 finishLatch.countDown();
             }
 
+            @Override
             public void onCompleted() {
+                log.info("gRPC responseObserver onCompleted triggered");
                 finishLatch.countDown();
             }
         };
+        
         StreamObserver<UploadFileRequest> requestObserver = this.asyncStub.uploadFile(responseObserver);
         try {
-            FileMetadata.Builder metadataBuilder = FileMetadata.newBuilder().setFilename(file.getOriginalFilename()).setDirectory(directory != null ? directory : "/uploads").setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream");
+            FileMetadata.Builder metadataBuilder = FileMetadata.newBuilder()
+                .setFilename(file.getOriginalFilename())
+                .setDirectory(directory != null ? directory : "/uploads")
+                .setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream");
+            
             if (oldPath != null) {
                 metadataBuilder.setOldPath(oldPath);
             }
+            
+            log.info("Sending gRPC metadata request");
             requestObserver.onNext(UploadFileRequest.newBuilder().setMetadata(metadataBuilder.build()).build());
+            
             byte[] buffer = new byte[65536];
-            try (InputStream inputStream = file.getInputStream();) {
+            log.info("Sending gRPC chunk data stream");
+            try (InputStream inputStream = file.getInputStream()) {
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    requestObserver.onNext(UploadFileRequest.newBuilder().setChunkData(ByteString.copyFrom((byte[]) buffer, (int) 0, (int) bytesRead)).build());
+                    requestObserver.onNext(UploadFileRequest.newBuilder().setChunkData(ByteString.copyFrom(buffer, 0, bytesRead)).build());
                 }
             }
+            log.info("gRPC file stream fully sent, calling requestObserver.onCompleted()");
             requestObserver.onCompleted();
+            
             if (!finishLatch.await(5L, TimeUnit.MINUTES)) {
+                log.error("gRPC upload timed out after 5 minutes waiting for server response");
                 throw new RuntimeException("Upload timed out");
             }
             if (error.get() != null) {
-                throw new RuntimeException("Upload failed: " + ((Throwable) error.get()).getMessage(), (Throwable) error.get());
+                log.error("gRPC upload encountered error after finishLatch await", error.get());
+                throw new RuntimeException("Upload failed: " + error.get().getMessage(), error.get());
             }
-            return (StorageFileData) responseData.get();
+            
+            StorageFileData finalData = responseData.get();
+            if (finalData == null) {
+                log.error("gRPC responseData was null after successful completion");
+                throw new RuntimeException("Upload failed: No data returned from storage-service");
+            }
+            log.info("gRPC upload completed successfully, returning final responseData fsId={}", finalData.getFsId());
+            return finalData;
         } catch (IOException | InterruptedException e) {
+            log.error("gRPC upload interrupted or threw IOException", e);
             requestObserver.onError(e);
             throw new RuntimeException("Upload interrupted or failed", e);
         }
