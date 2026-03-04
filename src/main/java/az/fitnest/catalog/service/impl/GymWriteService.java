@@ -53,8 +53,9 @@ public class GymWriteService {
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     
+    @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
-    private final GymWriteService self;
+    private GymWriteService self;
 
     @Transactional
     public void createGym(GymRequest request, MultipartFile cover) {
