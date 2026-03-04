@@ -125,10 +125,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = {RuntimeException.class})
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex, WebRequest request) {
+        // Log the full stack trace for debugging
+        ex.printStackTrace(); // Simple logging for now, ideally use a Logger
+
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("RUNTIME_EXCEPTION")
-                .message(getMessage("error.unexpected"))
+                .message(ex.getMessage() != null ? ex.getMessage() : getMessage("error.unexpected"))
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
                 .build();
@@ -165,7 +168,7 @@ public class GlobalExceptionHandler {
             return getMessage("error.unexpected");
         }
         // If the message looks like a key, try to resolve it
-        if (msg.startsWith("error.")) {
+        if (msg.startsWith("error.") || msg.equals("INVALID_CATEGORIES") || msg.equals("GYM_NOT_FOUND")) {
             String resolved = getMessage(msg);
             if (!resolved.equals(msg)) {
                 return resolved;

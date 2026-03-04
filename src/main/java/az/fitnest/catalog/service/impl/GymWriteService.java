@@ -52,6 +52,9 @@ public class GymWriteService {
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    
+    @org.springframework.context.annotation.Lazy
+    private final GymWriteService self;
 
     @Transactional
     public void createGym(GymRequest request) {
@@ -86,10 +89,8 @@ public class GymWriteService {
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         Gym saved = gymRepository.save(gym);
-        // Call it asynchronously to prevent blocking the HTTP request
-        // Using @Async requires @EnableAsync on the main class
-        // Alternatively we can use Spring Events
-        generateAndSaveQrCode(saved);
+        // Call it asynchronously via the proxy to honor @Async
+        self.generateAndSaveQrCode(saved);
     }
 
     @Transactional
