@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.data.domain.Page
- *  org.springframework.data.domain.Pageable
- *  org.springframework.data.jpa.repository.JpaRepository
- *  org.springframework.data.jpa.repository.Query
- *  org.springframework.data.repository.query.Param
- */
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.Review;
