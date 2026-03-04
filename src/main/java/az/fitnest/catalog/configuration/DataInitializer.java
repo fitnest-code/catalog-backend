@@ -161,9 +161,13 @@ public class DataInitializer {
 
             // Work Hours
             List<GymWorkHour> workHours = new ArrayList<>();
-            for (DayOfWeek day : DayOfWeek.values()) {
-                workHours.add(new GymWorkHour(day, LocalTime.of(8, 0), LocalTime.of(22, 0)));
-            }
+            workHours.add(new GymWorkHour(DayOfWeek.MONDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.TUESDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.WEDNESDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.THURSDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.FRIDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.SATURDAY, LocalTime.of(9, 0), LocalTime.of(21, 0)));
+            workHours.add(new GymWorkHour(DayOfWeek.SUNDAY, LocalTime.of(10, 0), LocalTime.of(18, 0)));
             gym.setWorkHours(workHours);
 
             // Social Links
@@ -230,9 +234,12 @@ public class DataInitializer {
             trainer3.setEmail("tural@premiumfitness.az");
             trainer3.setProfession(crossfitProfession);
 
-            gym.getTrainers().add(trainer1);
-            gym.getTrainers().add(trainer2);
-            gym.getTrainers().add(trainer3);
+            // Set Gym for Trainers and save them
+            trainer1.setGymId(gym.getId());
+            trainer2.setGymId(gym.getId());
+            trainer3.setGymId(gym.getId());
+            
+            gym.setTrainers(new ArrayList<>(List.of(trainer1, trainer2, trainer3)));
 
             // Add 13 Reviews
             String[] commonReviewTexts = {
@@ -251,9 +258,11 @@ public class DataInitializer {
                     "Excellent crossfit zone."
             };
             for (int i = 0; i < 13; i++) {
-                gym.getReviews().add(new Review((long)(i + 1), (i % 2 == 0 ? 4 : 5), commonReviewTexts[i]));
+                Review review = new Review((long)(i + 1), (i % 2 == 0 ? 4 : 5), commonReviewTexts[i]);
+                review.setGymId(gym.getId());
+                gym.getReviews().add(review);
             }
-            gymRepository.save(gym);
+            gym = gymRepository.save(gym);
 
             // Add Subscriptions for Gym 1
             GymSubscription sub1_1 = new GymSubscription();

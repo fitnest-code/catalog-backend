@@ -69,29 +69,63 @@ public class GymReadService {
                         .toList();
                 List<az.fitnest.order.grpc.GymMembershipPlan> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
 
-                membershipPlans = remotePlans.stream().map(remotePlan -> {
-                    // Find matching subscription to get benefits
-                    az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
-                            .filter(s -> s.getPlanId() == remotePlan.getPlanId())
-                            .findFirst().orElse(null);
+                if (remotePlans != null && !remotePlans.isEmpty()) {
+                    membershipPlans = remotePlans.stream().map(remotePlan -> {
+                        // Find matching subscription to get benefits
+                        az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
+                                .filter(s -> s.getPlanId() == remotePlan.getPlanId())
+                                .findFirst().orElse(null);
 
-                    List<String> benefitsList = new java.util.ArrayList<>();
-                    if (matchingSub != null && matchingSub.getBenefits() != null) {
-                        benefitsList = matchingSub.getBenefits().stream()
-                                .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
-                                .toList();
-                    }
+                        List<String> benefitsList = new java.util.ArrayList<>();
+                        if (matchingSub != null && matchingSub.getBenefits() != null) {
+                            benefitsList = matchingSub.getBenefits().stream()
+                                    .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                                    .toList();
+                        }
 
-                    return GymPlanItemDto.builder()
-                            .plan_id(String.valueOf(remotePlan.getPlanId()))
-                            .name(remotePlan.getName())
-                            .benefits(benefitsList)
-                            .build();
-                }).collect(java.util.stream.Collectors.toList());
+                        return GymPlanItemDto.builder()
+                                .plan_id(String.valueOf(remotePlan.getPlanId()))
+                                .name(remotePlan.getName())
+                                .benefits(benefitsList)
+                                .build();
+                    }).collect(java.util.stream.Collectors.toList());
+                } else {
+                    // Fallback to local data with placeholder names if gRPC returns nothing
+                    membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                        String placeholderName = switch (sub.getPlanId().intValue()) {
+                            case 1 -> "Bronze Plan";
+                            case 2 -> "Silver Plan";
+                            case 3 -> "Gold Plan";
+                            case 4 -> "Platinum Plan";
+                            default -> "Standard Plan";
+                        };
+                        return GymPlanItemDto.builder()
+                                .plan_id(String.valueOf(sub.getPlanId()))
+                                .name(placeholderName)
+                                .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                                .build();
+                    }).toList();
+                }
             }
         } catch (Exception e) {
-            // Log error or ignore if unavailable (e.g. StatusRuntimeException)
+            // Log error and fallback to local data
             System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
+            if (gym.getSubscriptions() != null) {
+                membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                    String placeholderName = switch (sub.getPlanId().intValue()) {
+                        case 1 -> "Bronze Plan";
+                        case 2 -> "Silver Plan";
+                        case 3 -> "Gold Plan";
+                        case 4 -> "Platinum Plan";
+                        default -> "Standard Plan";
+                    };
+                    return GymPlanItemDto.builder()
+                            .plan_id(String.valueOf(sub.getPlanId()))
+                            .name(placeholderName)
+                            .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                            .build();
+                }).toList();
+            }
         }
 
         List<GymTrainerDto> trainerDtos = trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
