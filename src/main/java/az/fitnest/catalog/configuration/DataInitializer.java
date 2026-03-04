@@ -156,7 +156,6 @@ public class DataInitializer {
             gym.setRating(3.8461538461538463);
             gym.setReviewsCount(13);
             gym.setIsNew(true);
-            gym.setResponsiblePerson("Eli Quliyev");
 
             // Work Hours
             List<GymWorkHour> workHours = new ArrayList<>();
@@ -329,7 +328,6 @@ public class DataInitializer {
             gym2.setRating(4.9);
             gym2.setReviewsCount(45);
             gym2.setIsNew(true);
-            gym2.setResponsiblePerson("Tural Aliyev");
 
             List<GymWorkHour> workHours2 = new ArrayList<>();
             for (DayOfWeek day : DayOfWeek.values()) {

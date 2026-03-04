@@ -35,10 +35,21 @@ public record GymRequest(
     @NotEmpty(message = "Kateqoriyalar boş ola bilməz")
     Set<Long> categoryIds,
 
-    String responsiblePerson,
-
     @NotNull(message = "Status boş ola bilməz")
     GymStatus status,
 
-    java.util.List<GymWorkHourDto> workHours
+    java.util.List<GymWorkHourDto> workHours,
+
+    @NotBlank(message = "Admin adı boş ola bilməz")
+    String adminName,
+
+    @NotBlank(message = "Admin soyadı boş ola bilməz")
+    String adminSurname,
+
+    @NotBlank(message = "Admin nömrəsi boş ola bilməz")
+    String adminPhoneNumber,
+
+    @NotBlank(message = "Admin email boş ola bilməz")
+    @Email(message = "Yanlış email formatı")
+    String adminEmail
 ) {}

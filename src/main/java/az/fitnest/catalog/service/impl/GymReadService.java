@@ -169,7 +169,6 @@ public class GymReadService {
                 .rating(gym.getRating())
                 .reviewsCount(gym.getReviewsCount())
                 .qr_code_url(gym.getQrCodeUrl())
-                .responsiblePerson(gym.getResponsiblePerson())
                 .status(gym.getStatus())
                 .build();
     }

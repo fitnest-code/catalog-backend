@@ -82,6 +82,11 @@ public class Gym
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
     private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
+    
+    @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
+    @Builder.Default
+    private List<GymAdmin> admins = new ArrayList<GymAdmin>();
+    
     @ManyToMany
     @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})
     @Builder.Default
@@ -95,8 +100,6 @@ public class Gym
     @Column(name = "is_new")
     @Builder.Default
     private Boolean isNew = false;
-    @Column(name = "responsible_person")
-    private String responsiblePerson;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default

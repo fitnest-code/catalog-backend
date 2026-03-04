@@ -21,6 +21,8 @@ import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.SavedGymRepository;
+import az.fitnest.catalog.model.entity.GymAdmin;
+import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
@@ -47,6 +49,7 @@ import java.util.Locale;
 public class GymWriteService {
 
     private final GymRepository gymRepository;
+    private final GymAdminRepository gymAdminRepository;
     private final SavedGymRepository savedGymRepository;
     private final CategoryRepository categoryRepository;
     private final ReverseGeocodingService reverseGeocodingService;
@@ -99,10 +102,19 @@ public class GymWriteService {
             gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
         }
 
-        gym.setResponsiblePerson(request.responsiblePerson());
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         Gym saved = gymRepository.save(gym);
+        
+        GymAdmin admin = GymAdmin.builder()
+            .name(request.adminName())
+            .surname(request.adminSurname())
+            .phoneNumber(request.adminPhoneNumber())
+            .email(request.adminEmail())
+            .gym(saved)
+            .build();
+        gymAdminRepository.save(admin);
+
         // Call it asynchronously via the proxy to honor @Async
         self.generateAndSaveQrCode(saved);
     }
@@ -140,7 +152,6 @@ public class GymWriteService {
             }
             gym.setCategories(new HashSet<>(categories));
         }
-        gym.setResponsiblePerson(request.responsiblePerson());
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         gymRepository.save(gym);
