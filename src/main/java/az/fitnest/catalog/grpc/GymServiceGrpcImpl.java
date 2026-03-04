@@ -260,7 +260,7 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
     @Override
     public void createGym(CreateGymRequest request, StreamObserver<CreateGymResponse> responseObserver) {
-        gymWriteService.createGym(mapToGymRequest(request), null);
+        gymWriteService.createGym(mapToGymRequest(request));
         responseObserver.onNext(CreateGymResponse.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }

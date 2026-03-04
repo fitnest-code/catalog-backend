@@ -60,7 +60,7 @@ public class GymWriteService {
     private GymWriteService self;
 
     @Transactional
-    public void createGym(GymRequest request, MultipartFile cover) {
+    public void createGym(GymRequest request) {
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
@@ -96,19 +96,6 @@ public class GymWriteService {
             gym.setWorkHours(new java.util.ArrayList<>(workHours));
         }
 
-        if (cover != null && !cover.isEmpty()) {
-            log.info("Starting cover image upload to FileStorageService...");
-            try {
-                String fsId = fileStorageService.saveFile(cover, "/gyms/covers");
-                gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
-                log.info("Cover image uploaded successfully. File ID: {}", fsId);
-            } catch (Exception e) {
-                log.error("Failed to upload cover image. Error: {}", e.getMessage(), e);
-                throw new RuntimeException("Image upload failed", e); // Or a specific custom exception
-            }
-        } else {
-            log.info("No cover image provided in the request.");
-        }
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 

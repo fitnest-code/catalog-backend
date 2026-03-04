@@ -31,30 +31,11 @@ public class GymAdminController {
     private final GymReadService gymReadService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir (üz qabığı şəkli ilə birlikdə). ADMIN rolu tələb olunur.")
+    @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> createGym(
-            @RequestPart("cover") MultipartFile cover,
-            @Parameter(description = "Gym details in JSON format") 
-            @RequestPart("request") String requestStr) {
-        
-        GymRequest request;
-        try {
-            request = objectMapper.readValue(requestStr, GymRequest.class);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new az.fitnest.catalog.exception.BadRequestException("INVALID_JSON", "Məlumat formatı düzgün deyil");
-        }
-
-        // Validate the deserialized object manually
-        jakarta.validation.ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
-        jakarta.validation.Validator validator = factory.getValidator();
-        java.util.Set<jakarta.validation.ConstraintViolation<GymRequest>> violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            throw new jakarta.validation.ConstraintViolationException(violations);
-        }
-
-        gymWriteService.createGym(request, cover);
+    @PostMapping
+    public ResponseEntity<Void> createGym(@Valid @RequestBody GymRequest request) {
+        gymWriteService.createGym(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
