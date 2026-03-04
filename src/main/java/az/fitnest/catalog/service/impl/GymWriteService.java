@@ -96,6 +96,19 @@ public class GymWriteService {
             gym.setWorkHours(new java.util.ArrayList<>(workHours));
         }
 
+        if (request.workHoursWoman() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> workHoursWoman = request.workHoursWoman().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.setWorkHoursWoman(new java.util.ArrayList<>(workHoursWoman));
+        }
+
+        if (request.workHoursMan() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> workHoursMan = request.workHoursMan().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.setWorkHoursMan(new java.util.ArrayList<>(workHoursMan));
+        }
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
@@ -138,6 +151,30 @@ public class GymWriteService {
             }
             gym.setCategories(new HashSet<>(categories));
         }
+        gym.getWorkHours().clear();
+        if (request.workHours() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHours = request.workHours().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.getWorkHours().addAll(newWorkHours);
+        }
+
+        gym.getWorkHoursWoman().clear();
+        if (request.workHoursWoman() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.getWorkHoursWoman().addAll(newWorkHoursWoman);
+        }
+
+        gym.getWorkHoursMan().clear();
+        if (request.workHoursMan() != null) {
+            List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursMan = request.workHoursMan().stream()
+                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .toList();
+            gym.getWorkHoursMan().addAll(newWorkHoursMan);
+        }
+
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         gymRepository.save(gym);

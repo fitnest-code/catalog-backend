@@ -14,6 +14,8 @@ public record GymDetailResponse(
     String phone,
     String email,
     List<GymWorkHourDto> work_hours,
+    List<GymWorkHourDto> work_hours_woman,
+    List<GymWorkHourDto> work_hours_man,
     List<GymRoomDto> rooms,
     List<GymPlanItemDto> membership_plans,
     List<GymTrainerDto> trainers,

@@ -71,6 +71,20 @@ public class Gym
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<GymWorkHour> workHours = new ArrayList<GymWorkHour>();
+    
+    @ElementCollection
+    @CollectionTable(name = "gym_work_hours_woman", joinColumns = {@JoinColumn(name = "gym_id")})
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private List<GymWorkHour> workHoursWoman = new ArrayList<GymWorkHour>();
+    
+    @ElementCollection
+    @CollectionTable(name = "gym_work_hours_man", joinColumns = {@JoinColumn(name = "gym_id")})
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private List<GymWorkHour> workHoursMan = new ArrayList<GymWorkHour>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default

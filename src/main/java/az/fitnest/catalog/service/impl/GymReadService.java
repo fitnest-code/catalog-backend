@@ -147,6 +147,14 @@ public class GymReadService {
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList());
 
+        List<GymWorkHourDto> workHoursWoman = gym.getWorkHoursWoman() != null ? gym.getWorkHoursWoman().stream()
+                .map(GymMapper::toWorkHourDto)
+                .collect(Collectors.toList()) : null;
+
+        List<GymWorkHourDto> workHoursMan = gym.getWorkHoursMan() != null ? gym.getWorkHoursMan().stream()
+                .map(GymMapper::toWorkHourDto)
+                .collect(Collectors.toList()) : null;
+
         List<CategoryDto> categoryDtos = gym.getCategories() != null ? gym.getCategories().stream()
                 .map(GymMapper::toCategoryDto)
                 .collect(Collectors.toList()) : null;
@@ -165,6 +173,8 @@ public class GymReadService {
                 .phone(gym.getPhone())
                 .email(gym.getEmail())
                 .work_hours(workHours)
+                .work_hours_woman(workHoursWoman)
+                .work_hours_man(workHoursMan)
                 .rooms(rooms)
                 .membership_plans(membershipPlans)
                 .trainers(trainerDtos)
