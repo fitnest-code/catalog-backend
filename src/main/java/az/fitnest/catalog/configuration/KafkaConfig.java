@@ -28,9 +28,6 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    /**
-     * Consumer factory for generic Map-based events (used by FavoritesEventListener)
-     */
     @Bean
     public ConsumerFactory<String, Map<String, Object>> defaultConsumerFactory() {
         Map<String, Object> props = new HashMap<>();

@@ -57,7 +57,6 @@ public class DataInitializer {
             category.setName(name);
             category = categoryRepository.save(category);
 
-            // Seed translations (assuming original is EN)
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "AZ", "name", translateCategoryToAz(name));
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "RU", "name", translateCategoryToRu(name));
         }
@@ -157,7 +156,6 @@ public class DataInitializer {
             gym.setReviewsCount(13);
             gym.setIsNew(true);
 
-            // Work Hours
             List<GymWorkHour> workHours = new ArrayList<>();
             workHours.add(new GymWorkHour(DayOfWeek.MONDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
             workHours.add(new GymWorkHour(DayOfWeek.TUESDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
@@ -168,20 +166,15 @@ public class DataInitializer {
             workHours.add(new GymWorkHour(DayOfWeek.SUNDAY, LocalTime.of(10, 0), LocalTime.of(18, 0)));
             gym.setWorkHours(workHours);
 
-            // Social Links
             List<GymSocialLink> socialLinks = new ArrayList<>();
             socialLinks.add(new GymSocialLink("Instagram", "https://instagram.com/premiumfitness"));
             socialLinks.add(new GymSocialLink("Facebook", "https://facebook.com/premiumfitness"));
             gym.setSocialLinks(socialLinks);
 
-            // Images (Grouped by Name to represent Rooms)
             List<GymImage> images = new ArrayList<>();
-            // Main Hall Room
             images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym1/1200/800").type("interior").title("Main Hall - Main View").build());
             images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym2/1200/800").type("interior").title("Main Hall - Equipment").build());
-            // Cardio Zone Room
             images.add(GymImage.builder().gym(gym).imageName("Cardio Zone").url("https://picsum.photos/seed/gym3/1200/800").type("interior").title("Cardio Room").build());
-            // Pool Room
             images.add(GymImage.builder().gym(gym).imageName("Swimming Pool").url("https://picsum.photos/seed/pool1/1200/800").type("interior").title("Olympic Pool").build());
             gym.setImages(images);
 
@@ -232,7 +225,6 @@ public class DataInitializer {
             trainer3.setEmail("tural@premiumfitness.az");
             trainer3.setProfession(crossfitProfession);
 
-            // Set Gym for Trainers and save them
             trainer1.setGymId(gym.getId());
             trainer2.setGymId(gym.getId());
             trainer3.setGymId(gym.getId());
