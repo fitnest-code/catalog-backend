@@ -189,17 +189,17 @@
         @SecurityRequirement(name = "bearerAuth")
         @PreAuthorize("isAuthenticated()")
         @ApiResponses(value = {
-                @ApiResponse(responseCode = "200", description = "Dəyişiklik uğurludur"),
-                @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı"),
-                @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")
+                @ApiResponse(responseCode = "200", description = "Dəyişiklik uğurludur", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ToggleSaveResponse.class))}),
+                @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class))}),
+                @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class))})
         })
-        public ResponseEntity<java.util.Map<String, Boolean>> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
+        public ResponseEntity<az.fitnest.catalog.dto.ToggleSaveResponse> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
             Long userId = this.extractUserId(principal);
             if (userId == null) {
                 return ResponseEntity.status(401).build();
             }
             boolean isSaved = this.gymWriteService.toggleSave(userId, gymId);
-            return ResponseEntity.ok(java.util.Map.of("is_saved", isSaved));
+            return ResponseEntity.ok(new az.fitnest.catalog.dto.ToggleSaveResponse(isSaved));
         }
 
         @GetMapping("/{gymId}/location")

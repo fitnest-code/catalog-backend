@@ -41,9 +41,6 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
-    /**
-     * Default Kafka listener container factory (used by @KafkaListener without containerFactory parameter)
-     */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Map<String, Object>> kafkaListenerContainerFactory(
             KafkaTemplate<String, Object> kafkaTemplate) {
@@ -61,9 +58,6 @@ public class KafkaConfig {
         return factory;
     }
 
-    /**
-     * Producer factory for sending events
-     */
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -74,9 +68,6 @@ public class KafkaConfig {
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
-    /**
-     * Kafka template for sending events
-     */
     @Bean
     public KafkaTemplate<String, Object> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
