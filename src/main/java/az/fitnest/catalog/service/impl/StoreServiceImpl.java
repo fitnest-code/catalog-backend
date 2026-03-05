@@ -147,7 +147,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional(readOnly = true)
     public StoreDetailResponseDto getStoreDetail(Long userId, Long storeId) {
-        Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         boolean isSaved = false;
         if (userId != null) {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
@@ -176,7 +176,7 @@ public class StoreServiceImpl implements StoreService {
             savedStoreRepository.delete(existing.get());
             return false;
         } else {
-            Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+            Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
             SavedStore saved = new SavedStore();
             saved.setUserId(userId);
             saved.setStore(store);
@@ -207,7 +207,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public StoreDetailResponseDto updateStore(Long storeId, StoreRequest request) {
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
         return getStoreDetail(null, saved.getId());
@@ -216,7 +216,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public void deleteStore(Long storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         storeRepository.deleteStoreBadgesByStoreId(storeId);
         savedStoreRepository.deleteByStoreId(storeId);
         if (store.getLogoUrl() != null) fileStorageService.deleteFile(store.getLogoUrl());
@@ -278,7 +278,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public String uploadStoreImage(Long storeId, MultipartFile file) {
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         String fsId = fileStorageService.saveFile(file, "/stores/" + storeId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
         StoreImage image = new StoreImage();
@@ -302,7 +302,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional(readOnly = true)
     public Store getStoreEntityById(Long storeId) {
-        return storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Store not found"));
+        return storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
     }
 
     @Override

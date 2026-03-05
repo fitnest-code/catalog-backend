@@ -1,10 +1,12 @@
 package az.fitnest.catalog.dto;
 
 import az.fitnest.catalog.model.enums.GymStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import java.util.List;
 
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record GymDetailResponse(
     String gym_id,
     String name,

@@ -30,7 +30,7 @@ public class ProfessionService {
     @Transactional(readOnly = true)
     public ProfessionDto getProfessionById(Long id) {
         Profession p = professionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
         return toDto(p);
     }
 
@@ -47,10 +47,10 @@ public class ProfessionService {
     @Transactional
     public ProfessionDto updateProfession(Long id, ProfessionRequest request) {
         Profession p = professionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
 
         if (!p.getName().equals(request.name()) && professionRepository.existsByName(request.name())) {
-            throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
+            throw new az.fitnest.catalog.exception.BadRequestException("PROFESSION_ALREADY_EXISTS", "error.profession_already_exists");
         }
 
         p.setName(request.name());

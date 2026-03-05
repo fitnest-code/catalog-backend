@@ -38,12 +38,13 @@ public class GymReadService {
     private final TrainerRepository trainerRepository;
     private final ReviewRepository reviewRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    private final org.springframework.context.MessageSource messageSource;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "gyms", key = "#gymId")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         Gym gym = gymRepository.findWithDetailsById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         boolean isSaved = false;
         if (userId != null) {
@@ -218,7 +219,7 @@ public class GymReadService {
     @Transactional(readOnly = true)
     public ReservationRulesResponse getReservationRules(Long gymId) {
         if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         return new ReservationRulesResponse(false, Map.of("max_reservations_per_day", 1, "cancel_before_minutes", 60));
     }
@@ -302,7 +303,7 @@ public class GymReadService {
 
         String message = null;
         if (items.isEmpty()) {
-            message = "İdman zalı tapılmadı.";
+            message = messageSource.getMessage("error.gym_not_found", null, org.springframework.context.i18n.LocaleContextHolder.getLocale());
         }
         return PaginatedResponse.<GymMainPageDto>builder()
                 .items(items)
@@ -366,7 +367,7 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public LocationDto getGymLocation(Long gymId) {
-        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Address addr = gym.getAddress();
         if (addr == null) {
             return LocationDto.builder().build();

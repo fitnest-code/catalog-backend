@@ -34,7 +34,7 @@ public class GymTrainerService {
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
         if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.by(direction, "id")));
@@ -54,7 +54,7 @@ public class GymTrainerService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void addTrainer(Long gymId, TrainerRequest request) {
         if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         Trainer trainer = new Trainer();
         trainer.setGymId(gymId);
@@ -68,7 +68,7 @@ public class GymTrainerService {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
-            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
         if (request.picture() != null && !request.picture().equals(trainer.getPicture())) {
@@ -99,7 +99,7 @@ public class GymTrainerService {
         trainer.setSurname(request.surname());
 
         Profession profession = professionRepository.findById(request.professionId())
-                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "Peşə tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
         trainer.setProfession(profession);
 
         trainer.setPicture(request.picture());

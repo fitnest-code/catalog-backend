@@ -32,7 +32,7 @@ public class GymImageService {
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public void updateCoverImageUrl(Long gymId, String url) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         if (gym.getCoverImageUrl() != null && !gym.getCoverImageUrl().equals(url)) {
             safeDeleteFile(gym.getCoverImageUrl());
         }
@@ -44,7 +44,7 @@ public class GymImageService {
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public void deleteCoverImageUrl(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         if (gym.getCoverImageUrl() != null && !gym.getCoverImageUrl().isBlank()) {
             safeDeleteFile(gym.getCoverImageUrl());
             gym.setCoverImageUrl(null);
@@ -56,7 +56,7 @@ public class GymImageService {
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public GymImageDto putGymImage(Long gymId, String imageName, String url) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         GymImage gymImage = new GymImage();
         gymImage.setGym(gym);
         gymImage.setImageName(imageName);
@@ -72,7 +72,7 @@ public class GymImageService {
         validateImageFile(file);
 
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         String fsId = fileStorageService.saveFile(file, "/gyms/" + gymId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
@@ -93,7 +93,7 @@ public class GymImageService {
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public void deleteRoomImage(Long gymId, Long imageId) {
         GymImage existing = gymImageRepository.findById(imageId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_IMAGE_NOT_FOUND", "Gym image not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_IMAGE_NOT_FOUND", "error.gym_image_not_found"));
         if (existing.getGym() == null || !existing.getGym().getId().equals(gymId)) {
             throw new ResourceNotFoundException("GYM_IMAGE_MISMATCH", "error.gym_image_mismatch");
         }

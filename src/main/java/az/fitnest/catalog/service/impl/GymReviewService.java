@@ -29,7 +29,7 @@ public class GymReviewService {
     @Transactional(readOnly = true)
     public PaginatedResponse<GymReviewDto> getReviews(Long gymId, int page, int pageSize, String sort) {
         if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı");
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         Page<Review> reviewPage = reviewRepository.findByGymId(gymId, pageable(page, pageSize, sortForReviews(sort)));
         List<GymReviewDto> items = reviewPage.getContent().stream()
@@ -48,7 +48,7 @@ public class GymReviewService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void addReview(Long userId, Long gymId, ReviewRequest request) {
         if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı");
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
 
         Review review = new Review();

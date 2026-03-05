@@ -18,12 +18,12 @@ public record AddressDto(
     String city,
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Schema(description = "Latitude")
+    @Schema(description = "Latitude", example = "40.4093")
     @NotNull(message = "Latitude cannot be null")
     Double latitude,
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Schema(description = "Longitude")
+    @Schema(description = "Longitude", example = "49.8671")
     @NotNull(message = "Longitude cannot be null")
     Double longitude
 ) {}

@@ -122,7 +122,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void updateGym(Long gymId, GymRequest request) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
 
         gym.setName(request.name());
@@ -184,7 +184,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
     public void enableGymSubscriptions(Long gymId, az.fitnest.catalog.dto.GymSubscriptionsEnableRequest request) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         if (request.planIds() == null) {
             gym.getSubscriptions().clear();
@@ -221,7 +221,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
     public void updateGymSubscriptionBenefits(Long gymId, Long planId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         GymSubscription subscription = gym.getSubscriptions().stream()
                 .filter(sub -> sub.getPlanId().equals(planId))
@@ -246,7 +246,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         if (gym.getCoverImageUrl() != null && !gym.getCoverImageUrl().isBlank()) {
             safeDeleteFile(gym.getCoverImageUrl());
@@ -295,7 +295,7 @@ public class GymWriteService {
             savedGymRepository.delete(existing.get());
             return false;
         } else {
-            Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "İdman zalı tapılmadı"));
+            Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
             az.fitnest.catalog.model.entity.SavedGym saved = new az.fitnest.catalog.model.entity.SavedGym();
             saved.setUserId(userId);
             saved.setGym(gym);
@@ -307,7 +307,7 @@ public class GymWriteService {
     @Transactional
     public CheckInResponseDto checkIn(Long userId, Long gymId) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         orderServiceGrpcClient.checkIn(userId, gymId);
 
@@ -364,7 +364,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         if (roomNames.size() != files.size()) {
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
@@ -404,7 +404,7 @@ public class GymWriteService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void updateCoverImage(Long gymId, MultipartFile file) {
         Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         String fsId = fileStorageService.saveFile(file, "/gyms/covers", gym.getCoverImageUrl());
         gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
