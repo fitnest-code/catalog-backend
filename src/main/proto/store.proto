@@ -21,6 +21,7 @@ message GetStoresRequest {
   int32 page = 2;
   int32 page_size = 3;
   int64 user_id = 4;
+  string sort_dir = 5;
 }
 
 message StoreListResponse {

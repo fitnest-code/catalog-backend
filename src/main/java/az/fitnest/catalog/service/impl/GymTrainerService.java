@@ -32,11 +32,12 @@ public class GymTrainerService {
     private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize) {
+    public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found");
         }
-        Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.unsorted()));
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.by(direction, "id")));
         List<GymTrainerDto> items = trainerPage.getContent().stream()
                 .map(this::toGymTrainerDto)
                 .collect(Collectors.toList());

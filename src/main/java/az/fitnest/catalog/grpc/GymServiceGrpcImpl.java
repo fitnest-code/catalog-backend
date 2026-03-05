@@ -118,7 +118,8 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
 
 
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
-        az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymTrainerDto> dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize());
+        String sortDir = request.getSortDir() != null && !request.getSortDir().isBlank() ? request.getSortDir() : "desc";
+        az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymTrainerDto> dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize(), sortDir);
         GymTrainersResponse.Builder builder = GymTrainersResponse.newBuilder();
         if (dto.items() != null) {
             for (az.fitnest.catalog.dto.GymTrainerDto item : dto.items()) {

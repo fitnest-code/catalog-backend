@@ -113,8 +113,8 @@
         @GetMapping("/{gymId}/trainers")
         @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
-        public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size) {
-            return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size));
+        public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
+            return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size, sortDir));
         }
 
         @GetMapping("/{gymId}/reviews")
