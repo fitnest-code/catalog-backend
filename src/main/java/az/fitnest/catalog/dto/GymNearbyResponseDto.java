@@ -3,12 +3,15 @@
  */
 package az.fitnest.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public class GymNearbyResponseDto {
     private Long gymId;
     private String name;
     private String address;
     private Double rating;
     private Boolean isNew;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private Double distanceKm;
 
     public GymNearbyResponseDto() {

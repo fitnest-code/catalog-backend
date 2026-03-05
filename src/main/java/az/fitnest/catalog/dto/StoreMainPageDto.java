@@ -1,5 +1,6 @@
 package az.fitnest.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 
 @Builder
@@ -12,6 +13,7 @@ public record StoreMainPageDto(
     String logoUrl,
     String coverImageUrl,
     java.util.List<StoreDiscountDto> discounts,
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     Double distanceKm,
     StoreSocialDto social,
     Boolean isSaved,

@@ -13,6 +13,7 @@ public record GymMainPageDto(
     boolean isNew,
     String location,
     String city,
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     Double distanceKm,
     boolean isSaved
 ) {}
