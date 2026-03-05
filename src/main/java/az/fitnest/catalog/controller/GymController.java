@@ -84,6 +84,7 @@
         private final GymImageService gymImageService;
         private final GymReviewService gymReviewService;
         private final GymTrainerService gymTrainerService;
+        private final az.fitnest.catalog.service.impl.RecentSearchService recentSearchService;
 
         @GetMapping("/{gymId:\\d+}")
         @Operation(summary = "İdman zalı təfərrüatlarını əldə edin", description = "Xüsusi bir idman zalının tam təfərrüatlarını, o cümlədən yerləşmə yeri, obyektləri və istifadəçiyə xüsusi favorit statusunu əldə edir.")
@@ -174,6 +175,11 @@
                 @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
                 @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng) {
             Long userId = this.extractUserId(principal);
+            
+            if (userId != null && q != null && !q.trim().isEmpty()) {
+                recentSearchService.saveSearch(userId, q, "GYM");
+            }
+            
             return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, page, page_size, lat, lng));
         }
 

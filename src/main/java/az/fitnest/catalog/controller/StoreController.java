@@ -27,6 +27,7 @@ import java.util.Map;
 public class StoreController {
 
     private final StoreService storeService;
+    private final az.fitnest.catalog.service.impl.RecentSearchService recentSearchService;
 
     @Operation(summary = "Kataloq mağazalarını əldə edin", description = "Bütün mağaza siyahıları üçün birləşdirilmiş ucluq (Hamısı, Ən yaxın, Yeni, Endirimlilər, Saxlanılanlar). Görünüşləri dəyişmək üçün 'type' parametrindən istifadə edin.")
     @PreAuthorize("isAuthenticated()")
@@ -44,6 +45,11 @@ public class StoreController {
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size) {
         Long userId = this.getCurrentUserId();
+        
+        if (userId != null && q != null && !q.trim().isEmpty()) {
+            recentSearchService.saveSearch(userId, q, "STORE");
+        }
+        
         return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size));
     }
 
