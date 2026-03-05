@@ -254,13 +254,14 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
-        return getGyms(userId, null, "CLOSEST", page, pageSize, userLat, userLng);
+        return getGyms(userId, null, "CLOSEST", page, pageSize, userLat, userLng, "desc");
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, int page, int pageSize, Double userLat, Double userLng) {
+    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         Page<Gym> gymPage;
-        Pageable pageable = pageable(page, pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
 
         if ("SAVED".equalsIgnoreCase(type)) {
             if (userId == null) return emptyPaginatedResponse(page, pageSize);

@@ -38,8 +38,9 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(direction, "createdDate"));
         Page<Store> storePage;
 
         if ("SAVED".equalsIgnoreCase(type)) {

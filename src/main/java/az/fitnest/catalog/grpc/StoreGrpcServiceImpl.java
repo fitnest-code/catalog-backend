@@ -47,7 +47,7 @@ public class StoreGrpcServiceImpl
             String query = request.getQuery() != null && !request.getQuery().isBlank() ? request.getQuery() : null;
             int page = request.getPage() > 0 ? request.getPage() : 1;
             int pageSize = request.getPageSize() > 0 ? request.getPageSize() : 10;
-            PaginatedResponse<az.fitnest.catalog.dto.StoreMainPageDto> response = this.storeService.getStores(userId, query, "ALL", null, null, page, pageSize);
+            PaginatedResponse<az.fitnest.catalog.dto.StoreMainPageDto> response = this.storeService.getStores(userId, query, "ALL", null, null, page, pageSize, "desc");
             String json = this.objectMapper.writeValueAsString(response);
             responseObserver.onNext(StoreListResponse.newBuilder().setJsonPayload(json).build());
             responseObserver.onCompleted();

@@ -173,14 +173,15 @@
                 @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
                 @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
                 @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
-                @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng) {
+                @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
+                @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
             Long userId = this.extractUserId(principal);
             
             if (userId != null && q != null && !q.trim().isEmpty()) {
                 recentSearchService.saveSearch(userId, q, "GYM");
             }
             
-            return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, page, page_size, lat, lng));
+            return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, page, page_size, lat, lng, sortDir));
         }
 
         @PostMapping("/{gymId}/save")

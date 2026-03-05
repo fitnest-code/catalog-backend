@@ -20,7 +20,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StoreService {
-    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize);
+    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir);
 
     public StoreDetailResponseDto getStoreDetail(Long var1, Long var2);
 

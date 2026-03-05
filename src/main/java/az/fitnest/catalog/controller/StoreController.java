@@ -43,14 +43,15 @@ public class StoreController {
             @Parameter(description = "İstifadəçinin enliyi (CLOSEST növü üçün tələb olunur)") @RequestParam(value = "lat", required = false) Double lat,
             @Parameter(description = "İstifadəçinin uzunluğu (CLOSEST növü üçün tələb olunur)") @RequestParam(value = "lng", required = false) Double lng,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size) {
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
+            @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
         Long userId = this.getCurrentUserId();
         
         if (userId != null && q != null && !q.trim().isEmpty()) {
             recentSearchService.saveSearch(userId, q, "STORE");
         }
         
-        return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size));
+        return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size, sortDir));
     }
 
     @Operation(summary = "Mağaza təfərrüatlarını əldə edin", description = "Xüsusi bir mağazanın tam təfərrüatlarını əldə edir.")
