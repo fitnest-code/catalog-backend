@@ -1,5 +1,6 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.RecentSearchDto;
 import az.fitnest.catalog.service.impl.RecentSearchService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +26,7 @@ public class RecentSearchController {
 
     private final RecentSearchService recentSearchService;
 
-    @Operation(summary = "Son axtarışları əldə edin", description = "İstifadəçinin son 10 axtarışını əldə edir. Növ (GYM və ya STORE) üzrə filtrləyin.")
+    @Operation(summary = "Son axtarışları əldə edin", description = "İstifadəçinin son axtarışlarını səhifələnmiş formada əldə edir. Növ (GYM və ya STORE) üzrə filtrləyin.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
@@ -33,11 +34,17 @@ public class RecentSearchController {
             @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur")
     })
     @GetMapping
-    public ResponseEntity<List<RecentSearchDto>> getRecentSearches(
+    public ResponseEntity<PaginatedResponse<RecentSearchDto>> getRecentSearches(
             @Parameter(description = "Axtarış növü (GYM və ya STORE)", example = "GYM") 
-            @RequestParam("type") String type) {
+            @RequestParam("type") String type,
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") 
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") 
+            @RequestParam(defaultValue = "10") int page_size,
+            @Parameter(description = "Çeşidləmə qaydası (asc, desc)") 
+            @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
         Long userId = getCurrentUserId();
-        return ResponseEntity.ok(recentSearchService.getRecentSearches(userId, type.toUpperCase()));
+        return ResponseEntity.ok(recentSearchService.getRecentSearches(userId, type.toUpperCase(), page, page_size, sortDir));
     }
 
     @Operation(summary = "Xüsusi axtarışı silin", description = "İstifadəçinin keçmişindən xüsusi bir axtarış sorğusunu silir.")

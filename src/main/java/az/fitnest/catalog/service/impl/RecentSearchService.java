@@ -1,10 +1,14 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.RecentSearchDto;
 import az.fitnest.catalog.model.entity.RecentSearch;
 import az.fitnest.catalog.repository.RecentSearchRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,15 +69,33 @@ public class RecentSearchService {
     }
 
     @Transactional(readOnly = true)
-    public List<RecentSearchDto> getRecentSearches(Long userId, String type) {
+    public PaginatedResponse<RecentSearchDto> getRecentSearches(Long userId, String type, int page, int pageSize, String sortDir) {
         if (userId == null || type == null) {
-            return List.of();
+            return PaginatedResponse.<RecentSearchDto>builder()
+                    .items(List.of())
+                    .total(0)
+                    .page(page)
+                    .pageSize(pageSize)
+                    .build();
         }
         
-        return recentSearchRepository.findByUserIdAndTypeOrderByCreatedDateDesc(userId, type, PageRequest.of(0, MAX_RECENT_SEARCHES))
-                .stream()
+        int safePage = Math.max(page, 1) - 1;
+        int safePageSize = Math.max(pageSize, 1);
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(safePage, safePageSize, Sort.by(direction, "createdDate"));
+        
+        Page<RecentSearch> resultPage = recentSearchRepository.findAllByUserIdAndType(userId, type, pageable);
+        
+        List<RecentSearchDto> items = resultPage.getContent().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+                
+        return PaginatedResponse.<RecentSearchDto>builder()
+                .items(items)
+                .total(resultPage.getTotalElements())
+                .page(page)
+                .pageSize(safePageSize)
+                .build();
     }
 
     @Transactional
