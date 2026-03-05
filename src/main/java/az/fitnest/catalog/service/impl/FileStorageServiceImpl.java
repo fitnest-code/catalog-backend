@@ -50,17 +50,17 @@ public class FileStorageServiceImpl
             StorageFileData data = this.storageGrpcClient.uploadFile(file, directory, extractedOldPath);
             return String.valueOf(data.getFsId());
         } catch (Exception e) {
-            throw new BadRequestException("Failed to upload image: " + e.getMessage());
+            throw new BadRequestException("error.file_upload_failed");
         }
     }
 
     private void validateFile(MultipartFile file) {
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
-            throw new BadRequestException("Only JPEG and PNG images are allowed");
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new BadRequestException("error.invalid_file_type");
         }
-        if (file.getSize() > 0x500000L) {
-            throw new BadRequestException("File size exceeds maximum allowed size of 5MB");
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BadRequestException("error.file_too_large");
         }
     }
 

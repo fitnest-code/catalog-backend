@@ -192,7 +192,7 @@ public class GymReadService {
     @Cacheable(cacheNames = "gymImages", key = "#gymId")
     public GymImageResponse getGymImages(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
-            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
             
         List<GymImageItemDto> items = gymImageRepository.findByGymId(gymId).stream()
                 .map(GymMapper::toImageItemDto)

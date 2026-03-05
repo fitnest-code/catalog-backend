@@ -47,11 +47,19 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "İdman zalı abunəliklərini yeniləyin", description = "İdman zalı üçün mövcud abunəlik planlarını və üstünlüklərini yeniləyir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "İdman zalı üçün mövcud abunəlik planlarını aktivləşdirin", description = "İdman zalı üçün göstərilən abunəlik planlarını aktivləşdirir. Mövcud planların üstünlükləri qorunur, siyahıda olmayanlar isə silinir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/subscriptions")
-    public ResponseEntity<Void> updateGymSubscriptions(@PathVariable Long id, @Valid @RequestBody GymSubscriptionsUpdateRequest request) {
-        gymWriteService.updateGymSubscriptions(id, request);
+    @PostMapping("/{id}/subscriptions/enable")
+    public ResponseEntity<Void> enableGymSubscriptions(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymSubscriptionsEnableRequest request) {
+        gymWriteService.enableGymSubscriptions(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Aktivləşdirilmiş abunəlik üçün üstünlükləri yeniləyin", description = "İdman zalı üçün artıq aktivləşdirilmiş olan müəyyən bir abunəliyin üstünlüklərini (benefits) yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/subscriptions/{planId}/benefits")
+    public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId, @Valid @RequestBody az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
+        gymWriteService.updateGymSubscriptionBenefits(id, planId, request);
         return ResponseEntity.ok().build();
     }
 

@@ -84,7 +84,7 @@ public class GymWriteService {
         if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(request.categoryIds());
             if (categories.size() != request.categoryIds().size()) {
-                throw new BadRequestException("INVALID_CATEGORIES", "Bir və ya daha çox kateqoriya ID-si yanlışdır");
+                throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
             }
             gym.setCategories(new HashSet<>(categories));
         }
@@ -147,7 +147,7 @@ public class GymWriteService {
         if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(request.categoryIds());
             if (categories.size() != request.categoryIds().size()) {
-                throw new BadRequestException("INVALID_CATEGORIES", "One or more category IDs are invalid");
+                throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
             }
             gym.setCategories(new HashSet<>(categories));
         }
@@ -182,31 +182,63 @@ public class GymWriteService {
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
-    public void updateGymSubscriptions(Long gymId, GymSubscriptionsUpdateRequest request) {
+    public void enableGymSubscriptions(Long gymId, az.fitnest.catalog.dto.GymSubscriptionsEnableRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
-        gym.getSubscriptions().clear();
-        if (request.subscriptions() != null) {
-            for (GymSubscriptionRequestDto subDto : request.subscriptions()) {
-                if (!orderServiceGrpcClient.checkPlanExists(subDto.planId())) {
-                    throw new BadRequestException("PLAN_NOT_FOUND", "Üzvlük planı ID " + subDto.planId() + " mövcud deyil və ya deaktivdir.");
-                }
+        if (request.planIds() == null) {
+            gym.getSubscriptions().clear();
+            gymRepository.save(gym);
+            return;
+        }
+
+        // Validate all newly requested plan IDs exist
+        for (Long planId : request.planIds()) {
+            if (!orderServiceGrpcClient.checkPlanExists(planId)) {
+                throw new BadRequestException("PLAN_NOT_FOUND", "error.plan_not_found");
+            }
+        }
+
+        // Remove subscriptions that are no longer enabled
+        gym.getSubscriptions().removeIf(sub -> !request.planIds().contains(sub.getPlanId()));
+
+        // Add new subscriptions that were not already enabled
+        List<Long> existingPlanIds = gym.getSubscriptions().stream().map(GymSubscription::getPlanId).toList();
+        for (Long planId : request.planIds()) {
+            if (!existingPlanIds.contains(planId)) {
                 GymSubscription subscription = new GymSubscription();
-                subscription.setPlanId(subDto.planId());
+                subscription.setPlanId(planId);
                 subscription.setGym(gym);
-                if (subDto.benefits() != null) {
-                    List<GymSubscriptionBenefit> benefits = subDto.benefits().stream().map(b -> {
-                        GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
-                        benefit.setBenefit(b.benefit());
-                        benefit.setBenefitLogo(b.benefitLogo());
-                        return benefit;
-                    }).toList();
-                    subscription.setBenefits(new java.util.ArrayList<>(benefits));
-                }
+                subscription.setBenefits(new java.util.ArrayList<>());
                 gym.getSubscriptions().add(subscription);
             }
         }
+
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    public void updateGymSubscriptionBenefits(Long gymId, Long planId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
+
+        GymSubscription subscription = gym.getSubscriptions().stream()
+                .filter(sub -> sub.getPlanId().equals(planId))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
+
+        subscription.getBenefits().clear();
+        if (request.benefits() != null) {
+            List<GymSubscriptionBenefit> newBenefits = request.benefits().stream().map(b -> {
+                GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
+                benefit.setBenefit(b.benefit());
+                benefit.setBenefitLogo(b.benefitLogo());
+                return benefit;
+            }).toList();
+            subscription.getBenefits().addAll(newBenefits);
+        }
+
         gymRepository.save(gym);
     }
 
@@ -335,7 +367,7 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "Gym not found"));
 
         if (roomNames.size() != files.size()) {
-            throw new BadRequestException("INVALID_INPUT", "Otaq adlarının sayı və şəkillərin sayı eyni olmalıdır");
+            throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
 
         for (int i = 0; i < files.size(); i++) {

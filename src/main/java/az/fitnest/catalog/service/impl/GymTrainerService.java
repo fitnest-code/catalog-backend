@@ -65,7 +65,7 @@ public class GymTrainerService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request) {
         Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
         }
@@ -82,9 +82,9 @@ public class GymTrainerService {
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void deleteTrainer(Long gymId, Long trainerId) {
         Trainer trainerToDelete = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı"));
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainerToDelete.getGymId())) {
-            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "Məşqçi tapılmadı");
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
         if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {

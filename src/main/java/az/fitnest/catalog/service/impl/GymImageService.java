@@ -95,7 +95,7 @@ public class GymImageService {
         GymImage existing = gymImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_IMAGE_NOT_FOUND", "Gym image not found"));
         if (existing.getGym() == null || !existing.getGym().getId().equals(gymId)) {
-            throw new ResourceNotFoundException("GYM_IMAGE_MISMATCH", "Image does not belong to specified gym");
+            throw new ResourceNotFoundException("GYM_IMAGE_MISMATCH", "error.gym_image_mismatch");
         }
         if (existing.getUrl() != null && !existing.getUrl().isBlank()) {
             safeDeleteFile(existing.getUrl());
@@ -113,15 +113,15 @@ public class GymImageService {
 
     private void validateImageFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new BadRequestException("FILE_EMPTY", "File cannot be empty");
+            throw new BadRequestException("FILE_EMPTY", "error.file_empty");
         }
         long maxSize = 5 * 1024 * 1024; // 5 MB
-        if (file.getSize() > maxSize) {
-            throw new BadRequestException("FILE_TOO_LARGE", "File size exceeds 5MB limit");
+        if (file.getSize() > 5 * 1024 * 1024) { // 5MB
+            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
         }
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
-            throw new BadRequestException("INVALID_FILE_TYPE", "Only JPG, PNG and WEBP images are allowed");
+            throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
         }
         // Further validation reading Magic Bytes could be done here with Tika.
     }

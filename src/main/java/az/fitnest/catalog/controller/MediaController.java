@@ -47,8 +47,8 @@ public class MediaController {
                 if (response.hasFileData()) {
                     try {
                         outputStream.write(response.getFileData().toByteArray());
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to stream file", e);
+                    } catch (Exception e) {
+                        throw new RuntimeException("error.file_upload_failed", e);
                     }
                 }
             });

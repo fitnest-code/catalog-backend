@@ -133,11 +133,12 @@ public class GlobalExceptionHandler {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("RUNTIME_EXCEPTION")
-                .message(ex.getMessage() != null ? ex.getMessage() : getMessage("error.unexpected"))
+                .message(ex.getMessage() != null ? safeMessage(ex.getMessage()) : getMessage("error.unexpected"))
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(apiError));
+
     }
 
     @ExceptionHandler(value = {Exception.class})

@@ -45,7 +45,7 @@ public class OrderServiceGrpcClient {
         az.fitnest.order.grpc.CheckInResponse response = blockingStub.checkIn(request);
 
         if (!response.getSuccess()) {
-            throw new RuntimeException("Check-in failed: " + response.getMessage());
+            throw new RuntimeException("error.rpc_failed");
         }
     }
 }

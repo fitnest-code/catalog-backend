@@ -37,7 +37,7 @@ public class ProfessionService {
     @Transactional
     public ProfessionDto createProfession(ProfessionRequest request) {
         if (professionRepository.existsByName(request.name())) {
-            throw new IllegalArgumentException("Bu adda peşə artıq mövcuddur");
+            throw new IllegalArgumentException("error.profession_already_exists");
         }
         Profession p = new Profession();
         p.setName(request.name());

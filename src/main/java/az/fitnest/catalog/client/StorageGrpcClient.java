@@ -113,24 +113,24 @@ public class StorageGrpcClient {
             
             if (!finishLatch.await(5L, TimeUnit.MINUTES)) {
                 log.error("gRPC upload timed out after 5 minutes waiting for server response");
-                throw new RuntimeException("Upload timed out");
+                throw new RuntimeException("error.rpc_failed");
             }
             if (error.get() != null) {
                 log.error("gRPC upload encountered error after finishLatch await", error.get());
-                throw new RuntimeException("Upload failed: " + error.get().getMessage(), error.get());
+                throw new RuntimeException("error.file_upload_failed", error.get());
             }
             
             StorageFileData finalData = responseData.get();
             if (finalData == null) {
                 log.error("gRPC responseData was null after successful completion");
-                throw new RuntimeException("Upload failed: No data returned from storage-service");
+                throw new RuntimeException("error.file_upload_failed");
             }
             log.info("gRPC upload completed successfully, returning final responseData fsId={}", finalData.getFsId());
             return finalData;
         } catch (IOException | InterruptedException e) {
             log.error("gRPC upload interrupted or threw IOException", e);
             requestObserver.onError(e);
-            throw new RuntimeException("Upload interrupted or failed", e);
+            throw new RuntimeException("error.file_upload_failed", e);
         }
     }
 
@@ -140,14 +140,14 @@ public class StorageGrpcClient {
         if (response.getSuccess()) {
             return response.getDownloadUrl();
         }
-        throw new RuntimeException("Download failed: " + response.getMessage());
+        throw new RuntimeException("error.rpc_failed");
     }
 
     public void deleteFiles(List<String> paths) {
         DeleteFilesRequest request = DeleteFilesRequest.newBuilder().addAllPaths(paths).build();
         DeleteFilesResponse response = this.blockingStub.deleteFiles(request);
         if (!response.getSuccess()) {
-            throw new RuntimeException("Delete failed: " + response.getMessage());
+            throw new RuntimeException("error.rpc_failed");
         }
     }
 

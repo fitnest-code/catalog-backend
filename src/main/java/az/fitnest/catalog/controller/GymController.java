@@ -152,7 +152,7 @@
             try {
                 return ResponseEntity.ok(this.gymWriteService.checkIn(userId, gymId));
             } catch (Exception e) {
-                throw new az.fitnest.catalog.exception.BadRequestException("CHECKIN_FAILED", e.getMessage());
+                throw new az.fitnest.catalog.exception.BadRequestException("CHECKIN_FAILED", "error.checkin_failed");
             }
         }
 
