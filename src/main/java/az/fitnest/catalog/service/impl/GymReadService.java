@@ -255,11 +255,11 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
-        return getGyms(userId, null, "CLOSEST", page, pageSize, userLat, userLng, "desc");
+        return getGyms(userId, null, "CLOSEST", null, page, pageSize, userLat, userLng, "desc");
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
+    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, Long categoryId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         Page<Gym> gymPage;
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
@@ -268,24 +268,44 @@ public class GymReadService {
             if (userId == null) return emptyPaginatedResponse(page, pageSize);
             List<SavedGym> saved = savedGymRepository.findByUserId(userId);
             List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
-            return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q);
+            return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId);
         }
 
         if (userLat != null && userLng != null) {
             double initialRadiusKm = 50.0;
             double[] bbox = boundingBox(userLat, userLng, initialRadiusKm);
             if (q != null && !q.isBlank()) {
-                gymPage = gymRepository.findClosestGymsWithQuery(q, bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                if (categoryId != null) {
+                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
+                } else {
+                    gymPage = gymRepository.findClosestGymsWithQuery(q, bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                }
             } else if ("CLOSEST".equalsIgnoreCase(type)) {
-                gymPage = gymRepository.findClosestGyms(bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                if (categoryId != null) {
+                    gymPage = gymRepository.findByCategory(categoryId, pageable);
+                } else {
+                    gymPage = gymRepository.findClosestGyms(bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                }
             } else {
-                gymPage = gymRepository.findAll(pageable);
+                if (categoryId != null) {
+                    gymPage = gymRepository.findByCategory(categoryId, pageable);
+                } else {
+                    gymPage = gymRepository.findAll(pageable);
+                }
             }
         } else {
             if (q != null && !q.isBlank()) {
-                gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCase(q, pageable);
+                if (categoryId != null) {
+                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
+                } else {
+                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCase(q, pageable);
+                }
             } else {
-                gymPage = gymRepository.findAll(pageable);
+                if (categoryId != null) {
+                    gymPage = gymRepository.findByCategory(categoryId, pageable);
+                } else {
+                    gymPage = gymRepository.findAll(pageable);
+                }
             }
         }
 
@@ -314,12 +334,15 @@ public class GymReadService {
                 .build();
     }
 
-    private PaginatedResponse<GymMainPageDto> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
+    private PaginatedResponse<GymMainPageDto> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q, Long categoryId) {
         java.util.stream.Stream<Gym> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
             stream = stream.filter(g -> (g.getName() != null && g.getName().toLowerCase().contains(lowerQ)) ||
                     (g.getAddress() != null && g.getAddress().getAddressText() != null && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
+        }
+        if (categoryId != null) {
+            stream = stream.filter(g -> g.getCategories() != null && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)));
         }
 
         List<GymMainPageDto> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true)).collect(Collectors.toList());
@@ -348,6 +371,17 @@ public class GymReadService {
         if (userLat != null && userLng != null && address != null && address.getLatitude() != null && address.getLongitude() != null) {
             distanceKm = Math.round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0) / 10.0;
         }
+
+        List<CategoryDto> categories = gym.getCategories() != null ?
+            gym.getCategories().stream()
+                .map(c -> CategoryDto.builder()
+                    .id(c.getId())
+                    .name(c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .build())
+                .collect(Collectors.toList())
+            : java.util.Collections.emptyList();
+
         return GymMainPageDto.builder()
                 .gymId(gym.getId().toString())
                 .name(gym.getName())
@@ -358,6 +392,7 @@ public class GymReadService {
                 .city(address != null ? address.getCity() : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
+                .categories(categories)
                 .build();
     }
 

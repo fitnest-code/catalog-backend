@@ -1,7 +1,8 @@
-package az.fitnest.catalog.dto;
+ package az.fitnest.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
+import java.util.List;
 
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -15,5 +16,6 @@ public record GymMainPageDto(
     String city,
     @JsonInclude(JsonInclude.Include.ALWAYS)
     Double distanceKm,
-    boolean isSaved
+    boolean isSaved,
+    List<CategoryDto> categories
 ) {}

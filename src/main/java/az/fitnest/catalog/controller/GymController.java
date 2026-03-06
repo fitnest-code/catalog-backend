@@ -170,6 +170,7 @@
                 @AuthenticationPrincipal Object principal,
                 @Parameter(description = "Axtarış sorğusu") @RequestParam(value = "q", required = false) String q,
                 @Parameter(description = "Filtr növü (ALL, NEW, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
+                @Parameter(description = "Kateqoriya ID-si") @RequestParam(value = "category", required = false) Long categoryId,
                 @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
                 @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
                 @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
@@ -181,7 +182,7 @@
                 recentSearchService.saveSearch(userId, q, "GYM");
             }
             
-            return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, page, page_size, lat, lng, sortDir));
+            return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, page, page_size, lat, lng, sortDir));
         }
 
         @PostMapping("/{gymId}/save")
