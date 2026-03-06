@@ -26,7 +26,7 @@ public class RecentSearchController {
 
     private final RecentSearchService recentSearchService;
 
-    @Operation(summary = "Son axtarışları əldə edin", description = "İstifadəçinin son axtarışlarını səhifələnmiş formada əldə edir. Növ (GYM və ya STORE) üzrə filtrləyin.")
+    @Operation(summary = "Son axtarışları əldə edin", description = "İstifadəçinin son axtarışlarını səhifələnmiş formada əldə edir. Növ (GYM, STORE və ya ALL) üzrə filtrləyin.")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
@@ -35,7 +35,7 @@ public class RecentSearchController {
     })
     @GetMapping
     public ResponseEntity<PaginatedResponse<RecentSearchDto>> getRecentSearches(
-            @Parameter(description = "Axtarış növü (GYM və ya STORE)", example = "GYM") 
+            @Parameter(description = "Axtarış növü (GYM, STORE və ya ALL)", example = "GYM")
             @RequestParam("type") String type,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") 
             @RequestParam(defaultValue = "1") int page,
@@ -52,7 +52,7 @@ public class RecentSearchController {
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping
     public ResponseEntity<Void> deleteSearch(
-            @Parameter(description = "Axtarış növü (GYM və ya STORE)", example = "GYM") 
+            @Parameter(description = "Axtarış növü (GYM, STORE və ya ALL)", example = "GYM")
             @RequestParam("type") String type,
             @Parameter(description = "Silinəcək axtarış sorğusu") 
             @RequestParam("query") String query) {
@@ -68,7 +68,7 @@ public class RecentSearchController {
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/all")
     public ResponseEntity<Void> clearAllSearches(
-            @Parameter(description = "Axtarış növü (GYM və ya STORE)", example = "GYM") 
+            @Parameter(description = "Axtarış növü (GYM, STORE və ya ALL)", example = "GYM")
             @RequestParam("type") String type) {
         Long userId = getCurrentUserId();
         if (userId != null) {

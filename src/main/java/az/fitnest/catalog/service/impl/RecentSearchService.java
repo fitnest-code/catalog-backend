@@ -84,8 +84,13 @@ public class RecentSearchService {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(safePage, safePageSize, Sort.by(direction, "createdDate"));
         
-        Page<RecentSearch> resultPage = recentSearchRepository.findAllByUserIdAndType(userId, type, pageable);
-        
+        Page<RecentSearch> resultPage;
+        if ("ALL".equalsIgnoreCase(type)) {
+            resultPage = recentSearchRepository.findAllByUserId(userId, pageable);
+        } else {
+            resultPage = recentSearchRepository.findAllByUserIdAndType(userId, type, pageable);
+        }
+
         List<RecentSearchDto> items = resultPage.getContent().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
@@ -101,13 +106,21 @@ public class RecentSearchService {
     @Transactional
     public void deleteSearch(Long userId, String type, String query) {
         if (userId == null || type == null || query == null) return;
-        recentSearchRepository.deleteByUserIdAndTypeAndQueryIgnoreCase(userId, type, query.trim());
+        if ("ALL".equalsIgnoreCase(type)) {
+            recentSearchRepository.deleteByUserIdAndQueryIgnoreCase(userId, query.trim());
+        } else {
+            recentSearchRepository.deleteByUserIdAndTypeAndQueryIgnoreCase(userId, type, query.trim());
+        }
     }
 
     @Transactional
     public void clearAllSearches(Long userId, String type) {
         if (userId == null || type == null) return;
-        recentSearchRepository.deleteByUserIdAndType(userId, type);
+        if ("ALL".equalsIgnoreCase(type)) {
+            recentSearchRepository.deleteByUserId(userId);
+        } else {
+            recentSearchRepository.deleteByUserIdAndType(userId, type);
+        }
     }
 
     private RecentSearchDto mapToDto(RecentSearch search) {
