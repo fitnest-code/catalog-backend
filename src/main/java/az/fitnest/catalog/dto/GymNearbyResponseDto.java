@@ -1,6 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package az.fitnest.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -195,4 +192,3 @@ public class GymNearbyResponseDto {
         }
     }
 }
-

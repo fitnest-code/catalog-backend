@@ -46,11 +46,11 @@ public class StoreController {
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
             @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
         Long userId = this.getCurrentUserId();
-        
+
         if (userId != null && q != null && !q.trim().isEmpty()) {
             recentSearchService.saveSearch(userId, q, "STORE");
         }
-        
+
         return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size, sortDir));
     }
 

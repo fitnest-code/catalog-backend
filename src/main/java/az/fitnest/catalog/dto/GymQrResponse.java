@@ -1,6 +1,5 @@
 package az.fitnest.catalog.dto;
 
-
 import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
@@ -12,7 +11,5 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class GymQrResponse {
     private String qrCodeUrl;
-
-
 
 }

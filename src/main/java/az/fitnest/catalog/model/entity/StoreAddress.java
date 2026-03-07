@@ -1,9 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Embeddable
- */
 package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.Embeddable;
@@ -20,4 +14,3 @@ public class StoreAddress {
     private Double latitude;
     private Double longitude;
 }
-

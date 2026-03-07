@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.GeneratedValue
- *  jakarta.persistence.GenerationType
- *  jakarta.persistence.Id
- *  jakarta.persistence.MappedSuperclass
- */
 package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.GeneratedValue;
@@ -24,4 +15,3 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 }
-

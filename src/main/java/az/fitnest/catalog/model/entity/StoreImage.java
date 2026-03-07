@@ -1,11 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.Entity
- *  jakarta.persistence.Table
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.BaseEntity;
@@ -57,4 +49,3 @@ public class StoreImage
         this.url = url;
     }
 }
-

@@ -1,17 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.Entity
- *  jakarta.persistence.FetchType
- *  jakarta.persistence.GeneratedValue
- *  jakarta.persistence.GenerationType
- *  jakarta.persistence.Id
- *  jakarta.persistence.JoinColumn
- *  jakarta.persistence.ManyToOne
- *  jakarta.persistence.Table
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.Gym;
@@ -224,4 +210,3 @@ public class GymImage {
         }
     }
 }
-

@@ -116,7 +116,6 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         responseObserver.onCompleted();
     }
 
-
     public void getTrainers(GetTrainersRequest request, StreamObserver<GymTrainersResponse> responseObserver) {
         String sortDir = request.getSortDir() != null && !request.getSortDir().isBlank() ? request.getSortDir() : "desc";
         az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymTrainerDto> dto = gymTrainerService.getTrainers(request.getGymId(), request.getPage(), request.getPageSize(), sortDir);
@@ -178,14 +177,12 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
     @Override
     public void getReservationRules(GetReservationRulesRequest request, StreamObserver<ReservationRulesResponse> responseObserver) {
         ReservationRulesResponse.Builder builder = ReservationRulesResponse.newBuilder();
-        // Placeholder as ReservationRules internal structure is opaque
         responseObserver.onNext(builder.build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void getMainPageGyms(GetMainPageGymsRequest request, StreamObserver<GetMainPageGymsResponse> responseObserver) {
-        // Proto doesn't include q/pagination — use defaults and delegate to new service signature
         double lat = request.getLat();
         double lng = request.getLng();
         az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.GymMainPageDto> resp = gymReadService.getClosestGyms(null, 1, 10, lat == 0.0 ? null : lat, lng == 0.0 ? null : lng);
@@ -218,7 +215,6 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         responseObserver.onNext(PutGymImageResponse.newBuilder().setSuccess(true).setItem(item).build());
         responseObserver.onCompleted();
     }
-
 
     @Override
     public void addTrainer(AddTrainerRequest request, StreamObserver<AddTrainerResponse> responseObserver) {

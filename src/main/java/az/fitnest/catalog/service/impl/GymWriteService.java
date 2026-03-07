@@ -54,7 +54,7 @@ public class GymWriteService {
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
-    
+
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
     private GymWriteService self;
@@ -64,7 +64,6 @@ public class GymWriteService {
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
-
 
         if (request.address() != null) {
             Address address = new Address();
@@ -114,7 +113,6 @@ public class GymWriteService {
 
         Gym saved = gymRepository.save(gym);
 
-        // Call it asynchronously via the proxy to honor @Async
         self.generateAndSaveQrCode(saved);
     }
 
@@ -124,10 +122,8 @@ public class GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-
         gym.setName(request.name());
         gym.setDescription(request.description());
-
 
         if (request.address() != null) {
             Address address = new Address();
@@ -192,17 +188,14 @@ public class GymWriteService {
             return;
         }
 
-        // Validate all newly requested plan IDs exist
         for (Long planId : request.planIds()) {
             if (!orderServiceGrpcClient.checkPlanExists(planId)) {
                 throw new BadRequestException("PLAN_NOT_FOUND", "error.plan_not_found");
             }
         }
 
-        // Remove subscriptions that are no longer enabled
         gym.getSubscriptions().removeIf(sub -> !request.planIds().contains(sub.getPlanId()));
 
-        // Add new subscriptions that were not already enabled
         List<Long> existingPlanIds = gym.getSubscriptions().stream().map(GymSubscription::getPlanId).toList();
         for (Long planId : request.planIds()) {
             if (!existingPlanIds.contains(planId)) {
@@ -260,7 +253,6 @@ public class GymWriteService {
             try {
                 fileStorageService.deleteFiles(imageUrls);
             } catch (Exception e) {
-                // Background error on deletion - swallowed on purpose
             }
         }
 
@@ -321,11 +313,9 @@ public class GymWriteService {
         try {
             fileStorageService.deleteFile(url);
         } catch (Exception e) {
-            // Background error on deletion - swallowed on purpose
         }
     }
 
-    // Ideally moved to an event listener or background queue
     @Async
     public void generateAndSaveQrCode(Gym gym) {
         try {
@@ -347,7 +337,6 @@ public class GymWriteService {
             );
 
             String fsId = fileStorageService.saveFile(multipartFile, "/gyms");
-            // Requires a separate transaction to update since this runs async
             gymRepository.findById(gym.getId()).ifPresent(g -> {
                 g.setQrCodeUrl("/api/v1/media/stream/" + fsId);
                 gymRepository.save(g);
@@ -373,7 +362,7 @@ public class GymWriteService {
         for (int i = 0; i < files.size(); i++) {
             String roomName = roomNames.get(i);
             MultipartFile file = files.get(i);
-            
+
             String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
             String url = "/api/v1/media/stream/" + fsId;
 

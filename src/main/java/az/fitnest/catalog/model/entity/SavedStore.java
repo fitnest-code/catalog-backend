@@ -1,22 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.Entity
- *  jakarta.persistence.EntityListeners
- *  jakarta.persistence.FetchType
- *  jakarta.persistence.GeneratedValue
- *  jakarta.persistence.GenerationType
- *  jakarta.persistence.Id
- *  jakarta.persistence.Index
- *  jakarta.persistence.JoinColumn
- *  jakarta.persistence.ManyToOne
- *  jakarta.persistence.Table
- *  jakarta.persistence.UniqueConstraint
- *  org.springframework.data.annotation.CreatedDate
- *  org.springframework.data.jpa.domain.support.AuditingEntityListener
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.Store;
@@ -138,4 +119,3 @@ public class SavedStore {
         }
     }
 }
-

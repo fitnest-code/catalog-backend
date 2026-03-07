@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.Embeddable
- */
 package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.Column;
@@ -52,4 +45,3 @@ public class SocialInfo {
         this.websiteUrl = websiteUrl;
     }
 }
-

@@ -1,9 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.http.HttpStatus
- */
 package az.fitnest.catalog.exception;
 
 import az.fitnest.catalog.exception.BaseException;

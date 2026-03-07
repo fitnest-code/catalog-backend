@@ -10,17 +10,17 @@ import java.util.Optional;
 
 @Repository
 public interface RecentSearchRepository extends JpaRepository<RecentSearch, Long> {
-    
+
     Optional<RecentSearch> findByUserIdAndTypeAndQueryIgnoreCase(Long userId, String type, String query);
-    
+
     List<RecentSearch> findByUserIdAndTypeOrderByCreatedDateDesc(Long userId, String type, Pageable pageable);
 
     org.springframework.data.domain.Page<RecentSearch> findAllByUserIdAndType(Long userId, String type, Pageable pageable);
-    
+
     org.springframework.data.domain.Page<RecentSearch> findAllByUserId(Long userId, Pageable pageable);
 
     long countByUserIdAndType(Long userId, String type);
-    
+
     long countByUserId(Long userId);
 
     void deleteByUserIdAndTypeAndQueryIgnoreCase(Long userId, String type, String query);

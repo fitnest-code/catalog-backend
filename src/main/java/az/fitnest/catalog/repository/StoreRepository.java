@@ -61,4 +61,3 @@ public interface StoreRepository
     @Query(value = "DELETE FROM store_badges WHERE store_id = :storeId", nativeQuery = true)
     void deleteStoreBadgesByStoreId(@Param("storeId") Long storeId);
 }
-

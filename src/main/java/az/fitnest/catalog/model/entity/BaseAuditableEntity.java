@@ -1,14 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.EntityListeners
- *  jakarta.persistence.MappedSuperclass
- *  org.springframework.data.annotation.CreatedDate
- *  org.springframework.data.annotation.LastModifiedDate
- *  org.springframework.data.jpa.domain.support.AuditingEntityListener
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.BaseEntity;
@@ -40,4 +29,3 @@ public abstract class BaseAuditableEntity
     @Column(name = "last_modified_by")
     private String lastModifiedBy;
 }
-

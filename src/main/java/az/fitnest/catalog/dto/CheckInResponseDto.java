@@ -1,6 +1,5 @@
 package az.fitnest.catalog.dto;
 
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -17,7 +16,5 @@ public class CheckInResponseDto {
     private String addressText;
     private LocalDate visitDate;
     private LocalTime visitHour;
-
-
 
 }

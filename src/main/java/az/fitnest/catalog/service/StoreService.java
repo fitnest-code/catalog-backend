@@ -1,9 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.web.multipart.MultipartFile
- */
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.FilterResponseDto;
@@ -32,14 +26,12 @@ public interface StoreService {
 
     public void deleteStore(Long var1);
 
-
     public boolean toggleSave(Long var1, Long var2);
 
     public String uploadStoreImage(Long storeId, MultipartFile file);
 
     public LocationDto getStoreLocation(Long storeId);
 
-    // Image Management operations
     public az.fitnest.catalog.model.entity.Store getStoreEntityById(Long storeId);
 
     public void deleteFileSafely(String url);
@@ -52,4 +44,3 @@ public interface StoreService {
 
     public void deleteAllStores();
 }
-

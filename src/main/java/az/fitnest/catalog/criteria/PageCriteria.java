@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  com.fasterxml.jackson.annotation.JsonInclude
- *  com.fasterxml.jackson.annotation.JsonInclude$Include
- */
 package az.fitnest.catalog.criteria;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -78,4 +71,3 @@ public class PageCriteria {
         return "PageCriteria(page=" + this.getPage() + ", count=" + this.getCount() + ")";
     }
 }
-

@@ -42,4 +42,3 @@ public interface GymRepository
     @Query(value = "DELETE FROM gym_categories", nativeQuery = true)
     void truncateGymCategories();
 }
-

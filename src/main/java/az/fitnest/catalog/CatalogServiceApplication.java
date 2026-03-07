@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.boot.SpringApplication
- *  org.springframework.boot.autoconfigure.SpringBootApplication
- *  org.springframework.data.jpa.repository.config.EnableJpaAuditing
- *  org.springframework.kafka.annotation.EnableKafka
- *  org.springframework.scheduling.annotation.EnableAsync
- */
 package az.fitnest.catalog;
 
 import org.springframework.boot.SpringApplication;
@@ -27,4 +17,3 @@ public class CatalogServiceApplication {
         SpringApplication.run(CatalogServiceApplication.class, (String[]) args);
     }
 }
-

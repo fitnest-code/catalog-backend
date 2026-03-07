@@ -1,16 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.slf4j.Logger
- *  org.slf4j.LoggerFactory
- *  org.springframework.boot.autoconfigure.condition.ConditionalOnBean
- *  org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
- *  org.springframework.boot.context.event.ApplicationReadyEvent
- *  org.springframework.context.event.EventListener
- *  org.springframework.jdbc.core.JdbcTemplate
- *  org.springframework.stereotype.Component
- */
 package az.fitnest.catalog.configuration;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -42,4 +29,3 @@ public class StartupWarmupListener {
         }
     }
 }
-

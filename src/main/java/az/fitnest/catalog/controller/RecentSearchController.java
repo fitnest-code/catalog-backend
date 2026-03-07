@@ -37,11 +37,11 @@ public class RecentSearchController {
     public ResponseEntity<PaginatedResponse<RecentSearchDto>> getRecentSearches(
             @Parameter(description = "Axtarış növü (GYM, STORE və ya ALL)", example = "GYM")
             @RequestParam("type") String type,
-            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") 
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)")
             @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Hər səhifədəki elementlərin sayı") 
+            @Parameter(description = "Hər səhifədəki elementlərin sayı")
             @RequestParam(defaultValue = "10") int page_size,
-            @Parameter(description = "Çeşidləmə qaydası (asc, desc)") 
+            @Parameter(description = "Çeşidləmə qaydası (asc, desc)")
             @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(recentSearchService.getRecentSearches(userId, type.toUpperCase(), page, page_size, sortDir));
@@ -54,7 +54,7 @@ public class RecentSearchController {
     public ResponseEntity<Void> deleteSearch(
             @Parameter(description = "Axtarış növü (GYM, STORE və ya ALL)", example = "GYM")
             @RequestParam("type") String type,
-            @Parameter(description = "Silinəcək axtarış sorğusu") 
+            @Parameter(description = "Silinəcək axtarış sorğusu")
             @RequestParam("query") String query) {
         Long userId = getCurrentUserId();
         if (userId != null) {

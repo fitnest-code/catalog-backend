@@ -1,9 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Embeddable
- */
 package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.Embeddable;
@@ -96,4 +90,3 @@ public class GymWorkHour {
         return "GymWorkHour(day=" + this.getDay() + ", fromTime=" + this.getFromTime() + ", toTime=" + this.getToTime() + ")";
     }
 }
-

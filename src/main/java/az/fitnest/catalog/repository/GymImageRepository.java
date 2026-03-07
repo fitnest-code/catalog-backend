@@ -16,4 +16,3 @@ public interface GymImageRepository
 
     public Optional<GymImage> findFirstByGymIdAndImageName(Long gymId, String imageName);
 }
-

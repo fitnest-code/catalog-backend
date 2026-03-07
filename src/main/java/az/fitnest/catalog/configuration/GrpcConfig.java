@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.context.annotation.Bean
- *  org.springframework.context.annotation.Configuration
- */
 package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.grpc.GymServiceGrpcImpl;
@@ -23,4 +16,3 @@ public class GrpcConfig {
         return new GymServiceGrpcImpl(gymReadService, gymWriteService, gymImageService, gymReviewService, gymTrainerService);
     }
 }
-

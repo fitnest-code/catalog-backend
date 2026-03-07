@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.http.HttpStatus
- *  org.springframework.validation.BindingResult
- */
 package az.fitnest.catalog.exception;
 
 import az.fitnest.catalog.exception.BaseException;
@@ -25,4 +18,3 @@ public class ValidationException
         return this.bindingResult;
     }
 }
-

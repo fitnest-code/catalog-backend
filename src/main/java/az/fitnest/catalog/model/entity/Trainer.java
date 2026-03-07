@@ -53,7 +53,6 @@ public class Trainer extends BaseAuditableEntity {
     @Column(name = "email")
     private String email;
 
-    // Aliases for compatibility
     public String getName() {
         return firstName;
     }
@@ -82,4 +81,3 @@ public class Trainer extends BaseAuditableEntity {
         return getId();
     }
 }
-

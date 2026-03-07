@@ -127,8 +127,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = {RuntimeException.class})
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex, WebRequest request) {
-        // Log the full stack trace for debugging
-        ex.printStackTrace(); // Simple logging for now, ideally use a Logger
+        ex.printStackTrace();
 
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
@@ -171,7 +170,6 @@ public class GlobalExceptionHandler {
         if (msg == null || msg.isBlank()) {
             return getMessage("error.unexpected");
         }
-        // If the message looks like a key, try to resolve it
         if (msg.startsWith("error.") || msg.equals("INVALID_CATEGORIES") || msg.equals("GYM_NOT_FOUND")) {
             String resolved = getMessage(msg);
             if (!resolved.equals(msg)) {
@@ -189,8 +187,7 @@ public class GlobalExceptionHandler {
         try {
             return messageSource.getMessage(code, arg != null ? new Object[]{arg} : null, LocaleContextHolder.getLocale());
         } catch (org.springframework.context.NoSuchMessageException e) {
-            return code; // Fallback to code if message not found
+            return code;
         }
     }
 }
-

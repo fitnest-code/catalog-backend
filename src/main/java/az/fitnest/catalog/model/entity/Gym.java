@@ -1,21 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.CascadeType
- *  jakarta.persistence.CollectionTable
- *  jakarta.persistence.Column
- *  jakarta.persistence.ElementCollection
- *  jakarta.persistence.Embedded
- *  jakarta.persistence.Entity
- *  jakarta.persistence.EnumType
- *  jakarta.persistence.Enumerated
- *  jakarta.persistence.JoinColumn
- *  jakarta.persistence.JoinTable
- *  jakarta.persistence.ManyToMany
- *  jakarta.persistence.OneToMany
- *  jakarta.persistence.Table
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.Address;
@@ -71,14 +53,14 @@ public class Gym
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<GymWorkHour> workHours = new ArrayList<GymWorkHour>();
-    
+
     @ElementCollection
     @CollectionTable(name = "gym_work_hours_woman", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<GymWorkHour> workHoursWoman = new ArrayList<GymWorkHour>();
-    
+
     @ElementCollection
     @CollectionTable(name = "gym_work_hours_man", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
@@ -108,7 +90,7 @@ public class Gym
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
-    
+
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
     @EqualsAndHashCode.Exclude
@@ -120,7 +102,7 @@ public class Gym
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<az.fitnest.catalog.model.entity.Room> rooms = new ArrayList<>();
-    
+
     @ManyToMany
     @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})
     @Builder.Default

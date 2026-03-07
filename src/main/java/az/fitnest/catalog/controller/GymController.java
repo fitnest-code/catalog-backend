@@ -1,30 +1,3 @@
-    /*
-     * Decompiled with CFR 0.152.
-     *
-     * Could not load the following classes:
-     *  io.swagger.v3.oas.annotations.Operation
-     *  io.swagger.v3.oas.annotations.Parameter
-     *  io.swagger.v3.oas.annotations.media.Content
-     *  io.swagger.v3.oas.annotations.media.Schema
-     *  io.swagger.v3.oas.annotations.responses.ApiResponse
-     *  io.swagger.v3.oas.annotations.responses.ApiResponses
-     *  io.swagger.v3.oas.annotations.security.SecurityRequirement
-     *  io.swagger.v3.oas.annotations.tags.Tag
-     *  jakarta.validation.Valid
-     *  org.springframework.http.ResponseEntity
-     *  org.springframework.security.access.prepost.PreAuthorize
-     *  org.springframework.security.core.annotation.AuthenticationPrincipal
-     *  org.springframework.web.bind.annotation.DeleteMapping
-     *  org.springframework.web.bind.annotation.GetMapping
-     *  org.springframework.web.bind.annotation.PathVariable
-     *  org.springframework.web.bind.annotation.PostMapping
-     *  org.springframework.web.bind.annotation.PutMapping
-     *  org.springframework.web.bind.annotation.RequestBody
-     *  org.springframework.web.bind.annotation.RequestMapping
-     *  org.springframework.web.bind.annotation.RequestParam
-     *  org.springframework.web.bind.annotation.RestController
-     *  org.springframework.web.multipart.MultipartFile
-     */
     package az.fitnest.catalog.controller;
 
     import az.fitnest.catalog.dto.GymDetailResponse;
@@ -109,7 +82,6 @@
             return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
         }
 
-
         @GetMapping("/{gymId}/trainers")
         @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
@@ -177,11 +149,11 @@
                 @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
                 @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
             Long userId = this.extractUserId(principal);
-            
+
             if (userId != null && q != null && !q.trim().isEmpty()) {
                 recentSearchService.saveSearch(userId, q, "GYM");
             }
-            
+
             return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, page, page_size, lat, lng, sortDir));
         }
 
@@ -217,4 +189,3 @@
             return null;
         }
     }
-

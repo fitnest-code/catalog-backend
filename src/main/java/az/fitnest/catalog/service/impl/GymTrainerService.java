@@ -111,7 +111,6 @@ public class GymTrainerService {
         try {
             fileStorageService.deleteFile(url);
         } catch (Exception e) {
-            // Background error on deletion - swallowed on purpose
         }
     }
 

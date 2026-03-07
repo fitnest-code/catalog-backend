@@ -24,5 +24,5 @@ public class RecentSearch extends BaseAuditableEntity {
     private String query;
 
     @Column(name = "search_type", nullable = false, length = 50)
-    private String type; // e.g. "GYM" or "STORE"
+    private String type;
 }

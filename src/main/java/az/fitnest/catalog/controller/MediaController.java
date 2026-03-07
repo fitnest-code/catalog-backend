@@ -1,18 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  io.swagger.v3.oas.annotations.Operation
- *  io.swagger.v3.oas.annotations.Parameter
- *  io.swagger.v3.oas.annotations.tags.Tag
- *  org.springframework.http.ResponseEntity
- *  org.springframework.http.ResponseEntity$BodyBuilder
- *  org.springframework.web.bind.annotation.GetMapping
- *  org.springframework.web.bind.annotation.PathVariable
- *  org.springframework.web.bind.annotation.RequestMapping
- *  org.springframework.web.bind.annotation.RestController
- *  org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
- */
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.client.StorageGrpcClient;
@@ -55,9 +40,7 @@ public class MediaController {
             try {
                 outputStream.flush();
             } catch (IOException iOException) {
-                // empty catch block
             }
         });
     }
 }
-

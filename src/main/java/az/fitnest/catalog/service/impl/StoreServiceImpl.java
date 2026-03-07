@@ -53,7 +53,6 @@ public class StoreServiceImpl implements StoreService {
         if (lat != null && lng != null && "CLOSEST".equalsIgnoreCase(type)) {
             double[] bbox = boundingBox(lat, lng, 50.0);
             storePage = storeRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1], bbox[2], bbox[3], pageable);
-            // For CLOSEST, we might need manual sorting/filtering if search query is present
             if (q != null && !q.isBlank()) {
                 return manualPaginate(storePage.getContent(), userId, lat, lng, page, pageSize, q);
             }

@@ -1,16 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.http.HttpEntity
- *  org.springframework.http.HttpHeaders
- *  org.springframework.http.HttpMethod
- *  org.springframework.http.ResponseEntity
- *  org.springframework.stereotype.Service
- *  org.springframework.util.MultiValueMap
- *  org.springframework.web.client.RestTemplate
- *  org.springframework.web.util.UriComponentsBuilder
- */
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.GeocodingResponse;
@@ -69,11 +56,9 @@ public class ReverseGeocodingService {
                         .build();
             }
         } catch (Exception exception) {
-            // empty catch block
         }
         return GeocodingResponse.builder()
                 .addressText(String.format("%.5f, %.5f", latitude, longitude))
                 .build();
     }
 }
-

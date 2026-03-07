@@ -20,4 +20,3 @@ public interface ReviewRepository
     @Query("UPDATE Gym g SET g.reviewsCount = g.reviewsCount + 1, g.rating = ((g.rating * g.reviewsCount) + :newRating) / CAST((g.reviewsCount + 1) AS double) WHERE g.id = :gymId")
     public void incrementReviewCountAndRating(@Param("gymId") Long gymId, @Param("newRating") Double newRating);
 }
-

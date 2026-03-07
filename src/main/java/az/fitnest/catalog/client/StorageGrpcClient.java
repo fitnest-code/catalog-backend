@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  com.google.protobuf.ByteString
- *  io.grpc.stub.StreamObserver
- *  net.devh.boot.grpc.client.inject.GrpcClient
- *  org.springframework.stereotype.Service
- *  org.springframework.web.multipart.MultipartFile
- */
 package az.fitnest.catalog.client;
 
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +44,7 @@ public class StorageGrpcClient {
         final CountDownLatch finishLatch = new CountDownLatch(1);
         final AtomicReference<StorageFileData> responseData = new AtomicReference<>();
         final AtomicReference<Throwable> error = new AtomicReference<>();
-        
+
         StreamObserver<UploadFileResponse> responseObserver = new StreamObserver<UploadFileResponse>() {
             @Override
             public void onNext(UploadFileResponse response) {
@@ -85,21 +75,21 @@ public class StorageGrpcClient {
                 finishLatch.countDown();
             }
         };
-        
+
         StreamObserver<UploadFileRequest> requestObserver = this.asyncStub.uploadFile(responseObserver);
         try {
             FileMetadata.Builder metadataBuilder = FileMetadata.newBuilder()
                 .setFilename(file.getOriginalFilename())
                 .setDirectory(directory != null ? directory : "/uploads")
                 .setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream");
-            
+
             if (oldPath != null) {
                 metadataBuilder.setOldPath(oldPath);
             }
-            
+
             log.info("Sending gRPC metadata request");
             requestObserver.onNext(UploadFileRequest.newBuilder().setMetadata(metadataBuilder.build()).build());
-            
+
             byte[] buffer = new byte[65536];
             log.info("Sending gRPC chunk data stream");
             try (InputStream inputStream = file.getInputStream()) {
@@ -110,7 +100,7 @@ public class StorageGrpcClient {
             }
             log.info("gRPC file stream fully sent, calling requestObserver.onCompleted()");
             requestObserver.onCompleted();
-            
+
             if (!finishLatch.await(5L, TimeUnit.MINUTES)) {
                 log.error("gRPC upload timed out after 5 minutes waiting for server response");
                 throw new RuntimeException("error.rpc_failed");
@@ -119,7 +109,7 @@ public class StorageGrpcClient {
                 log.error("gRPC upload encountered error after finishLatch await", error.get());
                 throw new RuntimeException("error.file_upload_failed", error.get());
             }
-            
+
             StorageFileData finalData = responseData.get();
             if (finalData == null) {
                 log.error("gRPC responseData was null after successful completion");
@@ -156,4 +146,3 @@ public class StorageGrpcClient {
         this.blockingStub.downloadFile(request).forEachRemaining(observer);
     }
 }
-

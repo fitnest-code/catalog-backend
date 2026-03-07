@@ -57,7 +57,6 @@ public class DataInitializer {
             category.setName(name);
             category = categoryRepository.save(category);
 
-            // Seed translations (assuming original is EN)
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "AZ", "name", translateCategoryToAz(name));
             createTranslationIfNotFound("Category", category.getCategoryId().toString(), "RU", "name", translateCategoryToRu(name));
         }
@@ -167,20 +166,15 @@ public class DataInitializer {
             workHours.add(new GymWorkHour(DayOfWeek.SUNDAY, LocalTime.of(10, 0), LocalTime.of(18, 0)));
             gym.setWorkHours(workHours);
 
-            // Social Links
             List<GymSocialLink> socialLinks = new ArrayList<>();
             socialLinks.add(new GymSocialLink("Instagram", "https://instagram.com/premiumfitness"));
             socialLinks.add(new GymSocialLink("Facebook", "https://facebook.com/premiumfitness"));
             gym.setSocialLinks(socialLinks);
 
-            // Images (Grouped by Name to represent Rooms)
             List<GymImage> images = new ArrayList<>();
-            // Main Hall Room
             images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym1/1200/800").type("interior").title("Main Hall - Main View").build());
             images.add(GymImage.builder().gym(gym).imageName("Main Hall").url("https://picsum.photos/seed/gym2/1200/800").type("interior").title("Main Hall - Equipment").build());
-            // Cardio Zone Room
             images.add(GymImage.builder().gym(gym).imageName("Cardio Zone").url("https://picsum.photos/seed/gym3/1200/800").type("interior").title("Cardio Room").build());
-            // Pool Room
             images.add(GymImage.builder().gym(gym).imageName("Swimming Pool").url("https://picsum.photos/seed/pool1/1200/800").type("interior").title("Olympic Pool").build());
             gym.setImages(images);
 
@@ -231,14 +225,12 @@ public class DataInitializer {
             trainer3.setEmail("tural@premiumfitness.az");
             trainer3.setProfession(crossfitProfession);
 
-            // Set Gym for Trainers and save them
             trainer1.setGymId(gym.getId());
             trainer2.setGymId(gym.getId());
             trainer3.setGymId(gym.getId());
-            
+
             gym.setTrainers(new ArrayList<>(List.of(trainer1, trainer2, trainer3)));
 
-            // Add 13 Reviews
             String[] commonReviewTexts = {
                     "Amazing gym with great trainers!",
                     "Very clean and modern equipment.",
@@ -261,10 +253,9 @@ public class DataInitializer {
             }
             gym = gymRepository.save(gym);
 
-            // Add Subscriptions for Gym 1
             GymSubscription sub1_1 = new GymSubscription();
             sub1_1.setGym(gym);
-            sub1_1.setPlanId(1L); // Bronze
+            sub1_1.setPlanId(1L);
             sub1_1.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
                     new GymSubscriptionBenefit("Email support", "https://img.icons8.com/color/96/customer-support.png")
@@ -272,7 +263,7 @@ public class DataInitializer {
 
             GymSubscription sub1_2 = new GymSubscription();
             sub1_2.setGym(gym);
-            sub1_2.setPlanId(2L); // Silver
+            sub1_2.setPlanId(2L);
             sub1_2.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
                     new GymSubscriptionBenefit("Priority email support", "https://img.icons8.com/color/96/customer-support.png"),
@@ -281,7 +272,7 @@ public class DataInitializer {
 
             GymSubscription sub1_3 = new GymSubscription();
             sub1_3.setGym(gym);
-            sub1_3.setPlanId(3L); // Gold
+            sub1_3.setPlanId(3L);
             sub1_3.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
                     new GymSubscriptionBenefit("24/7 support", "https://img.icons8.com/color/96/customer-support.png"),
@@ -291,7 +282,7 @@ public class DataInitializer {
 
             GymSubscription sub1_4 = new GymSubscription();
             sub1_4.setGym(gym);
-            sub1_4.setPlanId(4L); // Platinum
+            sub1_4.setPlanId(4L);
             sub1_4.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
                     new GymSubscriptionBenefit("Dedicated account manager", "https://img.icons8.com/color/96/conference-call.png"),
@@ -308,7 +299,6 @@ public class DataInitializer {
             createTranslationIfNotFound("Gym", gymId, "AZ", "description", "Müasir avadanlıq və peşəkar məşqçilər ilə yüksək keyfiyyətli fitnes mərkəzi");
             createTranslationIfNotFound("Gym", gymId, "RU", "description", "Высококачественный фитнес-центр с современным оборудованием и профессиональными тренерами");
 
-            // Second Gym
             Address address2 = Address.builder()
                     .addressText("456 Secondary St")
                     .city("Baku")
@@ -350,7 +340,6 @@ public class DataInitializer {
 
             gym2 = gymRepository.save(gym2);
 
-            // Add Trainers for Gym 2
             Trainer trainer4 = new Trainer();
             trainer4.setFirstName("Tural");
             trainer4.setLastName("Aliyev");
@@ -365,10 +354,9 @@ public class DataInitializer {
 
             gym2.getTrainers().add(trainer4);
 
-            // Add Subscriptions for Gym 2
             GymSubscription sub2_1 = new GymSubscription();
             sub2_1.setGym(gym2);
-            sub2_1.setPlanId(1L); // Bronze
+            sub2_1.setPlanId(1L);
             sub2_1.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
                     new GymSubscriptionBenefit("Basic training support", "https://img.icons8.com/color/96/customer-support.png")
@@ -376,7 +364,7 @@ public class DataInitializer {
 
             GymSubscription sub2_2 = new GymSubscription();
             sub2_2.setGym(gym2);
-            sub2_2.setPlanId(2L); // Silver
+            sub2_2.setPlanId(2L);
             sub2_2.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
                     new GymSubscriptionBenefit("Sauna & Steam room", "https://img.icons8.com/color/96/sauna.png")
@@ -384,7 +372,7 @@ public class DataInitializer {
 
             GymSubscription sub2_3 = new GymSubscription();
             sub2_3.setGym(gym2);
-            sub2_3.setPlanId(3L); // Gold
+            sub2_3.setPlanId(3L);
             sub2_3.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
                     new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
@@ -393,7 +381,7 @@ public class DataInitializer {
 
             GymSubscription sub2_4 = new GymSubscription();
             sub2_4.setGym(gym2);
-            sub2_4.setPlanId(4L); // Platinum
+            sub2_4.setPlanId(4L);
             sub2_4.setBenefits(Arrays.asList(
                     new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
                     new GymSubscriptionBenefit("VIP lounge access", "https://img.icons8.com/color/96/vip.png"),
@@ -433,7 +421,6 @@ public class DataInitializer {
             createTranslationIfNotFound("Store", storeId, "AZ", "category", "Avadanlıq");
             createTranslationIfNotFound("Store", storeId, "RU", "category", "Оборудование");
 
-            // Second Store
             StoreAddress address2 = new StoreAddress("789 Fit St", "Baku", 40.3955, 49.8505);
 
             Store store2 = new Store();
@@ -472,7 +459,6 @@ public class DataInitializer {
             createTranslationIfNotFound("Trainer", trainerId, "AZ", "specialization", "Fitnes");
             createTranslationIfNotFound("Trainer", trainerId, "RU", "specialization", "Фитнес");
 
-            // Second Trainer
             Trainer trainer2 = new Trainer();
             trainer2.setFirstName("Jane");
             trainer2.setLastName("Smith");

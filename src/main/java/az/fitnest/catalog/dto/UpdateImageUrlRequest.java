@@ -1,6 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package az.fitnest.catalog.dto;
 
 public class UpdateImageUrlRequest {
@@ -46,4 +43,3 @@ public class UpdateImageUrlRequest {
         return "UpdateImageUrlRequest(url=" + this.getUrl() + ")";
     }
 }
-

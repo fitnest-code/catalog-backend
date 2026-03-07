@@ -14,4 +14,3 @@ public class Address {
     private Double latitude;
     private Double longitude;
 }
-

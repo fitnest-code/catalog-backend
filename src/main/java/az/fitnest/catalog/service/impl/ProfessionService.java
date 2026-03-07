@@ -66,9 +66,7 @@ public class ProfessionService {
 
     @Transactional
     public void deleteAllProfessions() {
-        // Clear all trainer-profession associations first
         trainerRepository.clearAllProfessions();
-        // Now delete all professions
         professionRepository.deleteAll();
     }
 

@@ -1,32 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  io.swagger.v3.oas.annotations.Operation
- *  io.swagger.v3.oas.annotations.Parameter
- *  io.swagger.v3.oas.annotations.responses.ApiResponse
- *  io.swagger.v3.oas.annotations.responses.ApiResponses
- *  io.swagger.v3.oas.annotations.security.SecurityRequirement
- *  io.swagger.v3.oas.annotations.tags.Tag
- *  org.springframework.beans.factory.annotation.Autowired
- *  org.springframework.data.domain.Page
- *  org.springframework.data.domain.PageRequest
- *  org.springframework.data.domain.Pageable
- *  org.springframework.http.ResponseEntity
- *  org.springframework.security.access.prepost.PreAuthorize
- *  org.springframework.validation.BeanPropertyBindingResult
- *  org.springframework.validation.BindingResult
- *  org.springframework.web.bind.annotation.DeleteMapping
- *  org.springframework.web.bind.annotation.GetMapping
- *  org.springframework.web.bind.annotation.PathVariable
- *  org.springframework.web.bind.annotation.PostMapping
- *  org.springframework.web.bind.annotation.PutMapping
- *  org.springframework.web.bind.annotation.RequestBody
- *  org.springframework.web.bind.annotation.RequestMapping
- *  org.springframework.web.bind.annotation.RequestParam
- *  org.springframework.web.bind.annotation.RestController
- *  org.springframework.web.multipart.MultipartFile
- */
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.CategoryDto;
@@ -85,4 +56,3 @@ public class CategoryController {
         return ResponseEntity.ok(resp);
     }
 }
-

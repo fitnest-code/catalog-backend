@@ -1,12 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.Column
- *  jakarta.persistence.Entity
- *  jakarta.persistence.ManyToMany
- *  jakarta.persistence.Table
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.BaseAuditableEntity;
@@ -43,4 +34,3 @@ public class Category
         return getId();
     }
 }
-

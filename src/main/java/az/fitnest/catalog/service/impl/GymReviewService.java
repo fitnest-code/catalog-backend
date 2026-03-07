@@ -58,7 +58,6 @@ public class GymReviewService {
         review.setComment(request.comment());
         reviewRepository.save(review);
 
-        // Atomic update of rating and reviewsCount avoids concurrency race condition bugs
         reviewRepository.incrementReviewCountAndRating(gymId, (double) request.rating());
     }
 

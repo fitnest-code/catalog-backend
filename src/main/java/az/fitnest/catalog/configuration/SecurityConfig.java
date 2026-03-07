@@ -1,23 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.servlet.Filter
- *  org.springframework.context.annotation.Bean
- *  org.springframework.context.annotation.Configuration
- *  org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
- *  org.springframework.security.config.annotation.web.builders.HttpSecurity
- *  org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
- *  org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer
- *  org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer$AuthorizedUrl
- *  org.springframework.security.config.annotation.web.configurers.HeadersConfigurer$CacheControlConfig
- *  org.springframework.security.config.http.SessionCreationPolicy
- *  org.springframework.security.web.SecurityFilterChain
- *  org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
- *  org.springframework.web.cors.CorsConfiguration
- *  org.springframework.web.cors.CorsConfigurationSource
- *  org.springframework.web.cors.UrlBasedCorsConfigurationSource
- */
 package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.security.FitnestSecurityFilter;
@@ -99,4 +79,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

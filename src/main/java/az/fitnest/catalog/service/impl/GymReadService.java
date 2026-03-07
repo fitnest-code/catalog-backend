@@ -77,7 +77,6 @@ public class GymReadService {
 
                 if (remotePlans != null && !remotePlans.isEmpty()) {
                     membershipPlans = remotePlans.stream().map(remotePlan -> {
-                        // Find matching subscription to get benefits
                         az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
                                 .filter(s -> s.getPlanId() == remotePlan.getPlanId())
                                 .findFirst().orElse(null);
@@ -96,7 +95,6 @@ public class GymReadService {
                                 .build();
                     }).collect(java.util.stream.Collectors.toList());
                 } else {
-                    // Fallback to local data with placeholder names if gRPC returns nothing
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
                         String placeholderName = switch (sub.getPlanId().intValue()) {
                             case 1 -> "Bronze Plan";
@@ -114,7 +112,6 @@ public class GymReadService {
                 }
             }
         } catch (Exception e) {
-            // Log error and fallback to local data
             System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
             if (gym.getSubscriptions() != null) {
                 membershipPlans = gym.getSubscriptions().stream().map(sub -> {
@@ -194,11 +191,11 @@ public class GymReadService {
     public GymImageResponse getGymImages(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-            
+
         List<GymImageItemDto> items = gymImageRepository.findByGymId(gymId).stream()
                 .map(GymMapper::toImageItemDto)
                 .collect(Collectors.toList());
-                
+
         if (gym.getRooms() != null) {
             gym.getRooms().forEach(room -> {
                 room.getImages().forEach(img -> {
@@ -211,10 +208,9 @@ public class GymReadService {
                 });
             });
         }
-        
+
         return GymImageResponse.builder().items(items).build();
     }
-
 
     @Transactional(readOnly = true)
     public ReservationRulesResponse getReservationRules(Long gymId) {
@@ -413,7 +409,6 @@ public class GymReadService {
                 .longitude(addr.getLongitude())
                 .build();
     }
-
 
     private Pageable pageable(int page, int size, Sort sort) {
         int safePage = Math.max(page, 1) - 1;

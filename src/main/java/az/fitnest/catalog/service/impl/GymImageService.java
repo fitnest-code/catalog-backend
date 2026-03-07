@@ -27,7 +27,6 @@ public class GymImageService {
     private final GymImageRepository gymImageRepository;
     private final FileStorageService fileStorageService;
 
-
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public void updateCoverImageUrl(Long gymId, String url) {
@@ -65,7 +64,6 @@ public class GymImageService {
         return GymImageDto.builder().id(gymImage.getId()).gymId(gymId).name(gymImage.getImageName()).url(gymImage.getUrl()).build();
     }
 
-
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public GymImageDto uploadRoomImage(Long gymId, String roomName, MultipartFile file) {
@@ -79,7 +77,7 @@ public class GymImageService {
 
         GymImage gi = new GymImage();
         gi.setGym(gym);
-        gi.setImageName(roomName); // The entity field is still 'imageName'
+        gi.setImageName(roomName);
         gi.setUrl(fullUrl);
         gi.setType("photo");
         gi.setTitle(sanitizeFilename(file.getOriginalFilename()));
@@ -87,7 +85,6 @@ public class GymImageService {
 
         return GymImageDto.builder().id(gi.getId()).gymId(gymId).name(gi.getImageName()).url(gi.getUrl()).build();
     }
-
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
@@ -107,7 +104,6 @@ public class GymImageService {
         try {
             fileStorageService.deleteFile(url);
         } catch (Exception e) {
-            // Background error on deletion - swallowed on purpose
         }
     }
 
@@ -115,15 +111,14 @@ public class GymImageService {
         if (file.isEmpty()) {
             throw new BadRequestException("FILE_EMPTY", "error.file_empty");
         }
-        long maxSize = 5 * 1024 * 1024; // 5 MB
-        if (file.getSize() > 5 * 1024 * 1024) { // 5MB
+        long maxSize = 5 * 1024 * 1024;
+        if (file.getSize() > 5 * 1024 * 1024) {
             throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
         }
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
             throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
         }
-        // Further validation reading Magic Bytes could be done here with Tika.
     }
 
     private String sanitizeFilename(String filename) {

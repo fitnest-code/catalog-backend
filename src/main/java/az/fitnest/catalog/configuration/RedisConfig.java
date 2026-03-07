@@ -1,29 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  com.fasterxml.jackson.annotation.JsonTypeInfo$As
- *  com.fasterxml.jackson.databind.DeserializationFeature
- *  com.fasterxml.jackson.databind.Module
- *  com.fasterxml.jackson.databind.ObjectMapper
- *  com.fasterxml.jackson.databind.ObjectMapper$DefaultTyping
- *  com.fasterxml.jackson.databind.SerializationFeature
- *  com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator
- *  com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator
- *  com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
- *  org.springframework.cache.CacheManager
- *  org.springframework.cache.annotation.EnableCaching
- *  org.springframework.context.annotation.Bean
- *  org.springframework.context.annotation.Configuration
- *  org.springframework.data.redis.cache.RedisCacheConfiguration
- *  org.springframework.data.redis.cache.RedisCacheManager
- *  org.springframework.data.redis.connection.RedisConnectionFactory
- *  org.springframework.data.redis.core.RedisTemplate
- *  org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer
- *  org.springframework.data.redis.serializer.RedisSerializationContext$SerializationPair
- *  org.springframework.data.redis.serializer.RedisSerializer
- *  org.springframework.data.redis.serializer.StringRedisSerializer
- */
 package az.fitnest.catalog.configuration;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -80,4 +54,3 @@ public class RedisConfig {
         return objectMapper;
     }
 }
-

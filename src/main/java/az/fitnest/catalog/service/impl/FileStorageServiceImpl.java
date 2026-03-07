@@ -1,10 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.stereotype.Service
- *  org.springframework.web.multipart.MultipartFile
- */
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.StorageGrpcClient;
@@ -83,7 +76,6 @@ public class FileStorageServiceImpl
                 this.storageGrpcClient.deleteFiles(ids);
             }
         } catch (Exception exception) {
-            // empty catch block
         }
     }
 
@@ -98,4 +90,3 @@ public class FileStorageServiceImpl
         return url;
     }
 }
-

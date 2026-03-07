@@ -31,4 +31,3 @@ public interface SavedStoreRepository
     @Query(value = "delete from SavedStore ss where ss.store.id = :storeId")
     public void deleteByStoreId(@Param(value = "storeId") Long var1);
 }
-

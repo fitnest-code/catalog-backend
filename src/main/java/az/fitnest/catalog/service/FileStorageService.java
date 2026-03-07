@@ -1,9 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springframework.web.multipart.MultipartFile
- */
 package az.fitnest.catalog.service;
 
 import java.util.List;
@@ -21,4 +15,3 @@ public interface FileStorageService {
 
     public void deleteFiles(List<String> var1);
 }
-

@@ -85,4 +85,3 @@ public class FitnestSecurityFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 }
-

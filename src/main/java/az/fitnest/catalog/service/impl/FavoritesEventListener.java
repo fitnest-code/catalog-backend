@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.slf4j.Logger
- *  org.slf4j.LoggerFactory
- *  org.springframework.cache.CacheManager
- *  org.springframework.kafka.annotation.KafkaListener
- *  org.springframework.stereotype.Service
- */
 package az.fitnest.catalog.service.impl;
 
 import java.util.Map;
@@ -34,4 +24,3 @@ public class FavoritesEventListener {
         }
     }
 }
-

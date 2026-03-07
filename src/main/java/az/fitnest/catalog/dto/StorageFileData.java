@@ -1,6 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package az.fitnest.catalog.dto;
 
 public class StorageFileData {
@@ -90,4 +87,3 @@ public class StorageFileData {
         return "StorageFileData(path=" + this.getPath() + ", size=" + this.getSize() + ", md5=" + this.getMd5() + ", fsId=" + this.getFsId() + ")";
     }
 }
-

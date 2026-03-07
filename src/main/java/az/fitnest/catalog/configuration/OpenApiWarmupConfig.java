@@ -1,16 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  org.springdoc.core.properties.SpringDocConfigProperties
- *  org.springdoc.webmvc.api.OpenApiWebMvcResource
- *  org.springframework.beans.factory.annotation.Autowired
- *  org.springframework.beans.factory.annotation.Value
- *  org.springframework.boot.context.event.ApplicationReadyEvent
- *  org.springframework.context.annotation.Configuration
- *  org.springframework.context.event.EventListener
- *  org.springframework.scheduling.annotation.Async
- */
 package az.fitnest.catalog.configuration;
 
 import java.net.HttpURLConnection;
@@ -51,12 +38,10 @@ public class OpenApiWarmupConfig {
                     this.openApiResource.openapiJson(null, "", Locale.getDefault());
                     return;
                 } catch (Exception exception) {
-                    // empty catch block
                 }
             }
             this.warmupViaHttp();
         } catch (Exception exception) {
-            // empty catch block
         }
     }
 
@@ -77,8 +62,6 @@ public class OpenApiWarmupConfig {
             }
             connection.disconnect();
         } catch (Exception exception) {
-            // empty catch block
         }
     }
 }
-

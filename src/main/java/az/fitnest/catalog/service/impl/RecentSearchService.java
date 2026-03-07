@@ -32,9 +32,8 @@ public class RecentSearchService {
 
         String trimmedQuery = query.trim();
 
-        // Check if query exactly exists (case-insensitive) for this user and type
         Optional<RecentSearch> existingSearch = recentSearchRepository.findByUserIdAndTypeAndQueryIgnoreCase(userId, type, trimmedQuery);
-        
+
         if (existingSearch.isPresent()) {
             RecentSearch search = existingSearch.get();
             search.setCreatedDate(LocalDateTime.now());
@@ -47,19 +46,17 @@ public class RecentSearchService {
                     .build();
             newSearch.setCreatedDate(LocalDateTime.now());
             recentSearchRepository.save(newSearch);
-            
-            // Limit to 10 latest searches
+
             long count = recentSearchRepository.countByUserIdAndType(userId, type);
             if (count > MAX_RECENT_SEARCHES) {
                 List<RecentSearch> searchesToKeep = recentSearchRepository.findByUserIdAndTypeOrderByCreatedDateDesc(
                         userId, type, PageRequest.of(0, MAX_RECENT_SEARCHES));
-                
+
                 if (searchesToKeep.size() == MAX_RECENT_SEARCHES) {
                     RecentSearch oldestToKeep = searchesToKeep.get(searchesToKeep.size() - 1);
-                    // Find all searches older than the 10th one to delete
                     List<RecentSearch> allSearches = recentSearchRepository.findByUserIdAndTypeOrderByCreatedDateDesc(
                             userId, type, PageRequest.of(0, Integer.MAX_VALUE));
-                    
+
                     for (int i = MAX_RECENT_SEARCHES; i < allSearches.size(); i++) {
                         recentSearchRepository.delete(allSearches.get(i));
                     }
@@ -78,12 +75,12 @@ public class RecentSearchService {
                     .pageSize(pageSize)
                     .build();
         }
-        
+
         int safePage = Math.max(page, 1) - 1;
         int safePageSize = Math.max(pageSize, 1);
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(safePage, safePageSize, Sort.by(direction, "createdDate"));
-        
+
         Page<RecentSearch> resultPage;
         if ("ALL".equalsIgnoreCase(type)) {
             resultPage = recentSearchRepository.findAllByUserId(userId, pageable);
@@ -94,7 +91,7 @@ public class RecentSearchService {
         List<RecentSearchDto> items = resultPage.getContent().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
-                
+
         return PaginatedResponse.<RecentSearchDto>builder()
                 .items(items)
                 .total(resultPage.getTotalElements())

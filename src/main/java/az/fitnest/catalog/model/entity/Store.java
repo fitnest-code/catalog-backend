@@ -1,22 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  jakarta.persistence.AttributeOverride
- *  jakarta.persistence.AttributeOverrides
- *  jakarta.persistence.CascadeType
- *  jakarta.persistence.CollectionTable
- *  jakarta.persistence.Column
- *  jakarta.persistence.ElementCollection
- *  jakarta.persistence.Embedded
- *  jakarta.persistence.Entity
- *  jakarta.persistence.Index
- *  jakarta.persistence.JoinColumn
- *  jakarta.persistence.OneToMany
- *  jakarta.persistence.OneToOne
- *  jakarta.persistence.PrimaryKeyJoinColumn
- *  jakarta.persistence.Table
- */
 package az.fitnest.catalog.model.entity;
 
 import az.fitnest.catalog.model.entity.BaseAuditableEntity;
@@ -83,4 +64,3 @@ public class Store
         return getId();
     }
 }
-

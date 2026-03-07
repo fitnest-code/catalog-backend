@@ -1,13 +1,3 @@
-/*
- * Decompiled with CFR 0.152.
- *
- * Could not load the following classes:
- *  com.fasterxml.jackson.databind.ObjectMapper
- *  com.google.protobuf.Empty
- *  io.grpc.stub.StreamObserver
- *  net.devh.boot.grpc.server.service.GrpcService
- *  org.springframework.transaction.annotation.Transactional
- */
 package az.fitnest.catalog.grpc;
 
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
@@ -113,4 +103,3 @@ public class StoreGrpcServiceImpl
         }
     }
 }
-
