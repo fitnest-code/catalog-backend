@@ -56,7 +56,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return (SecurityFilterChain) http.csrf(AbstractHttpConfigurer::disable).cors(AbstractHttpConfigurer::disable).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).headers(headers -> headers.cacheControl(HeadersConfigurer.CacheControlConfig::disable)).authorizeHttpRequests(auth -> ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) auth.requestMatchers(new String[]{"/api/v1/internal/**"})).hasRole("INTERNAL").requestMatchers(new String[]{"/api/v1/stores/admin/**"})).hasRole("ADMIN").requestMatchers(new String[]{"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"})).permitAll().requestMatchers(new String[]{"/actuator/**", "/health/**"})).permitAll().requestMatchers(new String[]{"/error"})).permitAll().anyRequest()).authenticated()).addFilterBefore((Filter) this.securityFilter, UsernamePasswordAuthenticationFilter.class).build();
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.cacheControl(HeadersConfigurer.CacheControlConfig::disable))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/internal/**").hasRole("INTERNAL")
+                        .requestMatchers("/api/v1/stores/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/actuator/**", "/health/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore((Filter) this.securityFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
