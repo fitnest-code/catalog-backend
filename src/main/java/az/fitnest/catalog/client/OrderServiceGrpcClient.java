@@ -1,39 +1,31 @@
 package az.fitnest.catalog.client;
 
-import az.fitnest.catalog.dto.GymPlanItemDto;
-import az.fitnest.order.grpc.GetGymPlansRequest;
-import az.fitnest.order.grpc.GetGymPlansResponse;
-import az.fitnest.order.grpc.GymMembershipPlan;
-import az.fitnest.order.grpc.MembershipPlanServiceGrpc;
-import az.fitnest.order.grpc.PlanDurationOption;
+import az.fitnest.order.grpc.*;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceGrpcClient {
 
     @GrpcClient("order-service")
-    private MembershipPlanServiceGrpc.MembershipPlanServiceBlockingStub blockingStub;
+    private SubscriptionPackageServiceGrpc.SubscriptionPackageServiceBlockingStub blockingStub;
 
-    public boolean checkPlanExists(Long planId) {
+    public boolean checkPlanExists(Long packageId) {
         az.fitnest.order.grpc.CheckPlanExistsRequest request = az.fitnest.order.grpc.CheckPlanExistsRequest.newBuilder()
-                .setPlanId(planId)
+                .setPackageId(packageId)
                 .build();
         az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub.checkPlanExists(request);
         return response.getExists() && response.getIsActive();
     }
 
-    public List<az.fitnest.order.grpc.GymMembershipPlan> getPlansByIds(List<Long> planIds) {
+    public List<az.fitnest.order.grpc.SubscriptionPackageInfo> getPlansByIds(List<Long> packageIds) {
         az.fitnest.order.grpc.GetPlansByIdsRequest request = az.fitnest.order.grpc.GetPlansByIdsRequest.newBuilder()
-                .addAllPlanIds(planIds)
+                .addAllPackageIds(packageIds)
                 .build();
         az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub.getPlansByIds(request);
-        return response.getPlansList();
+        return response.getPackagesList();
     }
 
     public void checkIn(Long userId, Long gymId) {

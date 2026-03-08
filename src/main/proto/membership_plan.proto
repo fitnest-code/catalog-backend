@@ -4,13 +4,12 @@ package az.fitnest.order;
 
 option java_multiple_files = true;
 option java_package = "az.fitnest.order.grpc";
-option java_outer_classname = "MembershipPlanProto";
+option java_outer_classname = "SubscriptionPackageProto";
 
-service MembershipPlanService {
-  rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse); // Deprecated but kept for compatibility until full switch
+service SubscriptionPackageService {
+  rpc GetGymPlans(GetGymPlansRequest) returns (GetGymPlansResponse); 
   rpc CheckIn(CheckInRequest) returns (CheckInResponse);
 
-  // New cross-service methods
   rpc CheckPlanExists(CheckPlanExistsRequest) returns (CheckPlanExistsResponse);
   rpc GetPlansByIds(GetPlansByIdsRequest) returns (GetPlansByIdsResponse);
 }
@@ -20,7 +19,7 @@ message GetGymPlansRequest {
 }
 
 message CheckPlanExistsRequest {
-  int64 plan_id = 1;
+  int64 package_id = 1;
 }
 
 message CheckPlanExistsResponse {
@@ -29,27 +28,27 @@ message CheckPlanExistsResponse {
 }
 
 message GetPlansByIdsRequest {
-  repeated int64 plan_ids = 1;
+  repeated int64 package_ids = 1;
 }
 
 message GetPlansByIdsResponse {
-  repeated GymMembershipPlan plans = 1;
+  repeated SubscriptionPackageInfo packages = 1;
 }
 
 message GetGymPlansResponse {
-  repeated GymMembershipPlan plans = 1;
+  repeated SubscriptionPackageInfo packages = 1;
 }
 
-message GymMembershipPlan {
-  int64 plan_id = 1;
+message SubscriptionPackageInfo {
+  int64 package_id = 1;
   string name = 2;
   string currency = 3;
   bool is_active = 4;
-  repeated PlanDurationOption options = 5;
+  repeated SubscriptionPackageOption options = 5;
   repeated string benefits = 6;
 }
 
-message PlanDurationOption {
+message SubscriptionPackageOption {
   int32 duration_months = 1;
   string price_standard = 2;
   string price_discounted = 3;

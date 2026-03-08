@@ -73,12 +73,12 @@ public class GymReadService {
                         .map(az.fitnest.catalog.model.entity.GymSubscription::getPlanId)
                         .distinct()
                         .toList();
-                List<az.fitnest.order.grpc.GymMembershipPlan> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
+                List<az.fitnest.order.grpc.SubscriptionPackageInfo> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
 
                 if (remotePlans != null && !remotePlans.isEmpty()) {
                     membershipPlans = remotePlans.stream().map(remotePlan -> {
                         az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
-                                .filter(s -> s.getPlanId() == remotePlan.getPlanId())
+                                .filter(s -> s.getPlanId() == remotePlan.getPackageId())
                                 .findFirst().orElse(null);
 
                         List<String> benefitsList = new java.util.ArrayList<>();
@@ -89,7 +89,7 @@ public class GymReadService {
                         }
 
                         return GymPlanItemDto.builder()
-                                .plan_id(String.valueOf(remotePlan.getPlanId()))
+                                .plan_id(String.valueOf(remotePlan.getPackageId()))
                                 .name(remotePlan.getName())
                                 .benefits(benefitsList)
                                 .build();
