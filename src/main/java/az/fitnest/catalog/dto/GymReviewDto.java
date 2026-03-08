@@ -9,5 +9,6 @@ public record GymReviewDto(
     Integer rating,
     String comment,
     GymReviewAuthorDto author,
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd/MM/yyyy")
     LocalDateTime created_at
 ) {}

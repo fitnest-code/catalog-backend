@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class CheckInResponseDto {
     private String addressText;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate visitDate;
     private LocalTime visitHour;
 

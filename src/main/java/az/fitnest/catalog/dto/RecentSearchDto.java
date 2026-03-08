@@ -14,5 +14,6 @@ import java.time.LocalDateTime;
 public class RecentSearchDto {
     private String query;
     private String type;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDateTime createdDate;
 }
