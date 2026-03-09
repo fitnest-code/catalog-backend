@@ -274,7 +274,8 @@ public class GymReadService {
                 if (categoryId != null) {
                     gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
                 } else {
-                    gymPage = gymRepository.findClosestGymsWithQuery(q, bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                    // Use new search method for name+address+categoryName
+                    gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
                 }
             } else if ("CLOSEST".equalsIgnoreCase(type)) {
                 if (categoryId != null) {
@@ -294,7 +295,8 @@ public class GymReadService {
                 if (categoryId != null) {
                     gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
                 } else {
-                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCase(q, pageable);
+                    // Use new search method for name+address+categoryName
+                    gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
                 }
             } else {
                 if (categoryId != null) {

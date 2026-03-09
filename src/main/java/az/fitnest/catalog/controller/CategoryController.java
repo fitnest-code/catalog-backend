@@ -1,17 +1,13 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.CategoryDto;
-import az.fitnest.catalog.dto.CategoryRequest;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.exception.ValidationException;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.service.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
@@ -22,19 +18,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -45,14 +32,29 @@ public class CategoryController {
 
     private final CategoryRepository categoryRepository;
 
-    @Operation(summary = "Bütün kateqoriyaları əldə edin", description = "Bütün kataloq kateqoriyalarının səhifələnmiş siyahısını qaytarır.")
+    @Operation(summary = "Bütün kateqoriyaları əldə edin", description = "Bütün kataloq kateqoriyalarının səhifələnmiş siyahısını qaytarır. Ada görə axtarış üçün 'q' parametrindən istifadə edin.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriyalar uğurla əldə edildi")})
     @GetMapping
-    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(@Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(
+            @Parameter(description = "Axtarış üçün ad") @RequestParam(value = "q", required = false) String q,
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size) {
         PageRequest pageable = PageRequest.of(Math.max(0, page - 1), size);
-        Page<Category> categories = this.categoryRepository.findAll(pageable);
-        List<CategoryDto> items = categories.getContent().stream().map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).build()).collect(Collectors.toList());
-        PaginatedResponse<CategoryDto> resp = PaginatedResponse.<CategoryDto>builder().items(items).total(categories.getTotalElements()).page(page).pageSize(size).build();
+        Page<Category> categories;
+        if (q != null && !q.isBlank()) {
+            categories = this.categoryRepository.searchByName(q, pageable);
+        } else {
+            categories = this.categoryRepository.findAll(pageable);
+        }
+        List<CategoryDto> items = categories.getContent().stream()
+            .map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).build())
+            .collect(Collectors.toList());
+        PaginatedResponse<CategoryDto> resp = PaginatedResponse.<CategoryDto>builder()
+            .items(items)
+            .total(categories.getTotalElements())
+            .page(page)
+            .pageSize(size)
+            .build();
         return ResponseEntity.ok(resp);
     }
 }
