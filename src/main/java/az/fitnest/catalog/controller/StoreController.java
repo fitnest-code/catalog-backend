@@ -54,7 +54,7 @@ public class StoreController {
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mağaza təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = StoreDetailResponseDto.class))}),
-            @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")
+            @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı", content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     })
     @GetMapping("/{storeId:\\d+}")
     public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
