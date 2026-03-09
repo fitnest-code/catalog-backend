@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.service.FileStorageService;
@@ -35,7 +36,6 @@ public class CategoryService {
         validateImageFile(file);
         String fsId = fileStorageService.saveFile(file, "/categories/" + categoryId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
-
         categoryRepository.findById(categoryId).ifPresent(category -> {
             category.setPhotoUrl(fullUrl);
             categoryRepository.save(category);
@@ -44,15 +44,20 @@ public class CategoryService {
 
     private void validateImageFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new BadRequestException("FILE_EMPTY", "error.file_empty");
         }
         long maxSize = 5 * 1024 * 1024;
         if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException("File size exceeds limit");
+            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
         }
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
-            throw new IllegalArgumentException("Invalid file type");
+            throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
         }
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.isBlank()) return "unnamed";
+        return filename.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
     }
 }

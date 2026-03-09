@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -39,11 +41,11 @@ public class CategoryAdminController {
 
     @Operation(summary = "Kateqoriya şəklini dəyiş", description = "Kateqoriyanın şəklini yeniləyir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{categoryId}/photo")
+    @PutMapping(value = "/{categoryId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateCategoryPhoto(
             @PathVariable Long categoryId,
-            @RequestParam("file") MultipartFile metaFile) {
-        categoryService.updateCategoryPhoto(categoryId, metaFile);
+            @RequestParam("file") MultipartFile file) {
+        categoryService.updateCategoryPhoto(categoryId, file);
         return ResponseEntity.ok().build();
     }
 }
