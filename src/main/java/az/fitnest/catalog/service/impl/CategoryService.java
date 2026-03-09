@@ -28,9 +28,11 @@ public class CategoryService {
     }
 
     @Transactional
-    public void updateCategoryPhoto(Long categoryId, String photoUrl) {
+    public void updateCategoryPhoto(Long categoryId, String metaFile) {
+        // Process the metaFile instead of photoUrl
         categoryRepository.findById(categoryId).ifPresent(category -> {
-            category.setPhotoUrl(photoUrl);
+            // Assuming metaFile contains some metadata to be processed
+            category.setPhotoMetadata(metaFile); // Replace with actual processing logic
             categoryRepository.save(category);
         });
     }

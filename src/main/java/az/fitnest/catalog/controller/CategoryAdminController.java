@@ -41,8 +41,9 @@ public class CategoryAdminController {
     @PutMapping("/{categoryId}/photo")
     public ResponseEntity<Void> updateCategoryPhoto(
             @PathVariable Long categoryId,
-            @RequestParam String photoUrl) {
-        categoryService.updateCategoryPhoto(categoryId, photoUrl);
+            @RequestParam String metaFile) {
+        // Assuming metaFile contains necessary metadata for processing
+        categoryService.updateCategoryPhoto(categoryId, metaFile);
         return ResponseEntity.ok().build();
     }
 }
