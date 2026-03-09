@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,12 +28,20 @@ public class MediaController {
     }
 
     @Operation(summary = "Media faylını yayımlayın", description = "Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','USER')")
     @GetMapping(value = {"/stream/{fsId}"}, produces = {"image/jpeg", "image/png", "application/octet-stream"})
     public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description = "Medianın fayl sistemi ID-si") @PathVariable String fsId) {
         log.info("[MediaController] stream request received for fsId={}", fsId);
 
         // Capture the current SecurityContext so it can be propagated into the streaming thread
         SecurityContext securityContext = SecurityContextHolder.getContext();
+        // Log current authentication principal and authorities for debugging role issues
+        if (securityContext != null && securityContext.getAuthentication() != null) {
+            log.info("[MediaController] current principal={}, authorities={}", securityContext.getAuthentication().getPrincipal(), securityContext.getAuthentication().getAuthorities());
+        } else {
+            log.warn("[MediaController] no authentication present when handling stream request for fsId={}", fsId);
+        }
+
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
