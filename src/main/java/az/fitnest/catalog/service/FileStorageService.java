@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service;
 
+import java.io.OutputStream;
 import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
@@ -14,4 +15,6 @@ public interface FileStorageService {
     public void deleteFile(String var1);
 
     public void deleteFiles(List<String> var1);
+
+    void streamFileToOutput(String fsId, OutputStream outputStream);
 }

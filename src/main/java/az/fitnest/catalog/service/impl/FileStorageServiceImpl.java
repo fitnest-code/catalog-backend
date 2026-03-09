@@ -11,6 +11,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.OutputStream;
+
 @Service
 public class FileStorageServiceImpl
         implements FileStorageService {
@@ -88,5 +90,22 @@ public class FileStorageServiceImpl
             return parts[parts.length - 1];
         }
         return url;
+    }
+
+    @Override
+    public void streamFileToOutput(String fsId, OutputStream outputStream) {
+        storageGrpcClient.downloadFile(fsId, response -> {
+            if (response.hasFileData()) {
+                try {
+                    outputStream.write(response.getFileData().toByteArray());
+                    outputStream.flush();
+                } catch (Exception e) {
+                    throw new RuntimeException("error.file_upload_failed", e);
+                }
+            }
+        });
+        try {
+            outputStream.flush();
+        } catch (Exception ignored) {}
     }
 }
