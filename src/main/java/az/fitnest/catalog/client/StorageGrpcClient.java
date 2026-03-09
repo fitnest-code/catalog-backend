@@ -142,7 +142,16 @@ public class StorageGrpcClient {
     }
 
     public void downloadFile(String fileId, Consumer<DownloadFileResponse> observer) {
+        log.debug("[StorageGrpcClient] downloadFile called for fileId={}", fileId);
         DownloadFileRequest request = DownloadFileRequest.newBuilder().setFileId(fileId).build();
-        this.blockingStub.downloadFile(request).forEachRemaining(observer);
+        try {
+            this.blockingStub.downloadFile(request).forEachRemaining(response -> {
+                observer.accept(response);
+            });
+            log.debug("[StorageGrpcClient] downloadFile completed for fileId={}", fileId);
+        } catch (Exception e) {
+            log.error("[StorageGrpcClient] downloadFile error for fileId={}", fileId, e);
+            throw e;
+        }
     }
 }
