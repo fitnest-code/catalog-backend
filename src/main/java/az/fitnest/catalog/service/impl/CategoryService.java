@@ -18,4 +18,20 @@ public class CategoryService {
         gymRepository.truncateGymCategories();
         categoryRepository.deleteAll();
     }
+
+    @Transactional
+    public void updateCategoryName(Long categoryId, String newName) {
+        categoryRepository.findById(categoryId).ifPresent(category -> {
+            category.setName(newName);
+            categoryRepository.save(category);
+        });
+    }
+
+    @Transactional
+    public void updateCategoryPhoto(Long categoryId, String photoUrl) {
+        categoryRepository.findById(categoryId).ifPresent(category -> {
+            category.setPhotoUrl(photoUrl);
+            categoryRepository.save(category);
+        });
+    }
 }
