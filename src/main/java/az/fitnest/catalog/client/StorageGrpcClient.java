@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +35,14 @@ public class StorageGrpcClient {
     private StorageServiceGrpc.StorageServiceStub asyncStub;
     @GrpcClient(value = "storage-service")
     private StorageServiceGrpc.StorageServiceBlockingStub blockingStub;
+
+    // Deadline for short unary calls (seconds)
+    @Value("${grpc.storage.unary.deadline.seconds:30}")
+    private long unaryDeadlineSeconds;
+
+    // Deadline for streaming downloads (seconds)
+    @Value("${grpc.storage.stream.deadline.seconds:300}")
+    private long streamDeadlineSeconds;
 
     public StorageFileData uploadFile(MultipartFile file, String directory) {
         return this.uploadFile(file, directory, null);
@@ -126,18 +135,32 @@ public class StorageGrpcClient {
 
     public String getDownloadUrl(String fileId) {
         GetDownloadUrlRequest request = GetDownloadUrlRequest.newBuilder().setFileId(fileId).build();
-        GetDownloadUrlResponse response = this.blockingStub.getDownloadUrl(request);
-        if (response.getSuccess()) {
-            return response.getDownloadUrl();
+        try {
+            GetDownloadUrlResponse response = this.blockingStub
+                    .withDeadlineAfter(unaryDeadlineSeconds, TimeUnit.SECONDS)
+                    .getDownloadUrl(request);
+            if (response.getSuccess()) {
+                return response.getDownloadUrl();
+            }
+            throw new RuntimeException("error.rpc_failed: " + response.getMessage());
+        } catch (Exception e) {
+            log.error("gRPC getDownloadUrl failed for fileId={}", fileId, e);
+            throw new RuntimeException("error.rpc_failed", e);
         }
-        throw new RuntimeException("error.rpc_failed");
     }
 
     public void deleteFiles(List<String> paths) {
         DeleteFilesRequest request = DeleteFilesRequest.newBuilder().addAllPaths(paths).build();
-        DeleteFilesResponse response = this.blockingStub.deleteFiles(request);
-        if (!response.getSuccess()) {
-            throw new RuntimeException("error.rpc_failed");
+        try {
+            DeleteFilesResponse response = this.blockingStub
+                    .withDeadlineAfter(unaryDeadlineSeconds, TimeUnit.SECONDS)
+                    .deleteFiles(request);
+            if (!response.getSuccess()) {
+                throw new RuntimeException("error.rpc_failed: " + response.getMessage());
+            }
+        } catch (Exception e) {
+            log.error("gRPC deleteFiles failed for paths={} ", paths, e);
+            throw new RuntimeException("error.rpc_failed", e);
         }
     }
 
@@ -145,13 +168,16 @@ public class StorageGrpcClient {
         log.debug("[StorageGrpcClient] downloadFile called for fileId={}", fileId);
         DownloadFileRequest request = DownloadFileRequest.newBuilder().setFileId(fileId).build();
         try {
-            this.blockingStub.downloadFile(request).forEachRemaining(response -> {
-                observer.accept(response);
-            });
+            this.blockingStub
+                    .withDeadlineAfter(streamDeadlineSeconds, TimeUnit.SECONDS)
+                    .downloadFile(request)
+                    .forEachRemaining(response -> {
+                        observer.accept(response);
+                    });
             log.debug("[StorageGrpcClient] downloadFile completed for fileId={}", fileId);
         } catch (Exception e) {
             log.error("[StorageGrpcClient] downloadFile error for fileId={}", fileId, e);
-            throw e;
+            throw new RuntimeException("error.rpc_failed", e);
         }
     }
 }

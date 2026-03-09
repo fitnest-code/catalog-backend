@@ -6,14 +6,25 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import lombok.extern.slf4j.Slf4j;
 
 @SpringBootApplication
 @EnableAsync
 @EnableJpaAuditing
 @EnableKafka
 @EnableJpaRepositories(basePackages = "az.fitnest.catalog.repository")
+@Slf4j
 public class CatalogServiceApplication {
     public static void main(String[] args) {
+        try {
+            SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+            log.info("Set SecurityContextHolder strategy to MODE_INHERITABLETHREADLOCAL before application start");
+        } catch (Throwable t) {
+            // best-effort: if this fails, continue to start the app; the previously-created config class also tries to set it.
+            System.err.println("Warning: unable to set SecurityContextHolder strategy: " + t.getMessage());
+        }
         SpringApplication.run(CatalogServiceApplication.class, (String[]) args);
     }
 }
