@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/admin/categories")
@@ -41,8 +42,7 @@ public class CategoryAdminController {
     @PutMapping("/{categoryId}/photo")
     public ResponseEntity<Void> updateCategoryPhoto(
             @PathVariable Long categoryId,
-            @RequestParam String metaFile) {
-        // Assuming metaFile contains necessary metadata for processing
+            @RequestParam("file") MultipartFile metaFile) {
         categoryService.updateCategoryPhoto(categoryId, metaFile);
         return ResponseEntity.ok().build();
     }
