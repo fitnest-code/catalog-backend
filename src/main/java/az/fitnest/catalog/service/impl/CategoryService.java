@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.exception.BadRequestException;
+import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.service.FileStorageService;
@@ -34,12 +35,12 @@ public class CategoryService {
     @Transactional
     public void updateCategoryPhoto(Long categoryId, MultipartFile file) {
         validateImageFile(file);
+        var category = categoryRepository.findById(categoryId)
+            .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         String fsId = fileStorageService.saveFile(file, "/categories/" + categoryId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
-        categoryRepository.findById(categoryId).ifPresent(category -> {
-            category.setPhotoUrl(fullUrl);
-            categoryRepository.save(category);
-        });
+        category.setPhotoUrl(fullUrl);
+        categoryRepository.save(category);
     }
 
     private void validateImageFile(MultipartFile file) {
