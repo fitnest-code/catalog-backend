@@ -7,9 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/categories")
@@ -26,5 +24,25 @@ public class CategoryAdminController {
     public ResponseEntity<Void> deleteAllCategories() {
         categoryService.deleteAllCategories();
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Kateqoriya adını dəyiş", description = "Kateqoriyanın adını yeniləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{categoryId}/name")
+    public ResponseEntity<Void> updateCategoryName(
+            @PathVariable Long categoryId,
+            @RequestParam String newName) {
+        categoryService.updateCategoryName(categoryId, newName);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Kateqoriya şəklini dəyiş", description = "Kateqoriyanın şəklini yeniləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{categoryId}/photo")
+    public ResponseEntity<Void> updateCategoryPhoto(
+            @PathVariable Long categoryId,
+            @RequestParam String photoUrl) {
+        categoryService.updateCategoryPhoto(categoryId, photoUrl);
+        return ResponseEntity.ok().build();
     }
 }
