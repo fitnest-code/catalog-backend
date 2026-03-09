@@ -33,7 +33,7 @@ public class StoreController {
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mağazalar uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}),
-            @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur")
+            @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur", content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     })
     @GetMapping
     public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getStores(
