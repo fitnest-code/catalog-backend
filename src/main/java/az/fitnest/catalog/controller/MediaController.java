@@ -31,8 +31,8 @@ public class MediaController {
     @GetMapping(value = {"/stream/{fsId}"}, produces = {"image/jpeg", "image/png", "application/octet-stream"})
     public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description = "Medianın fayl sistemi ID-si") @PathVariable String fsId) {
         return ResponseEntity.ok()
-            .header("Content-Disposition", "inline")
-            .header("Cache-Control", "public, max-age=31536000, immutable")
-            .body(outputStream -> fileStorageService.streamFileToOutput(fsId, outputStream));
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .header(org.springframework.http.HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable")
+                .body(outputStream -> fileStorageService.streamFileToOutput(fsId, outputStream));
     }
 }

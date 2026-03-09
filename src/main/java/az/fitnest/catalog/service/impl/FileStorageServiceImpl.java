@@ -98,7 +98,6 @@ public class FileStorageServiceImpl
             if (response.hasFileData()) {
                 try {
                     outputStream.write(response.getFileData().toByteArray());
-                    outputStream.flush();
                 } catch (Exception e) {
                     throw new RuntimeException("error.file_upload_failed", e);
                 }
