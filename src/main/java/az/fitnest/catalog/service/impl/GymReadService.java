@@ -412,6 +412,13 @@ public class GymReadService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public boolean gymSupportsPlan(Long gymId, Long planId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        return gym.getSubscriptions().stream().anyMatch(sub -> sub.getPlanId().equals(planId));
+    }
+
     private Pageable pageable(int page, int size, Sort sort) {
         int safePage = Math.max(page, 1) - 1;
         int safeSize = Math.max(1, Math.min(size, 100));

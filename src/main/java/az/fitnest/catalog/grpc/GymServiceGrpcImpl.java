@@ -269,6 +269,16 @@ public class GymServiceGrpcImpl extends GymServiceGrpc.GymServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void gymSupportsPlan(az.fitnest.catalog.grpc.GymSupportsPlanRequest request, StreamObserver<az.fitnest.catalog.grpc.GymSupportsPlanResponse> responseObserver) {
+        boolean supported = gymReadService.gymSupportsPlan(request.getGymId(), request.getPlanId());
+        az.fitnest.catalog.grpc.GymSupportsPlanResponse response = az.fitnest.catalog.grpc.GymSupportsPlanResponse.newBuilder()
+                .setSupported(supported)
+                .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
     private az.fitnest.catalog.dto.GymRequest mapToGymRequest(CreateGymRequest request) {
         String addrText = null;
         Double lat = null;

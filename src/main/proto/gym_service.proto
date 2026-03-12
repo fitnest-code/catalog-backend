@@ -22,6 +22,7 @@ service GymService {
   rpc UpdateGym(UpdateGymRequest) returns (UpdateGymResponse);
   // New endpoint for adding/updating gym images
   rpc PutGymImage(PutGymImageRequest) returns (PutGymImageResponse);
+  rpc GymSupportsPlan(GymSupportsPlanRequest) returns (GymSupportsPlanResponse);
 }
 
 message GetGymDetailRequest {
@@ -228,4 +229,11 @@ message PutGymImageRequest {
 message PutGymImageResponse {
   bool success = 1;
   GymImageItem item = 2;
+}
+message GymSupportsPlanRequest {
+  int64 gym_id = 1;
+  int64 plan_id = 2;
+}
+message GymSupportsPlanResponse {
+  bool supported = 1;
 }
