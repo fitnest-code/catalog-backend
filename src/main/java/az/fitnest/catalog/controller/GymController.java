@@ -164,4 +164,3 @@ public class GymController {
         return null;
     }
 }
-

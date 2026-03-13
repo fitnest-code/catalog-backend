@@ -7,12 +7,6 @@ import org.springframework.core.annotation.Order;
 import javax.annotation.PostConstruct;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-/**
- * Ensure SecurityContext is inherited by child threads (useful for streaming / async dispatch).
- *
- * Note: This must be set before any child threads are created. We attempt to set it during
- * application startup.
- */
 @Configuration
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -28,4 +22,3 @@ public class SecurityContextStrategyConfig {
         }
     }
 }
-

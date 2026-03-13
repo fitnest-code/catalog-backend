@@ -36,11 +36,9 @@ public class StorageGrpcClient {
     @GrpcClient(value = "storage-service")
     private StorageServiceGrpc.StorageServiceBlockingStub blockingStub;
 
-    // Deadline for short unary calls (seconds)
     @Value("${grpc.storage.unary.deadline.seconds:30}")
     private long unaryDeadlineSeconds;
 
-    // Deadline for streaming downloads (seconds)
     @Value("${grpc.storage.stream.deadline.seconds:300}")
     private long streamDeadlineSeconds;
 

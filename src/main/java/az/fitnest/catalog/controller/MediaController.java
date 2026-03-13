@@ -34,12 +34,10 @@ public class MediaController {
     }
 
     @Operation(summary = "Media faylını yayımlayın", description = "Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
-    // Removed @PreAuthorize to avoid late AuthorizationDeniedException during async streaming.
     @GetMapping(value = {"/stream/{fsId}"}, produces = {"image/jpeg", "image/png", "application/octet-stream"})
     public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description = "Medianın fayl sistemi ID-si") @PathVariable String fsId) {
         log.info("[MediaController] stream request received for fsId={}", fsId);
 
-        // Immediate authorization check: return 403 BEFORE committing the response (streaming starts later).
         Authentication authentication = SecurityContextHolder.getContext() != null ? SecurityContextHolder.getContext().getAuthentication() : null;
         log.debug("[MediaController] authentication (pre-check) = {}", authentication);
         if (authentication == null || !authentication.isAuthenticated() || !hasAnyRole(authentication, "SUPER_ADMIN", "ADMIN", "USER")) {
@@ -47,15 +45,12 @@ public class MediaController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        // Capture the current SecurityContext so it can be propagated into the streaming thread
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        // Log current authentication principal and authorities for debugging role issues
         if (securityContext != null && securityContext.getAuthentication() != null) {
             log.info("[MediaController] current principal={}, authorities={}", securityContext.getAuthentication().getPrincipal(), securityContext.getAuthentication().getAuthorities());
         } else {
             log.warn("[MediaController] no authentication present when handling stream request for fsId={}", fsId);
         }
-
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
@@ -88,8 +83,6 @@ public class MediaController {
                 });
     }
 
-    // Helper: checks if the authentication has any of the supplied logical role names. Accepts both
-    // authorities with and without the "ROLE_" prefix (to be forgiving).
     private boolean hasAnyRole(Authentication authentication, String... roles) {
         if (authentication == null) return false;
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();

@@ -22,7 +22,6 @@ public class CatalogServiceApplication {
             SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
             log.info("Set SecurityContextHolder strategy to MODE_INHERITABLETHREADLOCAL before application start");
         } catch (Throwable t) {
-            // best-effort: if this fails, continue to start the app; the previously-created config class also tries to set it.
             System.err.println("Warning: unable to set SecurityContextHolder strategy: " + t.getMessage());
         }
         SpringApplication.run(CatalogServiceApplication.class, (String[]) args);

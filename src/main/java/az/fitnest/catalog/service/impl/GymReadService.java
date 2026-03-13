@@ -274,7 +274,6 @@ public class GymReadService {
                 if (categoryId != null) {
                     gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
                 } else {
-                    // Use new search method for name+address+categoryName
                     gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
                 }
             } else if ("CLOSEST".equalsIgnoreCase(type)) {
@@ -295,7 +294,6 @@ public class GymReadService {
                 if (categoryId != null) {
                     gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
                 } else {
-                    // Use new search method for name+address+categoryName
                     gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
                 }
             } else {
