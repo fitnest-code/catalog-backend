@@ -50,10 +50,11 @@ public class GymReviewService {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
-
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Review review = new Review();
         review.setUserId(userId);
         review.setGymId(gymId);
+        review.setGym(gym);
         review.setRating(request.rating());
         review.setComment(request.comment());
         reviewRepository.save(review);

@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 @Entity
 @Table(name = "reviews", indexes = {@Index(name = "idx_reviews_user_id", columnList = "user_id")})
@@ -12,8 +14,11 @@ public class Review
         extends BaseAuditableEntity {
     @Column(name = "user_id")
     private Long userId;
-    @Column(name = "gym_id", updatable = false, insertable = false)
+    @Column(name = "gym_id")
     private Long gymId;
+    @ManyToOne
+    @JoinColumn(name = "gym_id", referencedColumnName = "id")
+    private Gym gym;
     @Column(name = "rating")
     private Integer rating;
     @Column(name = "comment", columnDefinition = "TEXT")
@@ -58,5 +63,13 @@ public class Review
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public Gym getGym() {
+        return gym;
+    }
+
+    public void setGym(Gym gym) {
+        this.gym = gym;
     }
 }
