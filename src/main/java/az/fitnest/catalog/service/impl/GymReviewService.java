@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.GymReviewDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.Review;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
