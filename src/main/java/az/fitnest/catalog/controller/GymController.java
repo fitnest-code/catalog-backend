@@ -15,6 +15,8 @@ import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.dto.UpdateImageUrlRequest;
+import az.fitnest.catalog.grpc.CreateGymRequest;
+import az.fitnest.catalog.grpc.UpdateGymRequest;
 import az.fitnest.catalog.service.impl.GymImageService;
 import az.fitnest.catalog.service.impl.GymReadService;
 import az.fitnest.catalog.service.impl.GymReviewService;
@@ -32,6 +34,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,6 +50,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import az.fitnest.catalog.dto.SortDirection;
+import az.fitnest.catalog.mapper.GymProtoMapper;
 
 @RestController
 @RequestMapping("/api/v1/gyms")
@@ -84,8 +91,12 @@ public class GymController {
     @GetMapping("/{gymId}/trainers")
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
-    public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
-        return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size, sortDir));
+    public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(
+            @PathVariable Long gymId,
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
+            @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya)", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
+        return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size, sortDir.name().toLowerCase()));
     }
 
     @GetMapping("/{gymId}/reviews")
@@ -126,10 +137,9 @@ public class GymController {
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
             @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
             @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
-            @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
+            @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya)", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
         Long userId = this.extractUserId(principal);
-
-        return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, page, page_size, lat, lng, sortDir));
+        return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, page, page_size, lat, lng, sortDir.name().toLowerCase()));
     }
 
     @PostMapping("/{gymId}/save")
@@ -162,5 +172,13 @@ public class GymController {
             return (Long) principal;
         }
         return null;
+    }
+
+    private az.fitnest.catalog.dto.GymRequest mapToGymRequest(CreateGymRequest request) {
+        return GymProtoMapper.mapToGymRequest(request);
+    }
+
+    private az.fitnest.catalog.dto.GymRequest mapToGymRequest(UpdateGymRequest request) {
+        return GymProtoMapper.mapToGymRequest(request);
     }
 }

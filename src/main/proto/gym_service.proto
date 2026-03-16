@@ -4,10 +4,11 @@ package catalog;
 option java_multiple_files = true;
 option java_package = "az.fitnest.catalog.grpc";
 
+import "catalog_gym_service.proto";
+
 service GymService {
   rpc GetGymDetail(GetGymDetailRequest) returns (GymDetailResponse);
   rpc GetGymImages(GetGymImagesRequest) returns (GymImageResponse);
-
   rpc GetTrainers(GetTrainersRequest) returns (GymTrainersResponse);
   rpc GetReviews(GetReviewsRequest) returns (GymReviewsResponse);
   rpc AddReview(AddReviewRequest) returns (AddReviewResponse);
@@ -22,7 +23,7 @@ service GymService {
   rpc UpdateGym(UpdateGymRequest) returns (UpdateGymResponse);
   // New endpoint for adding/updating gym images
   rpc PutGymImage(PutGymImageRequest) returns (PutGymImageResponse);
-  rpc GymSupportsPlan(GymSupportsPlanRequest) returns (GymSupportsPlanResponse);
+  rpc GymSupportsPlan(catalog.GymSupportsPlanRequest) returns (catalog.GymSupportsPlanResponse);
 }
 
 message GetGymDetailRequest {
@@ -112,6 +113,7 @@ message GymReviewsResponse {
   int32 page = 2;
   int32 page_size = 3;
   int64 total = 4;
+  double rating = 5;
 }
 message GymReview {
   string review_id = 1;
@@ -229,11 +231,4 @@ message PutGymImageRequest {
 message PutGymImageResponse {
   bool success = 1;
   GymImageItem item = 2;
-}
-message GymSupportsPlanRequest {
-  int64 gym_id = 1;
-  int64 plan_id = 2;
-}
-message GymSupportsPlanResponse {
-  bool supported = 1;
 }

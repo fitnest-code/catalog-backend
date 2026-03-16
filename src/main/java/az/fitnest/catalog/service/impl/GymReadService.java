@@ -27,6 +27,9 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,60 +44,105 @@ public class GymReadService {
     private final org.springframework.context.MessageSource messageSource;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "gyms", key = "#gymId")
+    @Cacheable("gym-detail")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
-        Gym gym = gymRepository.findWithDetailsById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        boolean isSaved = false;
-        if (userId != null) {
-            isSaved = savedGymRepository.findByUserIdAndGymId(userId, gymId).isPresent();
-        }
-
-        List<GymRoomDto> rooms = new java.util.ArrayList<>();
-        if (gym.getRooms() != null) {
-            rooms = gym.getRooms().stream().map(room -> {
-                List<GymImageDto> images = room.getImages().stream().map(img ->
-                    GymImageDto.builder()
-                            .id(img.getId())
-                            .gymId(gym.getId())
-                            .name(room.getName())
-                            .url(img.getPictureUrl())
-                            .build()
-                ).collect(Collectors.toList());
-                return GymRoomDto.builder().room_name(room.getName()).images(images).build();
-            }).collect(Collectors.toList());
-        }
-
-        List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
-        try {
-            if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                List<Long> planIds = gym.getSubscriptions().stream()
-                        .map(az.fitnest.catalog.model.entity.GymSubscription::getPlanId)
-                        .distinct()
-                        .toList();
-                List<az.fitnest.order.grpc.SubscriptionPackageInfo> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
-
-                if (remotePlans != null && !remotePlans.isEmpty()) {
-                    membershipPlans = remotePlans.stream().map(remotePlan -> {
-                        az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
-                                .filter(s -> s.getPlanId() == remotePlan.getPackageId())
-                                .findFirst().orElse(null);
-
-                        List<String> benefitsList = new java.util.ArrayList<>();
-                        if (matchingSub != null && matchingSub.getBenefits() != null) {
-                            benefitsList = matchingSub.getBenefits().stream()
-                                    .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
-                                    .toList();
-                        }
-
-                        return GymPlanItemDto.builder()
-                                .plan_id(String.valueOf(remotePlan.getPackageId()))
-                                .name(remotePlan.getName())
-                                .benefits(benefitsList)
-                                .build();
-                    }).collect(java.util.stream.Collectors.toList());
-                } else {
+        ExecutorService executor = Executors.newFixedThreadPool(6);
+        CompletableFuture<Gym> gymFuture = CompletableFuture.supplyAsync(() -> gymRepository.findWithDetailsById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found")), executor);
+        CompletableFuture<Boolean> isSavedFuture = CompletableFuture.supplyAsync(() -> {
+            if (userId != null) {
+                return savedGymRepository.findByUserIdAndGymId(userId, gymId).isPresent();
+            }
+            return false;
+        }, executor);
+        CompletableFuture<List<GymTrainerDto>> trainerDtosFuture = CompletableFuture.supplyAsync(() ->
+            trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
+                .getContent().stream()
+                .map(GymMapper::toTrainerDto)
+                .collect(Collectors.toList()), executor);
+        CompletableFuture<List<GymReviewDto>> recentReviewsFuture = CompletableFuture.supplyAsync(() ->
+            reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
+                .getContent().stream()
+                .map(GymMapper::toReviewDto)
+                .collect(Collectors.toList()), executor);
+        CompletableFuture<List<GymWorkHourDto>> workHoursFuture = CompletableFuture.supplyAsync(() ->
+            gymRepository.findWorkHoursByGymId(gymId).stream()
+                .map(GymMapper::toWorkHourDto)
+                .collect(Collectors.toList()), executor);
+        CompletableFuture<List<CategoryDto>> categoryDtosFuture = CompletableFuture.supplyAsync(() -> {
+            Gym gym = gymRepository.findById(gymId).orElse(null);
+            if (gym != null && gym.getCategories() != null) {
+                return gym.getCategories().stream()
+                        .map(GymMapper::toCategoryDto)
+                        .collect(Collectors.toList());
+            }
+            return null;
+        }, executor);
+        CompletableFuture<List<GymRoomDto>> roomsFuture = CompletableFuture.supplyAsync(() -> {
+            Gym gym = gymRepository.findById(gymId).orElse(null);
+            List<GymRoomDto> rooms = new java.util.ArrayList<>();
+            if (gym != null && gym.getRooms() != null) {
+                rooms = gym.getRooms().stream().map(room -> {
+                    List<GymImageDto> images = room.getImages().stream().map(img ->
+                        GymImageDto.builder()
+                                .id(img.getId())
+                                .gymId(gym.getId())
+                                .name(room.getName())
+                                .url(img.getPictureUrl())
+                                .build()
+                    ).collect(Collectors.toList());
+                    return GymRoomDto.builder().room_name(room.getName()).images(images).build();
+                }).collect(Collectors.toList());
+            }
+            return rooms;
+        }, executor);
+        CompletableFuture<List<GymPlanItemDto>> membershipPlansFuture = CompletableFuture.supplyAsync(() -> {
+            Gym gym = gymRepository.findById(gymId).orElse(null);
+            List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
+            try {
+                if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+                    List<Long> planIds = gym.getSubscriptions().stream()
+                            .map(az.fitnest.catalog.model.entity.GymSubscription::getPlanId)
+                            .distinct()
+                            .toList();
+                    List<az.fitnest.order.grpc.SubscriptionPackageInfo> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
+                    if (remotePlans != null && !remotePlans.isEmpty()) {
+                        membershipPlans = remotePlans.stream().map(remotePlan -> {
+                            az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
+                                    .filter(s -> s.getPlanId() == remotePlan.getPackageId())
+                                    .findFirst().orElse(null);
+                            List<String> benefitsList = new java.util.ArrayList<>();
+                            if (matchingSub != null && matchingSub.getBenefits() != null) {
+                                benefitsList = matchingSub.getBenefits().stream()
+                                        .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                                        .toList();
+                            }
+                            return GymPlanItemDto.builder()
+                                    .plan_id(String.valueOf(remotePlan.getPackageId()))
+                                    .name(remotePlan.getName())
+                                    .benefits(benefitsList)
+                                    .build();
+                        }).collect(java.util.stream.Collectors.toList());
+                    } else {
+                        membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                            String placeholderName = switch (sub.getPlanId().intValue()) {
+                                case 1 -> "Bronze Plan";
+                                case 2 -> "Silver Plan";
+                                case 3 -> "Gold Plan";
+                                case 4 -> "Platinum Plan";
+                                default -> "Standard Plan";
+                            };
+                            return GymPlanItemDto.builder()
+                                    .plan_id(String.valueOf(sub.getPlanId()))
+                                    .name(placeholderName)
+                                    .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                                    .build();
+                        }).toList();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
+                if (gym != null && gym.getSubscriptions() != null) {
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
                         String placeholderName = switch (sub.getPlanId().intValue()) {
                             case 1 -> "Bronze Plan";
@@ -111,53 +159,29 @@ public class GymReadService {
                     }).toList();
                 }
             }
-        } catch (Exception e) {
-            System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
-            if (gym.getSubscriptions() != null) {
-                membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                    String placeholderName = switch (sub.getPlanId().intValue()) {
-                        case 1 -> "Bronze Plan";
-                        case 2 -> "Silver Plan";
-                        case 3 -> "Gold Plan";
-                        case 4 -> "Platinum Plan";
-                        default -> "Standard Plan";
-                    };
-                    return GymPlanItemDto.builder()
-                            .plan_id(String.valueOf(sub.getPlanId()))
-                            .name(placeholderName)
-                            .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
-                            .build();
-                }).toList();
-            }
-        }
+            return membershipPlans;
+        }, executor);
 
-        List<GymTrainerDto> trainerDtos = trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
-                .getContent().stream()
-                .map(GymMapper::toTrainerDto)
-                .collect(Collectors.toList());
-
-        List<GymReviewDto> recentReviews = reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
-                .getContent().stream()
-                .map(GymMapper::toReviewDto)
-                .collect(Collectors.toList());
-
-        List<GymWorkHourDto> workHours = gymRepository.findWorkHoursByGymId(gymId).stream()
-                .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList());
+        CompletableFuture.allOf(
+            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, workHoursFuture, categoryDtosFuture, roomsFuture, membershipPlansFuture
+        ).join();
+        Gym gym = gymFuture.join();
+        boolean isSaved = isSavedFuture.join();
+        List<GymTrainerDto> trainerDtos = trainerDtosFuture.join();
+        List<GymReviewDto> recentReviews = recentReviewsFuture.join();
+        List<GymWorkHourDto> workHours = workHoursFuture.join();
+        List<CategoryDto> categoryDtos = categoryDtosFuture.join();
+        List<GymRoomDto> rooms = roomsFuture.join();
+        List<GymPlanItemDto> membershipPlans = membershipPlansFuture.join();
 
         List<GymWorkHourDto> workHoursWoman = gym.getWorkHoursWoman() != null ? gym.getWorkHoursWoman().stream()
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList()) : null;
-
         List<GymWorkHourDto> workHoursMan = gym.getWorkHoursMan() != null ? gym.getWorkHoursMan().stream()
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList()) : null;
 
-        List<CategoryDto> categoryDtos = gym.getCategories() != null ? gym.getCategories().stream()
-                .map(GymMapper::toCategoryDto)
-                .collect(Collectors.toList()) : null;
-
-        return GymDetailResponse.builder()
+        GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
                 .name(gym.getName())
                 .description(gym.getDescription())
@@ -184,10 +208,12 @@ public class GymReadService {
                 .qr_code_url(gym.getQrCodeUrl())
                 .status(gym.getStatus())
                 .build();
+        executor.shutdown();
+        return response;
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "gymImages", key = "#gymId")
+    @Cacheable("gym-images")
     public GymImageResponse getGymImages(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -250,6 +276,7 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable("main-page-gyms")
     public PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
         return getGyms(userId, null, "CLOSEST", null, page, pageSize, userLat, userLng, "desc");
     }

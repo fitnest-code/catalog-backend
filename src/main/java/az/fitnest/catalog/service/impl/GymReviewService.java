@@ -61,6 +61,13 @@ public class GymReviewService {
         reviewRepository.incrementReviewCountAndRating(gymId, (double) request.rating());
     }
 
+    @Transactional(readOnly = true)
+    public Double getGymRating(Long gymId) {
+        return gymRepository.findById(gymId)
+                .map(gym -> gym.getRating() != null ? gym.getRating() : 0.0)
+                .orElse(0.0);
+    }
+
     private GymReviewDto toGymReviewDto(Review r) {
         return GymReviewDto.builder()
                 .review_id(r.getId() != null ? r.getId().toString() : null)
