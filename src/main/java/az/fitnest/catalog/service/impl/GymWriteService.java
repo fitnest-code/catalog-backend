@@ -61,6 +61,13 @@ public class GymWriteService {
 
     @Transactional
     public void createGym(GymRequest request) {
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+        if (categories.size() != request.categoryIds().size()) {
+            throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
+        }
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
@@ -80,13 +87,7 @@ public class GymWriteService {
         }
         gym.setPhone(request.phone());
         gym.setEmail(request.email());
-        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-            if (categories.size() != request.categoryIds().size()) {
-                throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
-            }
-            gym.setCategories(new HashSet<>(categories));
-        }
+        gym.setCategories(new HashSet<>(categories));
 
         if (request.workHours() != null) {
             List<az.fitnest.catalog.model.entity.GymWorkHour> workHours = request.workHours().stream()
@@ -119,6 +120,13 @@ public class GymWriteService {
     @Transactional
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void updateGym(Long gymId, GymRequest request) {
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+        if (categories.size() != request.categoryIds().size()) {
+            throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
+        }
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -140,13 +148,7 @@ public class GymWriteService {
         }
         gym.setPhone(request.phone());
         gym.setEmail(request.email());
-        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-            if (categories.size() != request.categoryIds().size()) {
-                throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
-            }
-            gym.setCategories(new HashSet<>(categories));
-        }
+        gym.setCategories(new HashSet<>(categories));
         gym.getWorkHours().clear();
         if (request.workHours() != null) {
             List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHours = request.workHours().stream()

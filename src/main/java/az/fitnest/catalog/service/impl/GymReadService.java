@@ -3,6 +3,7 @@ package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
@@ -12,6 +13,7 @@ import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,7 @@ public class GymReadService {
     private final ReviewRepository reviewRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final org.springframework.context.MessageSource messageSource;
+    private final CategoryRepository categoryRepository;
 
     @Transactional(readOnly = true)
     @Cacheable("gym-detail")
@@ -283,6 +286,9 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, Long categoryId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
+        if (categoryId != null && !categoryRepository.existsById(categoryId)) {
+            throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
+        }
         Page<Gym> gymPage;
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
