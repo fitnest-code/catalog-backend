@@ -14,7 +14,7 @@ public class Review
         extends BaseAuditableEntity {
     @Column(name = "user_id")
     private Long userId;
-    @Column(name = "gym_id")
+    @Column(name = "gym_id", insertable = false, updatable = false)
     private Long gymId;
     @ManyToOne
     @JoinColumn(name = "gym_id", referencedColumnName = "id")
