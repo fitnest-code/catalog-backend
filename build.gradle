@@ -81,11 +81,15 @@ dependencies {
     implementation "com.google.zxing:javase:3.5.3"
 
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure:4.0.3'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }
 
-tasks.named('test') {
-    enabled = false
-}
 
 protobuf {
     protoc {
@@ -116,4 +120,8 @@ sourceSets {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 25
+}
+
+tasks.named('test') {
+    enabled = false
 }
