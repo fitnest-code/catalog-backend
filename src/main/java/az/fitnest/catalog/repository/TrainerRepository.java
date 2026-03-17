@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface TrainerRepository
         extends JpaRepository<Trainer, Long> {
-    @Query(value = "SELECT t FROM Gym g JOIN g.trainers t WHERE g.id = :gymId")
+    @Query(value = "SELECT t FROM Gym g JOIN g.trainers t LEFT JOIN FETCH t.profession WHERE g.id = :gymId")
     public Page<Trainer> findByGymId(@Param(value = "gymId") Long var1, Pageable var2);
 
     @Modifying
