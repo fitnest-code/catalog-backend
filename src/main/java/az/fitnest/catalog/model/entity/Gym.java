@@ -93,15 +93,9 @@ public class Gym
 
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private List<GymAdmin> admins = new ArrayList<GymAdmin>();
-
-    @OneToMany(mappedBy = "gym", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private List<az.fitnest.catalog.model.entity.Room> rooms = new ArrayList<>();
+    private Set<az.fitnest.catalog.model.entity.Room> rooms = new HashSet<>();
 
     @ManyToMany
     @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})

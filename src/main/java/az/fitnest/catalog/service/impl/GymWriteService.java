@@ -204,7 +204,7 @@ public class GymWriteService {
                 GymSubscription subscription = new GymSubscription();
                 subscription.setPlanId(planId);
                 subscription.setGym(gym);
-                subscription.setBenefits(new java.util.ArrayList<>());
+                subscription.setBenefits(new java.util.HashSet<>());
                 gym.getSubscriptions().add(subscription);
             }
         }

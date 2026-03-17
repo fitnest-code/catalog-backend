@@ -6,8 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "gym_subscriptions")
@@ -26,6 +26,5 @@ public class GymSubscription extends BaseAuditableEntity {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "gym_subscription_benefits", joinColumns = @JoinColumn(name = "gym_subscription_id"))
-    private List<GymSubscriptionBenefit> benefits = new ArrayList<>();
-
+    private Set<GymSubscriptionBenefit> benefits = new HashSet<>();
 }
