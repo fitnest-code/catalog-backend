@@ -89,7 +89,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymSubscription> subscriptions = new ArrayList<GymSubscription>();
+    private Set<GymSubscription> subscriptions = new HashSet<>();
 
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @Builder.Default
