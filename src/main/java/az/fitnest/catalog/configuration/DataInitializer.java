@@ -290,7 +290,7 @@ public class DataInitializer {
                     new GymSubscriptionBenefit("Weekly personal trainer sessions", "https://img.icons8.com/color/96/personal-trainer.png")
             ));
 
-            gym.setSubscriptions(new ArrayList<>(Arrays.asList(sub1_1, sub1_2, sub1_3, sub1_4)));
+            gym.setSubscriptions(new HashSet<>(Arrays.asList(sub1_1, sub1_2, sub1_3, sub1_4)));
             gymRepository.save(gym);
 
             String gymId = gym.getGymId().toString();
@@ -388,7 +388,7 @@ public class DataInitializer {
                     new GymSubscriptionBenefit("Personal trainer weekly", "https://img.icons8.com/color/96/personal-trainer.png")
             ));
 
-            gym2.setSubscriptions(new ArrayList<>(Arrays.asList(sub2_1, sub2_2, sub2_3, sub2_4)));
+            gym2.setSubscriptions(new HashSet<>(Arrays.asList(sub2_1, sub2_2, sub2_3, sub2_4)));
             gymRepository.save(gym2);
 
             String gymId2 = gym2.getGymId().toString();
