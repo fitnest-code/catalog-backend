@@ -72,8 +72,7 @@ public class GymReadService {
             gymRepository.findWorkHoursByGymId(gymId).stream()
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList()), executor);
-        CompletableFuture<List<CategoryDto>> categoryDtosFuture = CompletableFuture.supplyAsync(() -> {
-            Gym gym = gymRepository.findById(gymId).orElse(null);
+        CompletableFuture<List<CategoryDto>> categoryDtosFuture = gymFuture.thenApplyAsync(gym -> {
             if (gym != null && gym.getCategories() != null) {
                 return gym.getCategories().stream()
                         .map(GymMapper::toCategoryDto)
@@ -81,8 +80,7 @@ public class GymReadService {
             }
             return null;
         }, executor);
-        CompletableFuture<List<GymRoomDto>> roomsFuture = CompletableFuture.supplyAsync(() -> {
-            Gym gym = gymRepository.findById(gymId).orElse(null);
+        CompletableFuture<List<GymRoomDto>> roomsFuture = gymFuture.thenApplyAsync(gym -> {
             List<GymRoomDto> rooms = new java.util.ArrayList<>();
             if (gym != null && gym.getRooms() != null) {
                 rooms = gym.getRooms().stream().map(room -> {
@@ -99,8 +97,7 @@ public class GymReadService {
             }
             return rooms;
         }, executor);
-        CompletableFuture<List<GymPlanItemDto>> membershipPlansFuture = CompletableFuture.supplyAsync(() -> {
-            Gym gym = gymRepository.findById(gymId).orElse(null);
+        CompletableFuture<List<GymPlanItemDto>> membershipPlansFuture = gymFuture.thenApplyAsync(gym -> {
             List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
             try {
                 if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
