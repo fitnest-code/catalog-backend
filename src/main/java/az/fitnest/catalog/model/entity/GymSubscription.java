@@ -24,7 +24,7 @@ public class GymSubscription extends BaseAuditableEntity {
     @JoinColumn(name = "gym_id", nullable = false)
     private Gym gym;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "gym_subscription_benefits", joinColumns = @JoinColumn(name = "gym_subscription_id"))
     private List<GymSubscriptionBenefit> benefits = new ArrayList<>();
 
