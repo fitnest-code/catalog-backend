@@ -539,11 +539,33 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
-            List<Gym> gyms = gymRepository.findAll();
-            return gyms.stream()
-                .filter(g -> g.getSubscriptions() != null)
-                .map(gym -> new GymSubscriptionCountResponse(gym.getName(), gym.getSubscriptions().size()))
-                .toList();
+        List<Gym> gyms = gymRepository.findAll();
+        java.util.Map<Long, java.util.Set<Long>> packageIdToGyms = new java.util.HashMap<>();
+        for (Gym gym : gyms) {
+            if (gym.getSubscriptions() != null) {
+                for (var subscription : gym.getSubscriptions()) {
+                    Long packageId = subscription.getPackageId();
+                    if (packageId != null) {
+                        packageIdToGyms.computeIfAbsent(packageId, k -> new java.util.HashSet<>()).add(gym.getId());
+                    }
+                }
+            }
+        }
+        java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
+        java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> packageInfos = orderServiceGrpcClient.getPlansByIds(packageIds);
+        java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
+        for (az.fitnest.order.grpc.SubscriptionPackageInfo info : packageInfos) {
+            packageIdToName.put(info.getPackageId(), info.getName());
+        }
+        java.util.Map<String, Integer> subscriptionNameToCount = new java.util.HashMap<>();
+        for (Long packageId : packageIdToGyms.keySet()) {
+            String name = packageIdToName.getOrDefault(packageId, "UNKNOWN");
+            int count = packageIdToGyms.get(packageId).size();
+            subscriptionNameToCount.put(name, subscriptionNameToCount.getOrDefault(name, 0) + count);
+        }
+        return subscriptionNameToCount.entrySet().stream()
+            .map(e -> new GymSubscriptionCountResponse(e.getKey(), e.getValue()))
+            .toList();
     }
 
     private Pageable pageable(int page, int size, Sort sort) {
