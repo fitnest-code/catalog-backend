@@ -255,7 +255,6 @@ public class DataInitializer {
 
             GymSubscription sub1_1 = new GymSubscription();
             sub1_1.setGym(gym);
-            sub1_1.setPackageId(1L);
             sub1_1.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
                     new GymSubscriptionBenefit("Email support", "https://img.icons8.com/color/96/customer-support.png")
@@ -263,7 +262,6 @@ public class DataInitializer {
 
             GymSubscription sub1_2 = new GymSubscription();
             sub1_2.setGym(gym);
-            sub1_2.setPackageId(2L);
             sub1_2.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
                     new GymSubscriptionBenefit("Priority email support", "https://img.icons8.com/color/96/customer-support.png"),
@@ -272,7 +270,6 @@ public class DataInitializer {
 
             GymSubscription sub1_3 = new GymSubscription();
             sub1_3.setGym(gym);
-            sub1_3.setPackageId(3L);
             sub1_3.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
                     new GymSubscriptionBenefit("24/7 support", "https://img.icons8.com/color/96/customer-support.png"),
@@ -282,7 +279,6 @@ public class DataInitializer {
 
             GymSubscription sub1_4 = new GymSubscription();
             sub1_4.setGym(gym);
-            sub1_4.setPackageId(4L);
             sub1_4.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
                     new GymSubscriptionBenefit("Dedicated account manager", "https://img.icons8.com/color/96/conference-call.png"),
@@ -356,7 +352,6 @@ public class DataInitializer {
 
             GymSubscription sub2_1 = new GymSubscription();
             sub2_1.setGym(gym2);
-            sub2_1.setPackageId(1L);
             sub2_1.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 5 gyms", "https://img.icons8.com/color/96/medal-bronze.png"),
                     new GymSubscriptionBenefit("Basic training support", "https://img.icons8.com/color/96/customer-support.png")
@@ -364,7 +359,6 @@ public class DataInitializer {
 
             GymSubscription sub2_2 = new GymSubscription();
             sub2_2.setGym(gym2);
-            sub2_2.setPackageId(2L);
             sub2_2.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to 15 gyms", "https://img.icons8.com/color/96/medal-silver.png"),
                     new GymSubscriptionBenefit("Sauna & Steam room", "https://img.icons8.com/color/96/sauna.png")
@@ -372,7 +366,6 @@ public class DataInitializer {
 
             GymSubscription sub2_3 = new GymSubscription();
             sub2_3.setGym(gym2);
-            sub2_3.setPackageId(3L);
             sub2_3.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Access to all gyms", "https://img.icons8.com/color/96/medal-gold.png"),
                     new GymSubscriptionBenefit("Pool access", "https://img.icons8.com/color/96/swimming-pool.png"),
@@ -381,7 +374,6 @@ public class DataInitializer {
 
             GymSubscription sub2_4 = new GymSubscription();
             sub2_4.setGym(gym2);
-            sub2_4.setPackageId(4L);
             sub2_4.setBenefits(new java.util.HashSet<>(Arrays.asList(
                     new GymSubscriptionBenefit("Unlimited access to all gyms", "https://img.icons8.com/color/96/diamond.png"),
                     new GymSubscriptionBenefit("VIP lounge access", "https://img.icons8.com/color/96/vip.png"),

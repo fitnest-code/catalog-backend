@@ -186,9 +186,8 @@ public class GymWriteService {
         if (!orderServiceGrpcClient.checkPackageExists(subscriptionId)) {
             throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
-        gym.getSubscriptions().removeIf(sub -> sub.getPackageId().equals(subscriptionId));
+        gym.getSubscriptions().clear();
         GymSubscription subscription = new GymSubscription();
-        subscription.setPackageId(subscriptionId);
         subscription.setGym(gym);
         subscription.setBenefits(new java.util.HashSet<>());
         gym.getSubscriptions().add(subscription);
@@ -200,12 +199,8 @@ public class GymWriteService {
     public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        GymSubscription subscription = gym.getSubscriptions().stream()
-                .filter(sub -> sub.getPackageId().equals(packageId))
-                .findFirst()
+        GymSubscription subscription = gym.getSubscriptions().stream().findFirst()
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
-
         subscription.getBenefits().clear();
         if (request.benefits() != null) {
             List<GymSubscriptionBenefit> newBenefits = request.benefits().stream().map(b -> {

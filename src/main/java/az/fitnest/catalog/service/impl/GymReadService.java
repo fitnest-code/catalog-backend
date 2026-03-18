@@ -102,62 +102,30 @@ public class GymReadService {
             List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
             try {
                 if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                    List<Long> planIds = gym.getSubscriptions().stream()
-                            .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
-                            .distinct()
+                    membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                        List<String> benefitsList = sub.getBenefits().stream()
+                            .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
                             .toList();
-                    List<az.fitnest.order.grpc.SubscriptionPackageInfo> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
-                    if (remotePlans != null && !remotePlans.isEmpty()) {
-                        membershipPlans = remotePlans.stream().map(remotePlan -> {
-                            az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
-                                    .filter(s -> s.getPackageId() == remotePlan.getPackageId())
-                                    .findFirst().orElse(null);
-                            List<String> benefitsList = new java.util.ArrayList<>();
-                            if (matchingSub != null && matchingSub.getBenefits() != null) {
-                                benefitsList = matchingSub.getBenefits().stream()
-                                        .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
-                                        .toList();
-                            }
-                            return GymPlanItemDto.builder()
-                                    .plan_id(String.valueOf(remotePlan.getPackageId()))
-                                    .name(remotePlan.getName())
-                                    .benefits(benefitsList)
-                                    .build();
-                        }).collect(java.util.stream.Collectors.toList());
-                    } else {
-                        membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                            String placeholderName = switch (sub.getPackageId().intValue()) {
-                                case 1 -> "Bronze Plan";
-                                case 2 -> "Silver Plan";
-                                case 3 -> "Gold Plan";
-                                case 4 -> "Platinum Plan";
-                                default -> "Standard Plan";
-                            };
-                            return GymPlanItemDto.builder()
-                                    .plan_id(String.valueOf(sub.getPackageId()))
-                                    .name(placeholderName)
-                                    .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
-                                    .build();
-                        }).toList();
-                    }
+                        return GymPlanItemDto.builder()
+                            .plan_id("N/A")
+                            .name("Standard Plan")
+                            .packageName("Standard Plan")
+                            .benefits(benefitsList)
+                            .build();
+                    }).collect(java.util.stream.Collectors.toList());
                 }
             } catch (Exception e) {
                 System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
                 if (gym != null && gym.getSubscriptions() != null) {
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                        String placeholderName = switch (sub.getPackageId().intValue()) {
-                            case 1 -> "Bronze Plan";
-                            case 2 -> "Silver Plan";
-                            case 3 -> "Gold Plan";
-                            case 4 -> "Platinum Plan";
-                            default -> "Standard Plan";
-                        };
+                        String placeholderName = "Standard Plan";
                         return GymPlanItemDto.builder()
-                                .plan_id(String.valueOf(sub.getPackageId()))
-                                .name(placeholderName)
-                                .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
-                                .build();
-                    }).toList();
+                            .plan_id("N/A")
+                            .name(placeholderName)
+                            .packageName(placeholderName)
+                            .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                            .build();
+                    }).collect(java.util.stream.Collectors.toList());
                 }
             }
             return membershipPlans;
@@ -445,9 +413,9 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public boolean gymSupportsPlan(Long gymId, Long planId) {
-        Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        return gym.getSubscriptions().stream().anyMatch(sub -> sub.getPackageId().equals(planId));
+            Gym gym = gymRepository.findById(gymId)
+                    .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+            return orderServiceGrpcClient.checkPackageExists(planId);
     }
 
     public GymEntranceResponse processGymEntrance(Long userId, Long gymId, Double lat, Double lng) {
@@ -520,7 +488,7 @@ public class GymReadService {
         }
         if (subscriptionId != null) {
             gyms = gyms.stream()
-                    .filter(g -> g.getSubscriptions() != null && g.getSubscriptions().stream().anyMatch(s -> s.getPackageId().equals(subscriptionId)))
+                    .filter(g -> g.getSubscriptions() != null)
                     .toList();
         }
         if (type != null && type.equalsIgnoreCase("new")) {
@@ -528,7 +496,14 @@ public class GymReadService {
                     .filter(g -> g.getCreatedDate() != null && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
                     .toList();
         }
-        return new GymCountResponse(gyms.size(), type, subscriptionId, categoryId);
+        return new GymCountResponse(
+            gyms.stream()
+                .filter(g -> g.getSubscriptions() != null)
+                .count(),
+            type != null ? type : "all",
+            subscriptionId,
+            categoryId
+        );
     }
 
     @Transactional(readOnly = true)
@@ -564,23 +539,11 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
-        List<Gym> gyms = gymRepository.findAll();
-        java.util.Map<Long, Long> subscriptionCounts = gyms.stream()
-            .flatMap(gym -> gym.getSubscriptions() != null ? gym.getSubscriptions().stream() : java.util.stream.Stream.empty())
-            .collect(java.util.stream.Collectors.groupingBy(
-                sub -> sub.getPackageId(),
-                java.util.stream.Collectors.counting()
-            ));
-        java.util.List<Long> packageIds = new java.util.ArrayList<>(subscriptionCounts.keySet());
-        java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> packages = orderServiceGrpcClient.getPlansByIds(packageIds);
-        java.util.Map<Long, String> idToName = packages.stream()
-            .collect(java.util.stream.Collectors.toMap(
-                az.fitnest.order.grpc.SubscriptionPackageInfo::getPackageId,
-                az.fitnest.order.grpc.SubscriptionPackageInfo::getName
-            ));
-        return subscriptionCounts.entrySet().stream()
-            .map(e -> new GymSubscriptionCountResponse(idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
-            .toList();
+            List<Gym> gyms = gymRepository.findAll();
+            return gyms.stream()
+                .filter(g -> g.getSubscriptions() != null)
+                .map(gym -> new GymSubscriptionCountResponse(gym.getName(), gym.getSubscriptions().size()))
+                .toList();
     }
 
     private Pageable pageable(int page, int size, Sort sort) {

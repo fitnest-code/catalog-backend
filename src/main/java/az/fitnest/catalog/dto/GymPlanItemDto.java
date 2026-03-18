@@ -5,14 +5,16 @@ import java.util.List;
 public class GymPlanItemDto {
     private String plan_id;
     private String name;
+    private String packageName;
     private List<String> benefits;
 
     public GymPlanItemDto() {
     }
 
-    public GymPlanItemDto(String plan_id, String name, List<String> benefits) {
+    public GymPlanItemDto(String plan_id, String name, String packageName, List<String> benefits) {
         this.plan_id = plan_id;
         this.name = name;
+        this.packageName = packageName;
         this.benefits = benefits;
     }
 
@@ -34,6 +36,14 @@ public class GymPlanItemDto {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getPackageName() {
+        return this.packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
     }
 
     public List<String> getBenefits() {
@@ -65,6 +75,11 @@ public class GymPlanItemDto {
         if (this$name == null ? other$name != null : !this$name.equals(other$name)) {
             return false;
         }
+        String this$packageName = this.getPackageName();
+        String other$packageName = other.getPackageName();
+        if (this$packageName == null ? other$packageName != null : !this$packageName.equals(other$packageName)) {
+            return false;
+        }
         List<String> this$benefits = this.getBenefits();
         List<String> other$benefits = other.getBenefits();
         return !(this$benefits == null ? other$benefits != null : !((Object) this$benefits).equals(other$benefits));
@@ -81,18 +96,21 @@ public class GymPlanItemDto {
         result = result * 59 + ($plan_id == null ? 43 : $plan_id.hashCode());
         String $name = this.getName();
         result = result * 59 + ($name == null ? 43 : $name.hashCode());
+        String $packageName = this.getPackageName();
+        result = result * 59 + ($packageName == null ? 43 : $packageName.hashCode());
         List<String> $benefits = this.getBenefits();
         result = result * 59 + ($benefits == null ? 43 : ((Object) $benefits).hashCode());
         return result;
     }
 
     public String toString() {
-        return "GymPlanItemDto(plan_id=" + this.getPlan_id() + ", name=" + this.getName() + ", benefits=" + this.getBenefits() + ")";
+        return "GymPlanItemDto(plan_id=" + this.getPlan_id() + ", name=" + this.getName() + ", packageName=" + this.getPackageName() + ", benefits=" + this.getBenefits() + ")";
     }
 
     public static class GymPlanItemDtoBuilder {
         private String plan_id;
         private String name;
+        private String packageName;
         private List<String> benefits;
 
         GymPlanItemDtoBuilder() {
@@ -108,17 +126,22 @@ public class GymPlanItemDto {
             return this;
         }
 
+        public GymPlanItemDtoBuilder packageName(String packageName) {
+            this.packageName = packageName;
+            return this;
+        }
+
         public GymPlanItemDtoBuilder benefits(List<String> benefits) {
             this.benefits = benefits;
             return this;
         }
 
         public GymPlanItemDto build() {
-            return new GymPlanItemDto(this.plan_id, this.name, this.benefits);
+            return new GymPlanItemDto(this.plan_id, this.name, this.packageName, this.benefits);
         }
 
         public String toString() {
-            return "GymPlanItemDto.GymPlanItemDtoBuilder(plan_id=" + this.plan_id + ", name=" + this.name + ", benefits=" + this.benefits + ")";
+            return "GymPlanItemDto.GymPlanItemDtoBuilder(plan_id=" + this.plan_id + ", name=" + this.name + ", packageName=" + this.packageName + ", benefits=" + this.benefits + ")";
         }
     }
 }
