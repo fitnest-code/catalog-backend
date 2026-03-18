@@ -7,6 +7,7 @@ import az.fitnest.catalog.dto.GymQrResponse;
 import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.GymCountResponse;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
@@ -193,6 +194,16 @@ public class GymController {
         } else {
             return ResponseEntity.status(403).body(response.error());
         }
+    }
+
+    @GetMapping("/count")
+    @Operation(summary = "Get gym count", description = "Returns count of gyms filtered by type (all, new), subscriptionId, and categoryId.")
+    public ResponseEntity<GymCountResponse> getGymCount(
+            @RequestParam(value = "type", required = false, defaultValue = "all") String type,
+            @RequestParam(value = "subscriptionId", required = false) Long subscriptionId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId) {
+        GymCountResponse response = gymReadService.getGymCount(type, subscriptionId, categoryId);
+        return ResponseEntity.ok(response);
     }
 
     private Long extractUserId(Object principal) {

@@ -509,6 +509,27 @@ public class GymReadService {
             .build();
     }
 
+    @Transactional(readOnly = true)
+    public GymCountResponse getGymCount(String type, Long subscriptionId, Long categoryId) {
+        List<Gym> gyms = gymRepository.findAll();
+        if (categoryId != null) {
+            gyms = gyms.stream()
+                    .filter(g -> g.getCategories() != null && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)))
+                    .toList();
+        }
+        if (subscriptionId != null) {
+            gyms = gyms.stream()
+                    .filter(g -> g.getSubscriptions() != null && g.getSubscriptions().stream().anyMatch(s -> s.getPlanId().equals(subscriptionId)))
+                    .toList();
+        }
+        if (type != null && type.equalsIgnoreCase("new")) {
+            gyms = gyms.stream()
+                    .filter(g -> g.getCreatedDate() != null && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
+                    .toList();
+        }
+        return new GymCountResponse(gyms.size(), type, subscriptionId, categoryId);
+    }
+
     private Pageable pageable(int page, int size, Sort sort) {
         int safePage = Math.max(page, 1) - 1;
         int safeSize = Math.max(1, Math.min(size, 100));
