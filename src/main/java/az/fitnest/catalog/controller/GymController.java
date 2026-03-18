@@ -167,7 +167,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymLocation(gymId));
     }
 
-    @PostMapping("/{gymId}/entrance/scan")
+    @PostMapping("/entrance/scan")
     @Operation(summary = "Scan gym QR code for entrance", description = "Checks user subscription, status, location, visit limit, and logs entrance if valid.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
@@ -176,12 +176,16 @@ public class GymController {
     })
     public ResponseEntity<?> scanGymQrEntrance(
             @AuthenticationPrincipal Object principal,
-            @PathVariable Long gymId,
+            @RequestBody az.fitnest.catalog.dto.GymQrScanRequest request,
             @RequestParam Double lat,
             @RequestParam Double lng) {
         Long userId = this.extractUserId(principal);
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
+        }
+        Long gymId = extractGymIdFromQr(request.getQrCodeValue());
+        if (gymId == null) {
+            return ResponseEntity.status(400).body("Invalid QR code");
         }
         az.fitnest.catalog.dto.GymEntranceResponse response = gymReadService.processGymEntrance(userId, gymId, lat, lng);
         if (response.allowed()) {
@@ -204,5 +208,18 @@ public class GymController {
 
     private az.fitnest.catalog.dto.GymRequest mapToGymRequest(UpdateGymRequest request) {
         return GymProtoMapper.mapToGymRequest(request);
+    }
+
+    private Long extractGymIdFromQr(String qrCodeValue) {
+        try {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
+            java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
+            if (matcher.find()) {
+                return Long.parseLong(matcher.group(1));
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
