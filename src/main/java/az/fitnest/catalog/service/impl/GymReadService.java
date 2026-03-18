@@ -539,30 +539,43 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
+        logger.info("[getGymCountBySubscription] Start fetching gyms and aggregating by subscription.");
         List<Gym> gyms = gymRepository.findAll();
+        logger.debug("[getGymCountBySubscription] Total gyms fetched: {}", gyms.size());
         java.util.Map<Long, java.util.Set<Long>> packageIdToGyms = new java.util.HashMap<>();
         for (Gym gym : gyms) {
             if (gym.getSubscriptions() != null) {
+                logger.debug("[getGymCountBySubscription] Gym ID {} has {} subscriptions.", gym.getId(), gym.getSubscriptions().size());
                 for (var subscription : gym.getSubscriptions()) {
                     Long packageId = subscription.getPackageId();
+                    logger.debug("[getGymCountBySubscription] Gym ID {} subscription packageId: {}", gym.getId(), packageId);
                     if (packageId != null) {
                         packageIdToGyms.computeIfAbsent(packageId, k -> new java.util.HashSet<>()).add(gym.getId());
                     }
                 }
+            } else {
+                logger.debug("[getGymCountBySubscription] Gym ID {} has no subscriptions.", gym.getId());
             }
         }
+        logger.info("[getGymCountBySubscription] Aggregated packageIdToGyms: {}", packageIdToGyms);
         java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
+        logger.info("[getGymCountBySubscription] Package IDs to fetch: {}", packageIds);
         java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> packageInfos = orderServiceGrpcClient.getPlansByIds(packageIds);
+        logger.info("[getGymCountBySubscription] Fetched packageInfos: {}", packageInfos);
         java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
         for (az.fitnest.order.grpc.SubscriptionPackageInfo info : packageInfos) {
+            logger.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
             packageIdToName.put(info.getPackageId(), info.getName());
         }
         java.util.Map<String, Integer> subscriptionNameToCount = new java.util.HashMap<>();
         for (Long packageId : packageIdToGyms.keySet()) {
             String name = packageIdToName.getOrDefault(packageId, "UNKNOWN");
             int count = packageIdToGyms.get(packageId).size();
+            logger.debug("[getGymCountBySubscription] Subscription name '{}' has {} gyms.", name, count);
             subscriptionNameToCount.put(name, subscriptionNameToCount.getOrDefault(name, 0) + count);
         }
+        logger.info("[getGymCountBySubscription] Final subscriptionNameToCount: {}", subscriptionNameToCount);
         return subscriptionNameToCount.entrySet().stream()
             .map(e -> new GymSubscriptionCountResponse(e.getKey(), e.getValue()))
             .toList();
