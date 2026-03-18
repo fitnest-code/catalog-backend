@@ -321,7 +321,8 @@ public class GymWriteService {
     @Async
     public void generateAndSaveQrCode(Gym gym) {
         try {
-            String qrContent = "{\"gymId\": " + gym.getId() + "}";
+            String secureToken = java.util.UUID.randomUUID().toString();
+            String qrContent = "https://fitnest.app/gym/" + gym.getId() + "?token=" + secureToken;
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
             BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
 
@@ -341,6 +342,8 @@ public class GymWriteService {
             String fsId = fileStorageService.saveFile(multipartFile, "/gyms");
             gymRepository.findById(gym.getId()).ifPresent(g -> {
                 g.setQrCodeUrl("/api/v1/media/stream/" + fsId);
+                g.setQrCodeValue(qrContent);
+                g.setQrCodeToken(secureToken);
                 gymRepository.save(g);
             });
         } catch (Exception e) {

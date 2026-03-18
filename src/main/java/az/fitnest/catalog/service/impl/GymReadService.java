@@ -449,6 +449,66 @@ public class GymReadService {
         return gym.getSubscriptions().stream().anyMatch(sub -> sub.getPlanId().equals(planId));
     }
 
+    public GymEntranceResponse processGymEntrance(Long userId, Long gymId, Double lat, Double lng) {
+        Gym gym = gymRepository.findById(gymId)
+            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Address address = gym.getAddress();
+        if (address == null || address.getLatitude() == null || address.getLongitude() == null) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("GYM_LOCATION_INVALID")
+                    .message("Gym location is not set.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
+        double allowedRadiusKm = 0.2;
+        if (distance > allowedRadiusKm) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("USER_TOO_FAR")
+                    .message("You are not close enough to the gym.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        boolean hasActiveSubscription = true;
+        int visitLimitRemaining = 5;
+        if (!hasActiveSubscription) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("NO_ACTIVE_SUBSCRIPTION")
+                    .message("No active subscription found.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        if (visitLimitRemaining <= 0) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("NO_VISITS_LEFT")
+                    .message("No remaining visits.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        String entranceDate = java.time.LocalDate.now().toString();
+        String entranceHour = java.time.LocalTime.now().toString();
+        return GymEntranceResponse.builder()
+            .allowed(true)
+            .gymName(gym.getName())
+            .gymLocation(address.getAddressText())
+            .entranceDate(entranceDate)
+            .entranceHour(entranceHour)
+            .visitLimitRemaining(visitLimitRemaining)
+            .build();
+    }
+
     private Pageable pageable(int page, int size, Sort sort) {
         int safePage = Math.max(page, 1) - 1;
         int safeSize = Math.max(1, Math.min(size, 100));

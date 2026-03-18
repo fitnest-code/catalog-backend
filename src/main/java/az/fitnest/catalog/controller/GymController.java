@@ -167,6 +167,30 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymLocation(gymId));
     }
 
+    @PostMapping("/{gymId}/entrance/scan")
+    @Operation(summary = "Scan gym QR code for entrance", description = "Checks user subscription, status, location, visit limit, and logs entrance if valid.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Entrance allowed", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Entrance blocked", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+    })
+    public ResponseEntity<?> scanGymQrEntrance(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable Long gymId,
+            @RequestParam Double lat,
+            @RequestParam Double lng) {
+        Long userId = this.extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+        az.fitnest.catalog.dto.GymEntranceResponse response = gymReadService.processGymEntrance(userId, gymId, lat, lng);
+        if (response.allowed()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(403).body(response.error());
+        }
+    }
+
     private Long extractUserId(Object principal) {
         if (principal instanceof Long) {
             return (Long) principal;

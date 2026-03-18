@@ -35,6 +35,10 @@ public class Gym
     private String coverImageUrl;
     @Column(name = "qr_code_url")
     private String qrCodeUrl;
+    @Column(name = "qr_code_value")
+    private String qrCodeValue;
+    @Column(name = "qr_code_token")
+    private String qrCodeToken;
     @Embedded
     private Address address;
     @Column(name = "phone")
@@ -119,5 +123,21 @@ public class Gym
 
     public Long getGymId() {
         return getId();
+    }
+
+    public String getQrCodeValue() {
+        return qrCodeValue;
+    }
+
+    public void setQrCodeValue(String qrCodeValue) {
+        this.qrCodeValue = qrCodeValue;
+    }
+
+    public String getQrCodeToken() {
+        return qrCodeToken;
+    }
+
+    public void setQrCodeToken(String qrCodeToken) {
+        this.qrCodeToken = qrCodeToken;
     }
 }
