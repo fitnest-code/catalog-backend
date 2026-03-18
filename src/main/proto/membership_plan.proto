@@ -11,7 +11,8 @@ service SubscriptionPackageService {
   rpc CheckIn(CheckInRequest) returns (CheckInResponse);
 
   rpc CheckPlanExists(CheckPlanExistsRequest) returns (CheckPlanExistsResponse);
-  rpc GetPlansByIds(GetPlansByIdsRequest) returns (GetPlansByIdsResponse);
+    rpc GetPlansByIds(GetPlansByIdsRequest) returns (GetPlansByIdsResponse);
+    rpc GetPackageNamesByIds(GetPackageNamesByIdsRequest) returns (GetPackageNamesByIdsResponse);
 }
 
 message GetGymPlansRequest {
@@ -29,6 +30,19 @@ message CheckPlanExistsResponse {
 
 message GetPlansByIdsRequest {
   repeated int64 package_ids = 1;
+}
+
+message GetPackageNamesByIdsRequest {
+  repeated int64 package_ids = 1;
+}
+
+message GetPackageNamesByIdsResponse {
+  repeated PackageNameInfo packages = 1;
+}
+
+message PackageNameInfo {
+  int64 package_id = 1;
+  string name = 2;
 }
 
 message GetPlansByIdsResponse {

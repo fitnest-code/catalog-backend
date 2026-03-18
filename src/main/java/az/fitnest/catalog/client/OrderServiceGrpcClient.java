@@ -44,4 +44,12 @@ public class OrderServiceGrpcClient {
             throw new RuntimeException("error.rpc_failed");
         }
     }
+
+    public List<az.fitnest.order.grpc.PackageNameInfo> getPackageNamesByIds(List<Long> packageIds) {
+        az.fitnest.order.grpc.GetPackageNamesByIdsRequest request = az.fitnest.order.grpc.GetPackageNamesByIdsRequest.newBuilder()
+                .addAllPackageIds(packageIds)
+                .build();
+        az.fitnest.order.grpc.GetPackageNamesByIdsResponse response = blockingStub.getPackageNamesByIds(request);
+        return response.getPackagesList();
+    }
 }

@@ -561,10 +561,10 @@ public class GymReadService {
         logger.info("[getGymCountBySubscription] Aggregated packageIdToGyms: {}", packageIdToGyms);
         java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
         logger.info("[getGymCountBySubscription] Package IDs to fetch: {}", packageIds);
-        java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> packageInfos = orderServiceGrpcClient.getPlansByIds(packageIds);
-        logger.info("[getGymCountBySubscription] Fetched packageInfos: {}", packageInfos);
+        java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+        logger.info("[getGymCountBySubscription] Fetched packageNames: {}", packageNames);
         java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
-        for (az.fitnest.order.grpc.SubscriptionPackageInfo info : packageInfos) {
+        for (az.fitnest.order.grpc.PackageNameInfo info : packageNames) {
             logger.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
             packageIdToName.put(info.getPackageId(), info.getName());
         }
