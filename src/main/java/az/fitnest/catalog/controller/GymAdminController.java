@@ -50,8 +50,10 @@ public class GymAdminController {
     @Operation(summary = "İdman zalı üçün mövcud abunəlik planlarını aktivləşdirin", description = "İdman zalı üçün göstərilən abunəlik planlarını aktivləşdirir. Mövcud planların üstünlükləri qorunur, siyahıda olmayanlar isə silinir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/subscriptions/enable")
-    public ResponseEntity<Void> enableGymSubscriptions(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymSubscriptionsEnableRequest request) {
-        gymWriteService.enableGymSubscriptions(id, request);
+    public ResponseEntity<Void> enableGymSubscription(
+            @PathVariable("id") Long gymId,
+            @RequestParam("subscriptionId") Long subscriptionId) {
+        gymWriteService.enableGymSubscription(gymId, subscriptionId);
         return ResponseEntity.ok().build();
     }
 

@@ -17,8 +17,8 @@ import java.util.Set;
 @AllArgsConstructor
 public class GymSubscription extends BaseAuditableEntity {
 
-    @Column(name = "plan_id", nullable = false)
-    private Long planId;
+    @Column(name = "package_id", nullable = false)
+    private Long packageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gym_id", nullable = false)

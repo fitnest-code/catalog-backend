@@ -103,14 +103,14 @@ public class GymReadService {
             try {
                 if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
                     List<Long> planIds = gym.getSubscriptions().stream()
-                            .map(az.fitnest.catalog.model.entity.GymSubscription::getPlanId)
+                            .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                             .distinct()
                             .toList();
                     List<az.fitnest.order.grpc.SubscriptionPackageInfo> remotePlans = orderServiceGrpcClient.getPlansByIds(planIds);
                     if (remotePlans != null && !remotePlans.isEmpty()) {
                         membershipPlans = remotePlans.stream().map(remotePlan -> {
                             az.fitnest.catalog.model.entity.GymSubscription matchingSub = gym.getSubscriptions().stream()
-                                    .filter(s -> s.getPlanId() == remotePlan.getPackageId())
+                                    .filter(s -> s.getPackageId() == remotePlan.getPackageId())
                                     .findFirst().orElse(null);
                             List<String> benefitsList = new java.util.ArrayList<>();
                             if (matchingSub != null && matchingSub.getBenefits() != null) {
@@ -126,7 +126,7 @@ public class GymReadService {
                         }).collect(java.util.stream.Collectors.toList());
                     } else {
                         membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                            String placeholderName = switch (sub.getPlanId().intValue()) {
+                            String placeholderName = switch (sub.getPackageId().intValue()) {
                                 case 1 -> "Bronze Plan";
                                 case 2 -> "Silver Plan";
                                 case 3 -> "Gold Plan";
@@ -134,7 +134,7 @@ public class GymReadService {
                                 default -> "Standard Plan";
                             };
                             return GymPlanItemDto.builder()
-                                    .plan_id(String.valueOf(sub.getPlanId()))
+                                    .plan_id(String.valueOf(sub.getPackageId()))
                                     .name(placeholderName)
                                     .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
                                     .build();
@@ -145,7 +145,7 @@ public class GymReadService {
                 System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
                 if (gym != null && gym.getSubscriptions() != null) {
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                        String placeholderName = switch (sub.getPlanId().intValue()) {
+                        String placeholderName = switch (sub.getPackageId().intValue()) {
                             case 1 -> "Bronze Plan";
                             case 2 -> "Silver Plan";
                             case 3 -> "Gold Plan";
@@ -153,7 +153,7 @@ public class GymReadService {
                             default -> "Standard Plan";
                         };
                         return GymPlanItemDto.builder()
-                                .plan_id(String.valueOf(sub.getPlanId()))
+                                .plan_id(String.valueOf(sub.getPackageId()))
                                 .name(placeholderName)
                                 .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
                                 .build();
@@ -447,7 +447,7 @@ public class GymReadService {
     public boolean gymSupportsPlan(Long gymId, Long planId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        return gym.getSubscriptions().stream().anyMatch(sub -> sub.getPlanId().equals(planId));
+        return gym.getSubscriptions().stream().anyMatch(sub -> sub.getPackageId().equals(planId));
     }
 
     public GymEntranceResponse processGymEntrance(Long userId, Long gymId, Double lat, Double lng) {
@@ -520,7 +520,7 @@ public class GymReadService {
         }
         if (subscriptionId != null) {
             gyms = gyms.stream()
-                    .filter(g -> g.getSubscriptions() != null && g.getSubscriptions().stream().anyMatch(s -> s.getPlanId().equals(subscriptionId)))
+                    .filter(g -> g.getSubscriptions() != null && g.getSubscriptions().stream().anyMatch(s -> s.getPackageId().equals(subscriptionId)))
                     .toList();
         }
         if (type != null && type.equalsIgnoreCase("new")) {
@@ -568,11 +568,18 @@ public class GymReadService {
         java.util.Map<Long, Long> subscriptionCounts = gyms.stream()
             .flatMap(gym -> gym.getSubscriptions() != null ? gym.getSubscriptions().stream() : java.util.stream.Stream.empty())
             .collect(java.util.stream.Collectors.groupingBy(
-                sub -> sub.getPlanId(),
+                sub -> sub.getPackageId(),
                 java.util.stream.Collectors.counting()
             ));
+        java.util.List<Long> packageIds = new java.util.ArrayList<>(subscriptionCounts.keySet());
+        java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> packages = orderServiceGrpcClient.getPlansByIds(packageIds);
+        java.util.Map<Long, String> idToName = packages.stream()
+            .collect(java.util.stream.Collectors.toMap(
+                az.fitnest.order.grpc.SubscriptionPackageInfo::getPackageId,
+                az.fitnest.order.grpc.SubscriptionPackageInfo::getName
+            ));
         return subscriptionCounts.entrySet().stream()
-            .map(e -> new GymSubscriptionCountResponse("Subscription " + e.getKey(), e.getValue()))
+            .map(e -> new GymSubscriptionCountResponse(idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
             .toList();
     }
 

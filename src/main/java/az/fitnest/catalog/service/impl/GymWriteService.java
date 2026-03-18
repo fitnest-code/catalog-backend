@@ -180,46 +180,29 @@ public class GymWriteService {
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
-    public void enableGymSubscriptions(Long gymId, az.fitnest.catalog.dto.GymSubscriptionsEnableRequest request) {
+    public void enableGymSubscription(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        if (request.planIds() == null) {
-            gym.getSubscriptions().clear();
-            gymRepository.save(gym);
-            return;
+        if (!orderServiceGrpcClient.checkPackageExists(subscriptionId)) {
+            throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
-
-        for (Long planId : request.planIds()) {
-            if (!orderServiceGrpcClient.checkPlanExists(planId)) {
-                throw new BadRequestException("PLAN_NOT_FOUND", "error.plan_not_found");
-            }
-        }
-
-        gym.getSubscriptions().removeIf(sub -> !request.planIds().contains(sub.getPlanId()));
-
-        List<Long> existingPlanIds = gym.getSubscriptions().stream().map(GymSubscription::getPlanId).toList();
-        for (Long planId : request.planIds()) {
-            if (!existingPlanIds.contains(planId)) {
-                GymSubscription subscription = new GymSubscription();
-                subscription.setPlanId(planId);
-                subscription.setGym(gym);
-                subscription.setBenefits(new java.util.HashSet<>());
-                gym.getSubscriptions().add(subscription);
-            }
-        }
-
+        gym.getSubscriptions().removeIf(sub -> sub.getPackageId().equals(subscriptionId));
+        GymSubscription subscription = new GymSubscription();
+        subscription.setPackageId(subscriptionId);
+        subscription.setGym(gym);
+        subscription.setBenefits(new java.util.HashSet<>());
+        gym.getSubscriptions().add(subscription);
         gymRepository.save(gym);
     }
 
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
-    public void updateGymSubscriptionBenefits(Long gymId, Long planId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
+    public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         GymSubscription subscription = gym.getSubscriptions().stream()
-                .filter(sub -> sub.getPlanId().equals(planId))
+                .filter(sub -> sub.getPackageId().equals(packageId))
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
 

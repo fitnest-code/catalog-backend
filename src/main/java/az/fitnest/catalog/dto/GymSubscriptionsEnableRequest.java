@@ -5,5 +5,5 @@ import java.util.List;
 
 @Builder
 public record GymSubscriptionsEnableRequest(
-    List<Long> planIds
+    List<Long> packageIds
 ) {}

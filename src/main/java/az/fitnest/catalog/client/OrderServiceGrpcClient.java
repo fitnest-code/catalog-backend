@@ -20,6 +20,10 @@ public class OrderServiceGrpcClient {
         return response.getExists() && response.getIsActive();
     }
 
+    public boolean checkPackageExists(Long packageId) {
+        return checkPlanExists(packageId);
+    }
+
     public List<az.fitnest.order.grpc.SubscriptionPackageInfo> getPlansByIds(List<Long> packageIds) {
         az.fitnest.order.grpc.GetPlansByIdsRequest request = az.fitnest.order.grpc.GetPlansByIdsRequest.newBuilder()
                 .addAllPackageIds(packageIds)
