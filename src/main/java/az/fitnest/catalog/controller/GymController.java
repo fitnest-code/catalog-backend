@@ -8,6 +8,9 @@ import az.fitnest.catalog.dto.GymImageResponse;
 import az.fitnest.catalog.dto.GymMainPageDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.GymCountResponse;
+import az.fitnest.catalog.dto.GymTypeCountResponse;
+import az.fitnest.catalog.dto.GymCategoryCountResponse;
+import az.fitnest.catalog.dto.GymSubscriptionCountResponse;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
@@ -204,6 +207,24 @@ public class GymController {
             @RequestParam(value = "categoryId", required = false) Long categoryId) {
         GymCountResponse response = gymReadService.getGymCount(type, subscriptionId, categoryId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/count/by-type")
+    @Operation(summary = "Get gym count by type", description = "Returns count of gyms for the requested type (all, new).")
+    public ResponseEntity<GymTypeCountResponse> getGymCountByType(@RequestParam(value = "type", required = false, defaultValue = "all") String type) {
+        return ResponseEntity.ok(gymReadService.getGymCountByType(type));
+    }
+
+    @GetMapping("/count/by-category")
+    @Operation(summary = "Get gym count by category", description = "Returns all categories with their gym counts.")
+    public ResponseEntity<List<GymCategoryCountResponse>> getGymCountByCategory() {
+        return ResponseEntity.ok(gymReadService.getGymCountByCategory());
+    }
+
+    @GetMapping("/count/by-subscription")
+    @Operation(summary = "Get gym count by subscription", description = "Returns all subscriptions with their gym counts.")
+    public ResponseEntity<List<GymSubscriptionCountResponse>> getGymCountBySubscription() {
+        return ResponseEntity.ok(gymReadService.getGymCountBySubscription());
     }
 
     private Long extractUserId(Object principal) {

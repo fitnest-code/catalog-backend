@@ -1,4 +1,5 @@
 package az.fitnest.catalog.service.impl;
+import az.fitnest.catalog.model.entity.Category;
 
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.mapper.GymMapper;
@@ -528,6 +529,51 @@ public class GymReadService {
                     .toList();
         }
         return new GymCountResponse(gyms.size(), type, subscriptionId, categoryId);
+    }
+
+    @Transactional(readOnly = true)
+    public GymTypeCountResponse getGymCountByType(String type) {
+        List<Gym> gyms = gymRepository.findAll();
+        long count;
+        if (type.equalsIgnoreCase("new")) {
+            count = gyms.stream()
+                .filter(g -> g.getCreatedDate() != null && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
+                .count();
+        } else {
+            count = gyms.size();
+        }
+        return new GymTypeCountResponse(type, count);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GymCategoryCountResponse> getGymCountByCategory() {
+        List<Gym> gyms = gymRepository.findAll();
+        java.util.Map<Long, Long> categoryCounts = gyms.stream()
+            .flatMap(gym -> gym.getCategories() != null ? gym.getCategories().stream() : java.util.stream.Stream.empty())
+            .collect(java.util.stream.Collectors.groupingBy(
+                category -> category.getCategoryId(),
+                java.util.stream.Collectors.counting()
+            ));
+        List<Category> allCategories = categoryRepository.findAllById(categoryCounts.keySet());
+        java.util.Map<Long, String> idToName = allCategories.stream()
+            .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, Category::getName));
+        return categoryCounts.entrySet().stream()
+            .map(e -> new GymCategoryCountResponse(idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
+        List<Gym> gyms = gymRepository.findAll();
+        java.util.Map<Long, Long> subscriptionCounts = gyms.stream()
+            .flatMap(gym -> gym.getSubscriptions() != null ? gym.getSubscriptions().stream() : java.util.stream.Stream.empty())
+            .collect(java.util.stream.Collectors.groupingBy(
+                sub -> sub.getPlanId(),
+                java.util.stream.Collectors.counting()
+            ));
+        return subscriptionCounts.entrySet().stream()
+            .map(e -> new GymSubscriptionCountResponse("Subscription " + e.getKey(), e.getValue()))
+            .toList();
     }
 
     private Pageable pageable(int page, int size, Sort sort) {
