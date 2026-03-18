@@ -186,9 +186,10 @@ public class GymWriteService {
         if (!orderServiceGrpcClient.checkPackageExists(subscriptionId)) {
             throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
-        gym.getSubscriptions().clear();
+        gym.getSubscriptions().removeIf(s -> s.getPackageId() != null && s.getPackageId().equals(subscriptionId));
         GymSubscription subscription = new GymSubscription();
         subscription.setGym(gym);
+        subscription.setPackageId(subscriptionId);
         subscription.setBenefits(new java.util.HashSet<>());
         gym.getSubscriptions().add(subscription);
         gymRepository.save(gym);
