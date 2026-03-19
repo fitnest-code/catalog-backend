@@ -23,8 +23,8 @@ public class GymProtoMapper {
                     .setAddressText(dto.address().addressText() != null ? dto.address().addressText() : "")
                     .build());
         }
-        if (dto.work_hours() != null) {
-            for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.work_hours()) {
+        if (dto.general_work_hours() != null) {
+            for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.general_work_hours()) {
                 builder.addWorkHours(az.fitnest.catalog.grpc.GymWorkHour.newBuilder()
                         .setDay(wh.day() != null ? wh.day().name() : "")
                         .setFrom(wh.from() != null ? wh.from().toString() : "")

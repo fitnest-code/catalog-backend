@@ -52,11 +52,11 @@ public class Gym
     @ToString.Exclude
     private List<GymSocialLink> socialLinks = new ArrayList<GymSocialLink>();
     @ElementCollection
-    @CollectionTable(name = "gym_work_hours", joinColumns = {@JoinColumn(name = "gym_id")})
+    @CollectionTable(name = "gym_general_work_hours", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymWorkHour> workHours = new ArrayList<GymWorkHour>();
+    private List<GymWorkHour> generalWorkHours = new ArrayList<GymWorkHour>();
 
     @ElementCollection
     @CollectionTable(name = "gym_work_hours_woman", joinColumns = {@JoinColumn(name = "gym_id")})

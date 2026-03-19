@@ -15,7 +15,7 @@ public record GymDetailResponse(
     Boolean isSaved,
     String phone,
     String email,
-    List<GymWorkHourDto> work_hours,
+    List<GymWorkHourDto> general_work_hours,
     List<GymWorkHourDto> work_hours_woman,
     List<GymWorkHourDto> work_hours_man,
     List<GymRoomDto> rooms,

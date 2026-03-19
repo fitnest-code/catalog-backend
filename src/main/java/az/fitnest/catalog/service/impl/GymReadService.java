@@ -69,8 +69,8 @@ public class GymReadService {
                 .getContent().stream()
                 .map(GymMapper::toReviewDto)
                 .collect(Collectors.toList()), executor);
-        CompletableFuture<List<GymWorkHourDto>> workHoursFuture = CompletableFuture.supplyAsync(() ->
-            gymRepository.findWorkHoursByGymId(gymId).stream()
+        CompletableFuture<List<GymWorkHourDto>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() ->
+            gymRepository.findGeneralWorkHoursByGymId(gymId).stream()
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList()), executor);
         CompletableFuture<List<CategoryDto>> categoryDtosFuture = gymFuture.thenApplyAsync(gym -> {
@@ -132,13 +132,13 @@ public class GymReadService {
         }, executor);
 
         CompletableFuture.allOf(
-            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, workHoursFuture, categoryDtosFuture, roomsFuture, membershipPlansFuture
+            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, categoryDtosFuture, roomsFuture, membershipPlansFuture
         ).join();
         Gym gym = gymFuture.join();
         boolean isSaved = isSavedFuture.join();
         List<GymTrainerDto> trainerDtos = trainerDtosFuture.join();
         List<GymReviewDto> recentReviews = recentReviewsFuture.join();
-        List<GymWorkHourDto> workHours = workHoursFuture.join();
+        List<GymWorkHourDto> generalWorkHours = generalWorkHoursFuture.join();
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
         List<GymRoomDto> rooms = roomsFuture.join();
         List<GymPlanItemDto> membershipPlans = membershipPlansFuture.join();
@@ -155,7 +155,7 @@ public class GymReadService {
                 .map(GymMapper::toWorkHourDto)
                 .collect(Collectors.toList());
         }
-        if (workHours != null && workHours.isEmpty()) workHours = null;
+        if (generalWorkHours != null && generalWorkHours.isEmpty()) generalWorkHours = null;
         GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
                 .name(gym.getName())
@@ -169,7 +169,7 @@ public class GymReadService {
                         .build() : null)
                 .phone(gym.getPhone())
                 .email(gym.getEmail())
-                .work_hours(workHours)
+                .general_work_hours(generalWorkHours)
                 .work_hours_woman(workHoursWoman)
                 .work_hours_man(workHoursMan)
                 .rooms(rooms)

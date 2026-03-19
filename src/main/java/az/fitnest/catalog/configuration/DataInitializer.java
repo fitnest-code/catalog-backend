@@ -164,7 +164,7 @@ public class DataInitializer {
             workHours.add(new GymWorkHour(DayOfWeek.FRIDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
             workHours.add(new GymWorkHour(DayOfWeek.SATURDAY, LocalTime.of(9, 0), LocalTime.of(21, 0)));
             workHours.add(new GymWorkHour(DayOfWeek.SUNDAY, LocalTime.of(10, 0), LocalTime.of(18, 0)));
-            gym.setWorkHours(workHours);
+            gym.setGeneralWorkHours(workHours);
 
             List<GymSocialLink> socialLinks = new ArrayList<>();
             socialLinks.add(new GymSocialLink("Instagram", "https://instagram.com/premiumfitness"));
@@ -318,7 +318,7 @@ public class DataInitializer {
             for (DayOfWeek day : DayOfWeek.values()) {
                 workHours2.add(new GymWorkHour(day, LocalTime.of(7, 0), LocalTime.of(23, 0)));
             }
-            gym2.setWorkHours(workHours2);
+            gym2.setGeneralWorkHours(workHours2);
 
             List<GymImage> images2 = new ArrayList<>();
             images2.add(GymImage.builder()

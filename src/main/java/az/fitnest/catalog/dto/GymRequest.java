@@ -45,7 +45,7 @@ public record GymRequest(
     GymStatus status,
 
     @Schema(description = "Ümumi iş saatları")
-    java.util.List<GymWorkHourDto> workHours,
+    java.util.List<GymWorkHourDto> generalWorkHours,
     @Schema(description = "Qadınlar zalı iş saatları")
     java.util.List<GymWorkHourDto> workHoursWoman,
     @Schema(description = "Kişilər zalı iş saatları")
