@@ -45,9 +45,9 @@ public record GymRequest(
     GymStatus status,
 
     @Schema(description = "Ümumi iş saatları")
-    java.util.List<GymWorkHourDto> generalWorkHours,
+    java.util.Set<GymWorkHourDto> generalWorkHours,
     @Schema(description = "Qadınlar zalı iş saatları")
-    java.util.List<GymWorkHourDto> workHoursWoman,
+    java.util.Set<GymWorkHourDto> workHoursWoman,
     @Schema(description = "Kişilər zalı iş saatları")
-    java.util.List<GymWorkHourDto> workHoursMan
+    java.util.Set<GymWorkHourDto> workHoursMan
 ) {}

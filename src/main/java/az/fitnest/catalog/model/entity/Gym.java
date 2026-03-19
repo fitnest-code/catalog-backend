@@ -56,14 +56,14 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymWorkHour> generalWorkHours = new ArrayList<GymWorkHour>();
+    private Set<GymWorkHour> generalWorkHours = new java.util.HashSet<>();
 
     @ElementCollection
     @CollectionTable(name = "gym_work_hours_woman", joinColumns = {@JoinColumn(name = "gym_id")})
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymWorkHour> workHoursWoman = new ArrayList<GymWorkHour>();
+    private Set<GymWorkHour> workHoursWoman = new java.util.HashSet<>();
 
     @ElementCollection
     @CollectionTable(name = "gym_work_hours_man", joinColumns = {@JoinColumn(name = "gym_id")})

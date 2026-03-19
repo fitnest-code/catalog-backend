@@ -138,22 +138,26 @@ public class GymReadService {
         boolean isSaved = isSavedFuture.join();
         List<GymTrainerDto> trainerDtos = trainerDtosFuture.join();
         List<GymReviewDto> recentReviews = recentReviewsFuture.join();
-        List<GymWorkHourDto> generalWorkHours = generalWorkHoursFuture.join();
+        java.util.Set<GymWorkHourDto> generalWorkHours = null;
+        List<GymWorkHourDto> generalWorkHoursList = generalWorkHoursFuture.join();
+        if (generalWorkHoursList != null && !generalWorkHoursList.isEmpty()) {
+            generalWorkHours = new java.util.HashSet<>(generalWorkHoursList);
+        }
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
         List<GymRoomDto> rooms = roomsFuture.join();
         List<GymPlanItemDto> membershipPlans = membershipPlansFuture.join();
 
-        List<GymWorkHourDto> workHoursWoman = null;
+        java.util.Set<GymWorkHourDto> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
             workHoursWoman = gym.getWorkHoursWoman().stream()
                 .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toSet());
         }
-        List<GymWorkHourDto> workHoursMan = null;
+        java.util.Set<GymWorkHourDto> workHoursMan = null;
         if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
             workHoursMan = gym.getWorkHoursMan().stream()
                 .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toSet());
         }
         if (generalWorkHours != null && generalWorkHours.isEmpty()) generalWorkHours = null;
         GymDetailResponse response = GymDetailResponse.builder()

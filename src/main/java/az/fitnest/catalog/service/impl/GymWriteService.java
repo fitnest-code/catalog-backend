@@ -91,17 +91,17 @@ public class GymWriteService {
         gym.setCategories(new HashSet<>(categories));
 
         if (request.generalWorkHours() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> generalWorkHours = request.generalWorkHours().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> generalWorkHours = request.generalWorkHours().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
-            gym.setGeneralWorkHours(new java.util.ArrayList<>(generalWorkHours));
+                    .collect(java.util.stream.Collectors.toSet());
+            gym.setGeneralWorkHours(generalWorkHours);
         }
 
         if (request.workHoursWoman() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> workHoursWoman = request.workHoursWoman().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursWoman = request.workHoursWoman().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
-            gym.setWorkHoursWoman(new java.util.ArrayList<>(workHoursWoman));
+                    .collect(java.util.stream.Collectors.toSet());
+            gym.setWorkHoursWoman(workHoursWoman);
         }
 
         if (request.workHoursMan() != null) {
@@ -152,25 +152,25 @@ public class GymWriteService {
         gym.setCategories(new HashSet<>(categories));
         gym.getGeneralWorkHours().clear();
         if (request.generalWorkHours() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> newGeneralWorkHours = request.generalWorkHours().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> newGeneralWorkHours = request.generalWorkHours().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toSet());
             gym.getGeneralWorkHours().addAll(newGeneralWorkHours);
         }
 
         gym.getWorkHoursWoman().clear();
         if (request.workHoursWoman() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursWoman().addAll(newWorkHoursWoman);
         }
 
         gym.getWorkHoursMan().clear();
         if (request.workHoursMan() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursMan = request.workHoursMan().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursMan = request.workHoursMan().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursMan().addAll(newWorkHoursMan);
         }
 
