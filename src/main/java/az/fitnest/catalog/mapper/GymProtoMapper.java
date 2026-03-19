@@ -26,7 +26,7 @@ public class GymProtoMapper {
         if (dto.general_work_hours() != null) {
             for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.general_work_hours()) {
                 builder.addWorkHours(az.fitnest.catalog.grpc.GymWorkHour.newBuilder()
-                        .setDay(wh.day() != null ? wh.day().name() : "")
+                        .setDay(wh.period() != null ? wh.period().name() : "")
                         .setFrom(wh.from() != null ? wh.from().toString() : "")
                         .setTo(wh.to() != null ? wh.to().toString() : "")
                         .build());

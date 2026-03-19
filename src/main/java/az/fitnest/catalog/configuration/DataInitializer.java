@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
 import java.time.DayOfWeek;
+import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
 import java.time.LocalTime;
 import java.util.Arrays;
 
@@ -311,9 +312,9 @@ public class DataInitializer {
             gym2.setIsNew(true);
 
             List<GymWorkHour> workHours2 = new ArrayList<>();
-            for (DayOfWeek day : DayOfWeek.values()) {
-                workHours2.add(new GymWorkHour(day, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            }
+            workHours2.add(GymWorkHour.builder().period(GymWorkHourPeriod.WEEKDAYS).fromTime(LocalTime.of(7, 0)).toTime(LocalTime.of(23, 0)).build());
+            workHours2.add(GymWorkHour.builder().period(GymWorkHourPeriod.SATURDAY).fromTime(LocalTime.of(9, 0)).toTime(LocalTime.of(21, 0)).build());
+            workHours2.add(GymWorkHour.builder().period(GymWorkHourPeriod.SUNDAY).fromTime(LocalTime.of(10, 0)).toTime(LocalTime.of(18, 0)).build());
             gym2.setGeneralWorkHours(new java.util.HashSet<>(workHours2));
 
             List<GymImage> images2 = new ArrayList<>();
