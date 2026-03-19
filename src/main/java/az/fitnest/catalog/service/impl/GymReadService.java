@@ -143,14 +143,18 @@ public class GymReadService {
         List<GymRoomDto> rooms = roomsFuture.join();
         List<GymPlanItemDto> membershipPlans = membershipPlansFuture.join();
 
-        List<GymWorkHourDto> workHoursWoman = gym.getWorkHoursWoman() != null ? gym.getWorkHoursWoman().stream()
+        List<GymWorkHourDto> workHoursWoman = null;
+        if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
+            workHoursWoman = gym.getWorkHoursWoman().stream()
                 .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList()) : null;
-        if (workHoursWoman != null && workHoursWoman.isEmpty()) workHoursWoman = null;
-        List<GymWorkHourDto> workHoursMan = gym.getWorkHoursMan() != null ? gym.getWorkHoursMan().stream()
+                .collect(Collectors.toList());
+        }
+        List<GymWorkHourDto> workHoursMan = null;
+        if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
+            workHoursMan = gym.getWorkHoursMan().stream()
                 .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList()) : null;
-        if (workHoursMan != null && workHoursMan.isEmpty()) workHoursMan = null;
+                .collect(Collectors.toList());
+        }
         if (workHours != null && workHours.isEmpty()) workHours = null;
         GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
