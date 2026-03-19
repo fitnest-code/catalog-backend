@@ -541,7 +541,7 @@ public class GymReadService {
         java.util.Map<Long, String> idToName = allCategories.stream()
             .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, Category::getName));
         return categoryCounts.entrySet().stream()
-            .map(e -> new GymCategoryCountResponse(idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
+            .map(e -> new GymCategoryCountResponse(e.getKey(), idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
             .toList();
     }
 
@@ -576,16 +576,8 @@ public class GymReadService {
             logger.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
             packageIdToName.put(info.getPackageId(), info.getName());
         }
-        java.util.Map<String, Integer> subscriptionNameToCount = new java.util.HashMap<>();
-        for (Long packageId : packageIdToGyms.keySet()) {
-            String name = packageIdToName.getOrDefault(packageId, "UNKNOWN");
-            int count = packageIdToGyms.get(packageId).size();
-            logger.debug("[getGymCountBySubscription] Subscription name '{}' has {} gyms.", name, count);
-            subscriptionNameToCount.put(name, subscriptionNameToCount.getOrDefault(name, 0) + count);
-        }
-        logger.info("[getGymCountBySubscription] Final subscriptionNameToCount: {}", subscriptionNameToCount);
-        return subscriptionNameToCount.entrySet().stream()
-            .map(e -> new GymSubscriptionCountResponse(e.getKey(), e.getValue()))
+        return packageIdToGyms.entrySet().stream()
+            .map(e -> new GymSubscriptionCountResponse(e.getKey(), packageIdToName.getOrDefault(e.getKey(), "UNKNOWN"), (long) e.getValue().size()))
             .toList();
     }
 
