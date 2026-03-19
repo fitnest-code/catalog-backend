@@ -1,48 +1,23 @@
 package az.fitnest.catalog.model.entity;
 
+import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
 import jakarta.persistence.Embeddable;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.DayOfWeek;
 import java.time.LocalTime;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Embeddable
 public class GymWorkHour {
-    private DayOfWeek day;
+    private GymWorkHourPeriod period; // Only WEEKDAYS, SATURDAY, SUNDAY
     private LocalTime fromTime;
     private LocalTime toTime;
-
-    public GymWorkHour() {
-    }
-
-    public GymWorkHour(DayOfWeek day, LocalTime fromTime, LocalTime toTime) {
-        this.day = day;
-        this.fromTime = fromTime;
-        this.toTime = toTime;
-    }
-
-    public DayOfWeek getDay() {
-        return this.day;
-    }
-
-    public void setDay(DayOfWeek day) {
-        this.day = day;
-    }
-
-    public LocalTime getFromTime() {
-        return this.fromTime;
-    }
-
-    public void setFromTime(LocalTime fromTime) {
-        this.fromTime = fromTime;
-    }
-
-    public LocalTime getToTime() {
-        return this.toTime;
-    }
-
-    public void setToTime(LocalTime toTime) {
-        this.toTime = toTime;
-    }
 
     public boolean equals(Object o) {
         if (o == this) {
@@ -53,11 +28,6 @@ public class GymWorkHour {
         }
         GymWorkHour other = (GymWorkHour) o;
         if (!other.canEqual(this)) {
-            return false;
-        }
-        DayOfWeek this$day = this.getDay();
-        DayOfWeek other$day = other.getDay();
-        if (this$day == null ? other$day != null : !this$day.equals(other$day)) {
             return false;
         }
         LocalTime this$fromTime = this.getFromTime();
@@ -77,8 +47,6 @@ public class GymWorkHour {
     public int hashCode() {
         int PRIME = 59;
         int result = 1;
-        DayOfWeek $day = this.getDay();
-        result = result * 59 + ($day == null ? 43 : $day.hashCode());
         LocalTime $fromTime = this.getFromTime();
         result = result * 59 + ($fromTime == null ? 43 : ((Object) $fromTime).hashCode());
         LocalTime $toTime = this.getToTime();
@@ -87,6 +55,6 @@ public class GymWorkHour {
     }
 
     public String toString() {
-        return "GymWorkHour(day=" + this.getDay() + ", fromTime=" + this.getFromTime() + ", toTime=" + this.getToTime() + ")";
+        return "GymWorkHour(fromTime=" + this.getFromTime() + ", toTime=" + this.getToTime() + ")";
     }
 }

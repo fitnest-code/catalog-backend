@@ -69,7 +69,7 @@ public final class GymMapper {
     public static GymWorkHourDto toWorkHourDto(GymWorkHour wh) {
         if (wh == null) return null;
         return GymWorkHourDto.builder()
-                .day(wh.getDay())
+                .period(wh.getPeriod())
                 .from(wh.getFromTime())
                 .to(wh.getToTime())
                 .build();

@@ -92,21 +92,33 @@ public class GymWriteService {
 
         if (request.generalWorkHours() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> generalWorkHours = request.generalWorkHours().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.setGeneralWorkHours(generalWorkHours);
         }
 
         if (request.workHoursWoman() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursWoman = request.workHoursWoman().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.setWorkHoursWoman(workHoursWoman);
         }
 
         if (request.workHoursMan() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursMan = request.workHoursMan().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.setWorkHoursMan(workHoursMan);
         }
@@ -153,7 +165,11 @@ public class GymWriteService {
         gym.getGeneralWorkHours().clear();
         if (request.generalWorkHours() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> newGeneralWorkHours = request.generalWorkHours().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getGeneralWorkHours().addAll(newGeneralWorkHours);
         }
@@ -161,7 +177,11 @@ public class GymWriteService {
         gym.getWorkHoursWoman().clear();
         if (request.workHoursWoman() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursWoman().addAll(newWorkHoursWoman);
         }
@@ -169,7 +189,11 @@ public class GymWriteService {
         gym.getWorkHoursMan().clear();
         if (request.workHoursMan() != null) {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursMan = request.workHoursMan().stream()
-                    .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
+                    .map(dto -> {
+                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        if (!isValidPeriod(dto.period())) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                    })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursMan().addAll(newWorkHoursMan);
         }
@@ -396,5 +420,9 @@ public class GymWriteService {
     private String sanitizeFilename(String filename) {
         if (filename == null || filename.isBlank()) return "unnamed";
         return filename.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
+    }
+
+    private boolean isValidPeriod(az.fitnest.catalog.model.enums.GymWorkHourPeriod period) {
+        return period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEEKDAYS || period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY || period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY;
     }
 }

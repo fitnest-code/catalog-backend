@@ -157,13 +157,9 @@ public class DataInitializer {
             gym.setIsNew(true);
 
             List<GymWorkHour> workHours = new ArrayList<>();
-            workHours.add(new GymWorkHour(DayOfWeek.MONDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.TUESDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.WEDNESDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.THURSDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.FRIDAY, LocalTime.of(7, 0), LocalTime.of(23, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.SATURDAY, LocalTime.of(9, 0), LocalTime.of(21, 0)));
-            workHours.add(new GymWorkHour(DayOfWeek.SUNDAY, LocalTime.of(10, 0), LocalTime.of(18, 0)));
+            workHours.add(GymWorkHour.builder().period(GymWorkHourPeriod.WEEKDAYS).fromTime(LocalTime.of(7, 30)).toTime(LocalTime.of(22, 30)).build());
+            workHours.add(GymWorkHour.builder().period(GymWorkHourPeriod.SATURDAY).fromTime(LocalTime.of(9, 0)).toTime(LocalTime.of(21, 0)).build());
+            workHours.add(GymWorkHour.builder().period(GymWorkHourPeriod.SUNDAY).fromTime(LocalTime.of(10, 0)).toTime(LocalTime.of(18, 0)).build());
             gym.setGeneralWorkHours(new java.util.HashSet<>(workHours));
 
             List<GymSocialLink> socialLinks = new ArrayList<>();
