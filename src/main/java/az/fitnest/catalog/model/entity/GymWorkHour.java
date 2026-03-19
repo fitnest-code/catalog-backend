@@ -15,7 +15,7 @@ import java.time.LocalTime;
 @Builder
 @Embeddable
 public class GymWorkHour {
-    private GymWorkHourPeriod period; // Only WEEKDAYS, SATURDAY, SUNDAY
+    private GymWorkHourPeriod period;
     private LocalTime fromTime;
     private LocalTime toTime;
 
