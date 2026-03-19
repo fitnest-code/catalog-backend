@@ -70,7 +70,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymWorkHour> workHoursMan = new ArrayList<GymWorkHour>();
+    private Set<GymWorkHour> workHoursMan = new java.util.HashSet<>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default

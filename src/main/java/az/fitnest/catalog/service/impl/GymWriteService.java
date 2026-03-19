@@ -42,6 +42,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -104,10 +105,10 @@ public class GymWriteService {
         }
 
         if (request.workHoursMan() != null) {
-            List<az.fitnest.catalog.model.entity.GymWorkHour> workHoursMan = request.workHoursMan().stream()
+            Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursMan = request.workHoursMan().stream()
                     .map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.day(), dto.from(), dto.to()))
-                    .toList();
-            gym.setWorkHoursMan(new java.util.ArrayList<>(workHoursMan));
+                    .collect(java.util.stream.Collectors.toSet());
+            gym.setWorkHoursMan(workHoursMan);
         }
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
