@@ -257,11 +257,11 @@ public class GymReadService {
     @Transactional(readOnly = true)
     @Cacheable("main-page-gyms")
     public PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
-        return getGyms(userId, null, "CLOSEST", null, page, pageSize, userLat, userLng, "desc");
+        return getGyms(userId, null, "CLOSEST", null, null, page, pageSize, userLat, userLng, "desc");
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, Long categoryId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
+    public PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, Long categoryId, Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
             throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
         }
@@ -324,6 +324,12 @@ public class GymReadService {
 
         final List<Long> finalSavedIds = savedGymIds;
         List<GymMainPageDto> items = gymPage.getContent().stream().map(gym -> mapToGymMainPageDto(gym, userId, userLat, userLng, finalSavedIds.contains(gym.getId())))
+                .filter(gymDto -> {
+                    if (subscriptionId == null) return true;
+                    Gym gym = gymPage.getContent().stream().filter(g -> g.getId().toString().equals(gymDto.gymId())).findFirst().orElse(null);
+                    if (gym == null || gym.getSubscriptions() == null) return false;
+                    return gym.getSubscriptions().stream().anyMatch(sub -> subscriptionId.equals(sub.getPackageId()));
+                })
                 .collect(Collectors.toList());
 
         String message = null;
