@@ -99,15 +99,17 @@ public class GymController {
             @PathVariable Long gymId,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
-            @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya)", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
-        return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, page_size, sortDir.name().toLowerCase()));
+            @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
+        int safePageSize = Math.min(page_size, 100);
+        return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, safePageSize, sortDir.name().toLowerCase()));
     }
 
     @GetMapping("/{gymId}/reviews")
     @Operation(summary = "İdman zalı rəylərini əldə edin", description = "İdman zalı üçün istifadəçi rəylərinin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Rəylər uğurla əldə edildi")})
     public ResponseEntity<PaginatedResponse<GymReviewDto>> getReviews(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (məsələn, ən yeni, ən yüksək reytinq)") @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, page_size, sort));
+        int safePageSize = Math.min(page_size, 100);
+        return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, safePageSize, sort));
     }
 
     @PostMapping("/{gymId}/reviews")
@@ -144,7 +146,8 @@ public class GymController {
             @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
             @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
         Long userId = this.extractUserId(principal);
-        return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, subscriptionId, page, page_size, lat, lng, sortDir.name().toLowerCase()));
+        int safePageSize = Math.min(page_size, 100);
+        return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
     }
 
     @PostMapping("/{gymId}/save")
