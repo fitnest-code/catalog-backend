@@ -1,3 +1,4 @@
+
 package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.model.entity.Category;
 
@@ -608,5 +609,13 @@ public class GymReadService {
                 Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
                         Math.sin(lonDistance / 2.0) * Math.sin(lonDistance / 2.0);
         return 6371.0 * 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
+    }
+    @Transactional(readOnly = true)
+    public String getGymQrUrl(Long gymId) {
+        String qrCodeUrl = gymRepository.findQrCodeUrlById(gymId);
+        if (qrCodeUrl == null) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        return qrCodeUrl;
     }
 }

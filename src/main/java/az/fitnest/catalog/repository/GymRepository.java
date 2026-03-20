@@ -1,3 +1,4 @@
+
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.Gym;
@@ -47,4 +48,7 @@ public interface GymRepository
     @Transactional
     @Query(value = "DELETE FROM gym_categories", nativeQuery = true)
     void truncateGymCategories();
+
+    @org.springframework.data.jpa.repository.Query("SELECT g.qrCodeUrl FROM Gym g WHERE g.id = :gymId")
+    String findQrCodeUrlById(@org.springframework.data.repository.query.Param("gymId") Long gymId);
 }

@@ -88,7 +88,7 @@ public class GymController {
     @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "QR kod URL-i uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymQrResponse.class))})})
     public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
-        String qrCodeUrl = this.gymReadService.getGymDetail(null, gymId).qr_code_url();
+        String qrCodeUrl = this.gymReadService.getGymQrUrl(gymId);
         return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
     }
 
