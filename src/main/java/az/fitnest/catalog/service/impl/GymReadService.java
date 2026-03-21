@@ -98,56 +98,9 @@ public class GymReadService {
             }
             return rooms;
         }, executor);
-        CompletableFuture<List<GymPlanItemDto>> membershipPlansFuture = gymFuture.thenApplyAsync(gym -> {
-            List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
-            try {
-                if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                    List<Long> packageIds = gym.getSubscriptions().stream()
-                        .map(sub -> sub.getPackageId())
-                        .filter(java.util.Objects::nonNull)
-                        .toList();
-                    List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-                    java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                        .collect(java.util.stream.Collectors.toMap(
-                            az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                            p -> p
-                        ));
-                    membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                        az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                        String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
-                        String packageName = info != null ? info.getName() : "Unknown";
-                        String name = info != null ? info.getName() : "Unknown";
-                        List<String> benefitsList = sub.getBenefits().stream()
-                            .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
-                            .toList();
-                        return GymPlanItemDto.builder()
-                            .plan_id(planId)
-                            .name(name)
-                            .packageName(packageName)
-                            .benefits(benefitsList)
-                            .build();
-                    }).collect(java.util.stream.Collectors.toList());
-                }
-            } catch (Exception e) {
-                System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
-                if (gym != null && gym.getSubscriptions() != null) {
-                    membershipPlans = gym.getSubscriptions().stream().map(sub -> {
-                        String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
-                        String placeholderName = "Standard Plan";
-                        return GymPlanItemDto.builder()
-                            .plan_id(planId)
-                            .name(placeholderName)
-                            .packageName(placeholderName)
-                            .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
-                            .build();
-                    }).collect(java.util.stream.Collectors.toList());
-                }
-            }
-            return membershipPlans;
-        }, executor);
 
         CompletableFuture.allOf(
-            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, categoryDtosFuture, roomsFuture, membershipPlansFuture
+            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, categoryDtosFuture, roomsFuture
         ).join();
         Gym gym = gymFuture.join();
         boolean isSaved = isSavedFuture.join();
@@ -160,7 +113,6 @@ public class GymReadService {
         }
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
         List<GymRoomDto> rooms = roomsFuture.join();
-        List<GymPlanItemDto> membershipPlans = membershipPlansFuture.join();
 
         java.util.Set<GymWorkHourDto> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
@@ -192,7 +144,6 @@ public class GymReadService {
                 .work_hours_woman(workHoursWoman)
                 .work_hours_man(workHoursMan)
                 .rooms(rooms)
-                .membership_plans(membershipPlans)
                 .trainers(trainerDtos)
                 .recent_reviews(recentReviews)
                 .categories(categoryDtos)
@@ -408,6 +359,50 @@ public class GymReadService {
                 .collect(Collectors.toList())
             : java.util.Collections.emptyList();
 
+        List<GymPlanItemDto> supportedSubscriptions = new java.util.ArrayList<>();
+        try {
+            if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+                List<Long> packageIds = gym.getSubscriptions().stream()
+                    .map(sub -> sub.getPackageId())
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                        az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                        p -> p
+                    ));
+                supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
+                    az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                    String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
+                    String packageName = info != null ? info.getName() : "Unknown";
+                    String name = info != null ? info.getName() : "Unknown";
+                    List<String> benefitsList = sub.getBenefits().stream()
+                        .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                        .toList();
+                    return GymPlanItemDto.builder()
+                        .plan_id(planId)
+                        .name(name)
+                        .packageName(packageName)
+                        .benefits(benefitsList)
+                        .build();
+                }).collect(java.util.stream.Collectors.toList());
+            }
+        } catch (Exception e) {
+            System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
+            if (gym.getSubscriptions() != null) {
+                supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
+                    String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
+                    String placeholderName = "Standard Plan";
+                    return GymPlanItemDto.builder()
+                        .plan_id(planId)
+                        .name(placeholderName)
+                        .packageName(placeholderName)
+                        .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                        .build();
+                }).collect(java.util.stream.Collectors.toList());
+            }
+        }
         return GymMainPageDto.builder()
                 .gymId(gym.getId().toString())
                 .name(gym.getName())
@@ -419,6 +414,7 @@ public class GymReadService {
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
                 .categories(categories)
+                .supportedSubscriptions(supportedSubscriptions)
                 .build();
     }
 

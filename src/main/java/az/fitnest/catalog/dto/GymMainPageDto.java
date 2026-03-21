@@ -17,5 +17,6 @@ public record GymMainPageDto(
     @JsonInclude(JsonInclude.Include.ALWAYS)
     Double distanceKm,
     boolean isSaved,
-    List<CategoryDto> categories
+    List<CategoryDto> categories,
+    List<GymPlanItemDto> supportedSubscriptions
 ) {}

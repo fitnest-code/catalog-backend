@@ -19,7 +19,6 @@ public record GymDetailResponse(
     java.util.Set<GymWorkHourDto> work_hours_woman,
     java.util.Set<GymWorkHourDto> work_hours_man,
     List<GymRoomDto> rooms,
-    List<GymPlanItemDto> membership_plans,
     List<GymTrainerDto> trainers,
     List<GymReviewDto> recent_reviews,
     List<CategoryDto> categories,
