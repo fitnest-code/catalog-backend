@@ -1,4 +1,3 @@
-
 package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.model.entity.Category;
 
@@ -103,14 +102,28 @@ public class GymReadService {
             List<GymPlanItemDto> membershipPlans = new java.util.ArrayList<>();
             try {
                 if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+                    List<Long> packageIds = gym.getSubscriptions().stream()
+                        .map(sub -> sub.getPackageId())
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+                    List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                    java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                            az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                            p -> p
+                        ));
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                        az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                        String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
+                        String packageName = info != null ? info.getName() : "Unknown";
+                        String name = info != null ? info.getName() : "Unknown";
                         List<String> benefitsList = sub.getBenefits().stream()
                             .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
                             .toList();
                         return GymPlanItemDto.builder()
-                            .plan_id("N/A")
-                            .name("Standard Plan")
-                            .packageName("Standard Plan")
+                            .plan_id(planId)
+                            .name(name)
+                            .packageName(packageName)
                             .benefits(benefitsList)
                             .build();
                     }).collect(java.util.stream.Collectors.toList());
@@ -119,9 +132,10 @@ public class GymReadService {
                 System.err.println("Could not fetch membership plans from order-service: " + e.getMessage());
                 if (gym != null && gym.getSubscriptions() != null) {
                     membershipPlans = gym.getSubscriptions().stream().map(sub -> {
+                        String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
                         String placeholderName = "Standard Plan";
                         return GymPlanItemDto.builder()
-                            .plan_id("N/A")
+                            .plan_id(planId)
                             .name(placeholderName)
                             .packageName(placeholderName)
                             .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
