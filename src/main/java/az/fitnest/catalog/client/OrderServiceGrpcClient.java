@@ -12,6 +12,9 @@ public class OrderServiceGrpcClient {
     @GrpcClient("order-service")
     private SubscriptionPackageServiceGrpc.SubscriptionPackageServiceBlockingStub blockingStub;
 
+    @GrpcClient("order-service")
+    private UserSubscriptionServiceGrpc.UserSubscriptionServiceBlockingStub userSubscriptionStub;
+
     public boolean checkPlanExists(Long packageId) {
         az.fitnest.order.grpc.CheckPlanExistsRequest request = az.fitnest.order.grpc.CheckPlanExistsRequest.newBuilder()
                 .setPackageId(packageId)
@@ -51,5 +54,12 @@ public class OrderServiceGrpcClient {
                 .build();
         az.fitnest.order.grpc.GetPackageNamesByIdsResponse response = blockingStub.getPackageNamesByIds(request);
         return response.getPackagesList();
+    }
+
+    public az.fitnest.order.grpc.ActiveSubscriptionResponse getActiveSubscription(Long userId) {
+        az.fitnest.order.grpc.GetActiveSubscriptionRequest request = az.fitnest.order.grpc.GetActiveSubscriptionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        return userSubscriptionStub.getActiveSubscription(request);
     }
 }

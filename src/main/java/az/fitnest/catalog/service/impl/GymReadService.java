@@ -443,7 +443,7 @@ public class GymReadService {
             return orderServiceGrpcClient.checkPackageExists(planId);
     }
 
-    public GymEntranceResponse processGymEntrance(Long userId, Long gymId, Double lat, Double lng) {
+    public GymEntranceResponse checkProximity(Double lat, Double lng, Long gymId) {
         Gym gym = gymRepository.findById(gymId)
             .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Address address = gym.getAddress();
@@ -469,9 +469,30 @@ public class GymReadService {
                     .build())
                 .build();
         }
-        boolean hasActiveSubscription = true;
-        int visitLimitRemaining = 5;
-        if (!hasActiveSubscription) {
+        return GymEntranceResponse.builder()
+            .allowed(true)
+            .build();
+    }
+
+    public GymEntranceResponse checkEligibility(Long userId, Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
+        try {
+            subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+        } catch (Exception e) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("ORDER_SERVICE_ERROR")
+                    .message("Failed to fetch subscription: " + e.getMessage())
+                    .status(500)
+                    .build())
+                .build();
+        }
+        String status = subResp.getSubscriptionStatus();
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
             return GymEntranceResponse.builder()
                 .allowed(false)
                 .error(ApiError.builder()
@@ -481,6 +502,17 @@ public class GymReadService {
                     .build())
                 .build();
         }
+        if (!status.equalsIgnoreCase("active")) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("SUBSCRIPTION_NOT_ACTIVE")
+                    .message("Subscription is not active: " + status)
+                    .status(403)
+                    .build())
+                .build();
+        }
+        int visitLimitRemaining = subResp.getRemainingLimit();
         if (visitLimitRemaining <= 0) {
             return GymEntranceResponse.builder()
                 .allowed(false)
@@ -491,12 +523,28 @@ public class GymReadService {
                     .build())
                 .build();
         }
+        Long userPackageId = subResp.getPackageId();
+        boolean gymSupports = false;
+        if (userPackageId != null && gym.getSubscriptions() != null) {
+            gymSupports = gym.getSubscriptions().stream().anyMatch(s -> userPackageId.equals(s.getPackageId()));
+        }
+        if (!gymSupports) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("GYM_NOT_SUPPORTED")
+                    .message("This gym does not support your subscription.")
+                    .status(403)
+                    .build())
+                .build();
+        }
         String entranceDate = java.time.LocalDate.now().toString();
         String entranceHour = java.time.LocalTime.now().toString();
+        Address address = gym.getAddress();
         return GymEntranceResponse.builder()
             .allowed(true)
             .gymName(gym.getName())
-            .gymLocation(address.getAddressText())
+            .gymLocation(address != null ? address.getAddressText() : null)
             .entranceDate(entranceDate)
             .entranceHour(entranceHour)
             .visitLimitRemaining(visitLimitRemaining)
@@ -612,7 +660,7 @@ public class GymReadService {
         return new double[]{minLat, maxLat, lng - deltaLng, lng + deltaLng};
     }
 
-    private double calculateDistanceRaw(double lat1, double lng1, double lat2, double lng2) {
+    public double calculateDistanceRaw(double lat1, double lng1, double lat2, double lng2) {
         double latDistance = Math.toRadians(lat2 - lat1);
         double lonDistance = Math.toRadians(lng2 - lng1);
         double a = Math.sin(latDistance / 2.0) * Math.sin(latDistance / 2.0) +
@@ -627,5 +675,56 @@ public class GymReadService {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         return qrCodeUrl;
+    }
+
+    public GymEntranceResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            throw new IllegalArgumentException("Unauthorized");
+        }
+        Long gymId = extractGymIdFromQr(qrCodeValue);
+        if (gymId == null) {
+            throw new IllegalArgumentException("Invalid QR code");
+        }
+        GymEntranceResponse response = checkProximity(lat, lng, gymId);
+        if (!response.allowed()) {
+            throw new IllegalStateException(response.error() != null ? response.error().message() : "Not allowed");
+        }
+        return response;
+    }
+
+    public GymEntranceResponse checkGymEntranceEligibility(Object principal, String qrCodeValue, Double lat, Double lng) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            throw new IllegalArgumentException("Unauthorized");
+        }
+        Long gymId = extractGymIdFromQr(qrCodeValue);
+        if (gymId == null) {
+            throw new IllegalArgumentException("Invalid QR code");
+        }
+        GymEntranceResponse response = checkEligibility(userId, gymId);
+        if (!response.allowed()) {
+            throw new IllegalStateException(response.error() != null ? response.error().message() : "Not eligible");
+        }
+        return response;
+    }
+
+    private Long extractUserId(Object principal) {
+        if (principal instanceof Long) {
+            return (Long) principal;
+        }
+        return null;
+    }
+    private Long extractGymIdFromQr(String qrCodeValue) {
+        try {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
+            java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
+            if (matcher.find()) {
+                return Long.parseLong(matcher.group(1));
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

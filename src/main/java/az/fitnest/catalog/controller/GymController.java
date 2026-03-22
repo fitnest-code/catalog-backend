@@ -176,30 +176,46 @@ public class GymController {
     }
 
     @PostMapping("/entrance/scan")
-    @Operation(summary = "Scan gym QR code for entrance", description = "Checks user subscription, status, location, visit limit, and logs entrance if valid.")
+    @Operation(summary = "Scan gym QR code for entrance (proximity only)", description = "Checks if user is close to the gym location. Returns allowed=true if close, false otherwise.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Entrance allowed", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Entrance blocked", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Not close enough", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
     public ResponseEntity<?> scanGymQrEntrance(
             @AuthenticationPrincipal Object principal,
-            @RequestBody az.fitnest.catalog.dto.GymQrScanRequest request,
+            @RequestParam String qrCodeValue,
             @RequestParam Double lat,
             @RequestParam Double lng) {
-        Long userId = this.extractUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
-        Long gymId = extractGymIdFromQr(request.getQrCodeValue());
-        if (gymId == null) {
-            return ResponseEntity.status(400).body("Invalid QR code");
-        }
-        az.fitnest.catalog.dto.GymEntranceResponse response = gymReadService.processGymEntrance(userId, gymId, lat, lng);
-        if (response.allowed()) {
+        try {
+            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng);
             return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(403).body(response.error());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/entrance/eligibility")
+    @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and other eligibility criteria for gym entrance.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Not eligible", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+    })
+    public ResponseEntity<?> checkGymEntranceEligibility(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam String qrCodeValue,
+            @RequestParam Double lat,
+            @RequestParam Double lng) {
+        try {
+            var response = gymReadService.checkGymEntranceEligibility(principal, qrCodeValue, lat, lng);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
         }
     }
 
