@@ -690,20 +690,12 @@ public class GymReadService {
         return response;
     }
 
-    public GymEntranceResponse checkGymEntranceEligibility(Object principal, String qrCodeValue, Double lat, Double lng) {
+    public GymEntranceResponse checkGymEntranceEligibility(Object principal, Double lat, Double lng) {
         Long userId = extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("Unauthorized");
         }
-        Long gymId = extractGymIdFromQr(qrCodeValue);
-        if (gymId == null) {
-            throw new IllegalArgumentException("Invalid QR code");
-        }
-        GymEntranceResponse response = checkEligibility(userId, gymId);
-        if (!response.allowed()) {
-            throw new IllegalStateException(response.error() != null ? response.error().message() : "Not eligible");
-        }
-        return response;
+        throw new IllegalArgumentException("Gym identification logic required after removing qrCodeValue");
     }
 
     private Long extractUserId(Object principal) {

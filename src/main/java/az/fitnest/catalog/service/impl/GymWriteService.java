@@ -55,6 +55,7 @@ public class GymWriteService {
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    private final az.fitnest.catalog.repository.GymImageRepository gymImageRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -282,6 +283,7 @@ public class GymWriteService {
                 }
             }
         }
+        gymImageRepository.deleteByGymId(gymId);
         savedGymRepository.deleteByGymId(gymId);
         gymRepository.delete(gym);
     }

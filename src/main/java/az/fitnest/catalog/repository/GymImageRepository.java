@@ -15,4 +15,6 @@ public interface GymImageRepository
     public List<GymImage> findByGymId(Long var1);
 
     public Optional<GymImage> findFirstByGymIdAndImageName(Long gymId, String imageName);
+
+    void deleteByGymId(Long gymId);
 }

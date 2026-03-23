@@ -206,11 +206,10 @@ public class GymController {
     })
     public ResponseEntity<?> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal,
-            @RequestParam String qrCodeValue,
             @RequestParam Double lat,
             @RequestParam Double lng) {
         try {
-            var response = gymReadService.checkGymEntranceEligibility(principal, qrCodeValue, lat, lng);
+            var response = gymReadService.checkGymEntranceEligibility(principal, lat, lng);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(e.getMessage());
