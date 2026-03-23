@@ -376,13 +376,11 @@ public class GymReadService {
                     az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                     String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
                     String packageName = info != null ? info.getName() : "Unknown";
-                    String name = info != null ? info.getName() : "Unknown";
                     List<String> benefitsList = sub.getBenefits().stream()
                         .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
                         .toList();
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
-                        .name(name)
                         .packageName(packageName)
                         .benefits(benefitsList)
                         .build();
@@ -396,7 +394,6 @@ public class GymReadService {
                     String placeholderName = "Standard Plan";
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
-                        .name(placeholderName)
                         .packageName(placeholderName)
                         .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
                         .build();
