@@ -461,50 +461,6 @@ public class GymReadService {
             .build();
     }
 
-    public GymEntranceResponse checkEligibility(Long userId, Long gymId) {
-        Gym gym = gymRepository.findById(gymId)
-            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
-        try {
-            subResp = orderServiceGrpcClient.getActiveSubscription(userId);
-        } catch (Exception e) {
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        String status = subResp.getSubscriptionStatus();
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        if (!status.equalsIgnoreCase("active")) {
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        int visitLimitRemaining = subResp.getRemainingLimit();
-        if (visitLimitRemaining <= 0) {
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        Long userPackageId = subResp.getPackageId();
-        boolean gymSupports = false;
-        if (userPackageId != null && gym.getSubscriptions() != null) {
-            gymSupports = gym.getSubscriptions().stream().anyMatch(s -> userPackageId.equals(s.getPackageId()));
-        }
-        if (!gymSupports) {
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        return GymEntranceResponse.builder()
-            .allowed(true)
-            .build();
-    }
-
     public boolean checkGymEntranceEligibilitySimple(Object principal) {
         Long userId = extractUserId(principal);
         if (userId == null) {
