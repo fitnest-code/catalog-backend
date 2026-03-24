@@ -690,12 +690,62 @@ public class GymReadService {
         return response;
     }
 
-    public GymEntranceResponse checkGymEntranceEligibility(Object principal, Double lat, Double lng) {
+    public GymEntranceResponse checkGymEntranceEligibility(Object principal) {
         Long userId = extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("Unauthorized");
         }
-        throw new IllegalArgumentException("Gym identification logic required after removing qrCodeValue");
+        // Only check subscription status and entry limits, not gym/location/QR code
+        az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
+        try {
+            subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+        } catch (Exception e) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("ORDER_SERVICE_ERROR")
+                    .message("Failed to fetch subscription: " + e.getMessage())
+                    .status(500)
+                    .build())
+                .build();
+        }
+        String status = subResp.getSubscriptionStatus();
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("NO_ACTIVE_SUBSCRIPTION")
+                    .message("No active subscription found.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        if (!status.equalsIgnoreCase("active")) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("SUBSCRIPTION_NOT_ACTIVE")
+                    .message("Subscription is not active: " + status)
+                    .status(403)
+                    .build())
+                .build();
+        }
+        int visitLimitRemaining = subResp.getRemainingLimit();
+        if (visitLimitRemaining <= 0) {
+            return GymEntranceResponse.builder()
+                .allowed(false)
+                .error(ApiError.builder()
+                    .code("NO_VISITS_LEFT")
+                    .message("No remaining visits.")
+                    .status(403)
+                    .build())
+                .build();
+        }
+        // No gym info, so only return allowed and visitLimitRemaining
+        return GymEntranceResponse.builder()
+            .allowed(true)
+            .visitLimitRemaining(visitLimitRemaining)
+            .build();
     }
 
     private Long extractUserId(Object principal) {

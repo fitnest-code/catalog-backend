@@ -205,11 +205,9 @@ public class GymController {
         @ApiResponse(responseCode = "403", description = "Not eligible", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
     public ResponseEntity<?> checkGymEntranceEligibility(
-            @AuthenticationPrincipal Object principal,
-            @RequestParam Double lat,
-            @RequestParam Double lng) {
+            @AuthenticationPrincipal Object principal) {
         try {
-            var response = gymReadService.checkGymEntranceEligibility(principal, lat, lng);
+            var response = gymReadService.checkGymEntranceEligibility(principal);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(e.getMessage());
