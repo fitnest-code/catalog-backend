@@ -447,11 +447,6 @@ public class GymReadService {
         if (address == null || address.getLatitude() == null || address.getLongitude() == null) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("GYM_LOCATION_INVALID")
-                    .message("Gym location is not set.")
-                    .status(403)
-                    .build())
                 .build();
         }
         double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
@@ -459,11 +454,6 @@ public class GymReadService {
         if (distance > allowedRadiusKm) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("USER_TOO_FAR")
-                    .message("You are not close enough to the gym.")
-                    .status(403)
-                    .build())
                 .build();
         }
         return GymEntranceResponse.builder()
@@ -481,43 +471,23 @@ public class GymReadService {
         } catch (Exception e) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("ORDER_SERVICE_ERROR")
-                    .message("Failed to fetch subscription: " + e.getMessage())
-                    .status(500)
-                    .build())
                 .build();
         }
         String status = subResp.getSubscriptionStatus();
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("NO_ACTIVE_SUBSCRIPTION")
-                    .message("No active subscription found.")
-                    .status(403)
-                    .build())
                 .build();
         }
         if (!status.equalsIgnoreCase("active")) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("SUBSCRIPTION_NOT_ACTIVE")
-                    .message("Subscription is not active: " + status)
-                    .status(403)
-                    .build())
                 .build();
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
         if (visitLimitRemaining <= 0) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("NO_VISITS_LEFT")
-                    .message("No remaining visits.")
-                    .status(403)
-                    .build())
                 .build();
         }
         Long userPackageId = subResp.getPackageId();
@@ -528,23 +498,10 @@ public class GymReadService {
         if (!gymSupports) {
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("GYM_NOT_SUPPORTED")
-                    .message("This gym does not support your subscription.")
-                    .status(403)
-                    .build())
                 .build();
         }
-        String entranceDate = java.time.LocalDate.now().toString();
-        String entranceHour = java.time.LocalTime.now().toString();
-        Address address = gym.getAddress();
         return GymEntranceResponse.builder()
             .allowed(true)
-            .gymName(gym.getName())
-            .gymLocation(address != null ? address.getAddressText() : null)
-            .entranceDate(entranceDate)
-            .entranceHour(entranceHour)
-            .visitLimitRemaining(visitLimitRemaining)
             .build();
     }
 
@@ -707,7 +664,7 @@ public class GymReadService {
         }
         GymEntranceResponse response = checkProximity(lat, lng, gymId);
         if (!response.allowed()) {
-            throw new IllegalStateException(response.error() != null ? response.error().message() : "Not allowed");
+            throw new IllegalStateException("Not allowed");
         }
         return response;
     }
@@ -728,11 +685,6 @@ public class GymReadService {
             logger.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("ORDER_SERVICE_ERROR")
-                    .message("Failed to fetch subscription: " + e.getMessage())
-                    .status(500)
-                    .build())
                 .build();
         }
         String status = subResp.getSubscriptionStatus();
@@ -741,22 +693,12 @@ public class GymReadService {
             logger.info("[checkGymEntranceEligibility] No active subscription found for userId={}", userId);
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("NO_ACTIVE_SUBSCRIPTION")
-                    .message("No active subscription found.")
-                    .status(403)
-                    .build())
                 .build();
         }
         if (!status.equalsIgnoreCase("active")) {
             logger.info("[checkGymEntranceEligibility] Subscription not active for userId={}, status={}", userId, status);
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("SUBSCRIPTION_NOT_ACTIVE")
-                    .message("Subscription is not active: " + status)
-                    .status(403)
-                    .build())
                 .build();
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
@@ -765,17 +707,11 @@ public class GymReadService {
             logger.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
             return GymEntranceResponse.builder()
                 .allowed(false)
-                .error(ApiError.builder()
-                    .code("NO_VISITS_LEFT")
-                    .message("No remaining visits.")
-                    .status(403)
-                    .build())
                 .build();
         }
         logger.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return GymEntranceResponse.builder()
             .allowed(true)
-            .visitLimitRemaining(visitLimitRemaining)
             .build();
     }
 
