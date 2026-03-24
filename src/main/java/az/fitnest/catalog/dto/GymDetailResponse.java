@@ -26,5 +26,6 @@ public record GymDetailResponse(
     Double rating,
     Integer reviewsCount,
     String qr_code_url,
-    GymStatus status
+    GymStatus status,
+    List<GymPlanItemDto> supportedSubscriptions
 ) {}
