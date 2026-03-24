@@ -1,3 +1,4 @@
+
 package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.model.entity.Category;
 
@@ -746,5 +747,24 @@ public class GymReadService {
         } catch (Exception e) {
             return null;
         }
+    }
+    @Transactional(readOnly = true)
+    public GymTypeCountResponse getGymCountByGender(String gender) {
+        List<Gym> gyms = gymRepository.findAll();
+        long count;
+        if (gender == null) {
+            throw new BadRequestException("GENDER_REQUIRED", "Gender parameter is required");
+        }
+        switch (gender.toLowerCase()) {
+            case "female":
+                count = gyms.stream().filter(g -> g.getWorkHoursWoman() != null && !g.getWorkHoursWoman().isEmpty()).count();
+                break;
+            case "male":
+                count = gyms.stream().filter(g -> g.getWorkHoursMan() != null && !g.getWorkHoursMan().isEmpty()).count();
+                break;
+            default:
+                throw new BadRequestException("INVALID_GENDER", "Gender must be 'male' or 'female'");
+        }
+        return new GymTypeCountResponse(gender, count);
     }
 }

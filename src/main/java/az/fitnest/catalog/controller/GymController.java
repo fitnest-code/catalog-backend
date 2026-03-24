@@ -250,6 +250,12 @@ public class GymController {
         return ResponseEntity.ok(gymReadService.getGymCountBySubscription());
     }
 
+    @GetMapping("/count/by-gender")
+    @Operation(summary = "Get gym count by gender", description = "Returns count of gyms with gender-specific work hours (male/female).")
+    public ResponseEntity<GymTypeCountResponse> getGymCountByGender(@RequestParam("gender") String gender) {
+        return ResponseEntity.ok(gymReadService.getGymCountByGender(gender));
+    }
+
     public GymEntranceEligibilityResponse testEligibilityResponse() {
         return new GymEntranceEligibilityResponse(true);
     }
