@@ -75,7 +75,7 @@ public class GymReviewService {
                 .review_id(r.getId() != null ? r.getId().toString() : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
-                .created_at(r.getCreatedDate())
+                .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
                 .author(GymReviewAuthorDto.builder()
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
