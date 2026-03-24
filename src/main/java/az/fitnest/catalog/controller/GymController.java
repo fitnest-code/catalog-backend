@@ -57,6 +57,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.mapper.GymProtoMapper;
+import az.fitnest.catalog.dto.GymEntranceEligibilityResponse;
 
 @RestController
 @RequestMapping("/api/v1/gyms")
@@ -201,14 +202,14 @@ public class GymController {
     @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and other eligibility criteria for gym entrance.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
+        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
         @ApiResponse(responseCode = "403", description = "Not eligible", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
     public ResponseEntity<?> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal) {
         try {
-            var response = gymReadService.checkGymEntranceEligibility(principal);
-            return ResponseEntity.ok(response);
+            boolean allowed = gymReadService.checkGymEntranceEligibilitySimple(principal);
+            return ResponseEntity.ok(GymEntranceEligibilityResponse.builder().allowed(allowed).build());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         } catch (IllegalStateException e) {
@@ -242,6 +243,11 @@ public class GymController {
     @Operation(summary = "Get gym count by subscription", description = "Returns all subscriptions with their gym counts.")
     public ResponseEntity<List<GymSubscriptionCountResponse>> getGymCountBySubscription() {
         return ResponseEntity.ok(gymReadService.getGymCountBySubscription());
+    }
+
+    // DEBUG: Test method to check if GymEntranceEligibilityResponse is visible to the compiler
+    public GymEntranceEligibilityResponse testEligibilityResponse() {
+        return new GymEntranceEligibilityResponse(true);
     }
 
     private Long extractUserId(Object principal) {

@@ -548,6 +548,28 @@ public class GymReadService {
             .build();
     }
 
+    public boolean checkGymEntranceEligibilitySimple(Object principal) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            throw new IllegalArgumentException("Unauthorized");
+        }
+        az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
+        try {
+            subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to fetch subscription: " + e.getMessage());
+        }
+        String status = subResp.getSubscriptionStatus();
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
+            return false;
+        }
+        if (!status.equalsIgnoreCase("active")) {
+            return false;
+        }
+        int visitLimitRemaining = subResp.getRemainingLimit();
+        return visitLimitRemaining > 0;
+    }
+
     @Transactional(readOnly = true)
     public GymCountResponse getGymCount(String type, Long subscriptionId, Long categoryId) {
         List<Gym> gyms = gymRepository.findAll();
@@ -695,7 +717,6 @@ public class GymReadService {
         if (userId == null) {
             throw new IllegalArgumentException("Unauthorized");
         }
-        // Only check subscription status and entry limits, not gym/location/QR code
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
@@ -741,7 +762,6 @@ public class GymReadService {
                     .build())
                 .build();
         }
-        // No gym info, so only return allowed and visitLimitRemaining
         return GymEntranceResponse.builder()
             .allowed(true)
             .visitLimitRemaining(visitLimitRemaining)
