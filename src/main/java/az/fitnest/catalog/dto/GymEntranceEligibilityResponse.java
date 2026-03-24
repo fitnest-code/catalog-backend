@@ -11,4 +11,3 @@ public record GymEntranceEligibilityResponse(
     @Schema(description = "Whether the user is eligible to enter the gym.", example = "true")
     boolean allowed
 ) {}
-

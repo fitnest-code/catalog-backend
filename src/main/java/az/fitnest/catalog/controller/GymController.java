@@ -202,14 +202,18 @@ public class GymController {
     @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and other eligibility criteria for gym entrance.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
+        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
         @ApiResponse(responseCode = "403", description = "Not eligible", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
     public ResponseEntity<?> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal) {
         try {
-            boolean allowed = gymReadService.checkGymEntranceEligibilitySimple(principal);
-            return ResponseEntity.ok(GymEntranceEligibilityResponse.builder().allowed(allowed).build());
+            var response = gymReadService.checkGymEntranceEligibility(principal);
+            if (response.allowed()) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(403).body(response);
+            }
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         } catch (IllegalStateException e) {
@@ -245,7 +249,6 @@ public class GymController {
         return ResponseEntity.ok(gymReadService.getGymCountBySubscription());
     }
 
-    // DEBUG: Test method to check if GymEntranceEligibilityResponse is visible to the compiler
     public GymEntranceEligibilityResponse testEligibilityResponse() {
         return new GymEntranceEligibilityResponse(true);
     }
