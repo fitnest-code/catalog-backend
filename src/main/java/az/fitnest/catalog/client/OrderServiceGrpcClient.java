@@ -3,11 +3,14 @@ package az.fitnest.catalog.client;
 import az.fitnest.order.grpc.*;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @Service
 public class OrderServiceGrpcClient {
+    private static final Logger logger = LoggerFactory.getLogger(OrderServiceGrpcClient.class);
 
     @GrpcClient("order-service")
     private SubscriptionPackageServiceGrpc.SubscriptionPackageServiceBlockingStub blockingStub;
@@ -57,9 +60,13 @@ public class OrderServiceGrpcClient {
     }
 
     public az.fitnest.order.grpc.ActiveSubscriptionResponse getActiveSubscription(Long userId) {
+        logger.info("[getActiveSubscription] Fetching active subscription for userId={}", userId);
         az.fitnest.order.grpc.GetActiveSubscriptionRequest request = az.fitnest.order.grpc.GetActiveSubscriptionRequest.newBuilder()
                 .setUserId(userId)
                 .build();
-        return userSubscriptionStub.getActiveSubscription(request);
+        logger.debug("[getActiveSubscription] gRPC request: {}", request);
+        az.fitnest.order.grpc.ActiveSubscriptionResponse response = userSubscriptionStub.getActiveSubscription(request);
+        logger.info("[getActiveSubscription] gRPC response: {}", response);
+        return response;
     }
 }

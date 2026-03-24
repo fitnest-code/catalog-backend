@@ -713,14 +713,19 @@ public class GymReadService {
     }
 
     public GymEntranceResponse checkGymEntranceEligibility(Object principal) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
         Long userId = extractUserId(principal);
+        logger.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
         if (userId == null) {
+            logger.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
             throw new IllegalArgumentException("Unauthorized");
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+            logger.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
         } catch (Exception e) {
+            logger.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
             return GymEntranceResponse.builder()
                 .allowed(false)
                 .error(ApiError.builder()
@@ -731,7 +736,9 @@ public class GymReadService {
                 .build();
         }
         String status = subResp.getSubscriptionStatus();
+        logger.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
+            logger.info("[checkGymEntranceEligibility] No active subscription found for userId={}", userId);
             return GymEntranceResponse.builder()
                 .allowed(false)
                 .error(ApiError.builder()
@@ -742,6 +749,7 @@ public class GymReadService {
                 .build();
         }
         if (!status.equalsIgnoreCase("active")) {
+            logger.info("[checkGymEntranceEligibility] Subscription not active for userId={}, status={}", userId, status);
             return GymEntranceResponse.builder()
                 .allowed(false)
                 .error(ApiError.builder()
@@ -752,7 +760,9 @@ public class GymReadService {
                 .build();
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
+        logger.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
         if (visitLimitRemaining <= 0) {
+            logger.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
             return GymEntranceResponse.builder()
                 .allowed(false)
                 .error(ApiError.builder()
@@ -762,6 +772,7 @@ public class GymReadService {
                     .build())
                 .build();
         }
+        logger.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return GymEntranceResponse.builder()
             .allowed(true)
             .visitLimitRemaining(visitLimitRemaining)
