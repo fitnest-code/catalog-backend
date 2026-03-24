@@ -609,7 +609,7 @@ public class GymReadService {
         return qrCodeUrl;
     }
 
-    public GymEntranceResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
+    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
         Long userId = extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("Unauthorized");
@@ -618,11 +618,26 @@ public class GymReadService {
         if (gymId == null) {
             throw new IllegalArgumentException("Invalid QR code");
         }
-        GymEntranceResponse response = checkProximity(lat, lng, gymId);
-        if (!response.allowed()) {
-            throw new IllegalStateException("Not allowed");
+        Gym gym = gymRepository.findById(gymId)
+            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        boolean allowed = false;
+        Address address = gym.getAddress();
+        String gymAddress = address != null ? address.getAddressText() : null;
+        String gymName = gym.getName();
+        String enterDate = java.time.LocalDate.now().toString();
+        String enterHour = java.time.LocalTime.now().withSecond(0).withNano(0).toString();
+        double distance = 9999;
+        if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null && lng != null) {
+            distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
+            allowed = distance <= 0.2;
         }
-        return response;
+        return GymEntranceScanResponse.builder()
+            .gymName(gymName)
+            .gymAddress(gymAddress)
+            .enterDate(enterDate)
+            .enterHour(enterHour)
+            .notAllowed(!allowed)
+            .build();
     }
 
     public GymEntranceResponse checkGymEntranceEligibility(Object principal) {

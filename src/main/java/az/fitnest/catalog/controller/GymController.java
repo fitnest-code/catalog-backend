@@ -58,6 +58,7 @@ import org.springframework.web.multipart.MultipartFile;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.mapper.GymProtoMapper;
 import az.fitnest.catalog.dto.GymEntranceEligibilityResponse;
+import az.fitnest.catalog.dto.GymEntranceScanResponse;
 
 @RestController
 @RequestMapping("/api/v1/gyms")
@@ -177,13 +178,13 @@ public class GymController {
     }
 
     @PostMapping("/entrance/scan")
-    @Operation(summary = "Scan gym QR code for entrance (proximity only)", description = "Checks if user is close to the gym location. Returns allowed=true if close, false otherwise.")
+    @Operation(summary = "Scan gym QR code for entrance (proximity only)", description = "Checks if user is close to the gym location. Returns gym name, address, enterDate, enterHour, notAllowed.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
+        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceScanResponse.class))),
         @ApiResponse(responseCode = "403", description = "Not close enough", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
-    public ResponseEntity<?> scanGymQrEntrance(
+    public ResponseEntity<GymEntranceScanResponse> scanGymQrEntrance(
             @AuthenticationPrincipal Object principal,
             @RequestParam String qrCodeValue,
             @RequestParam Double lat,
@@ -192,9 +193,9 @@ public class GymController {
             var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
+            return ResponseEntity.status(401).build();
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(e.getMessage());
+            return ResponseEntity.status(403).build();
         }
     }
 
