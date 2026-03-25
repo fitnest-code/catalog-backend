@@ -102,4 +102,20 @@ public class GymAdminController {
         gymWriteService.deleteAllGyms();
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Bütün abunəlikləri silin", description = "İdman zalı üçün bütün abunəlikləri silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/subscriptions")
+    public ResponseEntity<Void> deleteAllGymSubscriptions(@PathVariable("id") Long gymId) {
+        gymWriteService.deleteAllGymSubscriptions(gymId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Abunəliyi silin", description = "İdman zalı üçün müəyyən bir abunəliyi silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/subscriptions/{subscriptionId}")
+    public ResponseEntity<Void> deleteGymSubscriptionById(@PathVariable("id") Long gymId, @PathVariable("subscriptionId") Long subscriptionId) {
+        gymWriteService.deleteGymSubscriptionById(gymId, subscriptionId);
+        return ResponseEntity.noContent().build();
+    }
 }

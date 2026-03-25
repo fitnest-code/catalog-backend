@@ -21,6 +21,7 @@ import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.SavedGymRepository;
+import az.fitnest.catalog.repository.GymSubscriptionRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
@@ -56,6 +57,7 @@ public class GymWriteService {
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final az.fitnest.catalog.repository.GymImageRepository gymImageRepository;
+    private final GymSubscriptionRepository gymSubscriptionRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -417,6 +419,27 @@ public class GymWriteService {
         for (Gym gym : gyms) {
             deleteGym(gym.getId());
         }
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    public void deleteAllGymSubscriptions(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        gym.getSubscriptions().clear();
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    public void deleteGymSubscriptionById(Long gymId, Long subscriptionId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        boolean removed = gym.getSubscriptions().removeIf(s -> s.getId().equals(subscriptionId));
+        if (!removed) {
+            throw new ResourceNotFoundException("SUBSCRIPTION_NOT_FOUND", "error.subscription_not_found");
+        }
+        gymRepository.save(gym);
     }
 
     private String sanitizeFilename(String filename) {
