@@ -60,6 +60,16 @@ public class CategoryAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Kateqoriya ikonunu dəyiş", description = "Kateqoriyanın ikonunu yeniləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/{categoryId}/icon", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateCategoryIcon(
+            @PathVariable Long categoryId,
+            @RequestParam("file") MultipartFile file) {
+        categoryService.updateCategoryIcon(categoryId, file);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "Kateqoriya yaradın", description = "Yeni bir kateqoriya yaradır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Kateqoriya uğurla yaradıldı")})
     @PostMapping

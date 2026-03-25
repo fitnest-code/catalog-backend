@@ -24,6 +24,9 @@ public class Category
     private String name;
     @Column(name = "photo_url")
     private String photoUrl;
+
+    @Column(name = "icon_url")
+    private String iconUrl;
     @ManyToMany(mappedBy = "categories")
     @Builder.Default
     @EqualsAndHashCode.Exclude

@@ -43,6 +43,17 @@ public class CategoryService {
         categoryRepository.save(category);
     }
 
+    @Transactional
+    public void updateCategoryIcon(Long categoryId, MultipartFile file) {
+        validateImageFile(file);
+        var category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        String fsId = fileStorageService.saveFile(file, "/categories/icons/" + categoryId);
+        String fullUrl = "/api/v1/media/stream/" + fsId;
+        category.setIconUrl(fullUrl);
+        categoryRepository.save(category);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file.isEmpty()) {
             throw new BadRequestException("FILE_EMPTY", "error.file_empty");
