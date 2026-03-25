@@ -6,5 +6,6 @@ import lombok.Builder;
 public record CategoryDto(
     Long id,
     String name,
-    String photoUrl
+    String photoUrl,
+    String iconUrl
 ) {}

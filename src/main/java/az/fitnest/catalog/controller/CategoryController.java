@@ -47,7 +47,7 @@ public class CategoryController {
             categories = this.categoryRepository.findAll(pageable);
         }
         List<CategoryDto> items = categories.getContent().stream()
-            .map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).build())
+            .map(c -> CategoryDto.builder().id(c.getId()).name(c.getName()).photoUrl(c.getPhotoUrl()).iconUrl(c.getIconUrl()).build())
             .collect(Collectors.toList());
         PaginatedResponse<CategoryDto> resp = PaginatedResponse.<CategoryDto>builder()
             .items(items)
