@@ -1,14 +1,17 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.catalog.dto.GymReviewAuthorDto;
 import az.fitnest.catalog.dto.GymReviewDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.ReviewRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.Review;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
+import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymReviewDto> getReviews(Long gymId, int page, int pageSize, String sort) {
@@ -34,9 +38,24 @@ public class GymReviewService {
         }
         Page<Review> reviewPage = reviewRepository.findByGymId(gymId, pageable(page, pageSize, sortForReviews(sort)));
         List<GymReviewDto> items = reviewPage.getContent().stream()
-                .map(this::toGymReviewDto)
+                .map(r -> {
+                    UserResponse user = null;
+                    String fullName = "";
+                    String avatarUrl = null;
+                    try {
+                        if (r.getUserId() != null) {
+                            user = userServiceGrpcClient.getUserById(r.getUserId());
+                            if (user != null) {
+                                fullName = user.getFirstName() + " " + user.getLastName();
+                                avatarUrl = user.getProfileImageUrl();
+                            }
+                        }
+                    } catch (Exception e) {
+                        fullName = "User " + r.getUserId();
+                    }
+                    return GymMapper.toReviewDto(r, fullName, avatarUrl);
+                })
                 .collect(Collectors.toList());
-
         return PaginatedResponse.<GymReviewDto>builder()
                 .items(items)
                 .total(reviewPage.getTotalElements())

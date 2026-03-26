@@ -1,4 +1,3 @@
-
 package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.model.entity.Category;
 
@@ -18,6 +17,8 @@ import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.client.UserServiceGrpcClient;
+import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -47,6 +48,7 @@ public class GymReadService {
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final org.springframework.context.MessageSource messageSource;
     private final CategoryRepository categoryRepository;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
     @Cacheable("gym-detail")
@@ -68,7 +70,23 @@ public class GymReadService {
         CompletableFuture<List<GymReviewDto>> recentReviewsFuture = CompletableFuture.supplyAsync(() ->
             reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
                 .getContent().stream()
-                .map(GymMapper::toReviewDto)
+                .map(r -> {
+                    UserResponse user = null;
+                    String fullName = "";
+                    String avatarUrl = null;
+                    try {
+                        if (r.getUserId() != null) {
+                            user = userServiceGrpcClient.getUserById(r.getUserId());
+                            if (user != null) {
+                                fullName = user.getFirstName() + " " + user.getLastName();
+                                avatarUrl = user.getProfileImageUrl();
+                            }
+                        }
+                    } catch (Exception e) {
+                        fullName = "User " + r.getUserId();
+                    }
+                    return GymMapper.toReviewDto(r, fullName, avatarUrl);
+                })
                 .collect(Collectors.toList()), executor);
         CompletableFuture<List<GymWorkHourDto>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() ->
             gymRepository.findGeneralWorkHoursByGymId(gymId).stream()

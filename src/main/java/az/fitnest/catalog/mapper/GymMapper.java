@@ -46,6 +46,21 @@ public final class GymMapper {
                 .build();
     }
 
+    public static GymReviewDto toReviewDto(Review r, String fullName, String profileImageUrl) {
+        if (r == null) return null;
+        return GymReviewDto.builder()
+                .review_id(r.getId() != null ? r.getId().toString() : null)
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
+                .author(GymReviewAuthorDto.builder()
+                        .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
+                        .full_name(fullName)
+                        .avatar_url(profileImageUrl)
+                        .build())
+                .build();
+    }
+
     public static GymImageDto toImageDto(GymImage img) {
         if (img == null) return null;
         return GymImageDto.builder()
