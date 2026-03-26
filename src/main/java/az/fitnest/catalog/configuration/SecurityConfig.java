@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.cacheControl(HeadersConfigurer.CacheControlConfig::disable))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/stores", "/api/v1/stores/**").permitAll()
                         .requestMatchers("/api/v1/internal/**").hasRole("INTERNAL")
                         .requestMatchers("/api/v1/stores/admin/**").hasRole("ADMIN")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

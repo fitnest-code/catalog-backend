@@ -29,8 +29,6 @@ public class StoreController {
     private final StoreService storeService;
 
     @Operation(summary = "Kataloq mağazalarını əldə edin", description = "Bütün mağaza siyahıları üçün birləşdirilmiş ucluq (Hamısı, Ən yaxın, Yeni, Endirimlilər, Saxlanılanlar). Görünüşləri dəyişmək üçün 'type' parametrindən istifadə edin.")
-    @PreAuthorize("isAuthenticated()")
-    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mağazalar uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}),
             @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur", content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
