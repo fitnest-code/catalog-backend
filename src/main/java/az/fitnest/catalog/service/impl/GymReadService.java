@@ -77,13 +77,16 @@ public class GymReadService {
                     try {
                         if (r.getUserId() != null) {
                             user = userServiceGrpcClient.getUserById(r.getUserId());
+                            System.out.println("[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
                             if (user != null) {
                                 fullName = user.getFirstName() + " " + user.getLastName();
                                 avatarUrl = user.getProfileImageUrl();
+                                System.out.println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
                             }
                         }
                     } catch (Exception e) {
                         fullName = "User " + r.getUserId();
+                        System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": " + e.getMessage());
                     }
                     return GymMapper.toReviewDto(r, fullName, avatarUrl);
                 })
