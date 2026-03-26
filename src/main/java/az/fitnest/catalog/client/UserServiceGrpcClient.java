@@ -16,4 +16,3 @@ public class UserServiceGrpcClient {
         return userServiceStub.getUserById(request);
     }
 }
-
