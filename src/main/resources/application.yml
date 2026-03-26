@@ -167,6 +167,9 @@ springdoc:
 
 grpc:
   client:
+    user-service:
+      address: 'dns:///user-service.fitnest-dev.svc.cluster.local:9090'
+      negotiation-type: plaintext
     storage-service:
       address: 'dns:///storage-service.fitnest-dev.svc.cluster.local:9090'
       negotiation-type: plaintext
