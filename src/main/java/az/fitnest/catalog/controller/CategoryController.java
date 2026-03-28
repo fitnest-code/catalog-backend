@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.context.MessageSource;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -31,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class CategoryController {
 
     private final CategoryRepository categoryRepository;
+    private final MessageSource messageSource;
 
     @Operation(summary = "Bütün kateqoriyaları əldə edin", description = "Bütün kataloq kateqoriyalarının səhifələnmiş siyahısını qaytarır. Ada görə axtarış üçün 'q' parametrindən istifadə edin.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriyalar uğurla əldə edildi")})
@@ -38,8 +42,13 @@ public class CategoryController {
     public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(
             @Parameter(description = "Axtarış üçün ad") @RequestParam(value = "q", required = false) String q,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size) {
-        PageRequest pageable = PageRequest.of(Math.max(0, page - 1), size);
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size,
+            Locale locale) {
+        if (page < 1) {
+            String message = messageSource.getMessage("error.page_index_invalid", null, locale);
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, message);
+        }
+        PageRequest pageable = PageRequest.of(page - 1, size);
         Page<Category> categories;
         if (q != null && !q.isBlank()) {
             categories = this.categoryRepository.searchByName(q, pageable);
