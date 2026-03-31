@@ -135,7 +135,9 @@ public class GymController {
 
     @GetMapping
     @Operation(summary = "İdman zallarını əldə edin", description = "Bütün idman zalı siyahıları üçün birləşdirilmiş ucluq (Hamısı, Ən Yaxın, Yeni, Saxlanılanlar). Görünüşləri dəyişmək üçün 'type' parametrindən istifadə edin.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))})})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaginatedResponse<GymMainPageDto>> getGyms(
             @AuthenticationPrincipal Object principal,
             @Parameter(description = "Axtarış sorğusu") @RequestParam(value = "q", required = false) String q,

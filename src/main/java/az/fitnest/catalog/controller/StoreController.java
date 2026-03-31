@@ -33,6 +33,8 @@ public class StoreController {
             @ApiResponse(responseCode = "200", description = "Mağazalar uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}),
             @ApiResponse(responseCode = "401", description = "Autentifikasiya tələb olunur", content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getStores(
             @Parameter(description = "Axtarış sorğusu (ad və ya ünvana görə)") @RequestParam(value = "q", required = false) String q,
