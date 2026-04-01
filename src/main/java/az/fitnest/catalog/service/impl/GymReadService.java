@@ -809,10 +809,9 @@ public class GymReadService {
         return new GymTypeCountResponse(gender, count);
     }
 
-    // Helper for address localization
     private String getLocalizedAddressField(az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null) return null;
-        String addressId = address.toString(); // fallback if no id field
+        String addressId = address.toString();
         try {
             java.lang.reflect.Field idField = address.getClass().getDeclaredField("id");
             idField.setAccessible(true);
@@ -821,7 +820,6 @@ public class GymReadService {
         } catch (Exception ignored) {}
         String localized = translationService.getTranslatedValue("Address", addressId, fieldName, userLanguage);
         if (localized == null || localized.isEmpty()) {
-            // fallback to original value
             try {
                 java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
                 f.setAccessible(true);
