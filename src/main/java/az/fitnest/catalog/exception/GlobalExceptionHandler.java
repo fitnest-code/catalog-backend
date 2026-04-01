@@ -4,12 +4,18 @@ import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.ApiError;
 import az.fitnest.catalog.exception.BaseException;
 import az.fitnest.catalog.exception.ValidationException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import jakarta.validation.ConstraintViolationException;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -103,12 +109,63 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = {HttpMessageNotReadableException.class})
     public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception, WebRequest request) {
+        Map<String, Object> details = new HashMap<>();
+        Throwable cause = exception.getCause();
+
+        if (cause instanceof InvalidFormatException invalidFormat) {
+            String fieldPath = invalidFormat.getPath().stream()
+                    .map(JsonMappingException.Reference::getFieldName)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.joining("."));
+            String issueMessage;
+            if (invalidFormat.getTargetType().isEnum()) {
+                Object[] enumConstants = invalidFormat.getTargetType().getEnumConstants();
+                String accepted = java.util.Arrays.stream(enumConstants)
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", "));
+                issueMessage = "Invalid value. Accepted values: [" + accepted + "]";
+            } else {
+                issueMessage = "Invalid value. Expected type: " + invalidFormat.getTargetType().getSimpleName();
+            }
+            details.put("fieldIssues", List.of(Map.of(
+                    "field", fieldPath.isEmpty() ? "unknown" : fieldPath,
+                    "rejectedValue", String.valueOf(invalidFormat.getValue()),
+                    "issue", issueMessage
+            )));
+        } else if (cause instanceof UnrecognizedPropertyException unrecognized) {
+            String fieldPath = unrecognized.getPath().stream()
+                    .map(JsonMappingException.Reference::getFieldName)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.joining("."));
+            details.put("fieldIssues", List.of(Map.of(
+                    "field", fieldPath.isEmpty() ? unrecognized.getPropertyName() : fieldPath,
+                    "issue", "Unrecognized field. Known fields: " + unrecognized.getKnownPropertyIds()
+            )));
+        } else if (cause instanceof MismatchedInputException mismatched) {
+            String fieldPath = mismatched.getPath().stream()
+                    .map(JsonMappingException.Reference::getFieldName)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.joining("."));
+            details.put("fieldIssues", List.of(Map.of(
+                    "field", fieldPath.isEmpty() ? "unknown" : fieldPath,
+                    "issue", "Type mismatch. Expected type: " + (mismatched.getTargetType() != null ? mismatched.getTargetType().getSimpleName() : "unknown")
+            )));
+        } else if (cause instanceof JsonParseException parseException) {
+            details.put("parseError", Map.of(
+                    "location", "line " + parseException.getLocation().getLineNr() + ", column " + parseException.getLocation().getColumnNr(),
+                    "issue", parseException.getOriginalMessage()
+            ));
+        } else {
+            details.put("issue", exception.getMostSpecificCause().getMessage());
+        }
+
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .code("BAD_REQUEST")
                 .message(getMessage("error.invalid_json_format"))
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(OffsetDateTime.now())
+                .details(details)
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(apiError));
     }
