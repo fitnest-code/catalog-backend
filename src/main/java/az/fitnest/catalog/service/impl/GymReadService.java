@@ -16,6 +16,7 @@ import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.service.ReverseGeocodingService;
+import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.user.grpc.UserResponse;
@@ -48,7 +49,21 @@ public class GymReadService {
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final org.springframework.context.MessageSource messageSource;
     private final CategoryRepository categoryRepository;
+    private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
+
+    private String getUserLanguage(Long userId) {
+        String language = "AZ";
+        if (userId != null) {
+            try {
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    language = user.getLanguage();
+                }
+            } catch (Exception ignored) {}
+        }
+        return language;
+    }
 
     @Transactional(readOnly = true)
     @Cacheable("gym-detail")
@@ -184,10 +199,15 @@ public class GymReadService {
         } catch (Exception e) {
             System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
         }
+        String userLanguage = getUserLanguage(userId);
+        String localizedName = translationService.getTranslatedValue("Gym", gym.getId().toString(), "name", userLanguage);
+        if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
+        String localizedDescription = translationService.getTranslatedValue("Gym", gym.getId().toString(), "description", userLanguage);
+        if (localizedDescription == null || localizedDescription.isEmpty()) localizedDescription = gym.getDescription();
         GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
-                .name(gym.getName())
-                .description(gym.getDescription())
+                .name(localizedName)
+                .description(localizedDescription)
                 .isSaved(isSaved)
                 .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
                         .addressText(gym.getAddress().getAddressText())
@@ -458,9 +478,12 @@ public class GymReadService {
                 }).collect(java.util.stream.Collectors.toList());
             }
         }
+        String userLanguage = getUserLanguage(userId);
+        String localizedName = translationService.getTranslatedValue("Gym", gym.getId().toString(), "name", userLanguage);
+        if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
         return GymMainPageDto.builder()
                 .gymId(gym.getId().toString())
-                .name(gym.getName())
+                .name(localizedName)
                 .coverImageUrl(gym.getCoverImageUrl())
                 .stars(stars)
                 .isNew(isNew)

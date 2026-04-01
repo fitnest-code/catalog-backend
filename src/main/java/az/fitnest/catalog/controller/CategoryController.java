@@ -63,7 +63,6 @@ public class CategoryController {
         } else {
             categories = this.categoryRepository.findAll(pageable);
         }
-        // Determine user language
         String language = "AZ";
         if (userId != null) {
             UserResponse user = userServiceGrpcClient.getUserById(userId);

@@ -8,7 +8,10 @@ import az.fitnest.catalog.repository.StoreRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.service.StoreService;
+import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.client.UserServiceGrpcClient;
 import jakarta.persistence.criteria.Expression;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -22,19 +25,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
+@RequiredArgsConstructor
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
     private final SavedStoreRepository savedStoreRepository;
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
-
-    public StoreServiceImpl(StoreRepository storeRepository, SavedStoreRepository savedStoreRepository,
-                            ReverseGeocodingService reverseGeocodingService, FileStorageService fileStorageService) {
-        this.storeRepository = storeRepository;
-        this.savedStoreRepository = savedStoreRepository;
-        this.reverseGeocodingService = reverseGeocodingService;
-        this.fileStorageService = fileStorageService;
-    }
+    private final TranslationService translationService;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -113,6 +111,19 @@ public class StoreServiceImpl implements StoreService {
         return PaginatedResponse.<StoreMainPageDto>builder().items(Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
     }
 
+    private String getUserLanguage(Long userId) {
+        String language = "AZ";
+        if (userId != null) {
+            try {
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    language = user.getLanguage();
+                }
+            } catch (Exception ignored) {}
+        }
+        return language;
+    }
+
     private StoreMainPageDto mapToSummary(Store store, Long userId, Double lat, Double lng) {
         Double distance = null;
         if (lat != null && lng != null && store.getAddress() != null && store.getAddress().getLatitude() != null && store.getAddress().getLongitude() != null) {
@@ -124,9 +135,13 @@ public class StoreServiceImpl implements StoreService {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
         }
 
+        String userLanguage = getUserLanguage(userId);
+        String localizedName = translationService.getTranslatedValue("Store", store.getId().toString(), "name", userLanguage);
+        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
+
         return StoreMainPageDto.builder()
                 .storeId(store.getId())
-                .name(store.getName())
+                .name(localizedName)
                 .address(store.getAddress() != null ? store.getAddress().getAddressText() : null)
                 .city(store.getAddress() != null ? store.getAddress().getCity() : null)
                 .logoUrl(store.getLogoUrl())
@@ -151,9 +166,12 @@ public class StoreServiceImpl implements StoreService {
         if (userId != null) {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
         }
+        String userLanguage = getUserLanguage(userId);
+        String localizedName = translationService.getTranslatedValue("Store", store.getId().toString(), "name", userLanguage);
+        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
         return StoreDetailResponseDto.builder()
                 .storeId(store.getId())
-                .name(store.getName())
+                .name(localizedName)
                 .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
                 .phone(store.getPhone())
                 .category(store.getCategory())

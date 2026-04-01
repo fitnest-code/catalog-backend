@@ -61,4 +61,3 @@ public class TranslationController {
         return ResponseEntity.ok(results);
     }
 }
-
