@@ -121,16 +121,20 @@ public class GymReadService {
         CompletableFuture<List<GymRoomDto>> roomsFuture = gymFuture.thenApplyAsync(gym -> {
             List<GymRoomDto> rooms = new java.util.ArrayList<>();
             if (gym != null && gym.getRooms() != null) {
+                String userLanguage = getUserLanguage(userId);
                 rooms = gym.getRooms().stream().map(room -> {
+                    String localizedRoomName = translationService.getTranslatedValue("Room", room.getId().toString(), "name", userLanguage);
+                    if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
+                    final String finalLocalizedRoomName = localizedRoomName;
                     List<GymImageDto> images = room.getImages().stream().map(img ->
                         GymImageDto.builder()
                                 .id(img.getId())
                                 .gymId(gym.getId())
-                                .name(room.getName())
+                                .name(finalLocalizedRoomName)
                                 .url(img.getPictureUrl())
                                 .build()
                     ).collect(Collectors.toList());
-                    return GymRoomDto.builder().room_name(room.getName()).images(images).build();
+                    return GymRoomDto.builder().room_name(finalLocalizedRoomName).images(images).build();
                 }).collect(Collectors.toList());
             }
             return rooms;
@@ -210,8 +214,8 @@ public class GymReadService {
                 .description(localizedDescription)
                 .isSaved(isSaved)
                 .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
-                        .addressText(gym.getAddress().getAddressText())
-                        .city(gym.getAddress().getCity())
+                        .addressText(getLocalizedAddressField(gym.getAddress(), "addressText", userLanguage))
+                        .city(getLocalizedAddressField(gym.getAddress(), "city", userLanguage))
                         .latitude(gym.getAddress().getLatitude())
                         .longitude(gym.getAddress().getLongitude())
                         .build() : null)
@@ -803,5 +807,29 @@ public class GymReadService {
                 throw new BadRequestException("INVALID_GENDER", "Gender must be 'male' or 'female'");
         }
         return new GymTypeCountResponse(gender, count);
+    }
+
+    // Helper for address localization
+    private String getLocalizedAddressField(az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
+        if (address == null) return null;
+        String addressId = address.toString(); // fallback if no id field
+        try {
+            java.lang.reflect.Field idField = address.getClass().getDeclaredField("id");
+            idField.setAccessible(true);
+            Object idValue = idField.get(address);
+            if (idValue != null) addressId = idValue.toString();
+        } catch (Exception ignored) {}
+        String localized = translationService.getTranslatedValue("Address", addressId, fieldName, userLanguage);
+        if (localized == null || localized.isEmpty()) {
+            // fallback to original value
+            try {
+                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
+                f.setAccessible(true);
+                Object v = f.get(address);
+                if (v != null) return v.toString();
+            } catch (Exception ignored) {}
+            return null;
+        }
+        return localized;
     }
 }
