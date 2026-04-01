@@ -7,6 +7,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "reviews", indexes = {@Index(name = "idx_reviews_user_id", columnList = "user_id")})
@@ -23,6 +24,9 @@ public class Review
     private Integer rating;
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
+    @Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private az.fitnest.catalog.model.enums.ReviewStatus status = az.fitnest.catalog.model.enums.ReviewStatus.PENDING;
 
     public Review() {
     }
@@ -71,5 +75,13 @@ public class Review
 
     public void setGym(Gym gym) {
         this.gym = gym;
+    }
+
+    public az.fitnest.catalog.model.enums.ReviewStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(az.fitnest.catalog.model.enums.ReviewStatus status) {
+        this.status = status;
     }
 }

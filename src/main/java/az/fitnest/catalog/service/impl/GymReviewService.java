@@ -38,26 +38,7 @@ public class GymReviewService {
         }
         Page<Review> reviewPage = reviewRepository.findByGymId(gymId, pageable(page, pageSize, sortForReviews(sort)));
         List<GymReviewDto> items = reviewPage.getContent().stream()
-                .map(r -> {
-                    UserResponse user = null;
-                    String fullName = "";
-                    String avatarUrl = null;
-                    try {
-                        if (r.getUserId() != null) {
-                            user = userServiceGrpcClient.getUserById(r.getUserId());
-                            System.out.println("[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
-                            if (user != null) {
-                                fullName = user.getFirstName() + " " + user.getLastName();
-                                avatarUrl = user.getProfileImageUrl();
-                                System.out.println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
-                            }
-                        }
-                    } catch (Exception e) {
-                        fullName = "User " + r.getUserId();
-                        System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": " + e.getMessage());
-                    }
-                    return GymMapper.toReviewDto(r, fullName, avatarUrl);
-                })
+                .map(this::mapReviewToDto)
                 .collect(Collectors.toList());
         return PaginatedResponse.<GymReviewDto>builder()
                 .items(items)
@@ -80,9 +61,64 @@ public class GymReviewService {
         review.setGym(gym);
         review.setRating(request.rating());
         review.setComment(request.comment());
+        review.setStatus(az.fitnest.catalog.model.enums.ReviewStatus.PENDING);
         reviewRepository.save(review);
+    }
 
-        reviewRepository.incrementReviewCountAndRating(gymId, (double) request.rating());
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#result")
+    public Long approveReview(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
+            review.setStatus(az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
+            reviewRepository.save(review);
+            reviewRepository.incrementReviewCountAndRating(review.getGymId(), (double) review.getRating());
+        }
+        return review.getGymId();
+    }
+
+    @Transactional
+    public void rejectReview(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        review.setStatus(az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+        reviewRepository.save(review);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<GymReviewDto> getPendingReviews(int page, int pageSize) {
+        Page<Review> reviewPage = reviewRepository.findByStatus(az.fitnest.catalog.model.enums.ReviewStatus.PENDING, pageable(page, pageSize, Sort.by(Sort.Direction.DESC, "createdDate")));
+        List<GymReviewDto> items = reviewPage.getContent().stream()
+                .map(this::mapReviewToDto)
+                .collect(Collectors.toList());
+        return PaginatedResponse.<GymReviewDto>builder()
+                .items(items)
+                .total(reviewPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    private GymReviewDto mapReviewToDto(Review r) {
+        UserResponse user = null;
+        String fullName = "";
+        String avatarUrl = null;
+        try {
+            if (r.getUserId() != null) {
+                user = userServiceGrpcClient.getUserById(r.getUserId());
+                System.out.println("[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
+                if (user != null) {
+                    fullName = user.getFirstName() + " " + user.getLastName();
+                    avatarUrl = user.getProfileImageUrl();
+                    System.out.println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
+                }
+            }
+        } catch (Exception e) {
+            fullName = "User " + r.getUserId();
+            System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": " + e.getMessage());
+        }
+        return GymMapper.toReviewDto(r, fullName, avatarUrl);
     }
 
     @Transactional(readOnly = true)

@@ -10,11 +10,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository
         extends JpaRepository<Review, Long> {
-    @Query(value = "SELECT r FROM Gym g JOIN g.reviews r WHERE g.id = :gymId")
+    @Query(value = "SELECT r FROM Gym g JOIN g.reviews r WHERE g.id = :gymId AND r.status = 'ACCEPTED'")
     public Page<Review> findByGymId(@Param(value = "gymId") Long var1, Pageable var2);
 
-    @Query("SELECT new map(AVG(r.rating) as avgRating, COUNT(r) as totalCount) FROM Gym g JOIN g.reviews r WHERE g.id = :gymId")
+    @Query("SELECT new map(AVG(r.rating) as avgRating, COUNT(r) as totalCount) FROM Gym g JOIN g.reviews r WHERE g.id = :gymId AND r.status = 'ACCEPTED'")
     public java.util.Map<String, Object> getRatingAndCountByGymId(@Param("gymId") Long gymId);
+
+    public Page<Review> findByStatus(az.fitnest.catalog.model.enums.ReviewStatus status, Pageable pageable);
 
     @Modifying
     @Query("UPDATE Gym g SET g.reviewsCount = g.reviewsCount + 1, g.rating = ((g.rating * g.reviewsCount) + :newRating) / CAST((g.reviewsCount + 1) AS double) WHERE g.id = :gymId")
