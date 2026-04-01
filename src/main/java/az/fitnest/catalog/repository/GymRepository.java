@@ -26,7 +26,7 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT w FROM Gym g JOIN g.generalWorkHours w WHERE g.id = :gymId")
     public List<az.fitnest.catalog.model.entity.GymWorkHour> findGeneralWorkHoursByGymId(@org.springframework.data.repository.query.Param("gymId") Long gymId);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "categories", "subscriptions", "subscriptions.benefits", "rooms", "generalWorkHours", "workHoursWoman", "workHoursMan"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "categories", "subscriptions", "subscriptions.benefits", "rooms", "rooms.images", "generalWorkHours", "workHoursWoman", "workHoursMan"})
     public Optional<Gym> findWithDetailsById(Long id);
 
     @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', :q, '%')))")
