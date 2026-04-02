@@ -1,40 +1,53 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.ApiResponse;
+import az.fitnest.catalog.dto.request.CreateTranslationRequest;
 import az.fitnest.catalog.model.entity.Translation;
 import az.fitnest.catalog.repository.TranslationRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/admin/translations")
 @RequiredArgsConstructor
+@Tag(name = "Translation Management", description = "Tərcümələri idarə etmək üçün ucluqlar")
 public class TranslationController {
     private final TranslationRepository translationRepository;
 
+    @Operation(summary = "Tərcümə yaradın və ya yeniləyin", description = "Verilmiş obyekt, dil və sahə üçün yeni tərcümə yaradır və ya mövcud olanı yeniləyir.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tərcümə uğurla yaradıldı/yeniləndi",
+                    content = @Content(schema = @Schema(implementation = Translation.class)))
+    })
     @PostMapping
-    public ResponseEntity<Translation> createTranslation(@RequestBody Translation translation) {
-        Translation saved = translationRepository.save(translation);
-        return ResponseEntity.ok(saved);
-    }
+    public ResponseEntity<ApiResponse<Translation>> createOrUpdateTranslation(@RequestBody CreateTranslationRequest request) {
+        Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                request.entityType(), request.entityId(), request.languageCode().toUpperCase(), request.fieldName()
+        ).orElse(null);
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Translation> updateTranslation(@PathVariable Long id, @RequestBody Translation translation) {
-        Optional<Translation> existing = translationRepository.findById(id);
-        if (existing.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        if (existing != null) {
+            existing.setFieldValue(request.fieldValue());
+            Translation saved = translationRepository.save(existing);
+            return ResponseEntity.ok(ApiResponse.success(saved));
+        } else {
+            Translation translation = Translation.builder()
+                    .entityType(request.entityType())
+                    .entityId(request.entityId())
+                    .languageCode(request.languageCode().toUpperCase())
+                    .fieldName(request.fieldName())
+                    .fieldValue(request.fieldValue())
+                    .build();
+            Translation saved = translationRepository.save(translation);
+            return ResponseEntity.ok(ApiResponse.success(saved));
         }
-        Translation toUpdate = existing.get();
-        toUpdate.setEntityType(translation.getEntityType());
-        toUpdate.setEntityId(translation.getEntityId());
-        toUpdate.setLanguageCode(translation.getLanguageCode());
-        toUpdate.setFieldName(translation.getFieldName());
-        toUpdate.setFieldValue(translation.getFieldValue());
-        Translation saved = translationRepository.save(toUpdate);
-        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
@@ -61,3 +74,4 @@ public class TranslationController {
         return ResponseEntity.ok(results);
     }
 }
+
