@@ -222,10 +222,12 @@ public class GymReadService {
                         String planId = sub.getPackageId().toString();
                         String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
                         String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : info.getName();
-                        List<String> benefitsList = sub.getBenefits().stream()
+                        List<GymPlanBenefitDto> benefitsList = sub.getBenefits().stream()
                             .map(b -> {
                                 String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_"), "benefit", userLanguage);
-                                return (localizedBenefit != null && !localizedBenefit.isEmpty()) ? localizedBenefit : b.getBenefit();
+                                return GymPlanBenefitDto.builder()
+                                    .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getBenefit())
+                                    .build();
                             })
                             .toList();
                         return GymPlanItemDto.builder()
@@ -501,11 +503,13 @@ public class GymReadService {
                     String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
                     String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : 
                                     (info != null ? info.getName() : "Bronze Plan");
-                    List<String> benefitsList = sub.getBenefits().stream()
+                    List<GymPlanBenefitDto> benefitsList = sub.getBenefits().stream()
                         .map(b -> {
                             String ebId = sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_");
                             String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", ebId, "benefit", userLanguage);
-                            return (localizedBenefit != null && !localizedBenefit.isEmpty()) ? localizedBenefit : b.getBenefit();
+                            return GymPlanBenefitDto.builder()
+                                .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getBenefit())
+                                .build();
                         })
                         .toList();
                     return GymPlanItemDto.builder()
@@ -525,7 +529,7 @@ public class GymReadService {
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
                         .packageName(fallbackName)
-                        .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
+                        .benefits(sub.getBenefits().stream().map(b -> GymPlanBenefitDto.builder().description(b.getBenefit()).build()).toList())
                         .build();
                 }).collect(java.util.stream.Collectors.toList());
             }
