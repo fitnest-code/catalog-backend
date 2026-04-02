@@ -153,6 +153,18 @@ public class GymReadService {
             generalWorkHours = new java.util.HashSet<>(generalWorkHoursList);
         }
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
+        if (categoryDtos != null) {
+            categoryDtos = categoryDtos.stream()
+                    .map(c -> {
+                        String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.id().toString(), "name", userLanguage);
+                        return CategoryDto.builder()
+                                .id(c.id())
+                                .name(localizedCatName != null ? localizedCatName : c.name())
+                                .photoUrl(c.photoUrl())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        }
         List<GymRoomDto> rooms = roomsFuture.join();
         List<GymTrainerDto> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerDto>map(t -> {
             if (t.profession() != null && t.profession().id() != null) {
@@ -454,13 +466,17 @@ public class GymReadService {
             distanceKm = Math.round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0) / 10.0;
         }
 
+        String userLanguage = getUserLanguage(userId);
         List<CategoryDto> categories = gym.getCategories() != null ?
             gym.getCategories().stream()
-                .map(c -> CategoryDto.builder()
-                    .id(c.getId())
-                    .name(c.getName())
-                    .photoUrl(c.getPhotoUrl())
-                    .build())
+                .map(c -> {
+                    String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
+                    return CategoryDto.builder()
+                        .id(c.getCategoryId())
+                        .name(localizedCatName != null ? localizedCatName : c.getName())
+                        .photoUrl(c.getPhotoUrl())
+                        .build();
+                })
                 .collect(Collectors.toList())
             : java.util.Collections.emptyList();
 
@@ -477,12 +493,20 @@ public class GymReadService {
                         az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                         p -> p
                     ));
-                supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
+                supportedSubscriptions = gym.getSubscriptions().stream()
+                    .filter(sub -> sub.getPackageId() != null)
+                    .map(sub -> {
                     az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                    String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
-                    String packageName = info != null ? info.getName() : "Unknown";
+                    String planId = sub.getPackageId().toString();
+                    String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
+                    String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : 
+                                    (info != null ? info.getName() : "Bronze Plan");
                     List<String> benefitsList = sub.getBenefits().stream()
-                        .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                        .map(b -> {
+                            String ebId = sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_");
+                            String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", ebId, "benefit", userLanguage);
+                            return (localizedBenefit != null && !localizedBenefit.isEmpty()) ? localizedBenefit : b.getBenefit();
+                        })
                         .toList();
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
@@ -496,16 +520,17 @@ public class GymReadService {
             if (gym.getSubscriptions() != null) {
                 supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
                     String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
-                    String placeholderName = "Standard Plan";
+                    String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
+                    String fallbackName = localizedPackageName != null ? localizedPackageName : "Bronze Plan";
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
-                        .packageName(placeholderName)
+                        .packageName(fallbackName)
                         .benefits(sub.getBenefits().stream().map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit).toList())
                         .build();
                 }).collect(java.util.stream.Collectors.toList());
             }
         }
-        String userLanguage = getUserLanguage(userId);
+        // userLanguage already defined above
         String localizedName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
         return GymMainPageDto.builder()
