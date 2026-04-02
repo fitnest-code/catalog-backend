@@ -55,15 +55,21 @@ public class GymReadService {
             try {
                 az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    language = user.getLanguage();
+                    language = user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {}
+        }
+        if (language.equals("AZ")) {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage().toUpperCase();
+            if (localeLang.equals("EN") || localeLang.equals("RU")) {
+                language = localeLang;
+            }
         }
         return language;
     }
 
     @Transactional(readOnly = true)
-    @Cacheable("gym-detail")
+    @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         ExecutorService executor = Executors.newFixedThreadPool(6);
         CompletableFuture<Gym> gymFuture = CompletableFuture.supplyAsync(() -> gymRepository.findWithDetailsById(gymId)
@@ -118,9 +124,9 @@ public class GymReadService {
         CompletableFuture<List<GymRoomDto>> roomsFuture = gymFuture.thenApplyAsync(gym -> {
             List<GymRoomDto> rooms = new java.util.ArrayList<>();
             if (gym != null && gym.getRooms() != null) {
-                String userLanguage = getUserLanguage(userId);
+                String userLang = getUserLanguage(userId);
                 rooms = gym.getRooms().stream().map(room -> {
-                    String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLanguage);
+                    String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLang);
                     if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
                     final String finalLocalizedRoomName = localizedRoomName;
                     List<GymImageDto> images = room.getImages().stream().map(img ->
