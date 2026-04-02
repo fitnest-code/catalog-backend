@@ -49,7 +49,7 @@ public class GymReadService {
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
 
-    private String getUserLanguage(Long userId) {
+    public String getUserLanguage(Long userId) {
         String language = "AZ";
         if (userId != null) {
             try {
@@ -69,7 +69,7 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()")
+    @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + #root.target.getUserLanguage(#userId)")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         ExecutorService executor = Executors.newFixedThreadPool(6);
         CompletableFuture<Gym> gymFuture = CompletableFuture.supplyAsync(() -> gymRepository.findWithDetailsById(gymId)
