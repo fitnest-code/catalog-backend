@@ -12,4 +12,3 @@ public interface TranslationRepository extends JpaRepository<Translation, Long> 
 
     boolean existsByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(String entityType, String entityId, String languageCode, String fieldName);
 }
-

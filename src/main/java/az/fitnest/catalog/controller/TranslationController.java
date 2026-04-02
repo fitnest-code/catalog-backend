@@ -52,7 +52,6 @@ public class TranslationController {
         }
     }
 
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTranslation(@PathVariable Long id) {
         if (!translationRepository.existsById(id)) {
@@ -77,4 +76,3 @@ public class TranslationController {
         return ResponseEntity.ok(results);
     }
 }
-

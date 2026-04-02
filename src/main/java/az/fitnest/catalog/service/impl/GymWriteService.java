@@ -28,6 +28,7 @@ import az.fitnest.catalog.util.ByteArrayMultipartFile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +58,7 @@ public class GymWriteService {
     private GymWriteService self;
 
     @Transactional
+    @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     public void createGym(GymRequest request) {
         if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
@@ -127,7 +129,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void updateGym(Long gymId, GymRequest request) {
         if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
@@ -200,7 +205,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void enableGymSubscription(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -217,7 +225,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -238,7 +249,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -356,7 +370,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -396,7 +413,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void deleteAllGymRooms(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -419,7 +439,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void deleteGymRoomById(Long gymId, Long roomId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -445,7 +468,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void updateCoverImage(Long gymId, MultipartFile file) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -464,7 +490,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void deleteAllGymSubscriptions(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -473,7 +502,10 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gyms", "gymImages", "gymPackages"}, key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void deleteGymSubscriptionById(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));

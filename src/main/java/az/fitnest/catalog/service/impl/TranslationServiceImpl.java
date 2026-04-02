@@ -27,4 +27,3 @@ public class TranslationServiceImpl implements TranslationService {
         .orElse(null);
     }
 }
-

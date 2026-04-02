@@ -505,7 +505,7 @@ public class GymReadService {
                     az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                     String planId = sub.getPackageId().toString();
                     String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
-                    String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : 
+                    String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName :
                                     (info != null ? info.getName() : "Bronze Plan");
                     List<GymPlanBenefitDto> benefitsList = sub.getBenefits().stream()
                         .map(b -> {
