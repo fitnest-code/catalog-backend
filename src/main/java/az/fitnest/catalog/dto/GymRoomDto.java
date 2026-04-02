@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GymRoomDto {
+    private Long id;
     private String room_name;
     private List<GymImageDto> images;
 

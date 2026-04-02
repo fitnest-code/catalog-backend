@@ -472,6 +472,33 @@ public class GymWriteService {
         @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
+    public void deleteRoomImageById(Long gymId, Long imageId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
+            java.util.Optional<az.fitnest.catalog.model.entity.RoomImage> roomImageOpt = room.getImages().stream()
+                    .filter(img -> img.getId().equals(imageId))
+                    .findFirst();
+
+            if (roomImageOpt.isPresent()) {
+                az.fitnest.catalog.model.entity.RoomImage roomImage = roomImageOpt.get();
+                if (roomImage.getPictureUrl() != null && !roomImage.getPictureUrl().isBlank()) {
+                    safeDeleteFile(roomImage.getPictureUrl());
+                }
+                room.getImages().remove(roomImage);
+                gymRepository.save(gym);
+                return;
+            }
+        }
+        throw new ResourceNotFoundException("ROOM_IMAGE_NOT_FOUND", "error.room_image_not_found");
+    }
+
+    @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void updateCoverImage(Long gymId, MultipartFile file) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));

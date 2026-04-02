@@ -103,6 +103,14 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "İdman zalının müəyyən bir otaq şəklini silin", description = "İdman zalının otaqlarına aid olan müəyyən bir şəkli silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/rooms/images/{imageId}")
+    public ResponseEntity<Void> deleteRoomImageById(@PathVariable Long id, @PathVariable Long imageId) {
+        gymWriteService.deleteRoomImageById(id, imageId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "İdman zalı üz qabığı şəklini yeniləyin", description = "İdman zalı üçün əsas profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

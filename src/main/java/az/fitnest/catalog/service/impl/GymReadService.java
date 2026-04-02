@@ -137,7 +137,11 @@ public class GymReadService {
                                 .url(img.getPictureUrl())
                                 .build()
                     ).collect(Collectors.toList());
-                    return GymRoomDto.builder().room_name(finalLocalizedRoomName).images(images).build();
+                    return GymRoomDto.builder()
+                            .id(room.getId())
+                            .room_name(finalLocalizedRoomName)
+                            .images(images)
+                            .build();
                 }).collect(Collectors.toList());
             }
             return rooms;
