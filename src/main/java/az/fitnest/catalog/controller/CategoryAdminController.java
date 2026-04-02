@@ -5,7 +5,6 @@ import az.fitnest.catalog.dto.CategoryRequest;
 import az.fitnest.catalog.exception.ValidationException;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.impl.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,7 +29,6 @@ import java.net.URI;
 public class CategoryAdminController {
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
-    private final FileStorageService fileStorageService;
 
     @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -98,7 +96,7 @@ public class CategoryAdminController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        categoryRepository.deleteById(id);
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 }

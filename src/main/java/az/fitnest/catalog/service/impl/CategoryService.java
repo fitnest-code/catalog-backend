@@ -74,6 +74,22 @@ public class CategoryService {
     }
 
     @Transactional
+    public void deleteCategory(Long categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+
+        if (!category.getGyms().isEmpty()) {
+            String gymNames = category.getGyms().stream()
+                    .map(gym -> gym.getName() + " (ID: " + gym.getId() + ")")
+                    .collect(Collectors.joining(", "));
+            throw new BadRequestException("CATEGORY_IN_USE",
+                    "Cannot delete category '" + category.getName() + "' because it is assigned to: " + gymNames);
+        }
+
+        categoryRepository.delete(category);
+    }
+
+    @Transactional
     public void deleteAllCategories() {
         gymRepository.truncateGymCategories();
         categoryRepository.deleteAll();
