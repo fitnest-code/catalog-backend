@@ -4,24 +4,19 @@ import az.fitnest.catalog.dto.GeocodingResponse;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.CheckInResponseDto;
-import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
-import az.fitnest.catalog.model.entity.SavedGym;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymSubscriptionBenefit;
-import az.fitnest.catalog.dto.GymSubscriptionRequestDto;
-import az.fitnest.catalog.dto.GymSubscriptionBenefitRequestDto;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.SavedGymRepository;
-import az.fitnest.catalog.repository.GymSubscriptionRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
@@ -42,7 +37,6 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -57,7 +51,6 @@ public class GymWriteService {
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final az.fitnest.catalog.repository.GymImageRepository gymImageRepository;
-    private final GymSubscriptionRepository gymSubscriptionRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -399,6 +392,55 @@ public class GymWriteService {
             room.getImages().add(roomImage);
         }
 
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    public void deleteAllGymRooms(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (gym.getRooms() != null && !gym.getRooms().isEmpty()) {
+            List<String> roomImageUrls = gym.getRooms().stream()
+                    .flatMap(r -> r.getImages().stream())
+                    .map(az.fitnest.catalog.model.entity.RoomImage::getPictureUrl)
+                    .filter(url -> url != null && !url.isBlank())
+                    .toList();
+
+            if (!roomImageUrls.isEmpty()) {
+                try {
+                    fileStorageService.deleteFiles(roomImageUrls);
+                } catch (Exception e) {}
+            }
+            gym.getRooms().clear();
+            gymRepository.save(gym);
+        }
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    public void deleteGymRoomById(Long gymId, Long roomId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        az.fitnest.catalog.model.entity.Room room = gym.getRooms().stream()
+                .filter(r -> r.getId().equals(roomId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("ROOM_NOT_FOUND", "error.room_not_found"));
+
+        List<String> roomImageUrls = room.getImages().stream()
+                .map(az.fitnest.catalog.model.entity.RoomImage::getPictureUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .toList();
+
+        if (!roomImageUrls.isEmpty()) {
+            try {
+                fileStorageService.deleteFiles(roomImageUrls);
+            } catch (Exception e) {}
+        }
+
+        gym.getRooms().remove(room);
         gymRepository.save(gym);
     }
 
