@@ -7,15 +7,12 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymImage;
 import az.fitnest.catalog.model.entity.SavedGym;
-import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
@@ -241,8 +238,7 @@ public class GymReadService {
         } catch (Exception e) {
             System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
         }
-        String localizedName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
-        if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
+        String localizedName = getLocalizedGymName(gym, userLanguage);
         String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedDescription == null || localizedDescription.isEmpty()) localizedDescription = gym.getDescription();
         GymDetailResponse response = GymDetailResponse.builder()
@@ -319,12 +315,14 @@ public class GymReadService {
         return candidates.stream()
                 .filter(gym -> gym.getAddress() != null && gym.getAddress().getLatitude() != null && gym.getAddress().getLongitude() != null)
                 .map(gym -> {
+                    String userLanguage = getUserLanguage(az.fitnest.catalog.util.UserContext.getCurrentUserId());
+                    String localizedName = getLocalizedGymName(gym, userLanguage);
                     double rawDistance = calculateDistanceRaw(lat, lng, gym.getAddress().getLatitude(), gym.getAddress().getLongitude());
                     boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(newThreshold);
                     return new Object() {
                         GymNearbyResponseDto dto = GymNearbyResponseDto.builder()
                                 .gymId(gym.getId())
-                                .name(gym.getName())
+                                .name(localizedName)
                                 .address(gym.getAddress() != null ? gym.getAddress().getAddressText() : null)
                                 .rating(gym.getRating())
                                 .isNew(isNew)
@@ -534,9 +532,7 @@ public class GymReadService {
                 }).collect(java.util.stream.Collectors.toList());
             }
         }
-        // userLanguage already defined above
-        String localizedName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
-        if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
+        String localizedName = getLocalizedGymName(gym, userLanguage);
         return GymMainPageDto.builder()
                 .gymId(gym.getId().toString())
                 .name(localizedName)
@@ -760,7 +756,8 @@ public class GymReadService {
         boolean allowed = false;
         Address address = gym.getAddress();
         String gymAddress = address != null ? address.getAddressText() : null;
-        String gymName = gym.getName();
+        String userLanguage = getUserLanguage(userId);
+        String localizedName = getLocalizedGymName(gym, userLanguage);
         String enterDate = java.time.LocalDate.now().toString();
         String enterHour = java.time.LocalTime.now().withSecond(0).withNano(0).toString();
         double distance = 9999;
@@ -769,7 +766,7 @@ public class GymReadService {
             allowed = distance <= 0.2;
         }
         return GymEntranceScanResponse.builder()
-            .gymName(gymName)
+            .gymName(localizedName)
             .gymAddress(gymAddress)
             .enterDate(enterDate)
             .enterHour(enterHour)
@@ -874,5 +871,11 @@ public class GymReadService {
             return null;
         }
         return localized;
+    }
+
+    private String getLocalizedGymName(Gym gym, String userLanguage) {
+        if (gym == null) return null;
+        String translated = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
+        return (translated != null && !translated.isEmpty()) ? translated : gym.getName();
     }
 }
