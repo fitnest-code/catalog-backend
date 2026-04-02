@@ -3,8 +3,8 @@ package az.fitnest.catalog.model.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "gym_rooms")
@@ -30,5 +30,5 @@ public class Room {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private List<RoomImage> images = new ArrayList<>();
+    private Set<RoomImage> images = new HashSet<>();
 }
