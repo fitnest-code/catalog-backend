@@ -13,28 +13,18 @@ public class TranslationServiceImpl implements TranslationService {
 
     @Override
     public String getTranslatedValue(String entityType, String entityId, String fieldName, String languageCode) {
-        String value = translationRepository
-                .findAll()
-                .stream()
-                .filter(t -> t.getEntityType().equals(entityType)
-                        && t.getEntityId().equals(entityId)
-                        && t.getLanguageCode().equalsIgnoreCase(languageCode)
-                        && t.getFieldName().equals(fieldName))
-                .map(Translation::getFieldValue)
-                .findFirst()
-                .orElse(null);
-        if (value != null && !value.isEmpty()) {
-            return value;
+        if (languageCode == null || languageCode.equalsIgnoreCase("AZ")) {
+            return null;
         }
-        return translationRepository
-                .findAll()
-                .stream()
-                .filter(t -> t.getEntityType().equals(entityType)
-                        && t.getEntityId().equals(entityId)
-                        && t.getLanguageCode().equalsIgnoreCase("AZ")
-                        && t.getFieldName().equals(fieldName))
-                .map(Translation::getFieldValue)
-                .findFirst()
-                .orElse("");
+
+        return translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                entityType.toUpperCase(),
+                entityId,
+                languageCode.toUpperCase(),
+                fieldName
+        )
+        .map(Translation::getFieldValue)
+        .orElse(null);
     }
 }
+

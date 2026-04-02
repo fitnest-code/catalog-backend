@@ -29,17 +29,19 @@ public class TranslationController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<Translation>> createOrUpdateTranslation(@RequestBody CreateTranslationRequest request) {
+        String normalizedEntityType = request.entityType().toUpperCase();
         Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
-                request.entityType(), request.entityId(), request.languageCode().toUpperCase(), request.fieldName()
+                normalizedEntityType, request.entityId(), request.languageCode().toUpperCase(), request.fieldName()
         ).orElse(null);
 
         if (existing != null) {
             existing.setFieldValue(request.fieldValue());
+            existing.setEntityType(normalizedEntityType);
             Translation saved = translationRepository.save(existing);
             return ResponseEntity.ok(ApiResponse.success(saved));
         } else {
             Translation translation = Translation.builder()
-                    .entityType(request.entityType())
+                    .entityType(normalizedEntityType)
                     .entityId(request.entityId())
                     .languageCode(request.languageCode().toUpperCase())
                     .fieldName(request.fieldName())
@@ -49,6 +51,7 @@ public class TranslationController {
             return ResponseEntity.ok(ApiResponse.success(saved));
         }
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTranslation(@PathVariable Long id) {

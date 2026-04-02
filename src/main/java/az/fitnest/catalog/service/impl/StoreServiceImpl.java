@@ -136,14 +136,14 @@ public class StoreServiceImpl implements StoreService {
         }
 
         String userLanguage = getUserLanguage(userId);
-        String localizedName = translationService.getTranslatedValue("Store", store.getId().toString(), "name", userLanguage);
+        String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
 
         return StoreMainPageDto.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? store.getAddress().getAddressText() : null)
-                .city(store.getAddress() != null ? store.getAddress().getCity() : null)
+                .address(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
+                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
                 .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
@@ -167,12 +167,17 @@ public class StoreServiceImpl implements StoreService {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
         }
         String userLanguage = getUserLanguage(userId);
-        String localizedName = translationService.getTranslatedValue("Store", store.getId().toString(), "name", userLanguage);
+        String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
         return StoreDetailResponseDto.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? AddressDto.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).latitude(store.getAddress().getLatitude()).longitude(store.getAddress().getLongitude()).build() : null)
+                .address(store.getAddress() != null ? AddressDto.builder()
+                        .addressText(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage))
+                        .city(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage))
+                        .latitude(store.getAddress().getLatitude())
+                        .longitude(store.getAddress().getLongitude())
+                        .build() : null)
                 .phone(store.getPhone())
                 .category(store.getCategory())
                 .status(store.getStatus())
@@ -359,4 +364,21 @@ public class StoreServiceImpl implements StoreService {
             deleteStore(store.getId());
         }
     }
+
+    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.StoreAddress address, String fieldName, String userLanguage) {
+        if (address == null) return null;
+        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
+        if (localized == null || localized.isEmpty()) {
+            try {
+                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
+                f.setAccessible(true);
+                Object v = f.get(address);
+                if (v != null) return v.toString();
+            } catch (Exception ignored) {
+            }
+            return null;
+        }
+        return localized;
+    }
 }
+

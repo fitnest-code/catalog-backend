@@ -123,7 +123,7 @@ public class GymReadService {
             if (gym != null && gym.getRooms() != null) {
                 String userLanguage = getUserLanguage(userId);
                 rooms = gym.getRooms().stream().map(room -> {
-                    String localizedRoomName = translationService.getTranslatedValue("Room", room.getId().toString(), "name", userLanguage);
+                    String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLanguage);
                     if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
                     final String finalLocalizedRoomName = localizedRoomName;
                     List<GymImageDto> images = room.getImages().stream().map(img ->
@@ -145,7 +145,7 @@ public class GymReadService {
         ).join();
         Gym gym = gymFuture.join();
         boolean isSaved = isSavedFuture.join();
-        List<GymTrainerDto> trainerDtos = trainerDtosFuture.join();
+        String userLanguage = getUserLanguage(userId);
         List<GymReviewDto> recentReviews = recentReviewsFuture.join();
         java.util.Set<GymWorkHourDto> generalWorkHours = null;
         List<GymWorkHourDto> generalWorkHoursList = generalWorkHoursFuture.join();
@@ -154,6 +154,26 @@ public class GymReadService {
         }
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
         List<GymRoomDto> rooms = roomsFuture.join();
+        List<GymTrainerDto> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerDto>map(t -> {
+            if (t.profession() != null && t.profession().id() != null) {
+                String localizedProfession = translationService.getTranslatedValue("PROFESSION", t.profession().id().toString(), "name", userLanguage);
+                if (localizedProfession != null && !localizedProfession.isEmpty()) {
+                    return GymTrainerDto.builder()
+                            .trainer_id(t.trainer_id())
+                            .name(t.name())
+                            .surname(t.surname())
+                            .profession(ProfessionDto.builder()
+                                    .id(t.profession().id())
+                                    .name(localizedProfession)
+                                    .build())
+                            .picture(t.picture())
+                            .phone(t.phone())
+                            .email(t.email())
+                            .build();
+                }
+            }
+            return t;
+        }).collect(Collectors.toList());
 
         java.util.Set<GymWorkHourDto> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
@@ -188,9 +208,13 @@ public class GymReadService {
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String packageName = info.getName();
+                        String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
+                        String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : info.getName();
                         List<String> benefitsList = sub.getBenefits().stream()
-                            .map(az.fitnest.catalog.model.entity.GymSubscriptionBenefit::getBenefit)
+                            .map(b -> {
+                                String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_"), "benefit", userLanguage);
+                                return (localizedBenefit != null && !localizedBenefit.isEmpty()) ? localizedBenefit : b.getBenefit();
+                            })
                             .toList();
                         return GymPlanItemDto.builder()
                             .plan_id(planId)
@@ -203,10 +227,9 @@ public class GymReadService {
         } catch (Exception e) {
             System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
         }
-        String userLanguage = getUserLanguage(userId);
-        String localizedName = translationService.getTranslatedValue("Gym", gym.getId().toString(), "name", userLanguage);
+        String localizedName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
-        String localizedDescription = translationService.getTranslatedValue("Gym", gym.getId().toString(), "description", userLanguage);
+        String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedDescription == null || localizedDescription.isEmpty()) localizedDescription = gym.getDescription();
         GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
@@ -214,8 +237,8 @@ public class GymReadService {
                 .description(localizedDescription)
                 .isSaved(isSaved)
                 .address(gym.getAddress() != null ? az.fitnest.catalog.dto.LocationDto.builder()
-                        .addressText(getLocalizedAddressField(gym.getAddress(), "addressText", userLanguage))
-                        .city(getLocalizedAddressField(gym.getAddress(), "city", userLanguage))
+                        .addressText(getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage))
+                        .city(getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage))
                         .latitude(gym.getAddress().getLatitude())
                         .longitude(gym.getAddress().getLongitude())
                         .build() : null)
@@ -483,7 +506,7 @@ public class GymReadService {
             }
         }
         String userLanguage = getUserLanguage(userId);
-        String localizedName = translationService.getTranslatedValue("Gym", gym.getId().toString(), "name", userLanguage);
+        String localizedName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = gym.getName();
         return GymMainPageDto.builder()
                 .gymId(gym.getId().toString())
@@ -491,8 +514,8 @@ public class GymReadService {
                 .coverImageUrl(gym.getCoverImageUrl())
                 .stars(stars)
                 .isNew(isNew)
-                .location(address != null ? address.getAddressText() : null)
-                .city(address != null ? address.getCity() : null)
+                .location(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", userLanguage) : null)
+                .city(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage) : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
                 .categories(categories)
@@ -809,16 +832,9 @@ public class GymReadService {
         return new GymTypeCountResponse(gender, count);
     }
 
-    private String getLocalizedAddressField(az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
+    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null) return null;
-        String addressId = address.toString();
-        try {
-            java.lang.reflect.Field idField = address.getClass().getDeclaredField("id");
-            idField.setAccessible(true);
-            Object idValue = idField.get(address);
-            if (idValue != null) addressId = idValue.toString();
-        } catch (Exception ignored) {}
-        String localized = translationService.getTranslatedValue("Address", addressId, fieldName, userLanguage);
+        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
         if (localized == null || localized.isEmpty()) {
             try {
                 java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);

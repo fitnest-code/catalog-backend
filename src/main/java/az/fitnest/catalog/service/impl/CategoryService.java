@@ -65,7 +65,7 @@ public class CategoryService {
         String language = resolveUserLanguage(userId);
         List<Category> categories = categoryRepository.findAll();
         for (Category category : categories) {
-            String translatedName = translationService.getTranslatedValue("Category", String.valueOf(category.getId()), "name", language);
+            String translatedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(category.getId()), "name", language);
             if (translatedName != null && !translatedName.isEmpty()) {
                 category.setName(translatedName);
             }
@@ -126,7 +126,7 @@ public class CategoryService {
     }
 
     private CategoryDto mapToDto(Category category, String language) {
-        String localizedName = translationService.getTranslatedValue("Category", String.valueOf(category.getId()), "name", language);
+        String localizedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(category.getId()), "name", language);
         if (localizedName == null || localizedName.isEmpty()) {
             localizedName = category.getName();
         }
