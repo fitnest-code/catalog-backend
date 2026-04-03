@@ -34,7 +34,7 @@ public class MediaController {
     }
 
     @Operation(summary = "Media faylını yayımlayın", description = "Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
-    @GetMapping(value = {"/stream/{fsId}"}, produces = {"image/jpeg", "image/png", "application/octet-stream"})
+    @GetMapping(value = {"/stream/{fsId}"})
     public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description = "Medianın fayl sistemi ID-si") @PathVariable String fsId) {
         log.info("[MediaController] stream request received for fsId={}", fsId);
 
