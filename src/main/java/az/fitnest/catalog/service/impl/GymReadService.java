@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.exception.BadRequestException;
+import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.SavedGym;
@@ -784,10 +785,10 @@ public class GymReadService {
             .build();
     }
 
-    public GymEntranceResponse checkGymEntranceEligibility(Object principal) {
+    public GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal, Long gymId) {
         org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
         Long userId = extractUserId(principal);
-        logger.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
+        logger.info("[checkGymEntranceEligibility] Checking eligibility for userId={}, gymId={}", userId, gymId);
         if (userId == null) {
             logger.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
             throw new IllegalArgumentException("Unauthorized");
@@ -798,36 +799,35 @@ public class GymReadService {
             logger.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
         } catch (Exception e) {
             logger.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
+            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         String status = subResp.getSubscriptionStatus();
         logger.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
-            logger.info("[checkGymEntranceEligibility] No active subscription found for userId={}", userId);
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
-        }
-        if (!status.equalsIgnoreCase("active")) {
-            logger.info("[checkGymEntranceEligibility] Subscription not active for userId={}, status={}", userId, status);
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
+            logger.info("[checkGymEntranceEligibility] No active subscription found for userId={}, status={}", userId, status);
+            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
         logger.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
         if (visitLimitRemaining <= 0) {
             logger.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
-            return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
+            throw new ForbiddenException("Your visit limit has been exceeded", "VISIT_LIMIT_EXCEEDED");
+        }
+        if (gymId != null) {
+            long userPackageId = subResp.getPackageId();
+            logger.debug("[checkGymEntranceEligibility] Checking gym subscription support: gymId={}, userPackageId={}", gymId, userPackageId);
+            Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+            boolean gymSupportsPackage = gym.getSubscriptions() != null &&
+                gym.getSubscriptions().stream()
+                    .anyMatch(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId));
+            if (!gymSupportsPackage) {
+                logger.info("[checkGymEntranceEligibility] Gym {} does not support packageId={} for userId={}", gymId, userPackageId, userId);
+                throw new ForbiddenException("This gym does not support your subscription plan", "GYM_NOT_SUPPORTED");
+            }
         }
         logger.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
-        return GymEntranceResponse.builder()
-            .allowed(true)
-            .build();
+        return new GymEntranceEligibilityResponse(true);
     }
 
     private Long extractUserId(Object principal) {

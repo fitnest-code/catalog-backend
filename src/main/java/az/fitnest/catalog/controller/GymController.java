@@ -202,26 +202,17 @@ public class GymController {
     }
 
     @PostMapping("/entrance/eligibility")
-    @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and other eligibility criteria for gym entrance.")
+    @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and whether the gym supports the user's subscription plan.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Eligibility check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not eligible", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+        @ApiResponse(responseCode = "200", description = "Eligibility check passed", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION, VISIT_LIMIT_EXCEEDED, or GYM_NOT_SUPPORTED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
-    public ResponseEntity<?> checkGymEntranceEligibility(
-            @AuthenticationPrincipal Object principal) {
-        try {
-            var response = gymReadService.checkGymEntranceEligibility(principal);
-            if (response.allowed()) {
-                return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.status(403).body(response);
-            }
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(403).body(e.getMessage());
-        }
+    public ResponseEntity<GymEntranceEligibilityResponse> checkGymEntranceEligibility(
+            @AuthenticationPrincipal Object principal,
+            @Parameter(description = "ID of the gym to check eligibility for") @RequestParam Long gymId) {
+        var response = gymReadService.checkGymEntranceEligibility(principal, gymId);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/count")
