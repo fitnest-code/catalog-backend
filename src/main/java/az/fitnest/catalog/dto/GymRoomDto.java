@@ -1,5 +1,6 @@
 package az.fitnest.catalog.dto;
 
+import java.util.List;
 import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,6 @@ import lombok.AllArgsConstructor;
 public class GymRoomDto {
     private Long id;
     private String room_name;
-    private String url;
+    private List<String> urls;
 
 }

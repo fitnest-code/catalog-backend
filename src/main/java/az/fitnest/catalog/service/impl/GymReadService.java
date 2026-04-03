@@ -131,13 +131,13 @@ public class GymReadService {
                     String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLang);
                     if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
                     final String finalLocalizedRoomName = localizedRoomName;
-                    String roomImageUrl = (room.getImages() != null && !room.getImages().isEmpty())
-                            ? room.getImages().stream().findFirst().map(RoomImage::getPictureUrl).orElse(null)
-                            : null;
+                    List<String> imageUrls = room.getImages() != null
+                            ? room.getImages().stream().map(RoomImage::getPictureUrl).collect(Collectors.toList())
+                            : java.util.Collections.emptyList();
                     return GymRoomDto.builder()
                             .id(room.getId())
                             .room_name(finalLocalizedRoomName)
-                            .url(roomImageUrl)
+                            .urls(imageUrls)
                             .build();
                 }).collect(Collectors.toList());
             }
