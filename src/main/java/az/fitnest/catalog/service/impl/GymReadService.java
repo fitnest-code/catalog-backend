@@ -749,6 +749,7 @@ public class GymReadService {
         return qrCodeUrl;
     }
 
+    @Transactional(readOnly = true)
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
         Long userId = extractUserId(principal);
         if (userId == null) {
@@ -781,6 +782,7 @@ public class GymReadService {
             .build();
     }
 
+    @Transactional(readOnly = true)
     public GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal, Long gymId) {
         org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
         Long userId = extractUserId(principal);
