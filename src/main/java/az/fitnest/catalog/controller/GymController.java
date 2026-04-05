@@ -210,8 +210,8 @@ public class GymController {
     })
     public ResponseEntity<GymEntranceEligibilityResponse> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal,
-            @Parameter(description = "ID of the gym to check eligibility for") @RequestParam Long gymId) {
-        var response = gymReadService.checkGymEntranceEligibility(principal, gymId);
+            @Parameter(description = "Request body containing the gym ID to check eligibility for") @RequestBody az.fitnest.catalog.dto.GymEntranceEligibilityRequest request) {
+        var response = gymReadService.checkGymEntranceEligibility(principal, request.gymId());
         return ResponseEntity.ok(response);
     }
 
