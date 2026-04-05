@@ -202,16 +202,15 @@ public class GymController {
     }
 
     @PostMapping("/entrance/eligibility")
-    @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit, subscription status, and whether the gym supports the user's subscription plan.")
+    @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit and subscription status.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Eligibility check passed", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION, VISIT_LIMIT_EXCEEDED, or GYM_NOT_SUPPORTED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION or VISIT_LIMIT_EXCEEDED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
     })
     public ResponseEntity<GymEntranceEligibilityResponse> checkGymEntranceEligibility(
-            @AuthenticationPrincipal Object principal,
-            @Parameter(description = "Request body containing the gym ID to check eligibility for") @RequestBody az.fitnest.catalog.dto.GymEntranceEligibilityRequest request) {
-        var response = gymReadService.checkGymEntranceEligibility(principal, request.gymId());
+            @AuthenticationPrincipal Object principal) {
+        var response = gymReadService.checkGymEntranceEligibility(principal);
         return ResponseEntity.ok(response);
     }
 
