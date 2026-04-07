@@ -11,8 +11,8 @@ public record StoreDetailResponseDto(
     String phone,
     String category,
     String status,
-    List<StoreWorkHourDto> workingHours,
     List<StoreDiscountDto> discounts,
+
     StoreSocialDto social,
     List<String> images,
     Boolean isSaved,

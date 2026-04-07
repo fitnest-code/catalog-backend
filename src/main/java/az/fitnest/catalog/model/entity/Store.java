@@ -5,7 +5,7 @@ import az.fitnest.catalog.model.entity.StoreAddress;
 import az.fitnest.catalog.model.entity.StoreDiscount;
 import az.fitnest.catalog.model.entity.StoreImage;
 import az.fitnest.catalog.model.entity.StoreSocialLink;
-import az.fitnest.catalog.model.entity.StoreWorkHours;
+
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.*;
@@ -36,10 +36,7 @@ public class Store
     private StoreAddress address;
     @Column(name = "phone")
     private String phone;
-    @ElementCollection
-    @CollectionTable(name = "store_work_hours", joinColumns = {@JoinColumn(name = "store_id")})
-    @Builder.Default
-    private Set<StoreWorkHours> workHours = new LinkedHashSet<>();
+
     @Column(name = "logo_url")
     private String logoUrl;
     @Column(name = "cover_image_url")

@@ -3,7 +3,6 @@ package az.fitnest.catalog.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
-import java.util.List;
 
 @Builder
 @Schema(description = "Request to create or update a store")
@@ -23,9 +22,6 @@ public record StoreRequest(
 
     @Schema(description = "Store status", example = "ACTIVE")
     String status,
-
-    @Schema(description = "Store work hours")
-    List<StoreWorkHourDto> workingHours,
 
     @Schema(description = "Store social media links")
     StoreSocialDto social

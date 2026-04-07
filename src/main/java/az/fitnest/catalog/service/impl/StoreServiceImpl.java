@@ -181,7 +181,7 @@ public class StoreServiceImpl implements StoreService {
                 .phone(store.getPhone())
                 .category(store.getCategory())
                 .status(store.getStatus())
-                .workingHours(store.getWorkHours() != null ? store.getWorkHours().stream().map(wh -> new StoreWorkHourDto(wh.getDay(), wh.getFromTime(), wh.getToTime())).toList() : Collections.emptyList())
+
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLinks() != null ? StoreSocialDto.builder().links(new ArrayList<>(store.getSocialLinks())).build() : null)
                 .images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).toList() : Collections.emptyList())
@@ -265,10 +265,8 @@ public class StoreServiceImpl implements StoreService {
         store.setCategory(request.category());
         store.setStatus(request.status());
 
-        if (request.workingHours() != null) {
-            store.setWorkHours(request.workingHours().stream().map(dto -> new StoreWorkHours(dto.day(), dto.from(), dto.to())).collect(Collectors.toCollection(LinkedHashSet::new)));
-        }
         if (request.social() != null && request.social().links() != null) {
+
             store.setSocialLinks(new LinkedHashSet<>(request.social().links()));
         }
     }
