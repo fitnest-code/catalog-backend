@@ -24,5 +24,11 @@ public record StoreRequest(
     String status,
 
     @Schema(description = "Store social media links")
-    StoreSocialDto social
+    StoreSocialDto social,
+
+    @Schema(description = "Store logo URL")
+    String logoUrl,
+
+    @Schema(description = "Store cover image URL")
+    String coverImageUrl
 ) {}
