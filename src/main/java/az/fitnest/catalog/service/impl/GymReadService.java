@@ -367,19 +367,18 @@ public class GymReadService {
         }
 
         if (userLat != null && userLng != null) {
-            double initialRadiusKm = 50.0;
-            double[] bbox = boundingBox(userLat, userLng, initialRadiusKm);
+            Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
             if (q != null && !q.isBlank()) {
                 if (categoryId != null) {
-                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
+                    gymPage = gymRepository.searchClosestWithCategory(q, categoryId, userLat, userLng, distancePageable);
                 } else {
-                    gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
+                    gymPage = gymRepository.searchClosest(q, userLat, userLng, distancePageable);
                 }
             } else if ("CLOSEST".equalsIgnoreCase(type)) {
                 if (categoryId != null) {
-                    gymPage = gymRepository.findByCategory(categoryId, pageable);
+                    gymPage = gymRepository.findByCategoryClosest(categoryId, userLat, userLng, distancePageable);
                 } else {
-                    gymPage = gymRepository.findClosestGyms(bbox[0], bbox[1], bbox[2], bbox[3], userLat, userLng, pageable);
+                    gymPage = gymRepository.findAllClosest(userLat, userLng, distancePageable);
                 }
             } else {
                 if (categoryId != null) {
