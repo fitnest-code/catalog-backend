@@ -675,10 +675,18 @@ public class GymReadService {
                 java.util.stream.Collectors.counting()
             ));
         List<Category> allCategories = categoryRepository.findAllById(categoryCounts.keySet());
-        java.util.Map<Long, String> idToName = allCategories.stream()
-            .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, Category::getName));
+        java.util.Map<Long, Category> idToCategory = allCategories.stream()
+            .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, c -> c));
         return categoryCounts.entrySet().stream()
-            .map(e -> new GymCategoryCountResponse(e.getKey(), idToName.getOrDefault(e.getKey(), "UNKNOWN"), e.getValue()))
+            .map(e -> {
+                Category cat = idToCategory.get(e.getKey());
+                return new GymCategoryCountResponse(
+                        e.getKey(),
+                        cat != null ? cat.getName() : "UNKNOWN",
+                        cat != null ? cat.getIconUrl() : null,
+                        e.getValue()
+                );
+            })
             .toList();
     }
 
