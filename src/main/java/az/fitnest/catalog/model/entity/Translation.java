@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "translations", indexes = {
         @Index(name = "idx_translations_entity", columnList = "entity_type, entity_id, language_code, field_name")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_translations_entity_field_lang", columnNames = {"entity_type", "entity_id", "field_name", "language_code"})
 })
 @Data
 @NoArgsConstructor

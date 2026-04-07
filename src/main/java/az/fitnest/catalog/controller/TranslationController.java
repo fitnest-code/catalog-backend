@@ -4,6 +4,7 @@ import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.request.CreateTranslationRequest;
 import az.fitnest.catalog.model.entity.Translation;
 import az.fitnest.catalog.repository.TranslationRepository;
+import az.fitnest.catalog.exception.ConflictException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,34 +23,32 @@ import java.util.List;
 public class TranslationController {
     private final TranslationRepository translationRepository;
 
-    @Operation(summary = "Tərcümə yaradın və ya yeniləyin", description = "Verilmiş obyekt, dil və sahə üçün yeni tərcümə yaradır və ya mövcud olanı yeniləyir.")
+    @Operation(summary = "Tərcümə yaradın", description = "Verilmiş obyekt, dil və sahə üçün yeni tərcümə yaradır.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tərcümə uğurla yaradıldı/yeniləndi",
-                    content = @Content(schema = @Schema(implementation = Translation.class)))
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tərcümə uğurla yaradıldı",
+                    content = @Content(schema = @Schema(implementation = Translation.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Tərcümə artıq mövcuddur")
     })
     @PostMapping
-    public ResponseEntity<ApiResponse<Translation>> createOrUpdateTranslation(@RequestBody CreateTranslationRequest request) {
+    public ResponseEntity<ApiResponse<Translation>> createTranslation(@RequestBody CreateTranslationRequest request) {
         String normalizedEntityType = request.entityType().toUpperCase();
         Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
                 normalizedEntityType, request.entityId(), request.languageCode().toUpperCase(), request.fieldName()
         ).orElse(null);
 
         if (existing != null) {
-            existing.setFieldValue(request.fieldValue());
-            existing.setEntityType(normalizedEntityType);
-            Translation saved = translationRepository.save(existing);
-            return ResponseEntity.ok(ApiResponse.success(saved));
-        } else {
-            Translation translation = Translation.builder()
-                    .entityType(normalizedEntityType)
-                    .entityId(request.entityId())
-                    .languageCode(request.languageCode().toUpperCase())
-                    .fieldName(request.fieldName())
-                    .fieldValue(request.fieldValue())
-                    .build();
-            Translation saved = translationRepository.save(translation);
-            return ResponseEntity.ok(ApiResponse.success(saved));
+            throw new ConflictException("TRANSLATION_ALREADY_EXISTS", "Translation for this field already exists");
         }
+
+        Translation translation = Translation.builder()
+                .entityType(normalizedEntityType)
+                .entityId(request.entityId())
+                .languageCode(request.languageCode().toUpperCase())
+                .fieldName(request.fieldName())
+                .fieldValue(request.fieldValue())
+                .build();
+        Translation saved = translationRepository.save(translation);
+        return ResponseEntity.ok(ApiResponse.success(saved));
     }
 
     @DeleteMapping("/{id}")
