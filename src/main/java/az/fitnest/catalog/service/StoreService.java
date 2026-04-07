@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service;
 
+import az.fitnest.catalog.dto.AddDiscountRequest;
 import az.fitnest.catalog.dto.FilterResponseDto;
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreListResponseDto;
@@ -25,6 +26,8 @@ public interface StoreService {
     public StoreDetailResponseDto updateStore(Long var1, StoreRequest var2);
 
     public void deleteStore(Long var1);
+
+    void addDiscount(Long storeId, AddDiscountRequest request);
 
     public boolean toggleSave(Long var1, Long var2);
 

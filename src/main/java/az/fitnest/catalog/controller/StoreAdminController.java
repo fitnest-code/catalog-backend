@@ -1,5 +1,6 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.AddDiscountRequest;
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreRequest;
 import az.fitnest.catalog.service.StoreService;
@@ -74,5 +75,13 @@ public class StoreAdminController {
     public ResponseEntity<Void> deleteAllStores() {
         storeService.deleteAllStores();
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Mağaza üçün endirim əlavə edin", description = "Mağazaya xüsusi bir paket üçün endirim faizi əlavə edir. Paket ID-si gRPC vasitəsilə yoxlanılır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/discounts")
+    public ResponseEntity<Void> addDiscount(@PathVariable Long id, @Valid @RequestBody AddDiscountRequest request) {
+        storeService.addDiscount(id, request);
+        return ResponseEntity.ok().build();
     }
 }

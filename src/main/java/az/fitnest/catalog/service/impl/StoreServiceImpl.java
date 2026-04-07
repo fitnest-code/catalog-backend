@@ -9,6 +9,7 @@ import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.service.StoreService;
 import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class StoreServiceImpl implements StoreService {
     private final FileStorageService fileStorageService;
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
+    private final OrderServiceGrpcClient orderServiceGrpcClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -360,6 +362,22 @@ public class StoreServiceImpl implements StoreService {
         for (Store store : stores) {
             deleteStore(store.getId());
         }
+    }
+
+    @Override
+    @Transactional
+    public void addDiscount(Long storeId, AddDiscountRequest request) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
+
+        boolean exists = orderServiceGrpcClient.checkPackageExists(request.packageId());
+        if (!exists) {
+            throw new ResourceNotFoundException("PACKAGE_NOT_FOUND", "error.package_not_found");
+        }
+
+        StoreDiscount discount = new StoreDiscount(request.percent(), request.packageId().toString());
+        store.getDiscounts().add(discount);
+        storeRepository.save(store);
     }
 
     private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.StoreAddress address, String fieldName, String userLanguage) {
