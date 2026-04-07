@@ -10,7 +10,7 @@ import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.service.StoreService;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
-import jakarta.persistence.criteria.Expression;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -239,7 +239,6 @@ public class StoreServiceImpl implements StoreService {
     @Transactional
     public void deleteStore(Long storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
-        storeRepository.deleteStoreBadgesByStoreId(storeId);
         savedStoreRepository.deleteByStoreId(storeId);
         if (store.getLogoUrl() != null) fileStorageService.deleteFile(store.getLogoUrl());
         if (store.getCoverImageUrl() != null) fileStorageService.deleteFile(store.getCoverImageUrl());

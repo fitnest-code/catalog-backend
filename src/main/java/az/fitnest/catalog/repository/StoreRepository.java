@@ -1,7 +1,6 @@
 package az.fitnest.catalog.repository;
 
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.transaction.annotation.Transactional;
+
 import az.fitnest.catalog.model.entity.Store;
 
 import java.time.LocalDateTime;
@@ -56,8 +55,5 @@ public interface StoreRepository
     @Query(value = "SELECT s FROM Store s WHERE s.createdDate >= :cutoff AND (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern)")
     public Page<Store> findNewStoresByQuery(@Param(value = "cutoff") LocalDateTime var1, @Param(value = "pattern") String var2, Pageable var3);
 
-    @Modifying
-    @Transactional
-    @Query(value = "DELETE FROM store_badges WHERE store_id = :storeId", nativeQuery = true)
-    void deleteStoreBadgesByStoreId(@Param("storeId") Long storeId);
+
 }
