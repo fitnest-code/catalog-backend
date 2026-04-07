@@ -666,6 +666,9 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public List<GymCategoryCountResponse> getGymCountByCategory() {
+        Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
+        String language = getUserLanguage(userId);
+
         List<Gym> gyms = gymRepository.findAll();
         java.util.Map<Long, Long> categoryCounts = gyms.stream()
             .flatMap(gym -> gym.getCategories() != null ? gym.getCategories().stream() : java.util.stream.Stream.empty())
@@ -679,10 +682,17 @@ public class GymReadService {
         return categoryCounts.entrySet().stream()
             .map(e -> {
                 Category cat = idToCategory.get(e.getKey());
+                String catName = "UNKNOWN";
+                String iconUrl = null;
+                if (cat != null) {
+                    iconUrl = cat.getIconUrl();
+                    String translatedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(cat.getCategoryId()), "name", language);
+                    catName = (translatedName != null && !translatedName.isEmpty()) ? translatedName : cat.getName();
+                }
                 return new GymCategoryCountResponse(
                         e.getKey(),
-                        cat != null ? cat.getName() : "UNKNOWN",
-                        cat != null ? cat.getIconUrl() : null,
+                        catName,
+                        iconUrl,
                         e.getValue()
                 );
             })
