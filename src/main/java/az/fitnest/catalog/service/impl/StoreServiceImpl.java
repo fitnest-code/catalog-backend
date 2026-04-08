@@ -151,7 +151,7 @@ public class StoreServiceImpl implements StoreService {
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .isSaved(isSaved)
                 .distanceKm(distance)
-                .social(store.getSocialLinks() != null ? StoreSocialDto.builder().links(new ArrayList<>(store.getSocialLinks())).build() : null)
+                .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .isNew(isNew(store))
                 .build();
     }
@@ -185,7 +185,7 @@ public class StoreServiceImpl implements StoreService {
                 .status(store.getStatus())
 
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
-                .social(store.getSocialLinks() != null ? StoreSocialDto.builder().links(new ArrayList<>(store.getSocialLinks())).build() : null)
+                .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).toList() : Collections.emptyList())
                 .isSaved(isSaved)
                 .isNew(isNew(store))
@@ -267,9 +267,10 @@ public class StoreServiceImpl implements StoreService {
         store.setCategory(request.category());
         store.setStatus(request.status());
 
-        if (request.social() != null && request.social().links() != null) {
-
-            store.setSocialLinks(new LinkedHashSet<>(request.social().links()));
+        if (request.social() != null) {
+            store.setSocialLink(new StoreSocialLink(request.social().name(), request.social().url()));
+        } else {
+            store.setSocialLink(null);
         }
     }
 

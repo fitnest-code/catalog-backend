@@ -52,10 +52,12 @@ public class Store
     @JoinColumn(name = "store_id")
     @Builder.Default
     private Set<StoreImage> images = new LinkedHashSet<StoreImage>();
-    @ElementCollection
-    @CollectionTable(name = "store_social_links", joinColumns = @JoinColumn(name = "store_id"))
-    @Builder.Default
-    private Set<StoreSocialLink> socialLinks = new LinkedHashSet<>();
+    @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "name", column = @Column(name = "social_name")),
+        @AttributeOverride(name = "url", column = @Column(name = "social_url"))
+    })
+    private StoreSocialLink socialLink;
 
     public Long getStoreId() {
         return getId();
