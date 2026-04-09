@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -61,4 +62,7 @@ public interface StoreRepository
     @Query(value = "SELECT s FROM Store s WHERE s.createdDate >= :cutoff AND (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern)")
     public Page<Store> findNewStoresByQuery(@Param(value = "cutoff") LocalDateTime var1, @Param(value = "pattern") String var2, Pageable var3);
 
+    @Modifying
+    @Query(value = "DELETE FROM store_social_links WHERE store_id = :storeId", nativeQuery = true)
+    void deleteStoreSocialLinksByStoreId(@Param("storeId") Long storeId);
 }

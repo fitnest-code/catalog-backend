@@ -247,6 +247,12 @@ public class StoreServiceImpl implements StoreService {
         if (store.getImages() != null && !store.getImages().isEmpty()) {
             fileStorageService.deleteFiles(store.getImages().stream().map(StoreImage::getUrl).toList());
         }
+
+        try {
+            storeRepository.deleteStoreSocialLinksByStoreId(storeId);
+        } catch (Exception ignored) {
+        }
+
         storeRepository.delete(store);
     }
 
