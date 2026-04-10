@@ -1,11 +1,15 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.catalog.dto.ProfessionDto;
 import az.fitnest.catalog.dto.ProfessionRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Profession;
 import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.util.UserContext;
+import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +23,14 @@ public class ProfessionService {
 
     private final ProfessionRepository professionRepository;
     private final TrainerRepository trainerRepository;
+    private final TranslationService translationService;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
     public List<ProfessionDto> getAllProfessions() {
+        String language = resolveUserLanguage();
         return professionRepository.findAll().stream()
-                .map(this::toDto)
+                .map(p -> toDto(p, language))
                 .collect(Collectors.toList());
     }
 
@@ -31,7 +38,7 @@ public class ProfessionService {
     public ProfessionDto getProfessionById(Long id) {
         Profession p = professionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
-        return toDto(p);
+        return toDto(p, resolveUserLanguage());
     }
 
     @Transactional
@@ -41,7 +48,8 @@ public class ProfessionService {
         }
         Profession p = new Profession();
         p.setName(request.name());
-        return toDto(professionRepository.save(p));
+        Profession saved = professionRepository.save(p);
+        return toDto(saved, resolveUserLanguage());
     }
 
     @Transactional
@@ -54,7 +62,8 @@ public class ProfessionService {
         }
 
         p.setName(request.name());
-        return toDto(professionRepository.save(p));
+        Profession saved = professionRepository.save(p);
+        return toDto(saved, resolveUserLanguage());
     }
 
     @Transactional
@@ -70,10 +79,32 @@ public class ProfessionService {
         professionRepository.deleteAll();
     }
 
-    private ProfessionDto toDto(Profession profession) {
+    private ProfessionDto toDto(Profession profession, String language) {
+        String localizedName = translationService.getTranslatedValue("PROFESSION", String.valueOf(profession.getId()), "name", language);
+        if (localizedName == null || localizedName.isEmpty()) {
+            localizedName = profession.getName();
+        }
         return ProfessionDto.builder()
                 .id(profession.getId())
-                .name(profession.getName())
+                .name(localizedName)
                 .build();
+    }
+
+    private String resolveUserLanguage() {
+        Long userId = UserContext.getCurrentUserId();
+        return resolveUserLanguage(userId);
+    }
+
+    private String resolveUserLanguage(Long userId) {
+        if (userId != null) {
+            try {
+                UserResponse user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "AZ";
     }
 }

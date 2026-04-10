@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.catalog.dto.GymTrainerDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.TrainerRequest;
@@ -10,6 +11,9 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.FileStorageService;
+import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.util.UserContext;
+import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -30,6 +34,8 @@ public class GymTrainerService {
     private final TrainerRepository trainerRepository;
     private final ProfessionRepository professionRepository;
     private final FileStorageService fileStorageService;
+    private final TranslationService translationService;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
@@ -38,8 +44,9 @@ public class GymTrainerService {
         }
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.by(direction, "id")));
+        String userLanguage = resolveUserLanguage();
         List<GymTrainerDto> items = trainerPage.getContent().stream()
-                .map(this::toGymTrainerDto)
+                .map(t -> toGymTrainerDto(t, userLanguage))
                 .collect(Collectors.toList());
 
         return PaginatedResponse.<GymTrainerDto>builder()
@@ -114,12 +121,16 @@ public class GymTrainerService {
         }
     }
 
-    private GymTrainerDto toGymTrainerDto(Trainer t) {
+    private GymTrainerDto toGymTrainerDto(Trainer t, String language) {
         az.fitnest.catalog.dto.ProfessionDto professionDto = null;
         if (t.getProfession() != null) {
+            String localizedName = translationService.getTranslatedValue("PROFESSION", String.valueOf(t.getProfession().getId()), "name", language);
+            if (localizedName == null || localizedName.isEmpty()) {
+                localizedName = t.getProfession().getName();
+            }
             professionDto = az.fitnest.catalog.dto.ProfessionDto.builder()
                     .id(t.getProfession().getId())
-                    .name(t.getProfession().getName())
+                    .name(localizedName)
                     .build();
         }
 
@@ -138,5 +149,23 @@ public class GymTrainerService {
         int safePage = Math.max(page, 1) - 1;
         int safeSize = Math.max(1, Math.min(size, 100));
         return PageRequest.of(safePage, safeSize, sort);
+    }
+
+    private String resolveUserLanguage() {
+        Long userId = UserContext.getCurrentUserId();
+        return resolveUserLanguage(userId);
+    }
+
+    private String resolveUserLanguage(Long userId) {
+        if (userId != null) {
+            try {
+                UserResponse user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "AZ";
     }
 }
