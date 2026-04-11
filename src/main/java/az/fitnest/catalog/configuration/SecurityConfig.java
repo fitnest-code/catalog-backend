@@ -2,6 +2,7 @@ package az.fitnest.catalog.configuration;
 
 import az.fitnest.catalog.security.FitnestSecurityFilter;
 import jakarta.servlet.Filter;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -50,6 +51,24 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**", "/health/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            String path = request.getRequestURI();
+                            String timestamp = java.time.OffsetDateTime.now().toString();
+                            String json = String.format("{\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Unauthorized\",\"status\":401,\"path\":\"%s\",\"timestamp\":\"%s\"}}", path, timestamp);
+                            response.getWriter().write(json);
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            String path = request.getRequestURI();
+                            String timestamp = java.time.OffsetDateTime.now().toString();
+                            String json = String.format("{\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Unauthorized\",\"status\":401,\"path\":\"%s\",\"timestamp\":\"%s\"}}", path, timestamp);
+                            response.getWriter().write(json);
+                        })
                 )
                 .addFilterBefore((Filter) this.securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
