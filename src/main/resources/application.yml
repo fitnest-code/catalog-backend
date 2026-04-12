@@ -19,7 +19,7 @@ spring:
     virtual:
       enabled: true
   application:
-    name: catalog-service
+    name: catalog-backend   # ✅ Changed from catalog-service
   main:
     lazy-initialization: ${SPRING_MAIN_LAZY_INITIALIZATION:false}
   messages:
@@ -68,7 +68,6 @@ spring:
     default-property-inclusion: NON_NULL
     time-zone: UTC
 
-  # Redis
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis.fitnest-dev.svc.cluster.local}
@@ -76,7 +75,6 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:}
       timeout: 2000ms
 
-  # Kafka
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service.fitnest-dev.svc.cluster.local:9092}
     consumer:
@@ -119,15 +117,14 @@ jwt:
   secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
   issuer: ${JWT_ISSUER:fitnest}
 
-# Service URLs
-
+# ✅ Updated service URLs
 user:
   service:
-    url: ${USER_SERVICE_URL:http://user-service:8080}
+    url: ${USER_SERVICE_URL:http://user-backend:8080}
 
 media:
   service:
-    url: ${STORAGE_SERVICE_URL:http://storage-service:8080}
+    url: ${STORAGE_SERVICE_URL:http://storage-backend:8080}
 
 app:
   security:
@@ -167,14 +164,15 @@ springdoc:
 
 grpc:
   client:
-    user-service:
-      address: 'dns:///user-service.fitnest-dev.svc.cluster.local:9090'
+    # ✅ Updated gRPC client addresses
+    user-backend:
+      address: 'dns:///user-backend.fitnest-dev.svc.cluster.local:9090'
       negotiation-type: plaintext
-    storage-service:
-      address: 'dns:///storage-service.fitnest-dev.svc.cluster.local:9090'
+    storage-backend:
+      address: 'dns:///storage-backend.fitnest-dev.svc.cluster.local:9090'
       negotiation-type: plaintext
-    order-service:
-      address: 'dns:///order-service.fitnest-dev.svc.cluster.local:9090'
+    order-backend:
+      address: 'dns:///order-backend.fitnest-dev.svc.cluster.local:9090'
       negotiation-type: plaintext
       deadline-after: 10s
       enable-keep-alive: true
@@ -191,4 +189,4 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
-    name: logs/catalog-service.log
+    name: logs/catalog-backend.log   # ✅ Updated log file name
