@@ -17,7 +17,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class ReverseGeocodingService {
     private static final String BASE_URL = "https://nominatim.openstreetmap.org";
-    private static final String USER_AGENT = "fitnest-catalog-service";
+    private static final String USER_AGENT = "fitnest-catalog-backend";
     private final RestTemplate restTemplate = new RestTemplate();
 
     public GeocodingResponse reverseGeocode(Double latitude, Double longitude) {

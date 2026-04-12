@@ -243,7 +243,7 @@ public class GymReadService {
                     .collect(java.util.stream.Collectors.toList());
             }
         } catch (Exception e) {
-            System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
+            System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
         }
         String localizedName = getLocalizedGymName(gym, userLanguage);
         String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
@@ -524,7 +524,7 @@ public class GymReadService {
                 }).collect(java.util.stream.Collectors.toList());
             }
         } catch (Exception e) {
-            System.err.println("Could not fetch supported subscriptions from order-service: " + e.getMessage());
+            System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
             if (gym.getSubscriptions() != null) {
                 supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
                     String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
