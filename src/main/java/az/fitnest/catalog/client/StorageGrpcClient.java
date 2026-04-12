@@ -31,9 +31,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @Slf4j
 public class StorageGrpcClient {
-    @GrpcClient(value = "storage-service")
+    @GrpcClient(value = "storage-backend")
     private StorageServiceGrpc.StorageServiceStub asyncStub;
-    @GrpcClient(value = "storage-service")
+    @GrpcClient(value = "storage-backend")
     private StorageServiceGrpc.StorageServiceBlockingStub blockingStub;
 
     @Value("${grpc.storage.unary.deadline.seconds:30}")

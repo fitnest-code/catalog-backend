@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class UserServiceGrpcClient {
-    @GrpcClient("user-service")
+    @GrpcClient("user-backend")
     private UserServiceGrpc.UserServiceBlockingStub userServiceStub;
 
     public UserResponse getUserById(Long userId) {

@@ -12,10 +12,10 @@ import java.util.List;
 public class OrderServiceGrpcClient {
     private static final Logger logger = LoggerFactory.getLogger(OrderServiceGrpcClient.class);
 
-    @GrpcClient("order-service")
+    @GrpcClient("order-backend")
     private SubscriptionPackageServiceGrpc.SubscriptionPackageServiceBlockingStub blockingStub;
 
-    @GrpcClient("order-service")
+    @GrpcClient("order-backend")
     private UserSubscriptionServiceGrpc.UserSubscriptionServiceBlockingStub userSubscriptionStub;
 
     public boolean checkPlanExists(Long packageId) {
