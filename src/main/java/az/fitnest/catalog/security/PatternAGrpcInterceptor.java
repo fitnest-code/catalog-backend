@@ -76,7 +76,7 @@ public class PatternAGrpcInterceptor
                     PatternAGrpcInterceptor.this.propagate(request, headers, "X-Scopes", X_SCOPES);
                     PatternAGrpcInterceptor.this.propagate(request, headers, "X-Request-Id", X_REQUEST_ID);
                     PatternAGrpcInterceptor.this.propagate(request, headers, "X-From-Gateway", X_FROM_GATEWAY);
-                    headers.put(X_SERVICE_NAME, "catalog-service");
+                    headers.put(X_SERVICE_NAME, "catalog-backend");
                 }
                 super.start(responseListener, headers);
             }
