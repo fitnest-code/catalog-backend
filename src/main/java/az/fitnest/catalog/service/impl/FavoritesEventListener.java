@@ -14,7 +14,7 @@ public class FavoritesEventListener {
         this.cacheManager = cacheManager;
     }
 
-    @KafkaListener(topics = {"favorites-events"}, groupId = "catalog-service")
+    @KafkaListener(topics = {"favorites-events"}, groupId = "catalog-backend")
     public void handleFavoriteEvent(Map<String, Object> event) {
         String eventType = (String) event.get("eventType");
         Long userId = (Long) event.get("userId");
