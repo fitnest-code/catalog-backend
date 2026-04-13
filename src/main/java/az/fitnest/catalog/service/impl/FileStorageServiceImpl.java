@@ -17,7 +17,7 @@ import java.io.OutputStream;
 public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
-    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png");
+    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
     private final StorageGrpcClient storageGrpcClient;
 
     public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
@@ -51,7 +51,7 @@ public class FileStorageServiceImpl
 
     private void validateFile(MultipartFile file) {
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
             throw new BadRequestException("error.invalid_file_type");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
