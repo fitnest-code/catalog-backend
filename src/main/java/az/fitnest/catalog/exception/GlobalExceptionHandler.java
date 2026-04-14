@@ -211,11 +211,15 @@ public class GlobalExceptionHandler {
     }
 
     private String getLocalizedMessage(String errorCode, String defaultMessage) {
-        String key = "error." + errorCode.toLowerCase();
+        if (errorCode == null) return safeMessage(defaultMessage);
+
+        // Try error.code first
+        String key = errorCode.startsWith("error.") ? errorCode : "error." + errorCode.toLowerCase();
         try {
             return messageSource.getMessage(key, null, LocaleContextHolder.getLocale());
         } catch (org.springframework.context.NoSuchMessageException e1) {
             try {
+                // Try the raw error code
                 return messageSource.getMessage(errorCode, null, LocaleContextHolder.getLocale());
             } catch (org.springframework.context.NoSuchMessageException e2) {
                 return safeMessage(defaultMessage);
@@ -227,11 +231,18 @@ public class GlobalExceptionHandler {
         if (msg == null || msg.isBlank()) {
             return getMessage("error.unexpected");
         }
-        if (msg.startsWith("error.") || msg.equals("INVALID_CATEGORIES") || msg.equals("GYM_NOT_FOUND")) {
+        if (msg.startsWith("error.")) {
             String resolved = getMessage(msg);
             if (!resolved.equals(msg)) {
                 return resolved;
             }
+        }
+        // Check for common legacy codes that might be passed as message
+        if (msg.equals("INVALID_CATEGORIES") || msg.equals("GYM_NOT_FOUND") || msg.equals("STORE_NOT_FOUND")) {
+             String resolved = getLocalizedMessage(msg, msg);
+             if (!resolved.equals(msg)) {
+                 return resolved;
+             }
         }
         return msg;
     }
@@ -244,7 +255,14 @@ public class GlobalExceptionHandler {
         try {
             return messageSource.getMessage(code, arg != null ? new Object[]{arg} : null, LocaleContextHolder.getLocale());
         } catch (org.springframework.context.NoSuchMessageException e) {
-            return code;
+            // Last resort: if it's already an error. key, return the code itself
+            if (code.startsWith("error.")) return code;
+            // Otherwise try to find a generic error
+            try {
+                return messageSource.getMessage("error.unexpected", null, LocaleContextHolder.getLocale());
+            } catch (Exception ex) {
+                return code;
+            }
         }
     }
 }
