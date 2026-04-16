@@ -13,6 +13,7 @@ import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
     private final SavedStoreRepository savedStoreRepository;
@@ -121,7 +123,8 @@ public class StoreServiceImpl implements StoreService {
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     language = user.getLanguage();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return language;
     }
@@ -240,20 +243,42 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public void deleteStore(Long storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
+        log.info("Mağazanı silmə prosesi başladı. ID: {}", storeId);
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> {
+                    log.error("Mağaza tapılmadı, silmə ləğv edildi. ID: {}", storeId);
+                    return new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found");
+                });
+
         savedStoreRepository.deleteByStoreId(storeId);
-        if (store.getLogoUrl() != null) fileStorageService.deleteFile(store.getLogoUrl());
-        if (store.getCoverImageUrl() != null) fileStorageService.deleteFile(store.getCoverImageUrl());
+        log.debug("Mağazaya aid 'SavedStore' qeydləri silindi. Store ID: {}", storeId);
+
+        if (store.getLogoUrl() != null) {
+            fileStorageService.deleteFile(store.getLogoUrl());
+            log.debug("Logo silindi: {}", store.getLogoUrl());
+        }
+
+        if (store.getCoverImageUrl() != null) {
+            fileStorageService.deleteFile(store.getCoverImageUrl());
+            log.debug("Cover image silindi: {}", store.getCoverImageUrl());
+        }
+
         if (store.getImages() != null && !store.getImages().isEmpty()) {
-            fileStorageService.deleteFiles(store.getImages().stream().map(StoreImage::getUrl).toList());
+            List<String> imageUrls = store.getImages().stream().map(StoreImage::getUrl).toList();
+            fileStorageService.deleteFiles(imageUrls);
+            log.debug("{} ədəd əlavə şəkil silindi.", imageUrls.size());
         }
 
         try {
             storeRepository.deleteStoreSocialLinksByStoreId(storeId);
-        } catch (Exception ignored) {
+            log.info("Mağazaya aid social linklər silindi.");
+        } catch (Exception e) {
+            log.warn("Social linklər silinərkən xəta baş verdi (ignore edildi): {}", e.getMessage());
         }
 
         storeRepository.delete(store);
+        log.info("Mağaza uğurla silindi. ID: {}", storeId);
     }
 
     private void updateStoreFromRequest(Store store, StoreRequest request) {
