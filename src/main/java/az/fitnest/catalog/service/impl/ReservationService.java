@@ -22,8 +22,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +38,7 @@ public class ReservationService {
     private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
+    private final az.fitnest.catalog.repository.GymLessonTypeRepository gymLessonTypeRepository;
 
     @Transactional
     public ReservationResponse createReservation(Long userId, Long gymId, ReservationRequest request) {
@@ -106,6 +110,104 @@ public class ReservationService {
         reservationRepository.save(reservation);
     }
 
+    @Transactional
+    public void cancelReservation(Long userId, Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+
+        if (!reservation.getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found");
+        }
+
+        // 24 hour rule check
+        java.time.LocalDateTime lessonStart = java.time.LocalDateTime.of(
+                reservation.getReservationDate().getDate(),
+                reservation.getReservationDate().getStartTime()
+        );
+
+        if (java.time.LocalDateTime.now().plusHours(24).isAfter(lessonStart)) {
+            throw new BadRequestException("LATE_CANCELLATION", "error.late_cancellation");
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservationRepository.save(reservation);
+    }
+
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse getTrainerDailyAvailability(Long gymId, Long trainerId, LocalDate date) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (!Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
+            throw new BadRequestException("GYM_RESERVATION_DISABLED", "error.gym_reservation_disabled");
+        }
+
+        Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+
+        if (!trainer.getGymId().equals(gymId)) {
+            throw new BadRequestException("TRAINER_NOT_IN_GYM", "error.trainer_not_in_gym");
+        }
+
+        if (!Boolean.TRUE.equals(trainer.getIsReservationEnabled())) {
+            throw new BadRequestException("TRAINER_RESERVATION_DISABLED", "error.trainer_reservation_disabled");
+        }
+
+        List<TrainerReservationDate> slots = trainerReservationDateRepository.findByTrainerIdAndDate(trainerId, date);
+
+        List<az.fitnest.catalog.dto.GymReservationDetailsResponse.TimeSlotDto> timeSlots = slots.stream()
+                .sorted(java.util.Comparator.comparing(TrainerReservationDate::getStartTime))
+                .map(slot -> {
+                    int booked = reservationRepository.countByReservationDateId(slot.getId());
+                    return az.fitnest.catalog.dto.GymReservationDetailsResponse.TimeSlotDto.builder()
+                            .slotId(slot.getId())
+                            .startTime(slot.getStartTime())
+                            .endTime(slot.getEndTime())
+                            .totalSpaces(slot.getEmptySpaces())
+                            .bookedSpaces(booked)
+                            .availableSpaces(Math.max(0, slot.getEmptySpaces() - booked))
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse.builder()
+                .trainerId(trainerId)
+                .date(date)
+                .timeSlots(timeSlots)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.GymReservationDetailsResponse getReservationDetails(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        // Lesson types
+        List<String> lessonTypes = gymLessonTypeRepository.findByGymId(gymId).stream()
+                .map(az.fitnest.catalog.model.entity.GymLessonType::getName)
+                .collect(Collectors.toList());
+
+        // Trainers with reservation status info
+        List<Trainer> trainers = gym.getTrainers() != null ? new ArrayList<>(gym.getTrainers()) : List.of();
+
+        List<az.fitnest.catalog.dto.GymReservationDetailsResponse.TrainerAvailabilityDto> trainerDtos = trainers.stream()
+                .map(trainer -> az.fitnest.catalog.dto.GymReservationDetailsResponse.TrainerAvailabilityDto.builder()
+                        .trainerId(trainer.getId())
+                        .trainerName(trainer.getName())
+                        .trainerSurname(trainer.getSurname())
+                        .profileImageUrl(trainer.getProfileImageUrl())
+                        .reservationEnabled(Boolean.TRUE.equals(trainer.getIsReservationEnabled()))
+                        .build())
+                .collect(Collectors.toList());
+
+        return az.fitnest.catalog.dto.GymReservationDetailsResponse.builder()
+                .gymId(gymId)
+                .reservationEnabled(Boolean.TRUE.equals(gym.getIsReservationEnabled()))
+                .lessonTypes(lessonTypes)
+                .trainers(trainerDtos)
+                .build();
+    }
+
     private ReservationResponse mapToResponse(Reservation reservation) {
         return ReservationResponse.builder()
                 .id(reservation.getId())
@@ -118,3 +220,4 @@ public class ReservationService {
                 .build();
     }
 }
+

@@ -306,6 +306,13 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
+    public boolean isReservationEnabled(Long gymId) {
+        return gymRepository.findById(gymId)
+                .map(gym -> Boolean.TRUE.equals(gym.getIsReservationEnabled()))
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+    }
+
+    @Transactional(readOnly = true)
     public Map<String, Object> getReservationRules(Long gymId) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");

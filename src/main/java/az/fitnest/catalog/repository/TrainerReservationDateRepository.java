@@ -17,4 +17,7 @@ public interface TrainerReservationDateRepository extends JpaRepository<TrainerR
     Optional<TrainerReservationDate> findByTrainerIdAndDateAndStartTimeAndEndTime(Long trainerId, LocalDate date, LocalTime startTime, LocalTime endTime);
     
     List<TrainerReservationDate> findByTrainerIdAndDate(Long trainerId, LocalDate date);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT trd FROM TrainerReservationDate trd JOIN Trainer t ON trd.trainerId = t.id WHERE t.gymId = :gymId AND trd.date = :date")
+    List<TrainerReservationDate> findByGymIdAndDate(@org.springframework.data.repository.query.Param("gymId") Long gymId, @org.springframework.data.repository.query.Param("date") java.time.LocalDate date);
 }

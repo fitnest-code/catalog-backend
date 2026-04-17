@@ -16,4 +16,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByTrainerIdAndReservationDateId(Long trainerId, Long reservationDateId);
     
     boolean existsByUserIdAndReservationDateId(Long userId, Long reservationDateId);
+
+    int countByReservationDateId(Long reservationDateId);
 }

@@ -285,6 +285,44 @@ public class GymController {
                 .build());
     }
 
+        @PostMapping("/reservations/{reservationId}/cancel")
+    @Operation(summary = "Cancel reservation", description = "User cancels their own reservation. Possible only up to 24 hours before lesson starts.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> cancelReservation(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable Long reservationId) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        reservationService.cancelReservation(userId, reservationId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/check-reservation")
+    @Operation(summary = "Check if gym reservation is enabled", description = "Checks if reservation is enabled for the given gym ID.")
+    public ResponseEntity<az.fitnest.catalog.dto.GymReservationCheckResponse> checkReservation(
+            @Valid @RequestBody az.fitnest.catalog.dto.GymReservationCheckRequest request) {
+        boolean enabled = gymReadService.isReservationEnabled(request.getGymId());
+        return ResponseEntity.ok(az.fitnest.catalog.dto.GymReservationCheckResponse.builder()
+                .enabled(enabled)
+                .build());
+    }
+
+    @PostMapping("/daily-availability")
+    @Operation(summary = "Get trainer daily availability", description = "Returns available hour intervals for a specific trainer on a specific day.")
+    public ResponseEntity<az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse> getTrainerDailyAvailability(
+            @Valid @RequestBody az.fitnest.catalog.dto.TrainerDailyAvailabilityRequest request) {
+        return ResponseEntity.ok(reservationService.getTrainerDailyAvailability(request.getGymId(), request.getTrainerId(), request.getDate()));
+    }
+
+    @GetMapping("/{gymId}/reservation-details")
+    @Operation(summary = "Get gym reservation details", description = "Returns lesson types, trainers, available dates, hour intervals, and empty spaces for a gym.")
+    public ResponseEntity<az.fitnest.catalog.dto.GymReservationDetailsResponse> getReservationDetails(@PathVariable Long gymId) {
+        return ResponseEntity.ok(reservationService.getReservationDetails(gymId));
+    }
+
     public GymEntranceEligibilityResponse testEligibilityResponse() {
         return new GymEntranceEligibilityResponse(true);
     }
