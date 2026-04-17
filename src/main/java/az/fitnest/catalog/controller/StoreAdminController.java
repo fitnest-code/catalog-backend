@@ -92,7 +92,7 @@ public class StoreAdminController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{storeId}/image")
+    @PostMapping(value = "/{storeId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadStoreImage(@PathVariable Long storeId, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(storeService.uploadStoreImage(storeId, file));
     }
