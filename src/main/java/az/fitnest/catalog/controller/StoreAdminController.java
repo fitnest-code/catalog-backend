@@ -83,12 +83,17 @@ public class StoreAdminController {
         return ResponseEntity.ok().build();
     }
 
-    //Sonradan yazilan apidir,bu melumat xarakterlidir.
     @Operation(summary = "Mağaza statusunu yeniləyin", description = "Mağazanın aktiv, passiv və ya digər statuslarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{storeId}/status")
     public ResponseEntity<Void> updateStoreStatus(@PathVariable Long storeId, @RequestParam String status) {
         storeAdminService.updateStoreStatus(storeId, status);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{storeId}/image")
+    public ResponseEntity<String> uploadStoreImage(@PathVariable Long storeId, @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(storeService.uploadStoreImage(storeId, file));
     }
 }
