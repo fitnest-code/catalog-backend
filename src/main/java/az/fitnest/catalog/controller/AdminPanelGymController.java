@@ -1,20 +1,23 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.AdminGymListDto;
+import az.fitnest.catalog.dto.admin.AdminPanelCreateGymRequest;
+import az.fitnest.catalog.dto.admin.AdminPanelGymResponse;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
+import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/gyms")
@@ -23,7 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminPanelGymController {
 
-    private final AdminPanelGymReadService gymAdminService;
+    private final AdminPanelGymReadService gymAdminReadService;
+    private final AdminPanelGymWriteService gymAdminWriteService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
@@ -39,10 +43,20 @@ public class AdminPanelGymController {
             @RequestParam(defaultValue = "10") int size
     ) {
         int safeSize = Math.min(size, 100);
-        return ResponseEntity.ok(gymAdminService.getGymsForAdmin(
+        return ResponseEntity.ok(gymAdminReadService.getGymsForAdmin(
                 search, status, cityId, districtId,
                 sortBy, sortOrder, page, safeSize
         ));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<AdminPanelGymResponse>> createGymForAdmin(
+            @RequestBody @Valid AdminPanelCreateGymRequest request
+    ) {
+        AdminPanelGymResponse response = gymAdminWriteService.createGymForAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response));
     }
 
 }
