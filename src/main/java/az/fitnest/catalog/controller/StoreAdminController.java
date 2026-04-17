@@ -86,9 +86,9 @@ public class StoreAdminController {
     //Sonradan yazilan apidir,bu melumat xarakterlidir.
     @Operation(summary = "Mağaza statusunu yeniləyin", description = "Mağazanın aktiv, passiv və ya digər statuslarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{storeId}/status")
-    public ResponseEntity<Void> updateStoreStatus(@PathVariable Long storeId, @RequestParam String status) {
-        storeAdminService.updateStoreStatus(storeId, status);
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStoreStatus(@PathVariable Long id, @RequestParam String status) {
+        storeAdminService.updateStoreStatus(id, status);
         return ResponseEntity.ok().build();
     }
 }
