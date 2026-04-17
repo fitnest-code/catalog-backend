@@ -31,8 +31,6 @@ public interface StoreService {
 
     public boolean toggleSave(Long var1, Long var2);
 
-    public String uploadStoreImage(Long storeId, MultipartFile file);
-
     public LocationDto getStoreLocation(Long storeId);
 
     public az.fitnest.catalog.model.entity.Store getStoreEntityById(Long storeId);
@@ -46,4 +44,7 @@ public interface StoreService {
     public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl);
 
     public void deleteAllStores();
+
+    public String uploadStoreImage(Long storeId, MultipartFile file);
+
 }
