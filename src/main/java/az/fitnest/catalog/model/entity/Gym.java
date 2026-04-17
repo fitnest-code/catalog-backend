@@ -121,6 +121,10 @@ public class Gym
     @Builder.Default
     private GymStatus status = GymStatus.ACTIVE;
 
+    @Column(name = "is_reservation_enabled")
+    @Builder.Default
+    private Boolean isReservationEnabled = false;
+
     public Long getGymId() {
         return getId();
     }

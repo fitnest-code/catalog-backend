@@ -19,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import az.fitnest.catalog.service.impl.ReservationService;
+import az.fitnest.catalog.service.impl.GymLessonTypeService;
 
 @RestController
 @RequestMapping("/api/v1/admin/gyms")
@@ -30,6 +32,8 @@ public class GymAdminController {
     private final GymWriteService gymWriteService;
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
+    private final ReservationService reservationService;
+    private final GymLessonTypeService gymLessonTypeService;
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -188,6 +192,81 @@ public class GymAdminController {
     @DeleteMapping("/{id}/trainers/{trainerId}")
     public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId) {
         gymTrainerService.deleteTrainer(gymId, trainerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Enable or disable reservations for a gym", description = "ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/reservation/enable")
+    public ResponseEntity<Void> toggleGymReservation(@PathVariable Long id, @RequestParam boolean enabled) {
+        gymWriteService.toggleGymReservation(id, enabled);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Enable or disable reservations for a trainer", description = "ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/trainers/{trainerId}/reservation/enable")
+    public ResponseEntity<Void> toggleTrainerReservation(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId, @RequestParam boolean enabled) {
+        gymTrainerService.toggleTrainerReservation(gymId, trainerId, enabled);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Add availability for trainer", description = "ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/trainers/{trainerId}/availabilities")
+    public ResponseEntity<Void> addTrainerAvailability(
+            @PathVariable("id") Long gymId, 
+            @PathVariable("trainerId") Long trainerId, 
+            @Valid @RequestBody az.fitnest.catalog.dto.TrainerAvailabilityRequest request) {
+        gymTrainerService.addTrainerAvailability(gymId, trainerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Update reservation status", description = "ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/reservations/{reservationId}/status")
+    public ResponseEntity<Void> updateReservationStatus(
+            @PathVariable Long reservationId,
+            @Valid @RequestBody az.fitnest.catalog.dto.ReservationStatusUpdateRequest request) {
+        reservationService.updateReservationStatus(reservationId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    // ==================== Lesson Type CRUD ====================
+
+    @Operation(summary = "Add lesson type to gym", description = "Adds a new lesson type (e.g. Fly Yoga, Hatha Yoga) to the gym. ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/lesson-types")
+    public ResponseEntity<az.fitnest.catalog.dto.GymLessonTypeResponse> addLessonType(
+            @PathVariable("id") Long gymId,
+            @Valid @RequestBody az.fitnest.catalog.dto.GymLessonTypeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymLessonTypeService.addLessonType(gymId, request));
+    }
+
+    @Operation(summary = "Get all lesson types for a gym", description = "Returns all lesson types configured for the gym. ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/lesson-types")
+    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.GymLessonTypeResponse>> getLessonTypes(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymLessonTypeService.getLessonTypes(gymId));
+    }
+
+    @Operation(summary = "Update a lesson type", description = "Updates the name of an existing lesson type. ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/lesson-types/{lessonTypeId}")
+    public ResponseEntity<az.fitnest.catalog.dto.GymLessonTypeResponse> updateLessonType(
+            @PathVariable("id") Long gymId,
+            @PathVariable Long lessonTypeId,
+            @Valid @RequestBody az.fitnest.catalog.dto.GymLessonTypeRequest request) {
+        return ResponseEntity.ok(gymLessonTypeService.updateLessonType(gymId, lessonTypeId, request));
+    }
+
+    @Operation(summary = "Delete a lesson type", description = "Removes a lesson type from the gym. ADMIN only.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/lesson-types/{lessonTypeId}")
+    public ResponseEntity<Void> deleteLessonType(
+            @PathVariable("id") Long gymId,
+            @PathVariable Long lessonTypeId) {
+        gymLessonTypeService.deleteLessonType(gymId, lessonTypeId);
         return ResponseEntity.noContent().build();
     }
 }

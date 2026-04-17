@@ -551,4 +551,15 @@ public class GymWriteService {
     private boolean isValidPeriod(az.fitnest.catalog.model.enums.GymWorkHourPeriod period) {
         return period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEEKDAYS || period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY || period == az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY;
     }
+
+    @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
+    })
+    public void toggleGymReservation(Long gymId, boolean enabled) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        gym.setIsReservationEnabled(enabled);
+        gymRepository.save(gym);
+    }
 }

@@ -80,4 +80,8 @@ public class Trainer extends BaseAuditableEntity {
     public Long getTrainerId() {
         return getId();
     }
+
+    @Column(name = "is_reservation_enabled")
+    @Builder.Default
+    private Boolean isReservationEnabled = false;
 }

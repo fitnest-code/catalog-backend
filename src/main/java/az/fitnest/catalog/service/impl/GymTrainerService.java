@@ -36,6 +36,7 @@ public class GymTrainerService {
     private final FileStorageService fileStorageService;
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
+    private final az.fitnest.catalog.repository.TrainerReservationDateRepository trainerReservationDateRepository;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
@@ -168,5 +169,38 @@ public class GymTrainerService {
             }
         }
         return "AZ";
+    }
+
+    @Transactional
+    public void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled) {
+        Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        if (!gymId.equals(trainer.getGymId())) {
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
+        }
+        trainer.setIsReservationEnabled(enabled);
+        trainerRepository.save(trainer);
+    }
+
+    @Transactional
+    public void addTrainerAvailability(Long gymId, Long trainerId, az.fitnest.catalog.dto.TrainerAvailabilityRequest request) {
+        Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        if (!gymId.equals(trainer.getGymId())) {
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
+        }
+
+        if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
+            throw new az.fitnest.catalog.exception.BadRequestException("INVALID_TIME_RANGE", "error.invalid_time_range");
+        }
+
+        az.fitnest.catalog.model.entity.TrainerReservationDate availability = az.fitnest.catalog.model.entity.TrainerReservationDate.builder()
+                .trainer(trainer)
+                .date(request.getDate())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .emptySpaces(request.getEmptySpaces())
+                .build();
+        trainerReservationDateRepository.save(availability);
     }
 }

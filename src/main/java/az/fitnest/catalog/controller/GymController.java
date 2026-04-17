@@ -70,6 +70,7 @@ public class GymController {
     private final GymImageService gymImageService;
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
+    private final az.fitnest.catalog.service.impl.ReservationService reservationService;
 
     @GetMapping("/{gymId:\\d+}")
     @Operation(summary = "İdman zalı təfərrüatlarını əldə edin", description = "Xüsusi bir idman zalının tam təfərrüatlarını, o cümlədən yerləşmə yeri, obyektləri və istifadəçiyə xüsusi favorit statusunu əldə edir.")
@@ -246,6 +247,42 @@ public class GymController {
     @Operation(summary = "Get gym count by gender", description = "Returns count of gyms with gender-specific work hours (male/female).")
     public ResponseEntity<GymTypeCountResponse> getGymCountByGender(@RequestParam("gender") String gender) {
         return ResponseEntity.ok(gymReadService.getGymCountByGender(gender));
+    }
+
+    @PostMapping("/{gymId}/reservations")
+    @Operation(summary = "Create reservation", description = "User creates a reservation for a gym/trainer")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<az.fitnest.catalog.dto.ReservationResponse> createReservation(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable Long gymId,
+            @Valid @RequestBody az.fitnest.catalog.dto.ReservationRequest request) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(reservationService.createReservation(userId, gymId, request));
+    }
+
+    @GetMapping("/reservations")
+    @Operation(summary = "Get my reservations", description = "User gets their reservations.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.ReservationResponse>> getMyReservations(
+            @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        Long userId = extractUserId(principal);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        org.springframework.data.domain.Page<az.fitnest.catalog.dto.ReservationResponse> pagedResult = reservationService.getUserReservations(userId, page, pageSize);
+        return ResponseEntity.ok(PaginatedResponse.<az.fitnest.catalog.dto.ReservationResponse>builder()
+                .items(pagedResult.getContent())
+                .page(page)
+                .pageSize(pageSize)
+                .total(pagedResult.getTotalElements())
+                .build());
     }
 
     public GymEntranceEligibilityResponse testEligibilityResponse() {

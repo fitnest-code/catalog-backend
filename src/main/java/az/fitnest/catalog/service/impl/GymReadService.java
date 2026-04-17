@@ -306,11 +306,28 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    public ReservationRulesResponse getReservationRules(Long gymId) {
+    public Map<String, Object> getReservationRules(Long gymId) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
-        return new ReservationRulesResponse(false, Map.of("max_reservations_per_day", 1, "cancel_before_minutes", 60));
+        return Map.of(
+            "cancellation_policy", List.of(
+                "Free cancellation is possible up to 24 hours before the lesson starts",
+                "Cancellation within 24 hours will result in the loss of the session",
+                "In case of no-show, the full amount will be charged"
+            ),
+            "studio_rules", List.of(
+                "Please arrive at least 10 minutes before the lesson",
+                "Bring your own mat or rent one from the studio",
+                "Wear comfortable sportswear",
+                "Drink water before and after the lesson"
+            ),
+            "availability", List.of(
+                "Some classes may require confirmation from the studio",
+                "You will receive a confirmation email within 2 hours",
+                "For urgent bookings, please contact the studio directly"
+            )
+        );
     }
 
     @Transactional(readOnly = true)
