@@ -3,12 +3,9 @@ package az.fitnest.catalog.controller;
 import az.fitnest.catalog.dto.AddDiscountRequest;
 import az.fitnest.catalog.dto.StoreDetailResponseDto;
 import az.fitnest.catalog.dto.StoreRequest;
+import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class StoreAdminController {
 
     private final StoreService storeService;
+    private final StoreAdminService storeAdminService;
 
     @Operation(summary = "Yeni mağaza yaradın", description = "Sistemə yeni mağaza əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -82,6 +80,15 @@ public class StoreAdminController {
     @PostMapping("/{id}/discounts")
     public ResponseEntity<Void> addDiscount(@PathVariable Long id, @Valid @RequestBody AddDiscountRequest request) {
         storeService.addDiscount(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    //Sonradan yazilan apidir,bu melumat xarakterlidir.
+    @Operation(summary = "Mağaza statusunu yeniləyin", description = "Mağazanın aktiv, passiv və ya digər statuslarını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{storeId}/status")
+    public ResponseEntity<Void> updateStoreStatus(@PathVariable Long storeId, @RequestParam String status) {
+        storeAdminService.updateStoreStatus(storeId, status);
         return ResponseEntity.ok().build();
     }
 }
