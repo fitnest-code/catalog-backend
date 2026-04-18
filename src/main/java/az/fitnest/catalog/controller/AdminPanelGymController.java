@@ -3,10 +3,7 @@ package az.fitnest.catalog.controller;
 import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
-import az.fitnest.catalog.dto.admin.AdminGymListDto;
-import az.fitnest.catalog.dto.admin.AdminPanelCreateGymRequest;
-import az.fitnest.catalog.dto.admin.AdminPanelGymDetailDto;
-import az.fitnest.catalog.dto.admin.AdminPanelGymResponse;
+import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
 import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
@@ -73,5 +70,15 @@ public class AdminPanelGymController {
     public ResponseEntity<Void> deleteGym(@PathVariable Long gymId) {
         gymAdminWriteService.deleteGym(gymId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{gymId}/general-info")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateGeneralInfo(
+            @PathVariable Long gymId,
+            @RequestBody @Valid GeneralInfoRequest request
+    ) {
+        gymAdminWriteService.updateGeneralInfo(gymId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

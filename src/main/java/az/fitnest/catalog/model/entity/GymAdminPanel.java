@@ -1,9 +1,10 @@
 package az.fitnest.catalog.model.entity;
 
-import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,9 @@ public class GymAdminPanel extends BaseAuditableEntity {
 
     @Column(name = "email")
     private String email;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @ElementCollection
     @CollectionTable(name = "gym_general_work_hours", joinColumns = {@JoinColumn(name = "gym_id")})
@@ -83,13 +87,6 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @ToString.Exclude
     private Set<GymSubscription> subscriptions = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<Category> categories = new HashSet<Category>();
-
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;
@@ -101,7 +98,7 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default
-    private GymStatus status = GymStatus.ACTIVE;
+    private AdminPanelGymStatus status = AdminPanelGymStatus.ACTIVE;
 
     public Long getGymId() {
         return getId();
