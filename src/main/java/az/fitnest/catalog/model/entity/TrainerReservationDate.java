@@ -2,6 +2,7 @@ package az.fitnest.catalog.model.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -28,6 +29,13 @@ public class TrainerReservationDate extends BaseAuditableEntity {
     @JoinColumn(name = "trainer_id", nullable = false)
     private Trainer trainer;
 
+    @Column(name = "gym_id")
+    private Long gymId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_type_id")
+    private GymLessonType classType;
+
     @Column(name = "reservation_date", nullable = false)
     private LocalDate date;
 
@@ -39,4 +47,9 @@ public class TrainerReservationDate extends BaseAuditableEntity {
 
     @Column(name = "empty_spaces", nullable = false)
     private Integer emptySpaces;
+
+    @Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private az.fitnest.catalog.model.enums.SessionStatus status = az.fitnest.catalog.model.enums.SessionStatus.OPEN;
 }

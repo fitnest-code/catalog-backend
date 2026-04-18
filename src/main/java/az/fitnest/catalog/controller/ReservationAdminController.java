@@ -1,0 +1,107 @@
+package az.fitnest.catalog.controller;
+
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.service.impl.GymLessonTypeService;
+import az.fitnest.catalog.service.impl.GymTrainerService;
+import az.fitnest.catalog.service.impl.GymWriteService;
+import az.fitnest.catalog.service.impl.ReservationCommandService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/admin/reservations")
+@RequiredArgsConstructor
+@Tag(name = "Reservation Admin", description = "Rezervasiyaları, təlimçiləri və dərs növlərini idarə etmək üçün administrativ ucluqlar.")
+@SecurityRequirement(name = "bearerAuth")
+public class ReservationAdminController {
+
+    private final GymWriteService gymWriteService;
+    private final GymTrainerService gymTrainerService;
+    private final ReservationCommandService reservationCommandService;
+    private final GymLessonTypeService gymLessonTypeService;
+
+    @Operation(summary = "İdman zalı üçün rezervasiyaları aktivləşdirin və ya deaktiv edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/gyms/{id}/enable")
+    public ResponseEntity<Void> toggleGymReservation(@PathVariable Long id, @RequestParam boolean enabled) {
+        gymWriteService.toggleGymReservation(id, enabled);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Təlimçi üçün rezervasiyaları aktivləşdirin və ya deaktiv edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/gyms/{id}/trainers/{trainerId}/enable")
+    public ResponseEntity<Void> toggleTrainerReservation(
+            @PathVariable("id") Long gymId,
+            @PathVariable("trainerId") Long trainerId,
+            @RequestParam boolean enabled) {
+        gymTrainerService.toggleTrainerReservation(gymId, trainerId, enabled);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Təlimçi üçün mövcudluq (availability) əlavə edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/gyms/{id}/trainers/{trainerId}/availabilities")
+    public ResponseEntity<Void> addTrainerAvailability(
+            @PathVariable("id") Long gymId,
+            @PathVariable("trainerId") Long trainerId,
+            @Valid @RequestBody TrainerAvailabilityRequest request) {
+        gymTrainerService.addTrainerAvailability(gymId, trainerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Rezervasiya statusunu yeniləyin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{reservationId}/status")
+    public ResponseEntity<Void> updateReservationStatus(
+            @PathVariable Long reservationId,
+            @Valid @RequestBody ReservationStatusUpdateRequest request) {
+        reservationCommandService.updateReservationStatus(reservationId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "İdman zalına dərs növü əlavə edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/gyms/{id}/lesson-types")
+    public ResponseEntity<GymLessonTypeResponse> addLessonType(
+            @PathVariable("id") Long gymId,
+            @Valid @RequestBody GymLessonTypeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymLessonTypeService.addLessonType(gymId, request));
+    }
+
+    @Operation(summary = "İdman zalının bütün dərs növlərini əldə edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/gyms/{id}/lesson-types")
+    public ResponseEntity<List<GymLessonTypeResponse>> getLessonTypes(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymLessonTypeService.getLessonTypes(gymId));
+    }
+
+    @Operation(summary = "Dərs növünü yeniləyin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/gyms/{id}/lesson-types/{lessonTypeId}")
+    public ResponseEntity<GymLessonTypeResponse> updateLessonType(
+            @PathVariable("id") Long gymId,
+            @PathVariable Long lessonTypeId,
+            @Valid @RequestBody GymLessonTypeRequest request) {
+        return ResponseEntity.ok(gymLessonTypeService.updateLessonType(gymId, lessonTypeId, request));
+    }
+
+    @Operation(summary = "Dərs növünü silin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/gyms/{id}/lesson-types/{lessonTypeId}")
+    public ResponseEntity<Void> deleteLessonType(
+            @PathVariable("id") Long gymId,
+            @PathVariable Long lessonTypeId) {
+        gymLessonTypeService.deleteLessonType(gymId, lessonTypeId);
+        return ResponseEntity.noContent().build();
+    }
+}

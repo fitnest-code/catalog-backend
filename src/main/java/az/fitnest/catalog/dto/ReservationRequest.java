@@ -13,15 +13,22 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReservationRequest {
-    @NotNull(message = "Lesson type is required")
-    private String lessonType;
+    @NotNull(message = "Gym ID is required")
+    private Long gymId;
+
+    @NotNull(message = "Category name is required (PILATES/YOGA)")
+    private String categoryName;
+
+    @NotNull(message = "Class type ID is required")
+    private Long classTypeId;
 
     @NotNull(message = "Trainer ID is required")
     private Long trainerId;
 
-    @NotNull(message = "Date is required")
-    private LocalDate date;
+    @NotNull(message = "Session ID is required")
+    private Long sessionId;
 
-    @NotNull(message = "Time interval is required (e.g. 09:00-10:00)")
+    private String lessonType;
+    private java.time.LocalDate date;
     private String timeInterval;
 }

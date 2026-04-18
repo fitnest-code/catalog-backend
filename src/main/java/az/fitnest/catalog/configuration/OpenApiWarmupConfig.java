@@ -33,7 +33,6 @@ public class OpenApiWarmupConfig {
             return;
         }
         try {
-            // Give Tomcat a moment to fully initialize its connectors
             Thread.sleep(2000);
             if (this.openApiResource != null) {
                 try {

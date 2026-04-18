@@ -39,6 +39,14 @@ public class Reservation extends BaseAuditableEntity {
     @JoinColumn(name = "trainer_reservation_date_id", nullable = false)
     private TrainerReservationDate reservationDate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_type_id")
+    private GymLessonType classType;
+
     @Column(name = "lesson_type", nullable = false)
     private String lessonType;
 
@@ -46,4 +54,19 @@ public class Reservation extends BaseAuditableEntity {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private ReservationStatus status = ReservationStatus.PENDING;
+
+    @Column(name = "approved_at")
+    private java.time.LocalDateTime approvedAt;
+
+    @Column(name = "cancelled_at")
+    private java.time.LocalDateTime cancelledAt;
+
+    @Column(name = "cancel_reason_code")
+    private String cancelReasonCode;
+
+    @Column(name = "cancel_reason_text")
+    private String cancelReasonText;
+
+    @Column(name = "cancel_additional_note")
+    private String cancelAdditionalNote;
 }

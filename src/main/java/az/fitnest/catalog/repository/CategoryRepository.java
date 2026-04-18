@@ -13,4 +13,6 @@ public interface CategoryRepository
 
     @Query("SELECT c FROM Category c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%'))")
     Page<Category> searchByName(@Param("q") String q, Pageable pageable);
+
+    java.util.Optional<Category> findByNameIgnoreCase(String name);
 }

@@ -70,7 +70,6 @@ public class GymController {
     private final GymImageService gymImageService;
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
-    private final az.fitnest.catalog.service.impl.ReservationService reservationService;
 
     @GetMapping("/{gymId:\\d+}")
     @Operation(summary = "İdman zalı təfərrüatlarını əldə edin", description = "Xüsusi bir idman zalının tam təfərrüatlarını, o cümlədən yerləşmə yeri, obyektləri və istifadəçiyə xüsusi favorit statusunu əldə edir.")
@@ -126,12 +125,6 @@ public class GymController {
         }
         this.gymReviewService.addReview(userId, gymId, request);
         return ResponseEntity.status(201).build();
-    }
-
-    @GetMapping("/{gymId}/reservation-rules")
-    @Operation(summary = "Rezervasiya qaydalarını əldə edin", description = "İdman zalına giriş və rezervasiya üçün xüsusi qaydaları qaytarır (məsələn, vaxt məhdudiyyətləri, ləğv siyasəti).")
-    public ResponseEntity<Object> getReservationRules(@PathVariable Long gymId) {
-        return ResponseEntity.ok(this.gymReadService.getReservationRules(gymId));
     }
 
     @GetMapping
@@ -247,80 +240,6 @@ public class GymController {
     @Operation(summary = "Get gym count by gender", description = "Returns count of gyms with gender-specific work hours (male/female).")
     public ResponseEntity<GymTypeCountResponse> getGymCountByGender(@RequestParam("gender") String gender) {
         return ResponseEntity.ok(gymReadService.getGymCountByGender(gender));
-    }
-
-    @PostMapping("/{gymId}/reservations")
-    @Operation(summary = "Create reservation", description = "User creates a reservation for a gym/trainer")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<az.fitnest.catalog.dto.ReservationResponse> createReservation(
-            @AuthenticationPrincipal Object principal,
-            @PathVariable Long gymId,
-            @Valid @RequestBody az.fitnest.catalog.dto.ReservationRequest request) {
-        Long userId = extractUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(401).build();
-        }
-        return ResponseEntity.ok(reservationService.createReservation(userId, gymId, request));
-    }
-
-    @GetMapping("/reservations")
-    @Operation(summary = "Get my reservations", description = "User gets their reservations.")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.ReservationResponse>> getMyReservations(
-            @AuthenticationPrincipal Object principal,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
-        Long userId = extractUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(401).build();
-        }
-        org.springframework.data.domain.Page<az.fitnest.catalog.dto.ReservationResponse> pagedResult = reservationService.getUserReservations(userId, page, pageSize);
-        return ResponseEntity.ok(PaginatedResponse.<az.fitnest.catalog.dto.ReservationResponse>builder()
-                .items(pagedResult.getContent())
-                .page(page)
-                .pageSize(pageSize)
-                .total(pagedResult.getTotalElements())
-                .build());
-    }
-
-        @PostMapping("/reservations/{reservationId}/cancel")
-    @Operation(summary = "Cancel reservation", description = "User cancels their own reservation. Possible only up to 24 hours before lesson starts.")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> cancelReservation(
-            @AuthenticationPrincipal Object principal,
-            @PathVariable Long reservationId) {
-        Long userId = extractUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(401).build();
-        }
-        reservationService.cancelReservation(userId, reservationId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/check-reservation")
-    @Operation(summary = "Check if gym reservation is enabled", description = "Checks if reservation is enabled for the given gym ID.")
-    public ResponseEntity<az.fitnest.catalog.dto.GymReservationCheckResponse> checkReservation(
-            @Valid @RequestBody az.fitnest.catalog.dto.GymReservationCheckRequest request) {
-        boolean enabled = gymReadService.isReservationEnabled(request.getGymId());
-        return ResponseEntity.ok(az.fitnest.catalog.dto.GymReservationCheckResponse.builder()
-                .enabled(enabled)
-                .build());
-    }
-
-    @PostMapping("/daily-availability")
-    @Operation(summary = "Get trainer daily availability", description = "Returns available hour intervals for a specific trainer on a specific day.")
-    public ResponseEntity<az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse> getTrainerDailyAvailability(
-            @Valid @RequestBody az.fitnest.catalog.dto.TrainerDailyAvailabilityRequest request) {
-        return ResponseEntity.ok(reservationService.getTrainerDailyAvailability(request.getGymId(), request.getTrainerId(), request.getDate()));
-    }
-
-    @GetMapping("/{gymId}/reservation-details")
-    @Operation(summary = "Get gym reservation details", description = "Returns lesson types, trainers, available dates, hour intervals, and empty spaces for a gym.")
-    public ResponseEntity<az.fitnest.catalog.dto.GymReservationDetailsResponse> getReservationDetails(@PathVariable Long gymId) {
-        return ResponseEntity.ok(reservationService.getReservationDetails(gymId));
     }
 
     public GymEntranceEligibilityResponse testEligibilityResponse() {

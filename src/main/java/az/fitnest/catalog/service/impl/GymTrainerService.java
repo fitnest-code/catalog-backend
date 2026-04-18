@@ -63,10 +63,10 @@ public class GymTrainerService {
     public void addTrainer(Long gymId, TrainerRequest request) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        
+
         Trainer trainer = new Trainer();
         updateTrainerFromRequest(trainer, request);
-        
+
         gym.getTrainers().add(trainer);
         gymRepository.save(gym);
     }

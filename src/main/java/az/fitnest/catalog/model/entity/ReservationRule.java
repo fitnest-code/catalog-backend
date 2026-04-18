@@ -13,30 +13,33 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "gym_lesson_types")
+@Table(name = "reservation_rules")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class GymLessonType extends BaseAuditableEntity {
+public class ReservationRule extends BaseAuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gym_id", nullable = false)
     private Gym gym;
 
-    @Column(name = "name", nullable = false)
-    private String name;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @Column(name = "status")
-    @Builder.Default
-    private String status = "ACTIVE";
+    @Column(name = "title", nullable = false)
+    private String title;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "sort_order")
     @Builder.Default
     private Integer sortOrder = 0;
+
+    @Column(name = "status")
+    @Builder.Default
+    private String status = "ACTIVE";
 }
