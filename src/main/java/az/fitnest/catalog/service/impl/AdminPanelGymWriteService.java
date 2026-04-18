@@ -2,8 +2,10 @@ package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.admin.AdminPanelCreateGymRequest;
 import az.fitnest.catalog.dto.admin.AdminPanelGymResponse;
+import az.fitnest.catalog.exception.ConflictException;
+import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
-import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,7 @@ public class AdminPanelGymWriteService {
     public AdminPanelGymResponse createGymForAdmin(AdminPanelCreateGymRequest request) {
         GymAdminPanel gym = GymAdminPanel.builder()
                 .name(request.name())
-                .status(GymStatus.INACTIVE)
+                .status(AdminPanelGymStatus.INACTIVE)
                 .build();
 
         GymAdminPanel saved = gymAdminPanelRepository.save(gym);
@@ -32,4 +34,19 @@ public class AdminPanelGymWriteService {
                 saved.getStatus()
         );
     }
+
+    @Transactional
+    public void deleteGym(Long gymId) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+            throw new ConflictException("GYM_HAS_ACTIVE_SUBSCRIPTIONS", "error.gym_has_active_subscriptions");
+        }
+
+        gym.setStatus(AdminPanelGymStatus.DELETED);
+        gymAdminPanelRepository.save(gym);
+    }
+
+
 }
