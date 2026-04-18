@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/gyms")
+@RequestMapping("/api/v1/admin/gyms")
 @RequiredArgsConstructor
 @Tag(name = "Gyms", description = "Admin panelində idman zallarını idarə etmək və kəşf etmək üçün ucluqlar, o cümlədən paketlər, məşqçilər və istifadəçi rəyləri")
 @SecurityRequirement(name = "bearerAuth")
