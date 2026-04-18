@@ -3,6 +3,9 @@ package az.fitnest.catalog.service.impl;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.AdminGymListDto;
+import az.fitnest.catalog.dto.admin.AdminPanelGymDetailDto;
+import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,5 +49,24 @@ public class AdminPanelGymReadService {
                 .findAllForAdmin(search, status, cityName, districtName, pageable);
 
         return PaginatedResponse.of(result);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminPanelGymDetailDto getGymForAdmin(Long gymId) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        return new AdminPanelGymDetailDto(
+                gym.getId(),
+                gym.getName(),
+                gym.getDescription(),
+                gym.getStatus(),
+                gym.getPhone(),
+                gym.getEmail(),
+                gym.getAddress() != null ? gym.getAddress().getAddressText() : null,
+                gym.getAddress() != null ? gym.getAddress().getLatitude() : null,
+                gym.getAddress() != null ? gym.getAddress().getLongitude() : null,
+                gym.getCoverImageUrl()
+        );
     }
 }

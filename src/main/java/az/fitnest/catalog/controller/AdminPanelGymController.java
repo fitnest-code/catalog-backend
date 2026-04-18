@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.AdminGymListDto;
 import az.fitnest.catalog.dto.admin.AdminPanelCreateGymRequest;
+import az.fitnest.catalog.dto.admin.AdminPanelGymDetailDto;
 import az.fitnest.catalog.dto.admin.AdminPanelGymResponse;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
@@ -57,6 +58,14 @@ public class AdminPanelGymController {
         AdminPanelGymResponse response = gymAdminWriteService.createGymForAdmin(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{gymId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<AdminPanelGymDetailDto>> getGymForAdmin(
+            @PathVariable Long gymId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGymForAdmin(gymId)));
     }
 
 }
