@@ -13,6 +13,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Page<Reservation> findByUserId(Long userId, Pageable pageable);
 
+    Page<Reservation> findByUserIdAndStatus(Long userId, az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
+
     List<Reservation> findByTrainerIdAndReservationDateId(Long trainerId, Long reservationDateId);
 
     boolean existsByUserIdAndReservationDateId(Long userId, Long reservationDateId);

@@ -121,9 +121,12 @@ public class ReservationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReservationResponse> getMyReservations(Long userId, int page, int pageSize) {
-        return reservationRepository.findByUserId(userId, PageRequest.of(page - 1, pageSize, Sort.by("createdDate").descending()))
-                .stream()
+    public List<ReservationResponse> getMyReservations(Long userId, int page, int pageSize, ReservationStatus status) {
+        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by("createdDate").descending());
+        var result = status != null
+                ? reservationRepository.findByUserIdAndStatus(userId, status, pageable)
+                : reservationRepository.findByUserId(userId, pageable);
+        return result.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

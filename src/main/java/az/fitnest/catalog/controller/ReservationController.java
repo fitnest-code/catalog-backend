@@ -2,10 +2,14 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.service.impl.CancellationReasonService;
 import az.fitnest.catalog.service.impl.ReservationCommandService;
 import az.fitnest.catalog.service.impl.ReservationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -85,10 +89,16 @@ public class ReservationController {
     public ResponseEntity<PaginatedResponse<ReservationResponse>> getMyReservations(
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(
+                in = ParameterIn.QUERY,
+                description = "Filter by reservation status. Accepted values: PENDING, APPROVED, CANCELLED, REJECTED, EXPIRED",
+                schema = @Schema(type = "string", allowableValues = {"PENDING", "APPROVED", "CANCELLED", "REJECTED", "EXPIRED"})
+            )
+            @RequestParam(required = false) ReservationStatus status) {
         int p = page > 0 ? page : 1;
         int ps = pageSize > 0 ? pageSize : 10;
-        List<ReservationResponse> items = queryService.getMyReservations(userId, p, ps);
+        List<ReservationResponse> items = queryService.getMyReservations(userId, p, ps, status);
         return ResponseEntity.ok(PaginatedResponse.<ReservationResponse>builder()
                 .items(items)
                 .page(p)
