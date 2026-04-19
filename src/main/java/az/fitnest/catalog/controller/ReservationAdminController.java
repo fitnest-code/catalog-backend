@@ -39,11 +39,11 @@ public class ReservationAdminController {
 
     @Operation(summary = "Təlimçi üçün rezervasiyaları aktivləşdirin və ya deaktiv edin")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/gyms/{id}/trainers/{trainerId}/enable")
+    @PutMapping("/gyms/{id}/trainers/{trainerId}/enable/{lessonId}")
     public ResponseEntity<Void> toggleTrainerReservation(
             @PathVariable("id") Long gymId,
             @PathVariable("trainerId") Long trainerId,
-            @RequestParam Long lessonId,
+            @PathVariable("lessonId") Long lessonId,
             @RequestBody ToggleRequest request) {
         gymTrainerService.toggleTrainerReservation(gymId, trainerId, request.isEnabled(), lessonId);
         return ResponseEntity.ok().build();
