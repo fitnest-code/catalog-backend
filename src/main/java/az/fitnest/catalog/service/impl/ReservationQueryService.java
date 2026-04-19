@@ -84,6 +84,7 @@ public class ReservationQueryService {
                             int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
                             
                             return TimeSlotResponse.builder()
+                                    .sessionId(session.getId())
                                     .startTime(session.getStartTime())
                                     .endTime(session.getEndTime())
                                     .emptySpaces(emptySpaces)

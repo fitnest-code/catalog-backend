@@ -19,4 +19,6 @@ public class TimeSlotResponse {
     private LocalTime endTime;
     
     private Integer emptySpaces;
+
+    private Long sessionId;
 }
