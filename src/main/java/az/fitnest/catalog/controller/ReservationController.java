@@ -2,10 +2,6 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.model.entity.GymLessonType;
-import az.fitnest.catalog.model.entity.ReservationRule;
-import az.fitnest.catalog.model.entity.Trainer;
-import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.service.impl.CancellationReasonService;
 import az.fitnest.catalog.service.impl.ReservationCommandService;
 import az.fitnest.catalog.service.impl.ReservationQueryService;
@@ -14,13 +10,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -84,40 +78,25 @@ public class ReservationController {
         return ResponseEntity.ok(queryService.getReservationPreview(request.getSessionId()));
     }
 
-    @PostMapping("/my")
+    @GetMapping("/my")
     @Operation(summary = "Mənim rezervasiyalarım")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaginatedResponse<ReservationResponse>> getMyReservations(
             @AuthenticationPrincipal Long userId,
-            @RequestBody ReservationListRequest request) {
-        int page = request.getPage() > 0 ? request.getPage() : 1;
-        int pageSize = request.getPageSize() > 0 ? request.getPageSize() : 10;
-        List<ReservationResponse> items = queryService.getMyReservations(userId, page, pageSize);
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        int p = page > 0 ? page : 1;
+        int ps = pageSize > 0 ? pageSize : 10;
+        List<ReservationResponse> items = queryService.getMyReservations(userId, p, ps);
         return ResponseEntity.ok(PaginatedResponse.<ReservationResponse>builder()
                 .items(items)
-                .page(page)
-                .pageSize(pageSize)
+                .page(p)
+                .pageSize(ps)
                 .build());
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Rezervasiya təfərrüatları")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReservationDetailResponse> getDetail(
-            @AuthenticationPrincipal Long userId,
-            @PathVariable Long id) {
-        return ResponseEntity.ok(queryService.getReservationDetail(id, userId));
-    }
 
-    @GetMapping("/widget")
-    @Operation(summary = "Rezervasiya vidceti məlumatları")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ReservationWidgetResponse> getWidget(@AuthenticationPrincipal Long userId) {
-        return ResponseEntity.ok(queryService.getReservationWidget(userId));
-    }
 
     @GetMapping("/cancel-reasons")
     @Operation(summary = "Ləğvetmə səbəbləri")
@@ -138,8 +117,10 @@ public class ReservationController {
         return ResponseEntity.ok(ReservationResponse.builder()
                 .id(reservation.getId())
                 .gymId(reservation.getGym().getId())
+                .gymName(reservation.getGym().getName())
                 .trainerId(reservation.getTrainer().getId())
                 .lessonType(reservation.getLessonType())
+                .categoryName(reservation.getCategory() != null ? reservation.getCategory().getName() : null)
                 .date(reservation.getReservationDate().getDate())
                 .fromHour(reservation.getReservationDate().getStartTime())
                 .toHour(reservation.getReservationDate().getEndTime())

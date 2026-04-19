@@ -17,8 +17,10 @@ import java.time.LocalTime;
 public class ReservationResponse {
     private Long id;
     private Long gymId;
+    private String gymName;
     private Long trainerId;
     private String lessonType;
+    private String categoryName;
     @Schema(example = "2024-04-25")
     private LocalDate date;
     @Schema(type = "string", example = "22:00")
