@@ -33,30 +33,42 @@ public class ReservationController {
     private final ReservationCommandService commandService;
     private final CancellationReasonService reasonService;
 
-    @PostMapping("/lessons")
+    @GetMapping("/lessons")
     @Operation(summary = "Dərs növlərini əldə edin", description = "Müəyyən kateqoriya üzrə aktiv dərs növlərini qaytarır.")
-    public ResponseEntity<List<ReservationLessonResponse>> getLessons(@Valid @RequestBody ReservationLessonQueryRequest request) {
-        return ResponseEntity.ok(queryService.getLessonsForReservation(request.getGymId(), request.getCategoryId()));
+    public ResponseEntity<List<ReservationLessonResponse>> getLessons(
+            @RequestParam Long gymId,
+            @RequestParam Long categoryId) {
+        return ResponseEntity.ok(queryService.getLessonsForReservation(gymId, categoryId));
     }
 
-    @PostMapping("/trainers")
+    @GetMapping("/trainers")
     @Operation(summary = "Məşqçiləri əldə edin", description = "Seçilmiş dərs növü üzrə aktiv məşqçiləri qaytarır.")
-    public ResponseEntity<List<ReservationTeacherResponse>> getTeachersByLesson(@Valid @RequestBody ReservationTeacherQueryRequest request) {
-        return ResponseEntity.ok(queryService.getTrainersForLesson(request.getGymId(), request.getCategoryId(), request.getLessonTypeId()));
+    public ResponseEntity<List<ReservationTeacherResponse>> getTeachersByLesson(
+            @RequestParam Long gymId,
+            @RequestParam Long categoryId,
+            @RequestParam Long lessonTypeId) {
+        return ResponseEntity.ok(queryService.getTrainersForLesson(gymId, categoryId, lessonTypeId));
     }
 
-    @PostMapping("/times")
+    @GetMapping("/times")
     @Operation(summary = "Mövcud vaxtları əldə edin", description = "Məşqçi və dərs növü üzrə mövcud sessiyaları qaytarır.")
-    public ResponseEntity<List<DayAvailabilityResponse>> getAvailableTimes(@Valid @RequestBody ReservationTimeQueryRequest request) {
-        return ResponseEntity.ok(queryService.getAvailabilityForTeacher(request.getGymId(), request.getCategoryId(), request.getLessonTypeId(), request.getTrainerId()));
+    public ResponseEntity<List<DayAvailabilityResponse>> getAvailableTimes(
+            @RequestParam Long gymId,
+            @RequestParam Long categoryId,
+            @RequestParam Long lessonTypeId,
+            @RequestParam Long trainerId) {
+        return ResponseEntity.ok(queryService.getAvailabilityForTeacher(gymId, categoryId, lessonTypeId, trainerId));
     }
 
 
 
-    @PostMapping("/rules")
+    @GetMapping("/rules")
     @Operation(summary = "Rezervasiya qaydalarını əldə edin")
-    public ResponseEntity<ReservationRuleResponse> getRules(@Valid @RequestBody ReservationRulesRequest request) {
-        return ResponseEntity.ok(queryService.getRules(request.getGymId(), request.getCategoryId(), request.getLessonId()));
+    public ResponseEntity<ReservationRuleResponse> getRules(
+            @RequestParam Long gymId,
+            @RequestParam Long categoryId,
+            @RequestParam Long lessonId) {
+        return ResponseEntity.ok(queryService.getRules(gymId, categoryId, lessonId));
     }
 
 

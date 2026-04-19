@@ -74,8 +74,9 @@ public class ReservationAdminController {
     @PostMapping("/gyms/{id}/lesson-types")
     public ResponseEntity<GymLessonTypeResponse> addLessonType(
             @PathVariable("id") Long gymId,
+            @RequestParam(required = false) Long categoryId,
             @Valid @RequestBody GymLessonTypeRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gymLessonTypeService.addLessonType(gymId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymLessonTypeService.addLessonType(gymId, categoryId, request));
     }
 
     @Operation(summary = "İdman zalının bütün dərs növlərini əldə edin")
@@ -91,8 +92,9 @@ public class ReservationAdminController {
     public ResponseEntity<GymLessonTypeResponse> updateLessonType(
             @PathVariable("id") Long gymId,
             @PathVariable Long lessonTypeId,
+            @RequestParam(required = false) Long categoryId,
             @Valid @RequestBody GymLessonTypeRequest request) {
-        return ResponseEntity.ok(gymLessonTypeService.updateLessonType(gymId, lessonTypeId, request));
+        return ResponseEntity.ok(gymLessonTypeService.updateLessonType(gymId, lessonTypeId, categoryId, request));
     }
 
     @Operation(summary = "Dərs növünü silin")

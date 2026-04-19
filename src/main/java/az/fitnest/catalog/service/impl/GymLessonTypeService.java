@@ -28,7 +28,7 @@ public class GymLessonTypeService {
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public GymLessonTypeResponse addLessonType(Long gymId, GymLessonTypeRequest request) {
+    public GymLessonTypeResponse addLessonType(Long gymId, Long categoryId, GymLessonTypeRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -37,8 +37,8 @@ public class GymLessonTypeService {
         }
 
         Category category = null;
-        if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
+        if (categoryId != null) {
+            category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         }
 
@@ -63,7 +63,7 @@ public class GymLessonTypeService {
     }
 
     @Transactional
-    public GymLessonTypeResponse updateLessonType(Long gymId, Long lessonTypeId, GymLessonTypeRequest request) {
+    public GymLessonTypeResponse updateLessonType(Long gymId, Long lessonTypeId, Long categoryId, GymLessonTypeRequest request) {
         GymLessonType lessonType = gymLessonTypeRepository.findById(lessonTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
 
@@ -76,8 +76,8 @@ public class GymLessonTypeService {
             throw new BadRequestException("LESSON_TYPE_ALREADY_EXISTS", "error.lesson_type_already_exists");
         }
 
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
             lessonType.setCategory(category);
         }
