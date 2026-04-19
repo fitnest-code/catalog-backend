@@ -51,12 +51,13 @@ public class ReservationAdminController {
 
     @Operation(summary = "Təlimçi üçün mövcudluq (availability) əlavə edin")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/gyms/{id}/trainers/{trainerId}/availabilities")
+    @PostMapping("/gyms/{id}/trainers/{trainerId}/lessons/{lessonId}/availabilities")
     public ResponseEntity<Void> addTrainerAvailability(
             @PathVariable("id") Long gymId,
             @PathVariable("trainerId") Long trainerId,
+            @PathVariable("lessonId") Long lessonId,
             @Valid @RequestBody TrainerAvailabilityRequest request) {
-        gymTrainerService.addTrainerAvailability(gymId, trainerId, request);
+        gymTrainerService.addTrainerAvailability(gymId, trainerId, lessonId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

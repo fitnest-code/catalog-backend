@@ -198,12 +198,15 @@ public class GymTrainerService {
     }
 
     @Transactional
-    public void addTrainerAvailability(Long gymId, Long trainerId, az.fitnest.catalog.dto.TrainerAvailabilityRequest request) {
+    public void addTrainerAvailability(Long gymId, Long trainerId, Long lessonId, az.fitnest.catalog.dto.TrainerAvailabilityRequest request) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
+
+        GymLessonType lessonType = gymLessonTypeRepository.findById(lessonId)
+                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
 
         if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
             throw new az.fitnest.catalog.exception.BadRequestException("INVALID_TIME_RANGE", "error.invalid_time_range");
@@ -211,6 +214,8 @@ public class GymTrainerService {
 
         az.fitnest.catalog.model.entity.TrainerReservationDate availability = az.fitnest.catalog.model.entity.TrainerReservationDate.builder()
                 .trainer(trainer)
+                .classType(lessonType)
+                .gymId(gymId)
                 .date(request.getDate())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
