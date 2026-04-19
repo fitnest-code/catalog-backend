@@ -57,9 +57,9 @@ public class ReservationQueryService {
 
     @Transactional(readOnly = true)
     public List<ReservationTeacherResponse> getTrainersForLesson(Long gymId, Long categoryId, Long lessonTypeId) {
-        // Here we assume trainers are linked to the gym and specialization might match lesson type
-        // For now, returning all trainers in the gym as requested flow implies they are available for the selected lesson context
         return trainerRepository.findByGymId(gymId, PageRequest.of(0, 100)).getContent().stream()
+                .filter(t -> t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getId().equals(lessonTypeId)))
+                .filter(t -> Boolean.TRUE.equals(t.getIsReservationEnabled()))
                 .map(t -> ReservationTeacherResponse.builder()
                         .teacherId(t.getId())
                         .teacherName(t.getFirstName() + " " + t.getLastName())

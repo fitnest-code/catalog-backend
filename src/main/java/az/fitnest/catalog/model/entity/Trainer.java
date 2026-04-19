@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -84,4 +86,13 @@ public class Trainer extends BaseAuditableEntity {
     @Column(name = "is_reservation_enabled")
     @Builder.Default
     private Boolean isReservationEnabled = false;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "trainer_enabled_lessons",
+        joinColumns = @JoinColumn(name = "trainer_id"),
+        inverseJoinColumns = @JoinColumn(name = "lesson_type_id")
+    )
+    @Builder.Default
+    private java.util.Set<GymLessonType> enabledLessonTypes = new java.util.HashSet<>();
 }

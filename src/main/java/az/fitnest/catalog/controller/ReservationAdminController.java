@@ -43,8 +43,9 @@ public class ReservationAdminController {
     public ResponseEntity<Void> toggleTrainerReservation(
             @PathVariable("id") Long gymId,
             @PathVariable("trainerId") Long trainerId,
+            @RequestParam Long lessonId,
             @RequestBody ToggleRequest request) {
-        gymTrainerService.toggleTrainerReservation(gymId, trainerId, request.isEnabled());
+        gymTrainerService.toggleTrainerReservation(gymId, trainerId, request.isEnabled(), lessonId);
         return ResponseEntity.ok().build();
     }
 

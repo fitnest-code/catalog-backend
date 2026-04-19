@@ -10,7 +10,10 @@ import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.GymLessonTypeRepository;
+import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.service.FileStorageService;
+import az.fitnest.catalog.model.entity.GymLessonType;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.UserContext;
 import az.fitnest.user.grpc.UserResponse;
@@ -36,7 +39,8 @@ public class GymTrainerService {
     private final FileStorageService fileStorageService;
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
-    private final az.fitnest.catalog.repository.TrainerReservationDateRepository trainerReservationDateRepository;
+    private final TrainerReservationDateRepository trainerReservationDateRepository;
+    private final GymLessonTypeRepository gymLessonTypeRepository;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
@@ -172,12 +176,23 @@ public class GymTrainerService {
     }
 
     @Transactional
-    public void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled) {
+    public void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled, Long lessonId) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
+        
+        if (lessonId != null) {
+            GymLessonType lesson = gymLessonTypeRepository.findById(lessonId)
+                    .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+            if (enabled) {
+                trainer.getEnabledLessonTypes().add(lesson);
+            } else {
+                trainer.getEnabledLessonTypes().remove(lesson);
+            }
+        }
+        
         trainer.setIsReservationEnabled(enabled);
         trainerRepository.save(trainer);
     }
