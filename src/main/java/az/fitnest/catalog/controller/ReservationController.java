@@ -33,55 +33,45 @@ public class ReservationController {
     private final ReservationCommandService commandService;
     private final CancellationReasonService reasonService;
 
-    @GetMapping("/entry")
+    @PostMapping("/entry")
     @Operation(summary = "Rezervasiya giriş məlumatlarını əldə edin", description = "Müəyyən kateqoriya üzrə aktiv dərs növlərini qaytarır.")
-    public ResponseEntity<List<GymLessonType>> getEntryData(
-            @RequestParam Long gymId,
-            @RequestParam String categoryName) {
-        return ResponseEntity.ok(queryService.getReservationEntryData(gymId, categoryName));
+    public ResponseEntity<List<GymLessonType>> getEntryData(@RequestBody ReservationEntryRequest request) {
+        return ResponseEntity.ok(queryService.getReservationEntryData(request.getGymId(), request.getCategoryName()));
     }
 
-    @GetMapping("/trainers")
+    @PostMapping("/trainers")
     @Operation(summary = "Məşqçiləri əldə edin", description = "Seçilmiş tarix və dərs növü üzrə aktiv məşqçiləri qaytarır.")
-    public ResponseEntity<List<Trainer>> getTrainers(
-            @RequestParam Long gymId,
-            @RequestParam Long classTypeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(queryService.getTrainers(gymId, classTypeId, date));
+    public ResponseEntity<List<Trainer>> getTrainers(@RequestBody TrainerQueryRequest request) {
+        return ResponseEntity.ok(queryService.getTrainers(request.getGymId(), request.getClassTypeId(), request.getDate()));
     }
 
-    @GetMapping("/sessions")
+    @PostMapping("/sessions")
     @Operation(summary = "Sessiyaları əldə edin", description = "Məşqçi və tarix üzrə mövcud sessiyaları qaytarır.")
-    public ResponseEntity<List<TrainerReservationDate>> getSessions(
-            @RequestParam Long gymId,
-            @RequestParam Long classTypeId,
-            @RequestParam Long trainerId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(queryService.getSessions(gymId, classTypeId, trainerId, date));
+    public ResponseEntity<List<TrainerReservationDate>> getSessions(@RequestBody SessionQueryRequest request) {
+        return ResponseEntity.ok(queryService.getSessions(request.getGymId(), request.getClassTypeId(), request.getTrainerId(), request.getDate()));
     }
 
-    @GetMapping("/rules")
+    @PostMapping("/rules")
     @Operation(summary = "Rezervasiya qaydalarını əldə edin")
-    public ResponseEntity<List<ReservationRule>> getRules(
-            @RequestParam Long gymId,
-            @RequestParam String categoryName) {
-        return ResponseEntity.ok(queryService.getRules(gymId, categoryName));
+    public ResponseEntity<List<ReservationRule>> getRules(@RequestBody ReservationRulesRequest request) {
+        return ResponseEntity.ok(queryService.getRules(request.getGymId(), request.getCategoryName()));
     }
 
-    @GetMapping("/preview")
+    @PostMapping("/preview")
     @Operation(summary = "Rezervasiya önbaxışı")
-    public ResponseEntity<ReservationPreviewResponse> getPreview(@RequestParam Long sessionId) {
-        return ResponseEntity.ok(queryService.getReservationPreview(sessionId));
+    public ResponseEntity<ReservationPreviewResponse> getPreview(@RequestBody ReservationPreviewRequest request) {
+        return ResponseEntity.ok(queryService.getReservationPreview(request.getSessionId()));
     }
 
-    @GetMapping("/my")
+    @PostMapping("/my")
     @Operation(summary = "Mənim rezervasiyalarım")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaginatedResponse<ReservationResponse>> getMyReservations(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestBody ReservationListRequest request) {
+        int page = request.getPage() > 0 ? request.getPage() : 1;
+        int pageSize = request.getPageSize() > 0 ? request.getPageSize() : 10;
         List<ReservationResponse> items = queryService.getMyReservations(userId, page, pageSize);
         return ResponseEntity.ok(PaginatedResponse.<ReservationResponse>builder()
                 .items(items)
@@ -141,9 +131,8 @@ public class ReservationController {
     public ResponseEntity<Void> cancel(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
-            @RequestParam String reasonCode,
-            @RequestParam(required = false) String additionalNote) {
-        commandService.cancelReservation(id, userId, reasonCode, additionalNote);
+            @RequestBody ReservationCancelRequest request) {
+        commandService.cancelReservation(id, userId, request.getReasonCode(), request.getAdditionalNote());
         return ResponseEntity.ok().build();
     }
 }
