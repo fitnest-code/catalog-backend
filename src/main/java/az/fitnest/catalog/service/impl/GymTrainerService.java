@@ -182,7 +182,7 @@ public class GymTrainerService {
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
-        
+
         if (lessonId != null) {
             GymLessonType lesson = gymLessonTypeRepository.findById(lessonId)
                     .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
@@ -192,7 +192,7 @@ public class GymTrainerService {
                 trainer.getEnabledLessonTypes().remove(lesson);
             }
         }
-        
+
         trainer.setIsReservationEnabled(enabled);
         trainerRepository.save(trainer);
     }

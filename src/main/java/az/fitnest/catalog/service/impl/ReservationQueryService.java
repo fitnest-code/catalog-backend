@@ -72,7 +72,7 @@ public class ReservationQueryService {
     @Transactional(readOnly = true)
     public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
         List<TrainerReservationDate> sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
-        
+
         return sessions.stream()
                 .collect(Collectors.groupingBy(TrainerReservationDate::getDate))
                 .entrySet().stream()
@@ -80,10 +80,10 @@ public class ReservationQueryService {
                 .map(entry -> DayAvailabilityResponse.builder()
                         .date(entry.getKey())
                         .slots(entry.getValue().stream().map(session -> {
-                            int activeBookings = reservationRepository.countActiveReservations(session.getId(), 
+                            int activeBookings = reservationRepository.countActiveReservations(session.getId(),
                                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
                             int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
-                            
+
                             return TimeSlotResponse.builder()
                                     .sessionId(session.getId())
                                     .startTime(session.getStartTime())

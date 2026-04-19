@@ -14,10 +14,10 @@ import java.time.LocalTime;
 public class TimeSlotResponse {
     @Schema(example = "09:00", type = "string")
     private LocalTime startTime;
-    
+
     @Schema(example = "10:00", type = "string")
     private LocalTime endTime;
-    
+
     private Integer emptySpaces;
 
     private Long sessionId;
