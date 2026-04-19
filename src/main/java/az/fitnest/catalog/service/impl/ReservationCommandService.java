@@ -31,7 +31,7 @@ public class ReservationCommandService {
     private final ReservationRuleRepository ruleRepository;
 
     @Transactional
-    public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long classTypeId, Long trainerId, Long sessionId) {
+    public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long lessonId, Long trainerId, Long sessionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -40,7 +40,7 @@ public class ReservationCommandService {
 
         policyService.validateReservationAllowed(userId, gym, session);
 
-        if (reservationRepository.existsByUserIdAndReservationDateIdAndStatusIn(userId, sessionId,
+        if (reservationRepository.existsByUserIdAndReservationDateIdAndClassTypeIdAndStatusIn(userId, sessionId, lessonId,
                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))) {
             throw new BadRequestException("DUPLICATE_RESERVATION", "error.duplicate_reservation");
         }
@@ -56,7 +56,7 @@ public class ReservationCommandService {
             throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
         }
 
-        GymLessonType classType = gymLessonTypeRepository.findById(classTypeId)
+        GymLessonType classType = gymLessonTypeRepository.findById(lessonId)
                 .orElseThrow(() -> new ResourceNotFoundException("CLASS_TYPE_NOT_FOUND", "error.class_type_not_found"));
 
         if (!availabilityService.isSessionOpen(session)) {

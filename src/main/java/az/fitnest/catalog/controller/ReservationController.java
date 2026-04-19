@@ -58,8 +58,6 @@ public class ReservationController {
         return ResponseEntity.ok(queryService.getAvailabilityForTeacher(gymId, categoryId, lessonTypeId, trainerId));
     }
 
-
-
     @GetMapping("/rules")
     @Operation(summary = "Rezervasiya qaydalarını əldə edin")
     public ResponseEntity<ReservationRuleResponse> getRules(
@@ -68,7 +66,6 @@ public class ReservationController {
             @RequestParam Long lessonId) {
         return ResponseEntity.ok(queryService.getRules(gymId, categoryId, lessonId));
     }
-
 
     @GetMapping("/gyms/{id}/status")
     @Operation(summary = "İdman zalının rezervasiya statusunu əldə edin")
@@ -106,8 +103,6 @@ public class ReservationController {
                 .build());
     }
 
-
-
     @GetMapping("/cancel-reasons")
     @Operation(summary = "Ləğvetmə səbəbləri")
     public ResponseEntity<List<CancelReasonResponse>> getCancelReasons() {
@@ -122,7 +117,7 @@ public class ReservationController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReservationRequest request) {
         var reservation = commandService.createReservation(userId, request.getGymId(),
-                request.getCategoryId(), request.getClassTypeId(), request.getTrainerId(), request.getSessionId());
+                request.getCategoryId(), request.getLessonId(), request.getTrainerId(), request.getSessionId());
 
         return ResponseEntity.ok(ReservationResponse.builder()
                 .id(reservation.getId())

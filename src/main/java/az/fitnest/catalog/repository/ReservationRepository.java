@@ -21,6 +21,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     boolean existsByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
+    boolean existsByUserIdAndReservationDateIdAndClassTypeIdAndStatusIn(Long userId, Long reservationDateId, Long classTypeId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
     int countByReservationDateId(Long reservationDateId);
 
     int countByReservationDateIdAndStatusIn(Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
