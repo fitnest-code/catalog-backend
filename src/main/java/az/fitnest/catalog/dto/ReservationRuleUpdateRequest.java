@@ -12,9 +12,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReservationRuleUpdateRequest {
     @NotNull
-    private Long gymId;
-    @NotNull
-    private Long categoryId;
-    @NotNull
     private String htmlContent;
 }

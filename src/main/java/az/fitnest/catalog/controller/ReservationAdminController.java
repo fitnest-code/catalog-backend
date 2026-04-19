@@ -110,9 +110,12 @@ public class ReservationAdminController {
 
     @Operation(summary = "Rezervasiya qaydalarını yadda saxlayın")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/rules")
-    public ResponseEntity<Void> saveRules(@RequestBody ReservationRuleUpdateRequest request) {
-        reservationCommandService.saveOrUpdateRules(request);
+    @PostMapping("/gyms/{gymId}/categories/{categoryId}/rules")
+    public ResponseEntity<Void> saveRules(
+            @PathVariable Long gymId,
+            @PathVariable Long categoryId,
+            @RequestBody ReservationRuleUpdateRequest request) {
+        reservationCommandService.saveOrUpdateRules(gymId, categoryId, request);
         return ResponseEntity.ok().build();
     }
 }
