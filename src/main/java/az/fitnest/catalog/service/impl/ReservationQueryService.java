@@ -262,6 +262,13 @@ public class ReservationQueryService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public GymReservationStatusResponse getGymReservationStatus(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        return new GymReservationStatusResponse(Boolean.TRUE.equals(gym.getIsReservationEnabled()));
+    }
+
     private ReservationResponse mapToResponse(Reservation reservation) {
         return ReservationResponse.builder()
                 .id(reservation.getId())

@@ -72,6 +72,12 @@ public class ReservationController {
     }
 
 
+    @GetMapping("/gyms/{id}/status")
+    @Operation(summary = "İdman zalının rezervasiya statusunu əldə edin")
+    public ResponseEntity<GymReservationStatusResponse> getGymStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(queryService.getGymReservationStatus(id));
+    }
+
     @PostMapping("/preview")
     @Operation(summary = "Rezervasiya önbaxışı")
     public ResponseEntity<ReservationPreviewResponse> getPreview(@RequestBody ReservationPreviewRequest request) {
