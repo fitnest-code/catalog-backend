@@ -1,16 +1,17 @@
 package az.fitnest.catalog.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GymLessonTypeRequest {
-    @NotBlank(message = "Lesson type name is required")
-    private String name;
-    
+public class ReservationLessonResponse {
+    private Long gymId;
     private Long categoryId;
+    private Long lessonId;
+    private String lessonName;
 }

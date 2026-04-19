@@ -4,10 +4,12 @@ import az.fitnest.catalog.dto.GymLessonTypeRequest;
 import az.fitnest.catalog.dto.GymLessonTypeResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
-import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymLessonType;
+import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymLessonTypeRepository;
 import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.model.entity.Category;
+import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymLessonType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class GymLessonTypeService {
 
     private final GymRepository gymRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public GymLessonTypeResponse addLessonType(Long gymId, GymLessonTypeRequest request) {
@@ -33,8 +36,15 @@ public class GymLessonTypeService {
             throw new BadRequestException("LESSON_TYPE_ALREADY_EXISTS", "error.lesson_type_already_exists");
         }
 
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        }
+
         GymLessonType lessonType = GymLessonType.builder()
                 .gym(gym)
+                .category(category)
                 .name(request.getName().trim())
                 .build();
 
@@ -66,6 +76,12 @@ public class GymLessonTypeService {
             throw new BadRequestException("LESSON_TYPE_ALREADY_EXISTS", "error.lesson_type_already_exists");
         }
 
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+            lessonType.setCategory(category);
+        }
+
         lessonType.setName(newName);
         lessonType = gymLessonTypeRepository.save(lessonType);
         return mapToResponse(lessonType);
@@ -87,6 +103,7 @@ public class GymLessonTypeService {
         return GymLessonTypeResponse.builder()
                 .id(lessonType.getId())
                 .gymId(lessonType.getGym().getId())
+                .categoryId(lessonType.getCategory() != null ? lessonType.getCategory().getId() : null)
                 .name(lessonType.getName())
                 .build();
     }

@@ -14,6 +14,8 @@ public interface TrainerReservationDateRepository extends JpaRepository<TrainerR
 
     List<TrainerReservationDate> findByTrainerId(Long trainerId);
 
+    List<TrainerReservationDate> findByTrainerIdOrderByDateAscStartTimeAsc(Long trainerId);
+
     Optional<TrainerReservationDate> findByTrainerIdAndDateAndStartTimeAndEndTime(Long trainerId, LocalDate date, LocalTime startTime, LocalTime endTime);
 
     List<TrainerReservationDate> findByTrainerIdAndDate(Long trainerId, LocalDate date);

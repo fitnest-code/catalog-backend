@@ -10,11 +10,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReservationRulesRequest {
+public class ReservationTimeQueryRequest {
     @NotNull
     private Long gymId;
     @NotNull
     private Long categoryId;
     @NotNull
-    private Long lessonId;
+    private Long lessonTypeId;
+    @NotNull
+    private Long trainerId;
 }

@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GymLessonTypeResponse {
-    private Long id;
-    private Long gymId;
-    private Long categoryId;
-    private String name;
+public class ReservationTeacherResponse {
+    private Long teacherId;
+    private String teacherName;
+    private String teacherImageProfileUrl;
 }

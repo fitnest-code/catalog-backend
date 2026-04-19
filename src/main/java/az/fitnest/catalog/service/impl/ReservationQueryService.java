@@ -1,12 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.GymReservationDetailsResponse;
-import az.fitnest.catalog.dto.ReservationDetailResponse;
-import az.fitnest.catalog.dto.ReservationPreviewResponse;
-import az.fitnest.catalog.dto.ReservationResponse;
-import az.fitnest.catalog.dto.ReservationRuleResponse;
-import az.fitnest.catalog.dto.ReservationWidgetResponse;
-import az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse;
+import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymLessonType;
@@ -34,6 +28,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,8 +44,53 @@ public class ReservationQueryService {
     private final TrainerRepository trainerRepository;
 
     @Transactional(readOnly = true)
-    public List<GymLessonType> getReservationEntryData(Long gymId, Long categoryId) {
-        return gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
+    public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
+        return gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE").stream()
+                .map(lt -> ReservationLessonResponse.builder()
+                        .gymId(gymId)
+                        .categoryId(categoryId)
+                        .lessonId(lt.getId())
+                        .lessonName(lt.getName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservationTeacherResponse> getTrainersForLesson(Long gymId, Long categoryId, Long lessonTypeId) {
+        // Here we assume trainers are linked to the gym and specialization might match lesson type
+        // For now, returning all trainers in the gym as requested flow implies they are available for the selected lesson context
+        return trainerRepository.findByGymId(gymId, PageRequest.of(0, 100)).getContent().stream()
+                .map(t -> ReservationTeacherResponse.builder()
+                        .teacherId(t.getId())
+                        .teacherName(t.getFirstName() + " " + t.getLastName())
+                        .teacherImageProfileUrl(t.getProfileImageUrl())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
+        List<TrainerReservationDate> sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
+        
+        return sessions.stream()
+                .collect(Collectors.groupingBy(TrainerReservationDate::getDate))
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> DayAvailabilityResponse.builder()
+                        .date(entry.getKey())
+                        .slots(entry.getValue().stream().map(session -> {
+                            int activeBookings = reservationRepository.countActiveReservations(session.getId(), 
+                                List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+                            int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
+                            
+                            return TimeSlotResponse.builder()
+                                    .startTime(session.getStartTime())
+                                    .endTime(session.getEndTime())
+                                    .emptySpaces(emptySpaces)
+                                    .build();
+                        }).collect(Collectors.toList()))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +109,8 @@ public class ReservationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public ReservationRuleResponse getRules(Long gymId, Long categoryId) {
+    public ReservationRuleResponse getRules(Long gymId, Long categoryId, Long lessonId) {
+        // You mentioned adding lessonId to the body, currently fetching rules by gym and category
         List<ReservationRule> rules = ruleRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
 
         String htmlContent = rules.stream()
