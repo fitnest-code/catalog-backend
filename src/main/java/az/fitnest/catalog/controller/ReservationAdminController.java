@@ -104,4 +104,12 @@ public class ReservationAdminController {
         gymLessonTypeService.deleteLessonType(gymId, lessonTypeId);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Rezervasiya qaydalarını yadda saxlayın")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/rules")
+    public ResponseEntity<Void> saveRules(@RequestBody ReservationRuleUpdateRequest request) {
+        reservationCommandService.saveOrUpdateRules(request);
+        return ResponseEntity.ok().build();
+    }
 }

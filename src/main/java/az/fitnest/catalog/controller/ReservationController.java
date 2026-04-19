@@ -59,14 +59,6 @@ public class ReservationController {
         return ResponseEntity.ok(queryService.getRules(request.getGymId(), request.getCategoryId(), request.getLessonId()));
     }
 
-    @PostMapping("/rules")
-    @Operation(summary = "Rezervasiya qaydalarını yadda saxlayın")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> saveRules(@RequestBody ReservationRuleUpdateRequest request) {
-        commandService.saveOrUpdateRules(request);
-        return ResponseEntity.ok().build();
-    }
 
     @PostMapping("/preview")
     @Operation(summary = "Rezervasiya önbaxışı")
