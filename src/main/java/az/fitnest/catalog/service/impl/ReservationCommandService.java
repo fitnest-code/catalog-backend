@@ -121,13 +121,15 @@ public class ReservationCommandService {
     }
 
     @Transactional
-    public void saveOrUpdateRules(Long gymId, Long categoryId, ReservationRuleUpdateRequest request) {
+    public void saveOrUpdateRules(Long gymId, Long categoryId, Long lessonId, ReservationRuleUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        GymLessonType lessonType = gymLessonTypeRepository.findById(lessonId)
+                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.class_type_not_found"));
 
-        List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
+        List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
 
         ReservationRule rule;
         if (!existingRules.isEmpty()) {
@@ -137,7 +139,8 @@ public class ReservationCommandService {
             rule = ReservationRule.builder()
                     .gym(gym)
                     .category(category)
-                    .title("Rules for " + category.getName())
+                    .lessonType(lessonType)
+                    .title("Rules for " + lessonType.getName())
                     .description(request.getHtmlContent())
                     .status("ACTIVE")
                     .build();

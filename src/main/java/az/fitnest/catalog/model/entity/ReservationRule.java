@@ -29,6 +29,10 @@ public class ReservationRule extends BaseAuditableEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_type_id")
+    private GymLessonType lessonType;
+
     @Column(name = "title", nullable = false)
     private String title;
 

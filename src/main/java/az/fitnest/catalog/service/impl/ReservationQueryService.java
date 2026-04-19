@@ -110,8 +110,7 @@ public class ReservationQueryService {
 
     @Transactional(readOnly = true)
     public ReservationRuleResponse getRules(Long gymId, Long categoryId, Long lessonId) {
-        // You mentioned adding lessonId to the body, currently fetching rules by gym and category
-        List<ReservationRule> rules = ruleRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
+        List<ReservationRule> rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
 
         String htmlContent = rules.stream()
                 .map(ReservationRule::getDescription)
@@ -177,8 +176,9 @@ public class ReservationQueryService {
 
         Long categoryId = session.getClassType() != null && session.getClassType().getCategory() != null
                 ? session.getClassType().getCategory().getId() : null;
+        Long classTypeId = session.getClassType() != null ? session.getClassType().getId() : null;
 
-        List<String> rules = ruleRepository.findByGymIdAndCategoryIdAndStatus(session.getGymId(), categoryId, "ACTIVE")
+        List<String> rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE")
                 .stream()
                 .map(ReservationRule::getDescription)
                 .collect(Collectors.toList());

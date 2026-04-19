@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface ReservationRuleRepository extends JpaRepository<ReservationRule, Long> {
-    List<ReservationRule> findByGymIdAndCategoryIdAndStatus(Long gymId, Long categoryId, String status);
+    List<ReservationRule> findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(Long gymId, Long categoryId, Long lessonTypeId, String status);
     List<ReservationRule> findByGymIdAndStatusOrderBySortOrderAsc(Long gymId, String status);
 }
