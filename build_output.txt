@@ -1,0 +1,151 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/Users/aousganeh/.gradle/wrapper/dists/gradle-9.3.1-bin/23ovyewtku6u96viwx3xl3oks/gradle-9.3.1/lib/native-platform-0.22-milestone-29.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :clean
+> Task :protobufDummy UP-TO-DATE
+> Task :extractIncludeProto
+> Task :extractProto
+> Task :generateProto FROM-CACHE
+
+> Task :compileJava
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+           ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+           ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+           ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+           ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+           ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:18: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+        return new Jackson2ObjectMapperBuilder();
+                   ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                     ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                     ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                     ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                     ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                     ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:36: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+                                                                  ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:38: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "java.util.HashMap");
+                  ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:39: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+                  ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:66: warning: [removal] JsonSerializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+                                                                      ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:67: warning: [removal] JsonSerializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+        configProps.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+                        ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:34: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(this.redisObjectMapper());
+        ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:34: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(this.redisObjectMapper());
+                                                            ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:44: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10L)).serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer((RedisSerializer) new GenericJackson2JsonRedisSerializer(this.redisObjectMapper())));
+                                                                                                                                                                                                                             ^
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/service/impl/ReservationCommandService.java:129: error: cannot find symbol
+        List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndStatus(request.getGymId(), request.getCategoryId(), "ACTIVE");
+                                              ^
+  symbol:   variable ruleRepository
+  location: class ReservationCommandService
+/Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/service/impl/ReservationCommandService.java:144: error: cannot find symbol
+        ruleRepository.save(rule);
+        ^
+  symbol:   variable ruleRepository
+  location: class ReservationCommandService
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+2 errors
+19 warnings
+
+> Task :compileJava FAILED
+
+[Incubating] Problems report is available at: file:///Users/aousganeh/Desktop/fitnest/code/catalog-backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  Note: Recompile with -Xlint:deprecation for details.
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/service/impl/ReservationCommandService.java:129: error: cannot find symbol
+          List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndStatus(request.getGymId(), request.getCategoryId(), "ACTIVE");
+                                                ^
+    symbol:   variable ruleRepository
+    location: class ReservationCommandService
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/service/impl/ReservationCommandService.java:144: error: cannot find symbol
+          ruleRepository.save(rule);
+          ^
+    symbol:   variable ruleRepository
+    location: class ReservationCommandService
+  Note: Recompile with -Xlint:unchecked for details.
+  Note: Some input files use or override a deprecated API.
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:17: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+      public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+             ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:18: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+          return new Jackson2ObjectMapperBuilder();
+                     ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/JacksonConfig.java:23: warning: [removal] Jackson2ObjectMapperBuilder in org.springframework.http.converter.json has been deprecated and marked for removal
+      public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+                                       ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:36: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+          props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+                                                                    ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:38: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+          props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "java.util.HashMap");
+                    ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:39: warning: [removal] JsonDeserializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+          props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+                    ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:66: warning: [removal] JsonSerializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+          configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+                                                                        ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/KafkaConfig.java:67: warning: [removal] JsonSerializer in org.springframework.kafka.support.serializer has been deprecated and marked for removal
+          configProps.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+                          ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:34: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+          GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(this.redisObjectMapper());
+          ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:34: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+          GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(this.redisObjectMapper());
+                                                              ^
+  /Users/aousganeh/Desktop/fitnest/code/catalog-backend/src/main/java/az/fitnest/catalog/configuration/RedisConfig.java:44: warning: [removal] GenericJackson2JsonRedisSerializer in org.springframework.data.redis.serializer has been deprecated and marked for removal
+          RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10L)).serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer((RedisSerializer) new GenericJackson2JsonRedisSerializer(this.redisObjectMapper())));
+                                                                                                                                                                                                                               ^
+  Note: Some input files use unchecked or unsafe operations.
+  2 errors
+  19 warnings
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 3s
+5 actionable tasks: 4 executed, 1 from cache

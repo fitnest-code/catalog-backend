@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -37,7 +38,9 @@ public class GymReservationDetailsResponse {
     @AllArgsConstructor
     public static class TimeSlotDto {
         private Long slotId;
+        @Schema(type = "string", example = "22:00")
         private LocalTime startTime;
+        @Schema(type = "string", example = "23:00")
         private LocalTime endTime;
         private int totalSpaces;
         private int bookedSpaces;

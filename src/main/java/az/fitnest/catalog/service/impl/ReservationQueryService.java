@@ -4,6 +4,7 @@ import az.fitnest.catalog.dto.GymReservationDetailsResponse;
 import az.fitnest.catalog.dto.ReservationDetailResponse;
 import az.fitnest.catalog.dto.ReservationPreviewResponse;
 import az.fitnest.catalog.dto.ReservationResponse;
+import az.fitnest.catalog.dto.ReservationRuleResponse;
 import az.fitnest.catalog.dto.ReservationWidgetResponse;
 import az.fitnest.catalog.dto.TrainerDailyAvailabilityResponse;
 import az.fitnest.catalog.model.entity.Category;
@@ -48,11 +49,8 @@ public class ReservationQueryService {
     private final TrainerRepository trainerRepository;
 
     @Transactional(readOnly = true)
-    public List<GymLessonType> getReservationEntryData(Long gymId, String categoryName) {
-        Category category = categoryRepository.findByNameIgnoreCase(categoryName)
-                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-
-        return gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, category.getId(), "ACTIVE");
+    public List<GymLessonType> getReservationEntryData(Long gymId, Long categoryId) {
+        return gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
     }
 
     @Transactional(readOnly = true)
@@ -71,11 +69,14 @@ public class ReservationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReservationRule> getRules(Long gymId, String categoryName) {
-        Category category = categoryRepository.findByNameIgnoreCase(categoryName)
-                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+    public ReservationRuleResponse getRules(Long gymId, Long categoryId) {
+        List<ReservationRule> rules = ruleRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
 
-        return ruleRepository.findByGymIdAndCategoryIdAndStatus(gymId, category.getId(), "ACTIVE");
+        String htmlContent = rules.stream()
+                .map(ReservationRule::getDescription)
+                .collect(Collectors.joining("\n"));
+
+        return new ReservationRuleResponse(htmlContent);
     }
 
     @Transactional(readOnly = true)
@@ -104,8 +105,8 @@ public class ReservationQueryService {
                 .classType(reservation.getClassType() != null ? reservation.getClassType().getName() : reservation.getLessonType())
                 .categoryName(reservation.getCategory() != null ? reservation.getCategory().getName() : null)
                 .date(reservation.getReservationDate().getDate())
-                .startTime(reservation.getReservationDate().getStartTime())
-                .endTime(reservation.getReservationDate().getEndTime())
+                .fromHour(reservation.getReservationDate().getStartTime())
+                .toHour(reservation.getReservationDate().getEndTime())
                 .status(reservation.getStatus())
                 .createdAt(reservation.getCreatedDate())
                 .approvedAt(reservation.getApprovedAt())
@@ -143,7 +144,8 @@ public class ReservationQueryService {
 
         return ReservationPreviewResponse.builder()
                 .date(session.getDate())
-                .timeInterval(session.getStartTime() + " - " + session.getEndTime())
+                .fromHour(session.getStartTime())
+                .toHour(session.getEndTime())
                 .trainerName(session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName())
                 .classType(session.getClassType().getName())
                 .rules(rules)
@@ -226,7 +228,8 @@ public class ReservationQueryService {
                 .trainerId(reservation.getTrainer().getId())
                 .lessonType(reservation.getClassType() != null ? reservation.getClassType().getName() : reservation.getLessonType())
                 .date(reservation.getReservationDate().getDate())
-                .timeInterval(reservation.getReservationDate().getStartTime() + " - " + reservation.getReservationDate().getEndTime())
+                .fromHour(reservation.getReservationDate().getStartTime())
+                .toHour(reservation.getReservationDate().getEndTime())
                 .status(reservation.getStatus())
                 .build();
     }

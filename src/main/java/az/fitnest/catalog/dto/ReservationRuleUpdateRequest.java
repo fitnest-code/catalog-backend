@@ -5,16 +5,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReservationEntryRequest {
+public class ReservationRuleUpdateRequest {
     @NotNull
     private Long gymId;
     @NotNull
-    @Schema(example = "1")
     private Long categoryId;
+    @NotNull
+    private String htmlContent;
 }

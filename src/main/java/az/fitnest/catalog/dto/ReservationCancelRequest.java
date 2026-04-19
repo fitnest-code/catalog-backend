@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Data
 @Builder
@@ -12,6 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReservationCancelRequest {
     @NotBlank
+    @Schema(example = "MEMBER_CANCEL")
     private String reasonCode;
+    @Schema(example = "Feeling unwell")
     private String additionalNote;
 }

@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -16,8 +18,8 @@ public class ReservationRequest {
     @NotNull(message = "Gym ID is required")
     private Long gymId;
 
-    @NotNull(message = "Category name is required (PILATES/YOGA)")
-    private String categoryName;
+    @NotNull(message = "Category ID is required")
+    private Long categoryId;
 
     @NotNull(message = "Class type ID is required")
     private Long classTypeId;
@@ -29,6 +31,12 @@ public class ReservationRequest {
     private Long sessionId;
 
     private String lessonType;
+    @Schema(example = "2024-04-25")
     private java.time.LocalDate date;
-    private String timeInterval;
+    @NotNull
+    @Schema(type = "string", example = "22:00")
+    private LocalTime fromHour;
+    @NotNull
+    @Schema(type = "string", example = "23:00")
+    private LocalTime toHour;
 }

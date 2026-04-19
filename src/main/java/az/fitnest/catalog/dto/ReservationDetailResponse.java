@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -22,9 +23,12 @@ public class ReservationDetailResponse {
     private String trainerName;
     private String classType;
     private String categoryName;
+    @Schema(example = "2024-04-25")
     private LocalDate date;
-    private LocalTime startTime;
-    private LocalTime endTime;
+    @Schema(type = "string", example = "22:00")
+    private LocalTime fromHour;
+    @Schema(type = "string", example = "23:00")
+    private LocalTime toHour;
     private ReservationStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime approvedAt;

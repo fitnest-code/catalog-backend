@@ -1,12 +1,8 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.dto.ReservationRuleUpdateRequest;
 import az.fitnest.catalog.dto.ReservationStatusUpdateRequest;
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymLessonType;
-import az.fitnest.catalog.model.entity.Reservation;
-import az.fitnest.catalog.model.entity.Trainer;
-import az.fitnest.catalog.model.entity.TrainerReservationDate;
+import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.exception.BadRequestException;
@@ -32,9 +28,10 @@ public class ReservationCommandService {
     private final ReservationAvailabilityService availabilityService;
     private final ReservationAuditService auditService;
     private final CancellationReasonService reasonService;
+    private final ReservationRuleRepository ruleRepository;
 
     @Transactional
-    public Reservation createReservation(Long userId, Long gymId, String categoryName, Long classTypeId, Long trainerId, Long sessionId) {
+    public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long classTypeId, Long trainerId, Long sessionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -52,7 +49,7 @@ public class ReservationCommandService {
             throw new BadRequestException("INVALID_SESSION_REFERENCE", "error.invalid_session_reference");
         }
 
-        Category category = categoryRepository.findByNameIgnoreCase(categoryName)
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
         if (!gym.getCategories().contains(category)) {
@@ -121,5 +118,30 @@ public class ReservationCommandService {
         reservationRepository.save(reservation);
 
         auditService.log(reservationId, null, "UPDATE_STATUS", oldStatus, request.getStatus().name(), "Admin update");
+    }
+
+    @Transactional
+    public void saveOrUpdateRules(ReservationRuleUpdateRequest request) {
+        Gym gym = gymRepository.findById(request.getGymId())
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+
+        List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndStatus(request.getGymId(), request.getCategoryId(), "ACTIVE");
+
+        ReservationRule rule;
+        if (!existingRules.isEmpty()) {
+            rule = existingRules.get(0);
+            rule.setDescription(request.getHtmlContent());
+        } else {
+            rule = ReservationRule.builder()
+                    .gym(gym)
+                    .category(category)
+                    .title("Rules for " + category.getName())
+                    .description(request.getHtmlContent())
+                    .status("ACTIVE")
+                    .build();
+        }
+        ruleRepository.save(rule);
     }
 }

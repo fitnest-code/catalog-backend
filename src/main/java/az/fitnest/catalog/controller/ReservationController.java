@@ -33,10 +33,10 @@ public class ReservationController {
     private final ReservationCommandService commandService;
     private final CancellationReasonService reasonService;
 
-    @PostMapping("/entry")
+    @GetMapping("/entry")
     @Operation(summary = "Rezervasiya giriş məlumatlarını əldə edin", description = "Müəyyən kateqoriya üzrə aktiv dərs növlərini qaytarır.")
-    public ResponseEntity<List<GymLessonType>> getEntryData(@RequestBody ReservationEntryRequest request) {
-        return ResponseEntity.ok(queryService.getReservationEntryData(request.getGymId(), request.getCategoryName()));
+    public ResponseEntity<List<GymLessonType>> getEntryData(@RequestParam Long gymId, @RequestParam Long categoryId) {
+        return ResponseEntity.ok(queryService.getReservationEntryData(gymId, categoryId));
     }
 
     @PostMapping("/trainers")
@@ -51,10 +51,19 @@ public class ReservationController {
         return ResponseEntity.ok(queryService.getSessions(request.getGymId(), request.getClassTypeId(), request.getTrainerId(), request.getDate()));
     }
 
-    @PostMapping("/rules")
+    @GetMapping("/rules")
     @Operation(summary = "Rezervasiya qaydalarını əldə edin")
-    public ResponseEntity<List<ReservationRule>> getRules(@RequestBody ReservationRulesRequest request) {
-        return ResponseEntity.ok(queryService.getRules(request.getGymId(), request.getCategoryName()));
+    public ResponseEntity<ReservationRuleResponse> getRules(@RequestParam Long gymId, @RequestParam Long categoryId) {
+        return ResponseEntity.ok(queryService.getRules(gymId, categoryId));
+    }
+
+    @PostMapping("/rules")
+    @Operation(summary = "Rezervasiya qaydalarını yadda saxlayın")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> saveRules(@RequestBody ReservationRuleUpdateRequest request) {
+        commandService.saveOrUpdateRules(request);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/preview")
@@ -112,7 +121,7 @@ public class ReservationController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReservationRequest request) {
         var reservation = commandService.createReservation(userId, request.getGymId(),
-                request.getCategoryName(), request.getClassTypeId(), request.getTrainerId(), request.getSessionId());
+                request.getCategoryId(), request.getClassTypeId(), request.getTrainerId(), request.getSessionId());
 
         return ResponseEntity.ok(ReservationResponse.builder()
                 .id(reservation.getId())
@@ -120,6 +129,8 @@ public class ReservationController {
                 .trainerId(reservation.getTrainer().getId())
                 .lessonType(reservation.getLessonType())
                 .date(reservation.getReservationDate().getDate())
+                .fromHour(reservation.getReservationDate().getStartTime())
+                .toHour(reservation.getReservationDate().getEndTime())
                 .status(reservation.getStatus())
                 .build());
     }
