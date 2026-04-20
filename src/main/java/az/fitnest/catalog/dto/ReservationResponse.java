@@ -28,4 +28,5 @@ public class ReservationResponse {
     @Schema(type = "string", example = "23:00")
     private LocalTime toHour;
     private ReservationStatus status;
+    private Long sessionId;
 }

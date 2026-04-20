@@ -131,6 +131,7 @@ public class ReservationController {
                 .fromHour(reservation.getReservationDate().getStartTime())
                 .toHour(reservation.getReservationDate().getEndTime())
                 .status(reservation.getStatus())
+                .sessionId(reservation.getReservationDate().getId())
                 .build());
     }
 
