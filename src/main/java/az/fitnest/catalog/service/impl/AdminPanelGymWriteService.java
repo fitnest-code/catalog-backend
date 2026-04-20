@@ -227,6 +227,14 @@ public class AdminPanelGymWriteService {
         workingHourRepository.save(wh);
     }
 
+    @Transactional
+    public void deleteWorkingHour(Long gymId, Long workingHourId) {
+        AdminPanelWorkingHour wh = workingHourRepository.findByIdAndGymId(workingHourId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("WORKING_HOUR_NOT_FOUND", "error.working_hour_not_found"));
+
+        workingHourRepository.delete(wh);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");
