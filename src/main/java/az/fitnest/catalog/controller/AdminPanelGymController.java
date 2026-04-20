@@ -149,4 +149,14 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getWorkingHours(gymId)));
     }
 
+    @PostMapping("/{gymId}/working-hours")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<WorkingHourDto>> addWorkingHour(
+            @PathVariable Long gymId,
+            @RequestBody @Valid WorkingHourRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(gymAdminWriteService.addWorkingHour(gymId, request)));
+    }
+
 }

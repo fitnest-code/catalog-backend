@@ -6,8 +6,10 @@ import az.fitnest.catalog.exception.ConflictException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.AdminPanelGymImage;
+import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +36,7 @@ public class AdminPanelGymWriteService {
     private static final long MAX_SIZE = 2 * 1024 * 1024;
 
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
+    private final AdminPanelWorkingHourRepository workingHourRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final FileStorageService fileStorageService;
     private final AdminPanelGymMapper gymAdminMapper;
@@ -190,6 +194,28 @@ public class AdminPanelGymWriteService {
         gymAdminPanelRepository.save(gym);
     }
 
+    @Transactional
+    public WorkingHourDto addWorkingHour(Long gymId, WorkingHourRequest request) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (workingHourRepository.existsByGymIdAndDayOfWeek(gymId, request.dayOfWeek())) {
+            throw new ConflictException("WORKING_HOUR_ALREADY_EXISTS", "error.working_hour_already_exists");
+        }
+
+        validateWorkingHourRequest(request);
+
+        AdminPanelWorkingHour wh = AdminPanelWorkingHour.builder()
+                .gym(gymAdminPanelRepository.getReferenceById(gymId))
+                .dayOfWeek(request.dayOfWeek())
+                .openTime(parseTime(request.openTime()))
+                .closeTime(parseTime(request.closeTime()))
+                .isClosed(request.isClosed())
+                .build();
+
+        return gymAdminMapper.toWorkingHourDto(workingHourRepository.save(wh));
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");
@@ -199,6 +225,28 @@ public class AdminPanelGymWriteService {
         }
         if (file.getSize() > MAX_SIZE) {
             throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
+        }
+    }
+
+    private void validateWorkingHourRequest(WorkingHourRequest request) {
+        if (!request.isClosed()) {
+            if (!StringUtils.hasText(request.openTime()) || !StringUtils.hasText(request.closeTime())) {
+                throw new BadRequestException("TIME_REQUIRED", "error.open_close_time_required");
+            }
+            LocalTime open  = parseTime(request.openTime());
+            LocalTime close = parseTime(request.closeTime());
+            if (!open.isBefore(close)) {
+                throw new BadRequestException("INVALID_TIME_RANGE", "error.open_time_must_be_before_close");
+            }
+        }
+    }
+
+    private LocalTime parseTime(String time) {
+        if (!StringUtils.hasText(time)) return null;
+        try {
+            return LocalTime.parse(time);
+        } catch (Exception e) {
+            throw new BadRequestException("INVALID_TIME_FORMAT", "error.invalid_time_format");
         }
     }
 
