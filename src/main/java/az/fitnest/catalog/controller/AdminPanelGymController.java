@@ -141,4 +141,12 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @GetMapping("/{gymId}/working-hours")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<WorkingHourDto>>> getWorkingHours(
+            @PathVariable Long gymId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getWorkingHours(gymId)));
+    }
+
 }

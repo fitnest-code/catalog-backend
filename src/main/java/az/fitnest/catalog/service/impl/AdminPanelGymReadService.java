@@ -5,10 +5,12 @@ import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.AdminGymListDto;
 import az.fitnest.catalog.dto.admin.AdminPanelGymDetailDto;
 import az.fitnest.catalog.dto.admin.AdminPanelGymImageDto;
+import az.fitnest.catalog.dto.admin.WorkingHourDto;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,9 +28,10 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminPanelGymReadService {
 
+    private final AdminPanelWorkingHourRepository workingHourRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
-    private final LocationService locationService;
     private final AdminPanelGymMapper adminPanelGymMapper;
+    private final LocationService locationService;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<AdminGymListDto> getGymsForAdmin(
@@ -73,4 +76,12 @@ public class AdminPanelGymReadService {
                 .map(i -> new AdminPanelGymImageDto(i.getId(), i.getUrl(), i.getSortOrder()))
                 .toList();
     }
+
+    public List<WorkingHourDto> getWorkingHours(Long gymId) {
+        return workingHourRepository.findAllByGymIdOrderByDayOfWeekAsc(gymId)
+                .stream()
+                .map(adminPanelGymMapper::toWorkingHourDto)
+                .toList();
+    }
+
 }

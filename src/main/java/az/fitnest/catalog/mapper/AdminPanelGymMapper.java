@@ -2,6 +2,7 @@ package az.fitnest.catalog.mapper;
 
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.model.entity.AddressAdminPanel;
+import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import org.springframework.stereotype.Component;
@@ -54,4 +55,33 @@ public final class AdminPanelGymMapper {
             gym.setAddress(address);
         }
     }
+
+    public WorkingHourDto toWorkingHourDto(AdminPanelWorkingHour wh) {
+        return new WorkingHourDto(
+                wh.getId(),
+                wh.getDayOfWeek(),
+                resolveDayLabel(wh.getDayOfWeek()),
+                wh.getOpenTime() != null ? wh.getOpenTime().toString() : null,
+                wh.getCloseTime() != null ? wh.getCloseTime().toString() : null,
+                wh.getIsClosed()
+        );
+    }
+
+    private String resolveDayLabel(Integer dayOfWeek) {
+        if (dayOfWeek == null) {
+            return null;
+        }
+
+        return switch (dayOfWeek) {
+            case 1 -> "Bazar ertəsi";
+            case 2 -> "Çərşənbə axşamı";
+            case 3 -> "Çərşənbə";
+            case 4 -> "Cümə axşamı";
+            case 5 -> "Cümə";
+            case 6 -> "Şənbə";
+            case 7 -> "Bazar";
+            default -> null;
+        };
+    }
+
 }
