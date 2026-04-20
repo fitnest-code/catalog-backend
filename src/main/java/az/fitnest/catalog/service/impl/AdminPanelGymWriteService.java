@@ -1,9 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.admin.AdminPanelCreateGymRequest;
-import az.fitnest.catalog.dto.admin.AdminPanelGeocodingResponse;
-import az.fitnest.catalog.dto.admin.AdminPanelGymResponse;
-import az.fitnest.catalog.dto.admin.GeneralInfoRequest;
+import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ConflictException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
@@ -12,22 +9,30 @@ import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
+import az.fitnest.catalog.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AdminPanelGymWriteService {
 
-    private final GymAdminPanelRepository gymAdminPanelRepository;
-    private final LocationService locationService;
+    private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/jpg", "image/png");
+    private static final long MAX_SIZE = 2 * 1024 * 1024;
+
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
+    private final GymAdminPanelRepository gymAdminPanelRepository;
+    private final FileStorageService fileStorageService;
     private final AdminPanelGymMapper gymAdminMapper;
+    private final LocationService locationService;
 
     @Transactional
     public AdminPanelGymResponse createGymForAdmin(AdminPanelCreateGymRequest request) {
@@ -70,6 +75,38 @@ public class AdminPanelGymWriteService {
         }
 
         gymAdminPanelRepository.save(gym);
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public CoverImageResponse uploadCoverImage(Long gymId, MultipartFile file) {
+        validateImageFile(file);
+
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        String fsId = fileStorageService.saveFile(file, "/gyms/covers", gym.getCoverImageUrl());
+        String url = "/api/v1/media/stream/" + fsId;
+
+        gym.setCoverImageUrl(url);
+        gymAdminPanelRepository.save(gym);
+
+        return new CoverImageResponse(url);
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("FILE_REQUIRED", "error.file_required");
+        }
+        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
+        }
+        if (file.getSize() > MAX_SIZE) {
+            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
+        }
     }
 
 }
