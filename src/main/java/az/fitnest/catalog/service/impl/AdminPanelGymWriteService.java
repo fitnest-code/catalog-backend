@@ -21,6 +21,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -162,6 +164,29 @@ public class AdminPanelGymWriteService {
 
         fileStorageService.deleteFile(image.getUrl());
         gym.getImages().remove(image);
+        gymAdminPanelRepository.save(gym);
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public void updateImageOrder(Long gymId, UpdateImageOrderRequest request) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        Map<Long, AdminPanelGymImage> imageMap = gym.getImages().stream()
+                .collect(Collectors.toMap(AdminPanelGymImage::getId, i -> i));
+
+        for (UpdateImageOrderRequest.ImageOrderItem item : request.images()) {
+            AdminPanelGymImage image = imageMap.get(item.id());
+            if (image == null) {
+                throw new ResourceNotFoundException("IMAGE_NOT_FOUND", "error.image_not_found");
+            }
+            image.setSortOrder(item.sortOrder());
+        }
+
         gymAdminPanelRepository.save(gym);
     }
 

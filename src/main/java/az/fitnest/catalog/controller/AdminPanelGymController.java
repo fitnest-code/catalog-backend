@@ -131,4 +131,14 @@ public class AdminPanelGymController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{gymId}/gallery-images/order")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateImageOrder(
+            @PathVariable Long gymId,
+            @RequestBody @Valid UpdateImageOrderRequest request
+    ) {
+        gymAdminWriteService.updateImageOrder(gymId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
 }
