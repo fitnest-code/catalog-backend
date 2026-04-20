@@ -91,4 +91,12 @@ public class AdminPanelGymController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(gymAdminWriteService.uploadCoverImage(gymId, file)));
     }
+
+    @DeleteMapping("/{gymId}/cover-image")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> deleteCoverImage(@PathVariable Long gymId) {
+        gymAdminWriteService.deleteCoverImage(gymId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -95,6 +96,24 @@ public class AdminPanelGymWriteService {
         gymAdminPanelRepository.save(gym);
 
         return new CoverImageResponse(url);
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public void deleteCoverImage(Long gymId) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (!StringUtils.hasText(gym.getCoverImageUrl())) {
+            throw new ResourceNotFoundException("COVER_IMAGE_NOT_FOUND", "error.cover_image_not_found");
+        }
+
+        fileStorageService.deleteFile(gym.getCoverImageUrl());
+        gym.setCoverImageUrl(null);
+        gymAdminPanelRepository.save(gym);
     }
 
     private void validateImageFile(MultipartFile file) {
