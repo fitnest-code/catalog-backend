@@ -146,6 +146,25 @@ public class AdminPanelGymWriteService {
         gymAdminPanelRepository.save(gym);
     }
 
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public void deleteGalleryImage(Long gymId, Long imageId) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        AdminPanelGymImage image = gym.getImages().stream()
+                .filter(i -> i.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("IMAGE_NOT_FOUND", "error.image_not_found"));
+
+        fileStorageService.deleteFile(image.getUrl());
+        gym.getImages().remove(image);
+        gymAdminPanelRepository.save(gym);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");

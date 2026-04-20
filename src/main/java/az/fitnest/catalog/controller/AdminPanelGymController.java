@@ -121,4 +121,14 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGalleryImages(gymId)));
     }
 
+    @DeleteMapping("/{gymId}/gallery-images/{imageId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> deleteGalleryImage(
+            @PathVariable Long gymId,
+            @PathVariable Long imageId
+    ) {
+        gymAdminWriteService.deleteGalleryImage(gymId, imageId);
+        return ResponseEntity.noContent().build();
+    }
+
 }
