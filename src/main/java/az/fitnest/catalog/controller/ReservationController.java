@@ -48,8 +48,8 @@ public class ReservationController {
         return ResponseEntity.ok(queryService.getTrainersForLesson(gymId, categoryId, lessonTypeId));
     }
 
-    @GetMapping(\"/times\")
-    @Operation(summary = \"M\u00f6vcud vaxtlar\u0131 \u0259ld\u0259 edin\", description = \"M\u0259\u015fq\u00e7i v\u0259 d\u0259rs n\u00f6v\u00fc \u00fczr\u0259 m\u00f6vcud sessiyalar\u0131 qaytar\u0131r.\")
+    @GetMapping("/times")
+    @Operation(summary = "Mövcud vaxtları əldə edin", description = "Məşqçi və dərs növü üzrə mövcud sessiyaları qaytarır.")
     public ResponseEntity<List<DayAvailabilityResponse>> getAvailableTimes(
             @AuthenticationPrincipal Long userId,
             @RequestParam Long gymId,
