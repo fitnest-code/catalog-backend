@@ -5,6 +5,7 @@ import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ConflictException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
+import az.fitnest.catalog.model.entity.AdminPanelGymImage;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
@@ -113,6 +114,35 @@ public class AdminPanelGymWriteService {
 
         fileStorageService.deleteFile(gym.getCoverImageUrl());
         gym.setCoverImageUrl(null);
+        gymAdminPanelRepository.save(gym);
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public void addGalleryImage(Long gymId, MultipartFile file, Integer sortOrder) {
+        validateImageFile(file);
+
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        String fsId = fileStorageService.saveFile(file, "/gyms/gallery");
+        String url = "/api/v1/media/stream/" + fsId;
+
+        int order = sortOrder != null ? sortOrder :
+                gym.getImages().stream()
+                .mapToInt(i -> i.getSortOrder() != null ? i.getSortOrder() : 0)
+                .max()
+                .orElse(0) + 1;
+
+        AdminPanelGymImage image = AdminPanelGymImage.builder()
+                .url(url)
+                .sortOrder(order)
+                .build();
+
+        gym.getImages().add(image);
         gymAdminPanelRepository.save(gym);
     }
 

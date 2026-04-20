@@ -99,4 +99,15 @@ public class AdminPanelGymController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{gymId}/gallery-images")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> addGalleryImage(
+            @PathVariable Long gymId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) Integer sortOrder
+    ) {
+        gymAdminWriteService.addGalleryImage(gymId, file, sortOrder);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
+    }
+
 }

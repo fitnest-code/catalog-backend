@@ -65,7 +65,7 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private List<GymImage> images = new ArrayList<GymImage>();
+    private List<AdminPanelGymImage> images = new ArrayList<AdminPanelGymImage>();
 
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
