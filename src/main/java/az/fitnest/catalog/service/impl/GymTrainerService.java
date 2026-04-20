@@ -212,6 +212,10 @@ public class GymTrainerService {
             throw new az.fitnest.catalog.exception.BadRequestException("INVALID_TIME_RANGE", "error.invalid_time_range");
         }
 
+        if (trainerReservationDateRepository.existsOverlappingAvailability(trainerId, request.getDate(), request.getStartTime(), request.getEndTime())) {
+            throw new az.fitnest.catalog.exception.BadRequestException("TRAINER_AVAILABILITY_OVERLAP", "error.trainer_availability_overlap");
+        }
+
         az.fitnest.catalog.model.entity.TrainerReservationDate availability = az.fitnest.catalog.model.entity.TrainerReservationDate.builder()
                 .trainer(trainer)
                 .classType(lessonType)
