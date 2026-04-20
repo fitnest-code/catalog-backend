@@ -67,6 +67,17 @@ public final class AdminPanelGymMapper {
         );
     }
 
+    public void updateWorkingHour(AdminPanelWorkingHour wh, WorkingHourRequest request) {
+        wh.setDayOfWeek(request.dayOfWeek());
+        wh.setOpenTime(parseTime(request.openTime()));
+        wh.setCloseTime(parseTime(request.closeTime()));
+        wh.setIsClosed(request.isClosed());
+    }
+
+    private java.time.LocalTime parseTime(String time) {
+        return time != null ? java.time.LocalTime.parse(time) : null;
+    }
+
     private String resolveDayLabel(Integer dayOfWeek) {
         if (dayOfWeek == null) {
             return null;

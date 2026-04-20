@@ -1,7 +1,6 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.ApiResponse;
-import az.fitnest.catalog.dto.GymImageDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
@@ -157,6 +156,17 @@ public class AdminPanelGymController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(gymAdminWriteService.addWorkingHour(gymId, request)));
+    }
+
+    @PutMapping("/{gymId}/working-hours/{workingHourId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateWorkingHour(
+            @PathVariable Long gymId,
+            @PathVariable Long workingHourId,
+            @RequestBody @Valid WorkingHourRequest request
+    ) {
+        gymAdminWriteService.updateWorkingHour(gymId, workingHourId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
 }

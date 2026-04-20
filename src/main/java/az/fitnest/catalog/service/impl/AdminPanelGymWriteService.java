@@ -39,13 +39,13 @@ public class AdminPanelGymWriteService {
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final FileStorageService fileStorageService;
-    private final AdminPanelGymMapper gymAdminMapper;
+    private final AdminPanelGymMapper adminPanelGymMapper;
     private final LocationService locationService;
 
     @Transactional
     public AdminPanelGymResponse createGymForAdmin(AdminPanelCreateGymRequest request) {
-        GymAdminPanel saved = gymAdminPanelRepository.save(gymAdminMapper.toEntity(request));
-        return gymAdminMapper.toCreateResponse(saved);
+        GymAdminPanel saved = gymAdminPanelRepository.save(adminPanelGymMapper.toEntity(request));
+        return adminPanelGymMapper.toCreateResponse(saved);
     }
 
     @Transactional
@@ -76,7 +76,7 @@ public class AdminPanelGymWriteService {
         AdminPanelGeocodingResponse geocoding = reverseGeocodingService
                 .reverseGeocode(request.latitude(), request.longitude());
 
-        gymAdminMapper.updateGeneralInfo(gym, request, geocoding);
+        adminPanelGymMapper.updateGeneralInfo(gym, request, geocoding);
 
         if (request.latitude() != null) {
             locationService.resolveAndSetLocation(gym.getAddress(), geocoding);
@@ -213,7 +213,18 @@ public class AdminPanelGymWriteService {
                 .isClosed(request.isClosed())
                 .build();
 
-        return gymAdminMapper.toWorkingHourDto(workingHourRepository.save(wh));
+        return adminPanelGymMapper.toWorkingHourDto(workingHourRepository.save(wh));
+    }
+
+    @Transactional
+    public void updateWorkingHour(Long gymId, Long workingHourId, WorkingHourRequest request) {
+        AdminPanelWorkingHour wh = workingHourRepository.findByIdAndGymId(workingHourId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("WORKING_HOUR_NOT_FOUND", "error.working_hour_not_found"));
+
+        validateWorkingHourRequest(request);
+        adminPanelGymMapper.updateWorkingHour(wh, request);
+
+        workingHourRepository.save(wh);
     }
 
     private void validateImageFile(MultipartFile file) {
@@ -233,7 +244,7 @@ public class AdminPanelGymWriteService {
             if (!StringUtils.hasText(request.openTime()) || !StringUtils.hasText(request.closeTime())) {
                 throw new BadRequestException("TIME_REQUIRED", "error.open_close_time_required");
             }
-            LocalTime open  = parseTime(request.openTime());
+            LocalTime open = parseTime(request.openTime());
             LocalTime close = parseTime(request.closeTime());
             if (!open.isBefore(close)) {
                 throw new BadRequestException("INVALID_TIME_RANGE", "error.open_time_must_be_before_close");
