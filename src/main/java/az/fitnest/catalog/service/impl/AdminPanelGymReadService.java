@@ -93,4 +93,10 @@ public class AdminPanelGymReadService {
         return PaginatedResponse.of(mapped);
     }
 
+    public TrainerDetailDto getTrainer(Long gymId, Long trainerId) {
+        Trainer t = trainerRepository.findByIdAndGymId(trainerId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        return adminPanelGymMapper.toDetailDto(t);
+    }
+
 }

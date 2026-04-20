@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 public interface TrainerRepository
         extends JpaRepository<Trainer, Long> {
     @Query(value = "SELECT t FROM Gym g JOIN g.trainers t LEFT JOIN FETCH t.profession WHERE g.id = :gymId")
@@ -31,4 +33,8 @@ public interface TrainerRepository
             @Param("search") String search,
             Pageable pageable
     );
+
+    Optional<Trainer> findByIdAndGymId(Long id, Long gymId);
+
+    boolean existsByPhoneAndGymId(String phone, Long gymId);
 }

@@ -190,4 +190,13 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(gymAdminReadService.getTrainers(gymId, search, page, Math.min(size, 100)));
     }
 
+    @GetMapping("/{gymId}/trainers/{trainerId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<TrainerDetailDto>> getTrainer(
+            @PathVariable Long gymId,
+            @PathVariable Long trainerId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getTrainer(gymId, trainerId)));
+    }
+
 }

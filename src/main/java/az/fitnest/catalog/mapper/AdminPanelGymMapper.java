@@ -87,6 +87,20 @@ public final class AdminPanelGymMapper {
         );
     }
 
+    public TrainerDetailDto toDetailDto(Trainer t) {
+        return new TrainerDetailDto(
+                t.getId(),
+                t.getFirstName(),
+                t.getLastName(),
+                t.getSpecialization(),
+                t.getExperienceYears(),
+                t.getPhone(),
+                t.getEmail(),
+                t.getProfileImageUrl(),
+                t.getRating()
+        );
+    }
+
     private java.time.LocalTime parseTime(String time) {
         return time != null ? java.time.LocalTime.parse(time) : null;
     }
