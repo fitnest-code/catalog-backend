@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -197,6 +198,17 @@ public class AdminPanelGymController {
             @PathVariable Long trainerId
     ) {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getTrainer(gymId, trainerId)));
+    }
+
+    @PostMapping(value = "/{gymId}/trainers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<TrainerDetailDto>> addTrainer(
+            @PathVariable Long gymId,
+            @RequestPart("data") @Valid AdminPanelTrainerRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(gymAdminWriteService.addTrainer(gymId, request, file)));
     }
 
 }

@@ -8,9 +8,11 @@ import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.AdminPanelGymImage;
 import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
+import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
+import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +40,9 @@ public class AdminPanelGymWriteService {
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
-    private final FileStorageService fileStorageService;
     private final AdminPanelGymMapper adminPanelGymMapper;
+    private final FileStorageService fileStorageService;
+    private final TrainerRepository trainerRepository;
     private final LocationService locationService;
 
     @Transactional
@@ -235,6 +238,30 @@ public class AdminPanelGymWriteService {
         workingHourRepository.delete(wh);
     }
 
+    @Transactional
+    public TrainerDetailDto addTrainer(Long gymId, AdminPanelTrainerRequest request, MultipartFile file) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (trainerRepository.existsByPhoneAndGymId(request.phoneNumber(), gymId)) {
+            throw new ConflictException("TRAINER_PHONE_EXISTS", "error.trainer_phone_exists");
+        }
+
+        String imageUrl = uploadImageIfPresent(file);
+
+        Trainer trainer = Trainer.builder()
+                .gymId(gymId)
+                .firstName(request.firstName())
+                .lastName(request.lastName())
+                .specialization(request.specialization())
+                .phone(request.phoneNumber())
+                .email(request.email())
+                .profileImageUrl(imageUrl)
+                .build();
+
+        return adminPanelGymMapper.toDetailDto(trainerRepository.save(trainer));
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");
@@ -267,6 +294,13 @@ public class AdminPanelGymWriteService {
         } catch (Exception e) {
             throw new BadRequestException("INVALID_TIME_FORMAT", "error.invalid_time_format");
         }
+    }
+
+    private String uploadImageIfPresent(MultipartFile file) {
+        if (file == null || file.isEmpty()) return null;
+        validateImageFile(file);
+        String fsId = fileStorageService.saveFile(file, "/trainers");
+        return "/api/v1/media/stream/" + fsId;
     }
 
 }
