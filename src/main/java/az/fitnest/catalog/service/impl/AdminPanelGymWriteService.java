@@ -262,6 +262,27 @@ public class AdminPanelGymWriteService {
         return adminPanelGymMapper.toDetailDto(trainerRepository.save(trainer));
     }
 
+    @Transactional
+    public void updateTrainer(Long gymId, Long trainerId, AdminPanelTrainerRequest request, MultipartFile file) {
+        Trainer trainer = trainerRepository.findByIdAndGymId(trainerId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+
+        if (!trainer.getPhone().equals(request.phoneNumber()) &&
+                trainerRepository.existsByPhoneAndGymId(request.phoneNumber(), gymId)) {
+            throw new ConflictException("TRAINER_PHONE_EXISTS", "error.trainer_phone_exists");
+        }
+
+        adminPanelGymMapper.updateTrainer(trainer, request);
+
+        if (file != null && !file.isEmpty()) {
+            validateImageFile(file);
+            String fsId = fileStorageService.saveFile(file, "/trainers", trainer.getProfileImageUrl());
+            trainer.setProfileImageUrl("/api/v1/media/stream/" + fsId);
+        }
+
+        trainerRepository.save(trainer);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");

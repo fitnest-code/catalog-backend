@@ -101,6 +101,14 @@ public final class AdminPanelGymMapper {
         );
     }
 
+    public void updateTrainer(Trainer trainer, AdminPanelTrainerRequest request) {
+        trainer.setFirstName(request.firstName());
+        trainer.setLastName(request.lastName());
+        trainer.setSpecialization(request.specialization());
+        trainer.setPhone(request.phoneNumber());
+        trainer.setEmail(request.email());
+    }
+
     private java.time.LocalTime parseTime(String time) {
         return time != null ? java.time.LocalTime.parse(time) : null;
     }

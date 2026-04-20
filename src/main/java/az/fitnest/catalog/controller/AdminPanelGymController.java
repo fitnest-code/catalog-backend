@@ -211,4 +211,17 @@ public class AdminPanelGymController {
                 .body(ApiResponse.success(gymAdminWriteService.addTrainer(gymId, request, file)));
     }
 
+    @PutMapping(value = "/{gymId}/trainers/{trainerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateTrainer(
+            @PathVariable Long gymId,
+            @PathVariable Long trainerId,
+            @RequestPart("data") @Valid AdminPanelTrainerRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        gymAdminWriteService.updateTrainer(gymId, trainerId, request, file);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+
 }
