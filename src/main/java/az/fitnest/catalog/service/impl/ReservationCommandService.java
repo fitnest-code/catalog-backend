@@ -75,12 +75,12 @@ public class ReservationCommandService {
                 .category(category)
                 .classType(classType)
                 .lessonType(classType.getName())
-                .status(ReservationStatus.APPROVED)
+                .status(ReservationStatus.PENDING)
                 .build();
 
         reservation = reservationRepository.save(reservation);
 
-        auditService.log(reservation.getId(), userId, "CREATE", null, "APPROVED", null);
+        auditService.log(reservation.getId(), userId, "CREATE", null, "PENDING", null);
 
         return reservation;
     }
