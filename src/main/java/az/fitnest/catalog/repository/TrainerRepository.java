@@ -18,4 +18,17 @@ public interface TrainerRepository
     @Transactional
     @Query("UPDATE Trainer t SET t.profession = NULL")
     void clearAllProfessions();
+
+    @Query("""
+        SELECT t FROM Trainer t
+        WHERE t.gymId = :gymId
+          AND (:search IS NULL OR
+               LOWER(t.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+               LOWER(t.lastName) LIKE LOWER(CONCAT('%', :search, '%')))
+    """)
+    Page<Trainer> findAllByGymId(
+            @Param("gymId") Long gymId,
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

@@ -4,6 +4,7 @@ import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.model.entity.AddressAdminPanel;
 import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
+import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import org.springframework.stereotype.Component;
 
@@ -72,6 +73,18 @@ public final class AdminPanelGymMapper {
         wh.setOpenTime(parseTime(request.openTime()));
         wh.setCloseTime(parseTime(request.closeTime()));
         wh.setIsClosed(request.isClosed());
+    }
+
+    public TrainerListDto toTrainerListDto(Trainer t) {
+        return new TrainerListDto(
+                t.getId(),
+                t.getFirstName(),
+                t.getLastName(),
+                t.getSpecialization(),
+                t.getPhone(),
+                t.getEmail(),
+                t.getProfileImageUrl()
+        );
     }
 
     private java.time.LocalTime parseTime(String time) {

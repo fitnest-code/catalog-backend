@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/gyms")
 @RequiredArgsConstructor
-@Tag(name = "Gyms", description = "Admin panelində idman zallarını idarə etmək və kəşf etmək üçün ucluqlar, o cümlədən paketlər, məşqçilər və istifadəçi rəyləri")
+@Tag(name = "Admin Panel Gyms", description = "Admin panelində idman zallarını idarə etmək və kəşf etmək üçün ucluqlar, o cümlədən paketlər, məşqçilər və istifadəçi rəyləri")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminPanelGymController {
 
@@ -177,6 +177,17 @@ public class AdminPanelGymController {
     ) {
         gymAdminWriteService.deleteWorkingHour(gymId, workingHourId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{gymId}/trainers")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<PaginatedResponse<TrainerListDto>> getTrainers(
+            @PathVariable Long gymId,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(gymAdminReadService.getTrainers(gymId, search, page, Math.min(size, 100)));
     }
 
 }
