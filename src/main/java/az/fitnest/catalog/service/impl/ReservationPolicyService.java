@@ -39,7 +39,7 @@ public class ReservationPolicyService {
                 .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(userPackageId));
 
         if (!isPackageSupported) {
-            throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.subscription_not_eligible");
+            throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.gym_not_supported");
         }
 
         LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
