@@ -107,7 +107,7 @@ public class ReservationController {
     @GetMapping("/cancel-reasons")
     @Operation(summary = "Ləğvetmə səbəbləri")
     public ResponseEntity<List<CancelReasonResponse>> getCancelReasons() {
-        return ResponseEntity.ok(reasonService.getActiveReasons());
+        return ResponseEntity.ok(reasonService.getReasons());
     }
 
     @PostMapping

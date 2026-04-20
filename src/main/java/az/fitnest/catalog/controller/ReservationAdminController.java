@@ -127,7 +127,7 @@ public class ReservationAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/cancel-reasons")
     public ResponseEntity<List<CancelReasonResponse>> getAllCancelReasons() {
-        return ResponseEntity.ok(cancellationReasonService.getAllReasons());
+        return ResponseEntity.ok(cancellationReasonService.getReasons());
     }
 
     @Operation(summary = "Yeni rezervasiya ləğv səbəbi əlavə edin")

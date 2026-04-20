@@ -27,8 +27,4 @@ public class ReservationCancelReason extends BaseAuditableEntity {
     @Column(name = "requires_comment")
     @Builder.Default
     private Boolean requiresComment = false;
-
-    @Column(name = "status")
-    @Builder.Default
-    private String status = "ACTIVE";
 }

@@ -19,19 +19,7 @@ public class CancellationReasonService {
     private final ReservationCancelReasonRepository reasonRepository;
 
     @Transactional(readOnly = true)
-    public List<CancelReasonResponse> getActiveReasons() {
-        return reasonRepository.findByStatusOrderByCreatedDateAsc("ACTIVE")
-                .stream()
-                .map(reason -> CancelReasonResponse.builder()
-                        .code(reason.getCode())
-                        .label(reason.getLabel())
-                        .requiresComment(reason.getRequiresComment())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<CancelReasonResponse> getAllReasons() {
+    public List<CancelReasonResponse> getReasons() {
         return reasonRepository.findAll()
                 .stream()
                 .map(reason -> CancelReasonResponse.builder()
@@ -42,6 +30,8 @@ public class CancellationReasonService {
                 .collect(Collectors.toList());
     }
 
+
+
     @Transactional
     public void createReason(CancelReasonRequest request) {
         if (reasonRepository.findByCode(request.code()).isPresent()) {
@@ -51,7 +41,6 @@ public class CancellationReasonService {
                 .code(request.code())
                 .label(request.label())
                 .requiresComment(request.requiresComment())
-                .status(request.status() != null ? request.status() : "ACTIVE")
                 .build();
         reasonRepository.save(reason);
     }
@@ -62,9 +51,6 @@ public class CancellationReasonService {
                 .orElseThrow(() -> new ResourceNotFoundException("REASON_NOT_FOUND", "error.reason_not_found"));
         reason.setLabel(request.label());
         reason.setRequiresComment(request.requiresComment());
-        if (request.status() != null) {
-            reason.setStatus(request.status());
-        }
         reasonRepository.save(reason);
     }
 
