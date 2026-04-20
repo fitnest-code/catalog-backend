@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymLessonType;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -43,6 +45,7 @@ public class ReservationQueryService {
     private final ReservationRepository reservationRepository;
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
+    private final OrderServiceGrpcClient orderServiceClient;
 
     @Transactional(readOnly = true)
     public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
@@ -70,28 +73,72 @@ public class ReservationQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
+    public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long userId, Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
         List<TrainerReservationDate> sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
+
+        Gym gym = gymRepository.findById(gymId).orElse(null);
+        boolean isGymEnabled = gym != null && Boolean.TRUE.equals(gym.getIsReservationEnabled());
+
+        az.fitnest.order.grpc.ActiveSubscriptionResponse subscription = null;
+        if (userId != null && isGymEnabled) {
+            try {
+                subscription = orderServiceClient.getActiveSubscription(userId);
+            } catch (Exception ignored) {
+            }
+        }
+
+        final az.fitnest.order.grpc.ActiveSubscriptionResponse sub = subscription;
+        final boolean isPackageSupported = (sub != null && gym != null) && gym.getSubscriptions().stream()
+                .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(sub.getPackageId()));
+        final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
 
         return sessions.stream()
                 .collect(Collectors.groupingBy(TrainerReservationDate::getDate))
                 .entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .map(entry -> DayAvailabilityResponse.builder()
-                        .date(entry.getKey())
+                .map(entry -> {
+                    LocalDate date = entry.getKey();
+                    return DayAvailabilityResponse.builder()
+                        .date(date)
                         .slots(entry.getValue().stream().map(session -> {
                             int activeBookings = reservationRepository.countActiveReservations(session.getId(),
                                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
                             int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
+
+                            boolean isAcceptable = isGymEnabled;
+
+                            if (emptySpaces <= 0) {
+                                isAcceptable = false;
+                            }
+
+                            LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
+                            if (sessionStart.isBefore(LocalDateTime.now())) {
+                                isAcceptable = false;
+                            }
+
+                            if (userId != null && isAcceptable) {
+                                if (!isSubscriptionActive || !isPackageSupported) {
+                                    isAcceptable = false;
+                                } else {
+                                    boolean hasOverlap = reservationRepository.existsOverlappingReservation(
+                                            userId, date, session.getStartTime(), session.getEndTime(),
+                                            List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+                                    if (hasOverlap) {
+                                        isAcceptable = false;
+                                    }
+                                }
+                            }
 
                             return TimeSlotResponse.builder()
                                     .sessionId(session.getId())
                                     .startTime(session.getStartTime())
                                     .endTime(session.getEndTime())
                                     .emptySpaces(emptySpaces)
+                                    .isRegisterAcceptable(isAcceptable)
                                     .build();
                         }).collect(Collectors.toList()))
-                        .build())
+                        .build();
+                })
                 .collect(Collectors.toList());
     }
 

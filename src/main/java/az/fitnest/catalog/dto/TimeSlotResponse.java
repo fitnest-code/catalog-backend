@@ -21,4 +21,6 @@ public class TimeSlotResponse {
     private Integer emptySpaces;
 
     private Long sessionId;
+
+    private Boolean isRegisterAcceptable;
 }

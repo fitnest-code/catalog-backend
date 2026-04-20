@@ -21,6 +21,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     boolean existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(Long userId, Long classTypeId, java.time.LocalDate date, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.userId = :userId AND r.reservationDate.date = :date " +
+            "AND r.reservationDate.startTime < :endTime AND r.reservationDate.endTime > :startTime " +
+            "AND r.status IN :statuses")
+    boolean existsOverlappingReservation(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,
+            @org.springframework.data.repository.query.Param("startTime") java.time.LocalTime startTime,
+            @org.springframework.data.repository.query.Param("endTime") java.time.LocalTime endTime,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
     int countByReservationDateId(Long reservationDateId);
 
     int countByReservationDateIdAndStatusIn(Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
