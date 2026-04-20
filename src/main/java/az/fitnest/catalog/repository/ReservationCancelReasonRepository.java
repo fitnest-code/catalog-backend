@@ -9,6 +9,5 @@ import java.util.Optional;
 
 @Repository
 public interface ReservationCancelReasonRepository extends JpaRepository<ReservationCancelReason, Long> {
-    List<ReservationCancelReason> findByStatusOrderByCreatedDateAsc(String status);
     Optional<ReservationCancelReason> findByCode(String code);
 }
