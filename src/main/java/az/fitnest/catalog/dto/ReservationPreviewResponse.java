@@ -22,5 +22,5 @@ public class ReservationPreviewResponse {
     private LocalTime toHour;
     private String trainerName;
     private String classType;
-    private List<String> rules;
+    private String htmlContent;
 }

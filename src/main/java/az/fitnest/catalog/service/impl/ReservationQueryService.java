@@ -230,10 +230,10 @@ public class ReservationQueryService {
                 ? session.getClassType().getCategory().getId() : null;
         Long classTypeId = session.getClassType() != null ? session.getClassType().getId() : null;
 
-        List<String> rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE")
+        String htmlContent = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE")
                 .stream()
                 .map(ReservationRule::getDescription)
-                .collect(Collectors.toList());
+                .collect(Collectors.joining("<br/>"));
 
         return ReservationPreviewResponse.builder()
                 .date(session.getDate())
@@ -241,7 +241,7 @@ public class ReservationQueryService {
                 .toHour(session.getEndTime())
                 .trainerName(session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName())
                 .classType(session.getClassType().getName())
-                .rules(rules)
+                .htmlContent(htmlContent)
                 .build();
     }
 
