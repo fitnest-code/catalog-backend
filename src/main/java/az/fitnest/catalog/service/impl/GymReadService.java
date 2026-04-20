@@ -815,6 +815,10 @@ public class GymReadService {
             throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
 
+        if (subResp.getRemainingLimit() <= 0) {
+            throw new ForbiddenException("Your visit limit has been exceeded", "VISIT_LIMIT_EXCEEDED");
+        }
+
         long userPackageId = subResp.getPackageId();
         boolean gymSupportsPackage = gym.getSubscriptions() != null &&
             gym.getSubscriptions().stream()
@@ -884,15 +888,20 @@ public class GymReadService {
         return null;
     }
     private Long extractGymIdFromQr(String qrCodeValue) {
+        if (qrCodeValue == null || qrCodeValue.isBlank()) return null;
         try {
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
-            java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
-            if (matcher.find()) {
-                return Long.parseLong(matcher.group(1));
+            return Long.parseLong(qrCodeValue.trim());
+        } catch (NumberFormatException e) {
+            try {
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
+                java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
+                if (matcher.find()) {
+                    return Long.parseLong(matcher.group(1));
+                }
+                return null;
+            } catch (Exception ex) {
+                return null;
             }
-            return null;
-        } catch (Exception e) {
-            return null;
         }
     }
     @Transactional(readOnly = true)

@@ -337,7 +337,7 @@ public class GymWriteService {
     public void generateAndSaveQrCode(Gym gym) {
         try {
             String secureToken = java.util.UUID.randomUUID().toString();
-            String qrContent = "https://fitnest.app/gym/" + gym.getId() + "?token=" + secureToken;
+            String qrContent = gym.getId().toString();
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
             BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
 

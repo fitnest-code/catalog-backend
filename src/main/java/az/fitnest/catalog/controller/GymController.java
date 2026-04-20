@@ -262,15 +262,20 @@ public class GymController {
     }
 
     private Long extractGymIdFromQr(String qrCodeValue) {
+        if (qrCodeValue == null || qrCodeValue.isBlank()) return null;
         try {
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
-            java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
-            if (matcher.find()) {
-                return Long.parseLong(matcher.group(1));
+            return Long.parseLong(qrCodeValue.trim());
+        } catch (NumberFormatException e) {
+            try {
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
+                java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
+                if (matcher.find()) {
+                    return Long.parseLong(matcher.group(1));
+                }
+                return null;
+            } catch (Exception ex) {
+                return null;
             }
-            return null;
-        } catch (Exception e) {
-            return null;
         }
     }
 }

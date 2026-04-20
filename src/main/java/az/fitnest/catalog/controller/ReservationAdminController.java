@@ -1,6 +1,7 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.service.impl.CancellationReasonService;
 import az.fitnest.catalog.service.impl.GymLessonTypeService;
 import az.fitnest.catalog.service.impl.GymTrainerService;
 import az.fitnest.catalog.service.impl.GymWriteService;
@@ -28,6 +29,7 @@ public class ReservationAdminController {
     private final GymTrainerService gymTrainerService;
     private final ReservationCommandService reservationCommandService;
     private final GymLessonTypeService gymLessonTypeService;
+    private final CancellationReasonService cancellationReasonService;
 
     @Operation(summary = "İdman zalı üçün rezervasiyaları aktivləşdirin və ya deaktiv edin")
     @PreAuthorize("hasRole('ADMIN')")
@@ -119,5 +121,36 @@ public class ReservationAdminController {
             @RequestBody ReservationRuleUpdateRequest request) {
         reservationCommandService.saveOrUpdateRules(gymId, categoryId, lessonId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rezervasiya ləğv səbəblərini əldə edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/cancel-reasons")
+    public ResponseEntity<List<CancelReasonResponse>> getAllCancelReasons() {
+        return ResponseEntity.ok(cancellationReasonService.getAllReasons());
+    }
+
+    @Operation(summary = "Yeni rezervasiya ləğv səbəbi əlavə edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/cancel-reasons")
+    public ResponseEntity<Void> createCancelReason(@Valid @RequestBody CancelReasonRequest request) {
+        cancellationReasonService.createReason(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Rezervasiya ləğv səbəbini yeniləyin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/cancel-reasons/{code}")
+    public ResponseEntity<Void> updateCancelReason(@PathVariable String code, @Valid @RequestBody CancelReasonRequest request) {
+        cancellationReasonService.updateReason(code, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rezervasiya ləğv səbəbini silin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/cancel-reasons/{code}")
+    public ResponseEntity<Void> deleteCancelReason(@PathVariable String code) {
+        cancellationReasonService.deleteReason(code);
+        return ResponseEntity.noContent().build();
     }
 }

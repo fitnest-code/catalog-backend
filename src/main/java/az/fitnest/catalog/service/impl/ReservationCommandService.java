@@ -86,18 +86,22 @@ public class ReservationCommandService {
     }
 
     @Transactional
-    public void cancelReservation(Long reservationId, Long userId, String reasonCode, String additionalNote) {
-        Reservation reservation = reservationRepository.findById(reservationId)
+    public void cancelReservation(Long sessionId, Long userId, String reasonCode, String additionalNote) {
+        Reservation reservation = reservationRepository.findByUserIdAndReservationDateIdAndStatusIn(
+                        userId, sessionId, List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
-
-        if (!reservation.getUserId().equals(userId)) {
-            throw new BadRequestException("OWNERSHIP_CHECK_FAILED", "error.ownership_check_failed");
-        }
 
         policyService.validateCancellationAllowed(reservation);
 
         var reason = reasonService.getByCode(reasonCode);
-        if (Boolean.TRUE.equals(reason.getRequiresComment()) && (additionalNote == null || additionalNote.trim().isEmpty())) {
+        
+        // Enforce: only OTHER accepts additionalNote
+        String finalNote = additionalNote;
+        if (!"OTHER".equalsIgnoreCase(reasonCode)) {
+            finalNote = null;
+        }
+
+        if (Boolean.TRUE.equals(reason.getRequiresComment()) && (finalNote == null || finalNote.trim().isEmpty())) {
             throw new BadRequestException("CANCEL_COMMENT_REQUIRED", "error.cancel_comment_required");
         }
 
@@ -105,11 +109,11 @@ public class ReservationCommandService {
         reservation.setStatus(ReservationStatus.CANCELLED);
         reservation.setCancelledAt(LocalDateTime.now());
         reservation.setCancelReasonCode(reasonCode);
-        reservation.setCancelAdditionalNote(additionalNote);
+        reservation.setCancelAdditionalNote(finalNote);
 
         reservationRepository.save(reservation);
 
-        auditService.log(reservationId, userId, "CANCEL", oldStatus, "CANCELLED", reasonCode);
+        auditService.log(reservation.getId(), userId, "CANCEL", oldStatus, "CANCELLED", reasonCode);
     }
 
     @Transactional

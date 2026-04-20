@@ -134,15 +134,15 @@ public class ReservationController {
                 .build());
     }
 
-    @PostMapping("/{id}/cancel")
-    @Operation(summary = "Rezervasiyanı ləğv edin")
+    @PostMapping("/sessions/{sessionId}/cancel")
+    @Operation(summary = "Rezervasiyanı seansa görə ləğv edin")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> cancel(
             @AuthenticationPrincipal Long userId,
-            @PathVariable Long id,
+            @PathVariable Long sessionId,
             @RequestBody ReservationCancelRequest request) {
-        commandService.cancelReservation(id, userId, request.getReasonCode(), request.getAdditionalNote());
+        commandService.cancelReservation(sessionId, userId, request.getReasonCode(), request.getAdditionalNote());
         return ResponseEntity.ok().build();
     }
 }

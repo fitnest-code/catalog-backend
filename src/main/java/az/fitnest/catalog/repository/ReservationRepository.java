@@ -39,4 +39,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     @org.springframework.data.jpa.repository.Query("SELECT count(r) FROM Reservation r WHERE r.reservationDate.id = :sessionId AND r.status IN (:statuses)")
     int countActiveReservations(@org.springframework.data.repository.query.Param("sessionId") Long sessionId, @org.springframework.data.repository.query.Param("statuses") java.util.List<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    java.util.Optional<Reservation> findByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 }
