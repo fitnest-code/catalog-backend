@@ -15,6 +15,7 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
+import az.fitnest.catalog.repository.ReservationRepository;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
@@ -45,11 +46,12 @@ public class GymReadService {
     private final GymImageRepository gymImageRepository;
     private final TrainerRepository trainerRepository;
     private final ReviewRepository reviewRepository;
+    private final ReservationRepository reservationRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    private final UserServiceGrpcClient userServiceGrpcClient;
     private final org.springframework.context.MessageSource messageSource;
     private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
-    private final UserServiceGrpcClient userServiceGrpcClient;
 
     public String getUserLanguage(Long userId) {
         String language = "AZ";
@@ -835,9 +837,21 @@ public class GymReadService {
         String enterDate = java.time.LocalDate.now().toString();
         String enterHour = java.time.LocalTime.now().withSecond(0).withNano(0).toString();
         double distance = 9999;
+        
+        String gender = null;
+        try {
+            az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
+            gender = userResp.getGender();
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
+        }
+
+        boolean withinHours = isWithinWorkingHours(gym, gender);
         if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null && lng != null) {
             distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
-            allowed = distance <= 0.2;
+            allowed = distance <= 0.2 && withinHours;
+        } else {
+            allowed = withinHours;
         }
         return GymEntranceScanResponse.builder()
             .gymName(localizedName)
@@ -879,6 +893,51 @@ public class GymReadService {
         }
         logger.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return new GymEntranceEligibilityResponse(true);
+    }
+
+    private boolean isWithinWorkingHours(Gym gym, String gender) {
+        boolean noHours = (gym.getGeneralWorkHours() == null || gym.getGeneralWorkHours().isEmpty()) &&
+                (gym.getWorkHoursMan() == null || gym.getWorkHoursMan().isEmpty()) &&
+                (gym.getWorkHoursWoman() == null || gym.getWorkHoursWoman().isEmpty());
+        
+        if (noHours) {
+            return true;
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.DayOfWeek day = now.getDayOfWeek();
+        az.fitnest.catalog.model.enums.GymWorkHourPeriod period;
+
+        if (day == java.time.DayOfWeek.SATURDAY) {
+            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY;
+        } else if (day == java.time.DayOfWeek.SUNDAY) {
+            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY;
+        } else {
+            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEEKDAYS;
+        }
+
+        java.time.LocalTime currentTime = now.toLocalTime();
+        
+        boolean allowedInGeneral = gym.getGeneralWorkHours() != null && gym.getGeneralWorkHours().stream()
+                .filter(h -> h.getPeriod() == period)
+                .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
+                                (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+        
+        if (allowedInGeneral) return true;
+
+        if ("MALE".equalsIgnoreCase(gender)) {
+            return gym.getWorkHoursMan() != null && gym.getWorkHoursMan().stream()
+                    .filter(h -> h.getPeriod() == period)
+                    .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
+                                    (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+        } else if ("FEMALE".equalsIgnoreCase(gender)) {
+            return gym.getWorkHoursWoman() != null && gym.getWorkHoursWoman().stream()
+                    .filter(h -> h.getPeriod() == period)
+                    .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
+                                    (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+        }
+
+        return false;
     }
 
     private Long extractUserId(Object principal) {
