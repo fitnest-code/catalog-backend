@@ -283,6 +283,18 @@ public class AdminPanelGymWriteService {
         trainerRepository.save(trainer);
     }
 
+    @Transactional
+    public void deleteTrainer(Long gymId, Long trainerId) {
+        Trainer trainer = trainerRepository.findByIdAndGymId(trainerId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+
+        if (StringUtils.hasText(trainer.getProfileImageUrl())) {
+            fileStorageService.deleteFile(trainer.getProfileImageUrl());
+        }
+
+        trainerRepository.delete(trainer);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");
