@@ -1,6 +1,7 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.ApiResponse;
+import az.fitnest.catalog.dto.GymImageDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
@@ -17,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/gyms")
@@ -108,6 +111,14 @@ public class AdminPanelGymController {
     ) {
         gymAdminWriteService.addGalleryImage(gymId, file, sortOrder);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{gymId}/gallery-images")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<AdminPanelGymImageDto>>> getGalleryImages(
+            @PathVariable Long gymId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGalleryImages(gymId)));
     }
 
 }

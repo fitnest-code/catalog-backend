@@ -4,6 +4,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.AdminGymListDto;
 import az.fitnest.catalog.dto.admin.AdminPanelGymDetailDto;
+import az.fitnest.catalog.dto.admin.AdminPanelGymImageDto;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -58,5 +61,16 @@ public class AdminPanelGymReadService {
         GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         return adminPanelGymMapper.toDetailDto(gym);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminPanelGymImageDto> getGalleryImages(Long gymId) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        return gym.getImages().stream()
+                .sorted(Comparator.comparingInt(i -> i.getSortOrder() != null ? i.getSortOrder() : 0))
+                .map(i -> new AdminPanelGymImageDto(i.getId(), i.getUrl(), i.getSortOrder()))
+                .toList();
     }
 }
