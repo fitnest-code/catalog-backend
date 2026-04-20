@@ -30,7 +30,15 @@ public class ReservationPolicyService {
         UserResponse user = userServiceClient.getUserById(userId);
 
         ActiveSubscriptionResponse subscription = orderServiceClient.getActiveSubscription(userId);
-        if (!"ACTIVE".equals(subscription.getSubscriptionStatus())) {
+        if (!"ACTIVE".equalsIgnoreCase(subscription.getSubscriptionStatus())) {
+            throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.subscription_not_eligible");
+        }
+
+        long userPackageId = subscription.getPackageId();
+        boolean isPackageSupported = gym.getSubscriptions().stream()
+                .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(userPackageId));
+
+        if (!isPackageSupported) {
             throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.subscription_not_eligible");
         }
 

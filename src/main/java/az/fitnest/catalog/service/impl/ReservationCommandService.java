@@ -40,9 +40,13 @@ public class ReservationCommandService {
 
         policyService.validateReservationAllowed(userId, gym, session);
 
-        if (reservationRepository.existsByUserIdAndReservationDateIdAndClassTypeIdAndStatusIn(userId, sessionId, lessonId,
+        if (session.getClassType() != null && !session.getClassType().getId().equals(lessonId)) {
+            throw new BadRequestException("LESSON_SESSION_MISMATCH", "error.lesson_session_mismatch");
+        }
+
+        if (reservationRepository.existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(userId, lessonId, session.getDate(),
                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))) {
-            throw new BadRequestException("DUPLICATE_RESERVATION", "error.duplicate_reservation");
+            throw new BadRequestException("DUPLICATE_DAILY_RESERVATION", "error.duplicate_daily_reservation");
         }
 
         if (!session.getGymId().equals(gymId) || !session.getTrainer().getTrainerId().equals(trainerId)) {
