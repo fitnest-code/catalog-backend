@@ -907,7 +907,7 @@ public class GymReadService {
                 if (user != null) {
                     firstName = user.getFirstName();
                     lastName = user.getLastName();
-                    phone = user.getPhoneNumber();
+                    phone = user.getMobile();
                 }
             } catch (Exception e) {
                 firstName = "User";
