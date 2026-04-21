@@ -7,6 +7,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.model.enums.GymAdminRole;
 import az.fitnest.catalog.model.enums.GymAdminStatus;
 import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
@@ -402,6 +403,29 @@ public class AdminPanelGymWriteService {
         adminPanelGymMapper.updateGymAdmin(admin, request);
 
         adminRepository.save(admin);
+    }
+
+    @Transactional
+    public void deleteAdmin(Long gymId, Long adminId) {
+        AdminPanelGymAdmin admin = adminRepository.findByIdAndGymId(adminId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+
+        long adminCount = adminRepository.countByGymId(gymId);
+        if (adminCount <= 1) {
+            throw new ConflictException("LAST_ADMIN", "error.last_admin_cannot_be_deleted");
+        }
+
+        isSoleSuperAdmin(gymId, admin);
+
+        adminRepository.delete(admin);
+    }
+
+    private void isSoleSuperAdmin(Long gymId, AdminPanelGymAdmin admin) {
+        boolean isSoleSuperAdmin = admin.getRole() == GymAdminRole.SUPER_ADMIN
+                && !adminRepository.existsByGymIdAndRole(gymId, GymAdminRole.SUPER_ADMIN);
+        if (isSoleSuperAdmin) {
+            throw new ConflictException("SOLE_SUPER_ADMIN", "error.sole_super_admin_cannot_be_deleted");
+        }
     }
 
     private void validateImageFile(MultipartFile file) {
