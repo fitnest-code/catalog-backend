@@ -37,6 +37,7 @@ public class AdminPanelGymWriteService {
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final SubscriptionTypeRepository subscriptionTypeRepository;
+    private final GymServiceItemRepository  gymServiceItemRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
@@ -329,6 +330,32 @@ public class AdminPanelGymWriteService {
                 ServiceType.builder().name(request.name()).build()
         );
         return new ServiceTypeDto(saved.getId(), saved.getName());
+    }
+
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
+    })
+    public void updateGymServices(Long gymId, UpdateGymServiceRequest request) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<ServiceType> types = serviceTypeRepository
+                .findAllById(request.serviceTypeIds());
+        if (types.size() != request.serviceTypeIds().size()) {
+            throw new ResourceNotFoundException("INVALID_SERVICE_TYPE", "error.invalid_service_type");
+        }
+
+        gymServiceItemRepository.deleteAllByGymId(gymId);
+        List<GymServiceItem> newServices = request.serviceTypeIds().stream()
+                .map(typeId -> GymServiceItem.builder()
+                        .gymId(gymId)
+                        .serviceTypeId(typeId)
+                        .isAvailable(true)
+                        .build())
+                .toList();
+        gymServiceItemRepository.saveAll(newServices);
     }
 
     private void validateImageFile(MultipartFile file) {

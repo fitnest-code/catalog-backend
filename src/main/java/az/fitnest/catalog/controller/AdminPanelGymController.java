@@ -280,5 +280,14 @@ public class AdminPanelGymController {
                 .body(ApiResponse.success(gymAdminWriteService.createServiceType(request)));
     }
 
+    @PutMapping("/{gymId}/services")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateGymServices(
+            @PathVariable Long gymId,
+            @RequestBody @Valid UpdateGymServiceRequest request
+    ) {
+        gymAdminWriteService.updateGymServices(gymId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 
 }
