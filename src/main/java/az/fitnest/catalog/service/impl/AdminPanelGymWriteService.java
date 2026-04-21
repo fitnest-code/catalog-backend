@@ -420,6 +420,15 @@ public class AdminPanelGymWriteService {
         adminRepository.delete(admin);
     }
 
+    @Transactional
+    public void resetPassword(Long gymId, Long adminId, ResetPasswordRequest request) {
+        AdminPanelGymAdmin admin = adminRepository.findByIdAndGymId(adminId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+
+        admin.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        adminRepository.save(admin);
+    }
+
     private void isSoleSuperAdmin(Long gymId, AdminPanelGymAdmin admin) {
         boolean isSoleSuperAdmin = admin.getRole() == GymAdminRole.SUPER_ADMIN
                 && !adminRepository.existsByGymIdAndRole(gymId, GymAdminRole.SUPER_ADMIN);

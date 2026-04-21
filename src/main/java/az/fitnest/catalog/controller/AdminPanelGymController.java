@@ -329,4 +329,15 @@ public class AdminPanelGymController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{gymId}/admins/{adminId}/reset-password")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @PathVariable Long gymId,
+            @PathVariable Long adminId,
+            @RequestBody @Valid ResetPasswordRequest request
+    ) {
+        gymAdminWriteService.resetPassword(gymId, adminId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
 }
