@@ -257,4 +257,18 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @GetMapping("/service-types")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<ServiceTypeDto>>> getServiceTypes() {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getServiceTypes()));
+    }
+
+    @GetMapping("/{gymId}/services")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<GymServiceItemDto>>> getGymServices(
+            @PathVariable Long gymId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGymServices(gymId)));
+    }
+
 }

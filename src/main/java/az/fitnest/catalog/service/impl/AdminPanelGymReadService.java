@@ -5,10 +5,7 @@ import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
-import az.fitnest.catalog.model.entity.AdminPanelGymSubscription;
-import az.fitnest.catalog.model.entity.GymAdminPanel;
-import az.fitnest.catalog.model.entity.SubscriptionType;
-import az.fitnest.catalog.model.entity.Trainer;
+import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +29,9 @@ public class AdminPanelGymReadService {
     private final AdminPanelGymSubscriptionRepository gymSubscriptionRepository;
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final SubscriptionTypeRepository subscriptionTypeRepository;
+    private final GymServiceItemRepository gymServiceItemRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
+    private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final TrainerRepository trainerRepository;
     private final LocationService locationService;
@@ -124,6 +123,32 @@ public class AdminPanelGymReadService {
                         s.getId(),
                         s.getSubscriptionTypeId(),
                         typeNames.get(s.getSubscriptionTypeId()),
+                        s.getIsAvailable()
+                ))
+                .toList();
+    }
+
+    public List<ServiceTypeDto> getServiceTypes() {
+        return serviceTypeRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(s -> new ServiceTypeDto(s.getId(), s.getName()))
+                .toList();
+    }
+
+    public List<GymServiceItemDto> getGymServices(Long gymId) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<GymServiceItem> services = gymServiceItemRepository.findAllByGymId(gymId);
+        Map<Long, String> typeNames = serviceTypeRepository.findAllById(
+                services.stream().map(GymServiceItem::getServiceTypeId).toList()
+        ).stream().collect(Collectors.toMap(ServiceType::getId, ServiceType::getName));
+
+        return services.stream()
+                .map(s -> new GymServiceItemDto(
+                        s.getId(),
+                        s.getServiceTypeId(),
+                        typeNames.get(s.getServiceTypeId()),
                         s.getIsAvailable()
                 ))
                 .toList();
