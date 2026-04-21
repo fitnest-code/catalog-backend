@@ -366,5 +366,27 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getRating(gymId, ratingId)));
     }
 
+    @PatchMapping("/{gymId}/ratings/{ratingId}/approve")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> approveRating(
+            @PathVariable Long gymId,
+            @PathVariable Long ratingId,
+            @RequestBody ModerationRequest request
+    ) {
+        gymAdminWriteService.approveRating(gymId, ratingId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PatchMapping("/{gymId}/ratings/{ratingId}/reject")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> rejectRating(
+            @PathVariable Long gymId,
+            @PathVariable Long ratingId,
+            @RequestBody ModerationRequest request
+    ) {
+        gymAdminWriteService.rejectRating(gymId, ratingId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
 
 }

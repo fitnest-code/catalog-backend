@@ -3,7 +3,10 @@ package az.fitnest.catalog.mapper;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.model.enums.RatingStatus;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 @Component
 public final class AdminPanelGymMapper {
@@ -124,6 +127,12 @@ public final class AdminPanelGymMapper {
         admin.setPhoneNumber(request.phoneNumber());
         admin.setEmail(request.email());
         admin.setRole(request.role());
+    }
+
+    public void moderateRating(GymRating rating, RatingStatus status, ModerationRequest request) {
+        rating.setStatus(status);
+        rating.setModerationNote(request.moderationNote());
+        rating.setModeratedAt(LocalDateTime.now());
     }
 
     private java.time.LocalTime parseTime(String time) {

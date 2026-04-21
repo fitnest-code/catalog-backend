@@ -9,6 +9,7 @@ import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.model.enums.GymAdminRole;
 import az.fitnest.catalog.model.enums.GymAdminStatus;
+import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
@@ -43,6 +44,7 @@ public class AdminPanelGymWriteService {
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final AdminPanelGymAdminRepository adminRepository;
     private final ServiceTypeRepository serviceTypeRepository;
+    private final GymRatingRepository gymRatingRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final FileStorageService fileStorageService;
     private final TrainerRepository trainerRepository;
@@ -336,7 +338,6 @@ public class AdminPanelGymWriteService {
         return new ServiceTypeDto(saved.getId(), saved.getName());
     }
 
-
     @Transactional
     @Caching(evict = {
             @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
@@ -427,6 +428,33 @@ public class AdminPanelGymWriteService {
 
         admin.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         adminRepository.save(admin);
+    }
+
+    @Transactional
+    public void approveRating(Long gymId, Long ratingId, ModerationRequest request) {
+        GymRating rating = findPendingRating(gymId, ratingId);
+
+        adminPanelGymMapper.moderateRating(rating, RatingStatus.APPROVED, request);
+
+        gymRatingRepository.save(rating);
+    }
+
+    @Transactional
+    public void rejectRating(Long gymId, Long ratingId, ModerationRequest request) {
+        GymRating rating = findPendingRating(gymId, ratingId);
+
+        adminPanelGymMapper.moderateRating(rating, RatingStatus.REJECTED, request);
+
+        gymRatingRepository.save(rating);
+    }
+
+    private GymRating findPendingRating(Long gymId, Long ratingId) {
+        GymRating rating = gymRatingRepository.findByIdAndGymId(ratingId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("RATING_NOT_FOUND", "error.rating_not_found"));
+        if (rating.getStatus() != RatingStatus.PENDING) {
+            throw new ConflictException("RATING_NOT_PENDING", "error.rating_not_pending");
+        }
+        return rating;
     }
 
     private void isSoleSuperAdmin(Long gymId, AdminPanelGymAdmin admin) {
