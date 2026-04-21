@@ -7,6 +7,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class AdminPanelGymReadService {
     private final AdminPanelGymAdminRepository adminRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
+    private final GymRatingRepository ratingRepository;
     private final TrainerRepository trainerRepository;
     private final LocationService locationService;
     private final AdminPanelGymMapper mapper;
@@ -166,4 +168,31 @@ public class AdminPanelGymReadService {
                 .toList();
     }
 
+    public PaginatedResponse<RatingListDto> getRatings(
+            Long gymId, String search, RatingStatus status,
+            String sortBy, SortDirection sortOrder, int page, int size) {
+
+        Set<String> allowed = Set.of("createdAt", "rating");
+        if (!allowed.contains(sortBy)) sortBy = "createdAt";
+
+        Pageable pageable = PageRequest.of(
+                page - 1, size,
+                Sort.by(Sort.Direction.fromString(sortOrder.name()), sortBy)
+        );
+
+        Page<RatingListDto> result = ratingRepository
+                .findAllByGymId(gymId, search, status, pageable)
+                .map(r -> new RatingListDto(
+                        r.getId(),
+                        r.getCustomerFullName(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getStatus(),
+                        r.getCreatedDate()
+                ));
+
+        return PaginatedResponse.of(result);
+    }
+
+    
 }

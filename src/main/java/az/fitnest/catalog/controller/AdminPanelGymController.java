@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
 import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -338,6 +339,22 @@ public class AdminPanelGymController {
     ) {
         gymAdminWriteService.resetPassword(gymId, adminId, request);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{gymId}/ratings")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<PaginatedResponse<RatingListDto>> getRatings(
+            @PathVariable Long gymId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) RatingStatus status,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") SortDirection sortOrder,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(gymAdminReadService.getRatings(
+                gymId, search, status, sortBy, sortOrder, page, Math.min(size, 100)
+        ));
     }
 
 }
