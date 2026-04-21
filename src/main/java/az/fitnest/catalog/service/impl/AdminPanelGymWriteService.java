@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
+import aQute.bnd.annotation.metatype.Meta;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ConflictException;
@@ -7,10 +8,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
-import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
-import az.fitnest.catalog.repository.GymAdminPanelRepository;
-import az.fitnest.catalog.repository.SubscriptionTypeRepository;
-import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +33,12 @@ public class AdminPanelGymWriteService {
     private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/jpg", "image/png");
     private static final long MAX_SIZE = 2 * 1024 * 1024;
 
+    private final AdminPanelGymSubscriptionRepository gymSubscriptionRepository;
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
-    private final SubscriptionTypeRepository subscriptionTypeRepository;
     private final AdminPanelWorkingHourRepository workingHourRepository;
+    private final SubscriptionTypeRepository subscriptionTypeRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
+    private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final FileStorageService fileStorageService;
     private final TrainerRepository trainerRepository;
@@ -299,19 +299,36 @@ public class AdminPanelGymWriteService {
             @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
     })
     public void updateGymSubscriptions(Long gymId, UpdateGymSubscriptionRequest request) {
-        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+        gymAdminPanelRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         List<SubscriptionType> types = subscriptionTypeRepository
                 .findAllById(request.subscriptionTypeIds());
-
         if (types.size() != request.subscriptionTypeIds().size()) {
             throw new ResourceNotFoundException("INVALID_SUBSCRIPTION_TYPE", "error.invalid_subscription_type");
         }
 
-        gym.getSubscriptionTypes().clear();
-        gym.getSubscriptionTypes().addAll(types);
-        gymAdminPanelRepository.save(gym);
+        gymSubscriptionRepository.deleteAllByGymId(gymId);
+        List<AdminPanelGymSubscription> newSubs = request.subscriptionTypeIds().stream()
+                .map(typeId -> AdminPanelGymSubscription.builder()
+                        .gymId(gymId)
+                        .subscriptionTypeId(typeId)
+                        .isAvailable(true)
+                        .build())
+                .toList();
+        gymSubscriptionRepository.saveAll(newSubs);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "service-types", allEntries = true)
+    public ServiceTypeDto createServiceType(CreateServiceTypeRequest request) {
+        if (serviceTypeRepository.existsByNameIgnoreCase(request.name())) {
+            throw new ConflictException("SERVICE_TYPE_EXISTS", "error.service_type_exists");
+        }
+        ServiceType saved = serviceTypeRepository.save(
+                ServiceType.builder().name(request.name()).build()
+        );
+        return new ServiceTypeDto(saved.getId(), saved.getName());
     }
 
     private void validateImageFile(MultipartFile file) {

@@ -271,4 +271,14 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGymServices(gymId)));
     }
 
+    @PostMapping("/service-types")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<ServiceTypeDto>> createServiceType(
+            @RequestBody @Valid CreateServiceTypeRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(gymAdminWriteService.createServiceType(request)));
+    }
+
+
 }
