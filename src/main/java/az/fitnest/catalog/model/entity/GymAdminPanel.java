@@ -59,6 +59,17 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @ToString.Exclude
     private List<Trainer> trainers = new ArrayList<Trainer>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "gym_service_items",
+            joinColumns = @JoinColumn(name = "gym_id"),
+            inverseJoinColumns = @JoinColumn(name = "service_item_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<GymServiceItem> services = new HashSet<>();
+
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
@@ -70,7 +81,7 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private Set<GymSubscription> subscriptions = new HashSet<>();
+    private Set<AdminPanelGymSubscription> subscriptions = new HashSet<>();
 
     @Column(name = "rating")
     @Builder.Default

@@ -5,12 +5,12 @@ import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
+import az.fitnest.catalog.model.entity.AdminPanelGymSubscription;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
+import az.fitnest.catalog.model.entity.SubscriptionType;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.enums.GymStatus;
-import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
-import az.fitnest.catalog.repository.GymAdminPanelRepository;
-import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,13 +21,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AdminPanelGymReadService {
 
+    private final AdminPanelGymSubscriptionRepository gymSubscriptionRepository;
     private final AdminPanelWorkingHourRepository workingHourRepository;
+    private final SubscriptionTypeRepository subscriptionTypeRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final TrainerRepository trainerRepository;
@@ -97,6 +101,32 @@ public class AdminPanelGymReadService {
         Trainer t = trainerRepository.findByIdAndGymId(trainerId, gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         return adminPanelGymMapper.toDetailDto(t);
+    }
+
+    public List<SubscriptionTypeDto> getSubscriptionTypes() {
+        return subscriptionTypeRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(s -> new SubscriptionTypeDto(s.getId(), s.getName()))
+                .toList();
+    }
+
+    public List<GymSubscriptionDto> getGymSubscriptions(Long gymId) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<AdminPanelGymSubscription> subscriptions = gymSubscriptionRepository.findAllByGymId(gymId);
+        Map<Long, String> typeNames = subscriptionTypeRepository.findAllById(
+                subscriptions.stream().map(AdminPanelGymSubscription::getSubscriptionTypeId).toList()
+        ).stream().collect(Collectors.toMap(SubscriptionType::getId, SubscriptionType::getName));
+
+        return subscriptions.stream()
+                .map(s -> new GymSubscriptionDto(
+                        s.getId(),
+                        s.getSubscriptionTypeId(),
+                        typeNames.get(s.getSubscriptionTypeId()),
+                        s.getIsAvailable()
+                ))
+                .toList();
     }
 
 }
