@@ -194,5 +194,22 @@ public class AdminPanelGymReadService {
         return PaginatedResponse.of(result);
     }
 
-    
+    public RatingDetailDto getRating(Long gymId, Long ratingId) {
+        GymRating r = ratingRepository.findByIdAndGymId(ratingId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("RATING_NOT_FOUND", "error.rating_not_found"));
+
+        return new RatingDetailDto(
+                r.getId(),
+                r.getCustomerId(),
+                r.getCustomerFullName(),
+                r.getRating(),
+                r.getComment(),
+                r.getStatus(),
+                r.getModerationNote(),
+                r.getModeratedBy(),
+                r.getModeratedAt(),
+                r.getCreatedDate()
+        );
+    }
+
 }

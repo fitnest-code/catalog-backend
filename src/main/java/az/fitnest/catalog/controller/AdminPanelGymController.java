@@ -357,4 +357,14 @@ public class AdminPanelGymController {
         ));
     }
 
+    @GetMapping("/{gymId}/ratings/{ratingId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<RatingDetailDto>> getRating(
+            @PathVariable Long gymId,
+            @PathVariable Long ratingId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getRating(gymId, ratingId)));
+    }
+
+
 }
