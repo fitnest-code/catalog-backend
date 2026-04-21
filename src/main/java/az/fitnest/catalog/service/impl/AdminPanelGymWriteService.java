@@ -1,6 +1,5 @@
 package az.fitnest.catalog.service.impl;
 
-import aQute.bnd.annotation.metatype.Meta;
 import az.fitnest.catalog.dto.admin.*;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ConflictException;
@@ -8,6 +7,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.model.enums.GymAdminStatus;
 import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,13 +38,15 @@ public class AdminPanelGymWriteService {
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final SubscriptionTypeRepository subscriptionTypeRepository;
-    private final GymServiceItemRepository  gymServiceItemRepository;
+    private final GymServiceItemRepository gymServiceItemRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
+    private final AdminPanelGymAdminRepository adminRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final FileStorageService fileStorageService;
     private final TrainerRepository trainerRepository;
     private final LocationService locationService;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public AdminPanelGymResponse createGymForAdmin(AdminPanelCreateGymRequest request) {
@@ -356,6 +359,32 @@ public class AdminPanelGymWriteService {
                         .build())
                 .toList();
         gymServiceItemRepository.saveAll(newServices);
+    }
+
+    @Transactional
+    public GymAdminListDto createAdmin(Long gymId, CreateGymAdminRequest request) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (adminRepository.existsByEmail(request.email())) {
+            throw new ConflictException("EMAIL_EXISTS", "error.email_exists");
+        }
+        if (adminRepository.existsByPhoneNumber(request.phoneNumber())) {
+            throw new ConflictException("PHONE_EXISTS", "error.phone_exists");
+        }
+
+        AdminPanelGymAdmin admin = AdminPanelGymAdmin.builder()
+                .gym(gymAdminPanelRepository.getReferenceById(gymId))
+                .firstName(request.firstName())
+                .lastName(request.lastName())
+                .phoneNumber(request.phoneNumber())
+                .email(request.email())
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .role(request.role())
+                .status(GymAdminStatus.ACTIVE)
+                .build();
+
+        return adminPanelGymMapper.toAdminListDto(adminRepository.save(admin));
     }
 
     private void validateImageFile(MultipartFile file) {

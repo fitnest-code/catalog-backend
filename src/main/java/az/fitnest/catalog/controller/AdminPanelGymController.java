@@ -298,4 +298,15 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getAdmins(gymId)));
     }
 
+    @PostMapping("/{gymId}/admins")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<GymAdminListDto>> createAdmin(
+            @PathVariable Long gymId,
+            @RequestBody @Valid CreateGymAdminRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(gymAdminWriteService.createAdmin(gymId, request)));
+    }
+
+
 }

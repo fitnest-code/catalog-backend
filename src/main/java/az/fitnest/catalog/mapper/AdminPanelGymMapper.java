@@ -106,7 +106,7 @@ public final class AdminPanelGymMapper {
         trainer.setEmail(request.email());
     }
 
-    public GymAdminListDto adminListDto(AdminPanelGymAdmin admin) {
+    public GymAdminListDto toAdminListDto(AdminPanelGymAdmin admin) {
         return new GymAdminListDto(
                 admin.getId(),
                 admin.getFirstName(),

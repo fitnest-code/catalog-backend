@@ -162,7 +162,7 @@ public class AdminPanelGymReadService {
 
         return adminRepository.findAllByGymId(gymId)
                 .stream()
-                .map(mapper::adminListDto)
+                .map(mapper::toAdminListDto)
                 .toList();
     }
 
