@@ -2,7 +2,7 @@ package az.fitnest.catalog.dto.admin;
 
 import az.fitnest.catalog.model.enums.GymStatus;
 
-public record AdminGymListDto(
+public record AdminPanelGymListDto(
         Long id,
         String name,
         String city,

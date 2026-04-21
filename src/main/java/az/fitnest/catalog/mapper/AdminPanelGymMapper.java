@@ -1,10 +1,7 @@
 package az.fitnest.catalog.mapper;
 
 import az.fitnest.catalog.dto.admin.*;
-import az.fitnest.catalog.model.entity.AddressAdminPanel;
-import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
-import az.fitnest.catalog.model.entity.GymAdminPanel;
-import az.fitnest.catalog.model.entity.Trainer;
+import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import org.springframework.stereotype.Component;
 
@@ -107,6 +104,18 @@ public final class AdminPanelGymMapper {
         trainer.setSpecialization(request.specialization());
         trainer.setPhone(request.phoneNumber());
         trainer.setEmail(request.email());
+    }
+
+    public GymAdminListDto adminListDto(AdminPanelGymAdmin admin) {
+        return new GymAdminListDto(
+                admin.getId(),
+                admin.getFirstName(),
+                admin.getLastName(),
+                admin.getPhoneNumber(),
+                admin.getEmail(),
+                admin.getRole(),
+                admin.getStatus()
+        );
     }
 
     private java.time.LocalTime parseTime(String time) {

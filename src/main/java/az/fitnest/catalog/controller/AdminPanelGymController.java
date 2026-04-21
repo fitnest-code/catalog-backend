@@ -34,7 +34,7 @@ public class AdminPanelGymController {
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @Operation(summary = "Admin - Zalların siyahısı")
-    public ResponseEntity<PaginatedResponse<AdminGymListDto>> getGymsForAdmin(
+    public ResponseEntity<PaginatedResponse<AdminPanelGymListDto>> getGymsForAdmin(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) GymStatus status,
             @RequestParam(required = false) Long cityId,
@@ -288,6 +288,14 @@ public class AdminPanelGymController {
     ) {
         gymAdminWriteService.updateGymServices(gymId, request);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{gymId}/admins")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<GymAdminListDto>>> getAdmins(
+            @PathVariable Long gymId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getAdmins(gymId)));
     }
 
 }

@@ -1,6 +1,6 @@
 package az.fitnest.catalog.repository;
 
-import az.fitnest.catalog.dto.admin.AdminGymListDto;
+import az.fitnest.catalog.dto.admin.AdminPanelGymListDto;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
 import az.fitnest.catalog.model.enums.GymStatus;
 import feign.Param;
@@ -35,7 +35,7 @@ public interface GymAdminPanelRepository extends JpaRepository<GymAdminPanel, Lo
                        LOWER(CONCAT(ga.name, ' ', ga.surname)) LIKE LOWER(CONCAT('%', :search, '%'))
                   )
             """)
-    Page<AdminGymListDto> findAllForAdmin(
+    Page<AdminPanelGymListDto> findAllForAdmin(
             @Param("search") String search,
             @Param("status") GymStatus status,
             @Param("cityName") String cityName,

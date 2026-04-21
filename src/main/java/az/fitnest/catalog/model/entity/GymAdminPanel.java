@@ -81,18 +81,24 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @ToString.Exclude
     private Set<SubscriptionType> subscriptionTypes = new HashSet<>();
 
+    @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<AdminPanelGymSubscription> subscriptions = new HashSet<>();
+
+    @OneToMany(mappedBy = "gym", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private List<AdminPanelGymAdmin> admins = new ArrayList<>();
+
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<Review> reviews = new ArrayList<Review>();
-
-    @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<AdminPanelGymSubscription> subscriptions = new HashSet<>();
 
     @Column(name = "rating")
     @Builder.Default

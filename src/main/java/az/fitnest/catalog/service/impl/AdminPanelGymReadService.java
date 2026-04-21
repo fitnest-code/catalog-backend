@@ -31,13 +31,15 @@ public class AdminPanelGymReadService {
     private final SubscriptionTypeRepository subscriptionTypeRepository;
     private final GymServiceItemRepository gymServiceItemRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
+    private final AdminPanelGymAdminRepository adminRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
     private final TrainerRepository trainerRepository;
     private final LocationService locationService;
+    private final AdminPanelGymMapper mapper;
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<AdminGymListDto> getGymsForAdmin(
+    public PaginatedResponse<AdminPanelGymListDto> getGymsForAdmin(
             String search, GymStatus status,
             Long cityId, Long districtId,
             String sortBy, SortDirection sortOrder,
@@ -56,7 +58,7 @@ public class AdminPanelGymReadService {
                 Sort.by(Sort.Direction.fromString(sortOrder.name()), sortBy)
         );
 
-        Page<AdminGymListDto> result = gymAdminPanelRepository
+        Page<AdminPanelGymListDto> result = gymAdminPanelRepository
                 .findAllForAdmin(search, status, cityName, districtName, pageable);
 
         return PaginatedResponse.of(result);
@@ -151,6 +153,16 @@ public class AdminPanelGymReadService {
                         typeNames.get(s.getServiceTypeId()),
                         s.getIsAvailable()
                 ))
+                .toList();
+    }
+
+    public List<GymAdminListDto> getAdmins(Long gymId) {
+        gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        return adminRepository.findAllByGymId(gymId)
+                .stream()
+                .map(mapper::adminListDto)
                 .toList();
     }
 
