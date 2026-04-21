@@ -387,6 +387,23 @@ public class AdminPanelGymWriteService {
         return adminPanelGymMapper.toAdminListDto(adminRepository.save(admin));
     }
 
+    @Transactional
+    public void updateAdmin(Long gymId, Long adminId, UpdateGymAdminRequest request) {
+        AdminPanelGymAdmin admin = adminRepository.findByIdAndGymId(adminId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+
+        if (!admin.getEmail().equals(request.email()) && adminRepository.existsByEmail(request.email())) {
+            throw new ConflictException("EMAIL_EXISTS", "error.email_exists");
+        }
+        if (!admin.getPhoneNumber().equals(request.phoneNumber()) && adminRepository.existsByPhoneNumber(request.phoneNumber())) {
+            throw new ConflictException("PHONE_EXISTS", "error.phone_exists");
+        }
+
+        adminPanelGymMapper.updateGymAdmin(admin, request);
+
+        adminRepository.save(admin);
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("FILE_REQUIRED", "error.file_required");

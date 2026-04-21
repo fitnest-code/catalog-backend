@@ -308,5 +308,15 @@ public class AdminPanelGymController {
                 .body(ApiResponse.success(gymAdminWriteService.createAdmin(gymId, request)));
     }
 
+    @PutMapping("/{gymId}/admins/{adminId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateAdmin(
+            @PathVariable Long gymId,
+            @PathVariable Long adminId,
+            @RequestBody @Valid UpdateGymAdminRequest request
+    ) {
+        gymAdminWriteService.updateAdmin(gymId, adminId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 
 }

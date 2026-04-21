@@ -118,6 +118,14 @@ public final class AdminPanelGymMapper {
         );
     }
 
+    public void updateGymAdmin(AdminPanelGymAdmin admin, UpdateGymAdminRequest request) {
+        admin.setFirstName(request.firstName());
+        admin.setLastName(request.lastName());
+        admin.setPhoneNumber(request.phoneNumber());
+        admin.setEmail(request.email());
+        admin.setRole(request.role());
+    }
+
     private java.time.LocalTime parseTime(String time) {
         return time != null ? java.time.LocalTime.parse(time) : null;
     }
