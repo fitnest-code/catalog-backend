@@ -8,6 +8,9 @@ import az.fitnest.catalog.dto.TrainerRequest;
 import az.fitnest.catalog.service.impl.GymWriteService;
 import az.fitnest.catalog.service.impl.GymReviewService;
 import az.fitnest.catalog.service.impl.GymTrainerService;
+import az.fitnest.catalog.service.impl.GymReadService;
+import az.fitnest.catalog.dto.GymEntranceHistoryAdminResponse;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +33,7 @@ public class GymAdminController {
     private final GymWriteService gymWriteService;
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
+    private final GymReadService gymReadService;
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -189,6 +193,13 @@ public class GymAdminController {
     public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId) {
         gymTrainerService.deleteTrainer(gymId, trainerId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "İdman zalı giriş tarixçəsini alın", description = "İdman zalı üçün bütün giriş cəhdlərinin (uğurlu/uğursuz) siyahısını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<GymEntranceHistoryAdminResponse>> getGymEntranceHistory(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
 
 }

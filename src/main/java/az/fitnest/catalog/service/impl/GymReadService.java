@@ -10,6 +10,8 @@ import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.SavedGym;
+import az.fitnest.catalog.model.entity.GymEntranceHistory;
+import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
@@ -52,6 +54,7 @@ public class GymReadService {
     private final org.springframework.context.MessageSource messageSource;
     private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
+    private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
 
     public String getUserLanguage(Long userId) {
         String language = "AZ";
@@ -792,7 +795,7 @@ public class GymReadService {
         return qrCodeUrl;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
         Long userId = extractUserId(principal);
         if (userId == null) {
@@ -805,61 +808,122 @@ public class GymReadService {
         Gym gym = gymRepository.findById(gymId)
             .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
+        boolean allowed = true;
+        String reason = null;
+        String status = "ELIGIBLE";
+        
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+            String subStatus = subResp.getSubscriptionStatus();
+            if (subStatus == null || subStatus.isEmpty() || subStatus.equalsIgnoreCase("none") || !subStatus.equalsIgnoreCase("active")) {
+                allowed = false;
+                reason = "NO_ACTIVE_SUBSCRIPTION";
+            } else if (subResp.getRemainingLimit() <= 0) {
+                allowed = false;
+                reason = "VISIT_LIMIT_EXCEEDED";
+            } else {
+                long userPackageId = subResp.getPackageId();
+                boolean gymSupportsPackage = gym.getSubscriptions() != null &&
+                    gym.getSubscriptions().stream()
+                        .anyMatch(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId));
+                if (!gymSupportsPackage) {
+                    allowed = false;
+                    reason = "GYM_NOT_SUPPORTED";
+                }
+            }
         } catch (Exception e) {
-            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
+            allowed = false;
+            reason = "NO_ACTIVE_SUBSCRIPTION";
         }
 
-        String status = subResp.getSubscriptionStatus();
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
-            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
+        if (allowed) {
+            String gender = null;
+            try {
+                az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
+                gender = userResp.getGender();
+            } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
+            }
+
+            boolean withinHours = isWithinWorkingHours(gym, gender);
+            if (!withinHours) {
+                allowed = false;
+                reason = "OUT_OF_WORKING_HOURS";
+            } else {
+                Address address = gym.getAddress();
+                if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null && lng != null) {
+                    double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
+                    if (distance > 0.2) {
+                        allowed = false;
+                        reason = "TOO_FAR_FROM_GYM";
+                    }
+                }
+            }
         }
 
-        if (subResp.getRemainingLimit() <= 0) {
-            throw new ForbiddenException("Your visit limit has been exceeded", "VISIT_LIMIT_EXCEEDED");
+        if (!allowed) {
+            status = "UNSUCCESSFUL";
         }
 
-        long userPackageId = subResp.getPackageId();
-        boolean gymSupportsPackage = gym.getSubscriptions() != null &&
-            gym.getSubscriptions().stream()
-                .anyMatch(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId));
-        if (!gymSupportsPackage) {
-            throw new ForbiddenException("This gym does not support your subscription plan", "GYM_NOT_SUPPORTED");
-        }
+        // Save history
+        GymEntranceHistory history = GymEntranceHistory.builder()
+            .userId(userId)
+            .gymId(gymId)
+            .scanDate(LocalDateTime.now())
+            .status(status)
+            .reason(reason)
+            .build();
+        gymEntranceHistoryRepository.save(history);
 
-        boolean allowed = false;
-        Address address = gym.getAddress();
-        String gymAddress = address != null ? address.getAddressText() : null;
         String userLanguage = getUserLanguage(userId);
         String localizedName = getLocalizedGymName(gym, userLanguage);
-        String enterDate = java.time.LocalDate.now().toString();
-        String enterHour = java.time.LocalTime.now().withSecond(0).withNano(0).toString();
-        double distance = 9999;
-        
-        String gender = null;
-        try {
-            az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
-            gender = userResp.getGender();
-        } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
-        }
+        Address addr = gym.getAddress();
+        String gymAddress = addr != null ? addr.getAddressText() : null;
 
-        boolean withinHours = isWithinWorkingHours(gym, gender);
-        if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null && lng != null) {
-            distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
-            allowed = distance <= 0.2 && withinHours;
-        } else {
-            allowed = withinHours;
-        }
         return GymEntranceScanResponse.builder()
-            .gymName(localizedName)
-            .gymAddress(gymAddress)
-            .enterDate(enterDate)
-            .enterHour(enterHour)
-            .notAllowed(!allowed)
+            .gymName(allowed ? localizedName : null)
+            .gymAddress(allowed ? gymAddress : null)
+            .enterDate(allowed ? java.time.LocalDate.now().toString() : null)
+            .enterHour(allowed ? java.time.LocalTime.now().withSecond(0).withNano(0).toString() : null)
+            .isAllowed(allowed)
+            .status(status)
+            .reason(reason)
             .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        List<GymEntranceHistory> historyList = gymEntranceHistoryRepository.findByGymIdOrderByScanDateDesc(gymId);
+        return historyList.stream().map(h -> {
+            String firstName = "";
+            String lastName = "";
+            String phone = "";
+            try {
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
+                if (user != null) {
+                    firstName = user.getFirstName();
+                    lastName = user.getLastName();
+                    phone = user.getPhoneNumber();
+                }
+            } catch (Exception e) {
+                firstName = "User";
+                lastName = String.valueOf(h.getUserId());
+            }
+            String formattedDate = h.getScanDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            return GymEntranceHistoryAdminResponse.builder()
+                .userId(h.getUserId())
+                .firstName(firstName)
+                .lastName(lastName)
+                .phone(phone)
+                .scanDateTime(formattedDate)
+                .status(h.getStatus())
+                .reason(h.getReason())
+                .build();
+        }).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
