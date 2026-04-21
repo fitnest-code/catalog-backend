@@ -70,6 +70,17 @@ public class GymAdminPanel extends BaseAuditableEntity {
     @ToString.Exclude
     private Set<GymServiceItem> services = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "gym_subscription_types",
+            joinColumns = @JoinColumn(name = "gym_id"),
+            inverseJoinColumns = @JoinColumn(name = "subscription_type_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<SubscriptionType> subscriptionTypes = new HashSet<>();
+
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default

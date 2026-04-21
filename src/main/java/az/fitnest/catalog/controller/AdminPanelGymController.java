@@ -247,6 +247,14 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGymSubscriptions(gymId)));
     }
 
-
+    @PutMapping("/{gymId}/subscriptions")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateGymSubscriptions(
+            @PathVariable Long gymId,
+            @RequestBody @Valid UpdateGymSubscriptionRequest request
+    ) {
+        gymAdminWriteService.updateGymSubscriptions(gymId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 
 }

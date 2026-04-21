@@ -5,13 +5,11 @@ import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ConflictException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
-import az.fitnest.catalog.model.entity.AdminPanelGymImage;
-import az.fitnest.catalog.model.entity.AdminPanelWorkingHour;
-import az.fitnest.catalog.model.entity.GymAdminPanel;
-import az.fitnest.catalog.model.entity.Trainer;
+import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.repository.AdminPanelWorkingHourRepository;
 import az.fitnest.catalog.repository.GymAdminPanelRepository;
+import az.fitnest.catalog.repository.SubscriptionTypeRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.AdminPanelReverseGeocodingService;
 import az.fitnest.catalog.service.FileStorageService;
@@ -38,6 +36,7 @@ public class AdminPanelGymWriteService {
     private static final long MAX_SIZE = 2 * 1024 * 1024;
 
     private final AdminPanelReverseGeocodingService reverseGeocodingService;
+    private final SubscriptionTypeRepository subscriptionTypeRepository;
     private final AdminPanelWorkingHourRepository workingHourRepository;
     private final GymAdminPanelRepository gymAdminPanelRepository;
     private final AdminPanelGymMapper adminPanelGymMapper;
@@ -293,6 +292,26 @@ public class AdminPanelGymWriteService {
         }
 
         trainerRepository.delete(trainer);
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
+    })
+    public void updateGymSubscriptions(Long gymId, UpdateGymSubscriptionRequest request) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<SubscriptionType> types = subscriptionTypeRepository
+                .findAllById(request.subscriptionTypeIds());
+
+        if (types.size() != request.subscriptionTypeIds().size()) {
+            throw new ResourceNotFoundException("INVALID_SUBSCRIPTION_TYPE", "error.invalid_subscription_type");
+        }
+
+        gym.getSubscriptionTypes().clear();
+        gym.getSubscriptionTypes().addAll(types);
+        gymAdminPanelRepository.save(gym);
     }
 
     private void validateImageFile(MultipartFile file) {
