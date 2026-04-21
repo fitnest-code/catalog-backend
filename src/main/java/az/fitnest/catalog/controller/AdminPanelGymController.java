@@ -388,5 +388,14 @@ public class AdminPanelGymController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @DeleteMapping("/{gymId}/ratings/{ratingId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<Void> deleteRating(
+            @PathVariable Long gymId,
+            @PathVariable Long ratingId
+    ) {
+        gymAdminWriteService.deleteRating(gymId, ratingId);
+        return ResponseEntity.noContent().build();
+    }
 
 }

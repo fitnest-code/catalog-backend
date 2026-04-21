@@ -448,6 +448,14 @@ public class AdminPanelGymWriteService {
         gymRatingRepository.save(rating);
     }
 
+    @Transactional
+    public void deleteRating(Long gymId, Long ratingId) {
+        GymRating rating = gymRatingRepository.findByIdAndGymId(ratingId, gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("RATING_NOT_FOUND", "error.rating_not_found"));
+
+        gymRatingRepository.delete(rating);
+    }
+
     private GymRating findPendingRating(Long gymId, Long ratingId) {
         GymRating rating = gymRatingRepository.findByIdAndGymId(ratingId, gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("RATING_NOT_FOUND", "error.rating_not_found"));
