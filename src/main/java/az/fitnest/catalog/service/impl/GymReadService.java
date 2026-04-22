@@ -870,7 +870,7 @@ public class GymReadService {
         GymEntranceHistory history = GymEntranceHistory.builder()
             .userId(userId)
             .gymId(gymId)
-            .scanDate(LocalDateTime.now())
+            .scanDate(LocalDateTime.now(java.time.ZoneId.of("Asia/Baku")))
             .status(status)
             .reason(reason)
             .build();
@@ -884,8 +884,8 @@ public class GymReadService {
         return GymEntranceScanResponse.builder()
             .gymName(allowed ? localizedName : null)
             .gymAddress(allowed ? gymAddress : null)
-            .enterDate(allowed ? java.time.LocalDate.now().toString() : null)
-            .enterHour(allowed ? java.time.LocalTime.now().withSecond(0).withNano(0).toString() : null)
+            .enterDate(allowed ? java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku")).toString() : null)
+            .enterHour(allowed ? java.time.LocalTime.now(java.time.ZoneId.of("Asia/Baku")).withSecond(0).withNano(0).toString() : null)
             .isAllowed(allowed)
             .status(status)
             .reason(reason)
@@ -968,7 +968,7 @@ public class GymReadService {
             return true;
         }
 
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku"));
         java.time.DayOfWeek day = now.getDayOfWeek();
         az.fitnest.catalog.model.enums.GymWorkHourPeriod period;
 
