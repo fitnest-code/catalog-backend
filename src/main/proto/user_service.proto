@@ -32,6 +32,10 @@ message UserResponse {
   string language = 8;
   string created_at = 9;
   string gender = 10;
+  string status = 11;
+  bool account_locked = 12;
+  string session_status = 13;
+  bool has_local_password = 14;
 }
 
 message UpdateUserProfileRequest {
