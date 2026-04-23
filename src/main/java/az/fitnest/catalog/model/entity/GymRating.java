@@ -16,8 +16,9 @@ import java.time.LocalDateTime;
 @Table(name = "gym_ratings")
 public class GymRating extends BaseAuditableEntity {
 
-    @Column(name = "gym_id", nullable = false)
-    private Long gymId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gym_id", nullable = false)
+    private GymAdminPanel gym;
 
     @Column(name = "customer_id")
     private Long customerId;

@@ -16,8 +16,9 @@ public class AdminPanelGymSubscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "gym_id", nullable = false)
-    private Long gymId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gym_id", nullable = false)
+    private GymAdminPanel gym;
 
     @Column(name = "subscription_type_id", nullable = false)
     private Long subscriptionTypeId;

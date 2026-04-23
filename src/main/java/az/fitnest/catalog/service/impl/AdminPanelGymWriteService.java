@@ -371,7 +371,7 @@ public class AdminPanelGymWriteService {
         gymSubscriptionRepository.deleteAllByGymId(gymId);
         List<AdminPanelGymSubscription> newSubs = request.subscriptionTypeIds().stream()
                 .map(typeId -> AdminPanelGymSubscription.builder()
-                        .gymId(gymId)
+                        .id(gymId)
                         .subscriptionTypeId(typeId)
                         .isAvailable(true)
                         .build())
@@ -408,7 +408,7 @@ public class AdminPanelGymWriteService {
         gymServiceItemRepository.deleteAllByGymId(gymId);
         List<GymServiceItem> newServices = request.serviceTypeIds().stream()
                 .map(typeId -> GymServiceItem.builder()
-                        .gymId(gymId)
+                        .id(gymId)
                         .serviceTypeId(typeId)
                         .isAvailable(true)
                         .build())
