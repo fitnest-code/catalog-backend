@@ -4,7 +4,7 @@ import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
-import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
 import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
@@ -37,7 +37,7 @@ public class AdminPanelGymController {
     @Operation(summary = "Admin - Zalların siyahısı")
     public ResponseEntity<PaginatedResponse<AdminPanelGymListDto>> getGymsForAdmin(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) GymStatus status,
+            @RequestParam(required = false) AdminPanelGymStatus status,
             @RequestParam(required = false) Long cityId,
             @RequestParam(required = false) Long districtId,
             @RequestParam(defaultValue = "createdAt") String sortBy,

@@ -2,7 +2,7 @@ package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.dto.admin.AdminPanelGymListDto;
 import az.fitnest.catalog.model.entity.GymAdminPanel;
-import az.fitnest.catalog.model.enums.GymStatus;
+import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
 import feign.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,17 +14,19 @@ import java.util.List;
 public interface GymAdminPanelRepository extends JpaRepository<GymAdminPanel, Long> {
 
     @Query("""
-                SELECT DISTINCT new az.fitnest.catalog.model.dto.AdminGymListDto(
+                SELECT DISTINCT new az.fitnest.catalog.dto.admin.AdminPanelGymListDto(
                     g.id,
                     g.name,
                     g.address.city,
                     g.address.district,
-                    ga.name,
-                    ga.surname,
+                    CASE
+                        WHEN ga.id IS NULL THEN null
+                        ELSE CONCAT(COALESCE(ga.firstName, ''), ' ', COALESCE(ga.lastName, ''))
+                    END,
                     g.status
                 )
                 FROM GymAdminPanel g
-                LEFT JOIN GymAdmin ga ON ga.gym = g
+                LEFT JOIN AdminPanelGymAdmin ga ON ga.gym = g
                 WHERE (:status IS NULL OR g.status = :status)
                   AND (:cityName IS NULL OR g.address.city = :cityName)
                   AND (:districtName IS NULL OR g.address.district = :districtName)
@@ -32,12 +34,12 @@ public interface GymAdminPanelRepository extends JpaRepository<GymAdminPanel, Lo
                        LOWER(g.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
                        LOWER(g.address.city) LIKE LOWER(CONCAT('%', :search, '%')) OR
                        LOWER(g.address.district) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                       LOWER(CONCAT(ga.name, ' ', ga.surname)) LIKE LOWER(CONCAT('%', :search, '%'))
+                       LOWER(CONCAT(COALESCE(ga.firstName, ''), ' ', COALESCE(ga.lastName, ''))) LIKE LOWER(CONCAT('%', :search, '%'))
                   )
             """)
     Page<AdminPanelGymListDto> findAllForAdmin(
             @Param("search") String search,
-            @Param("status") GymStatus status,
+            @Param("status") AdminPanelGymStatus status,
             @Param("cityName") String cityName,
             @Param("districtName") String districtName,
             Pageable pageable
