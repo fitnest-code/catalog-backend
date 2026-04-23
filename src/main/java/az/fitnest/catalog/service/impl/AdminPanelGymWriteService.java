@@ -23,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,6 +60,56 @@ public class AdminPanelGymWriteService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
+    })
+    public void updateGymStatus(Long gymId, AdminPanelUpdateGymStatusRequest request) {
+        GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        AdminPanelGymStatus newStatus = AdminPanelGymStatus.valueOf(request.status().name());
+
+        if (gym.getStatus() == newStatus) {
+            throw new ConflictException("SAME_STATUS", "error.same_status");
+        }
+
+        if (newStatus == AdminPanelGymStatus.ACTIVE) {
+            validateActivationRequirements(gym);
+        }
+
+        gym.setStatus(newStatus);
+        gymAdminPanelRepository.save(gym);
+    }
+
+    private void validateActivationRequirements(GymAdminPanel gym) {
+        List<String> missing = new ArrayList<>();
+
+        if (!StringUtils.hasText(gym.getName()))
+            missing.add("name");
+
+        if (!StringUtils.hasText(gym.getPhone()))
+            missing.add("phoneNumber");
+
+        if (gym.getAddress() == null || !StringUtils.hasText(gym.getAddress().getAddressText()))
+            missing.add("address");
+
+        if (!StringUtils.hasText(gym.getCoverImageUrl()))
+            missing.add("coverImage");
+
+        boolean hasWorkingHours = gym.getWorkingHours() != null
+                && !gym.getWorkingHours().isEmpty();
+        if (!hasWorkingHours)
+            missing.add("ən azı 1 iş saatı");
+
+        if (!missing.isEmpty()) {
+            throw new BadRequestException(
+                    "ACTIVATION_REQUIREMENTS_NOT_MET",
+                    "Tamamlanmalıdır: " + String.join(", ", missing)
+            );
+        }
+    }
+
+    @Transactional
     public void deleteGym(Long gymId) {
         GymAdminPanel gym = gymAdminPanelRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -67,6 +119,7 @@ public class AdminPanelGymWriteService {
         }
 
         gym.setStatus(AdminPanelGymStatus.DELETED);
+        gym.setDeletedAt(LocalDateTime.now());
         gymAdminPanelRepository.save(gym);
     }
 

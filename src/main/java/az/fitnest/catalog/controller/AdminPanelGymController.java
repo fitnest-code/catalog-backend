@@ -4,7 +4,7 @@ import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.dto.admin.*;
-import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.model.enums.GymFilterStatus;
 import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
 import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
@@ -42,7 +42,7 @@ public class AdminPanelGymController {
     })
     public ResponseEntity<PaginatedResponse<AdminPanelGymListDto>> getGymsForAdmin(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) AdminPanelGymStatus status,
+            @RequestParam(required = false) GymFilterStatus status,
             @RequestParam(required = false) Long cityId,
             @RequestParam(required = false) Long districtId,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -85,6 +85,16 @@ public class AdminPanelGymController {
             @PathVariable Long gymId
     ) {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getGymForAdmin(gymId)));
+    }
+
+    @PatchMapping("/{gymId}/status")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateGymStatus(
+            @PathVariable Long gymId,
+            @RequestBody @Valid AdminPanelUpdateGymStatusRequest request
+    ) {
+        gymAdminWriteService.updateGymStatus(gymId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{gymId}")

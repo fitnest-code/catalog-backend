@@ -27,7 +27,8 @@ public interface GymAdminPanelRepository extends JpaRepository<GymAdminPanel, Lo
                 )
                 FROM GymAdminPanel g
                 LEFT JOIN AdminPanelGymAdmin ga ON ga.gym = g
-                WHERE (:status IS NULL OR g.status = :status)
+                WHERE g.deletedAt IS NULL
+                  AND (:status IS NULL OR g.status = :status)
                   AND (:cityName IS NULL OR g.address.city = :cityName)
                   AND (:districtName IS NULL OR g.address.district = :districtName)
                   AND (:search IS NULL OR

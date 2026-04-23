@@ -7,6 +7,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.AdminPanelGymMapper;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.AdminPanelGymStatus;
+import az.fitnest.catalog.model.enums.GymFilterStatus;
 import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -42,13 +43,17 @@ public class AdminPanelGymReadService {
 
     @Transactional(readOnly = true)
     public PaginatedResponse<AdminPanelGymListDto> getGymsForAdmin(
-            String search, AdminPanelGymStatus status,
+            String search, GymFilterStatus filterStatus,
             Long cityId, Long districtId,
             String sortBy, SortDirection sortOrder,
             int page, int size) {
 
         Set<String> allowed = Set.of("name", "createdAt", "status");
         if (!allowed.contains(sortBy)) sortBy = "createdAt";
+
+        AdminPanelGymStatus status = filterStatus != null
+                ? AdminPanelGymStatus.valueOf(filterStatus.name())
+                : null;
 
         String cityName = locationService.resolveCityName(cityId);
         String districtName = locationService.resolveDistrictName(cityId, districtId);
