@@ -44,11 +44,12 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT g FROM Gym g JOIN g.categories c WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', :q, '%'))) AND c.id = :categoryId")
     public org.springframework.data.domain.Page<Gym> findByNameOrDescriptionContainingIgnoreCaseAndCategory(@org.springframework.data.repository.query.Param("q") String q, @org.springframework.data.repository.query.Param("categoryId") Long categoryId, org.springframework.data.domain.Pageable pageable);
 
-    @org.springframework.data.jpa.repository.Query(value = "SELECT DISTINCT g.* FROM gyms g JOIN gym_categories gc ON g.id = gc.gym_id WHERE gc.category_id = :categoryId " +
+    @org.springframework.data.jpa.repository.Query(value = "SELECT g.* FROM gyms g WHERE EXISTS (SELECT 1 FROM gym_categories gc WHERE gc.gym_id = g.id AND gc.category_id = :categoryId) " +
             "ORDER BY (6371 * acos(least(1, cos(radians(:userLat)) * cos(radians(g.latitude)) * cos(radians(g.longitude) - radians(:userLng)) + sin(radians(:userLat)) * sin(radians(g.latitude))))) ASC", nativeQuery = true)
     public org.springframework.data.domain.Page<Gym> findByCategoryClosest(@org.springframework.data.repository.query.Param("categoryId") Long categoryId, @org.springframework.data.repository.query.Param("userLat") Double userLat, @org.springframework.data.repository.query.Param("userLng") Double userLng, org.springframework.data.domain.Pageable pageable);
 
-    @org.springframework.data.jpa.repository.Query(value = "SELECT DISTINCT g.* FROM gyms g JOIN gym_categories gc ON g.id = gc.gym_id WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%'))) AND gc.category_id = :categoryId " +
+    @org.springframework.data.jpa.repository.Query(value = "SELECT g.* FROM gyms g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+            "AND EXISTS (SELECT 1 FROM gym_categories gc WHERE gc.gym_id = g.id AND gc.category_id = :categoryId) " +
             "ORDER BY (6371 * acos(least(1, cos(radians(:userLat)) * cos(radians(g.latitude)) * cos(radians(g.longitude) - radians(:userLng)) + sin(radians(:userLat)) * sin(radians(g.latitude))))) ASC", nativeQuery = true)
     public org.springframework.data.domain.Page<Gym> searchClosestWithCategory(@org.springframework.data.repository.query.Param("q") String q, @org.springframework.data.repository.query.Param("categoryId") Long categoryId, @org.springframework.data.repository.query.Param("userLat") Double userLat, @org.springframework.data.repository.query.Param("userLng") Double userLng, org.springframework.data.domain.Pageable pageable);
 
