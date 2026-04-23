@@ -9,6 +9,7 @@ import az.fitnest.catalog.model.enums.RatingStatus;
 import az.fitnest.catalog.service.impl.AdminPanelGymReadService;
 import az.fitnest.catalog.service.impl.AdminPanelGymWriteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,7 +35,11 @@ public class AdminPanelGymController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
-    @Operation(summary = "Admin - Zalların siyahısı")
+    @Operation(summary = "Admin - Zalların siyahısı", description = "Filtrlər və sıralama əsasında admin paneli üçün zalları paginated şəkildə qaytarır.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Zallar uğurla qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Bu əməliyyat üçün icazə yoxdur")
+    })
     public ResponseEntity<PaginatedResponse<AdminPanelGymListDto>> getGymsForAdmin(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) AdminPanelGymStatus status,
@@ -54,6 +59,12 @@ public class AdminPanelGymController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Yeni zal yarat", description = "Admin panelindən yeni idman zalı yaradır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Zal uğurla yaradıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Daxil edilən məlumat yanlışdır"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Bu əməliyyat üçün icazə yoxdur")
+    })
     public ResponseEntity<ApiResponse<AdminPanelGymResponse>> createGymForAdmin(
             @RequestBody @Valid AdminPanelCreateGymRequest request
     ) {
@@ -64,6 +75,12 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal detalı", description = "Verilən zalın admin panel üçün detallı məlumatlarını qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Zal detalları qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Bu əməliyyat üçün icazə yoxdur")
+    })
     public ResponseEntity<ApiResponse<AdminPanelGymDetailDto>> getGymForAdmin(
             @PathVariable Long gymId
     ) {
@@ -72,6 +89,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal sil", description = "Verilən zalı sistemdən silir.")
     public ResponseEntity<Void> deleteGym(@PathVariable Long gymId) {
         gymAdminWriteService.deleteGym(gymId);
         return ResponseEntity.noContent().build();
@@ -79,6 +97,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/general-info")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Ümumi məlumatları yenilə", description = "Zalın ad, təsvir, status, əlaqə və ünvan məlumatlarını yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateGeneralInfo(
             @PathVariable Long gymId,
             @RequestBody @Valid GeneralInfoRequest request
@@ -89,6 +108,12 @@ public class AdminPanelGymController {
 
     @PostMapping("/{gymId}/cover-image")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Cover şəkli yüklə", description = "Zal üçün cover image yükləyir və saxlayır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cover şəkli uğurla yükləndi"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Fayl yanlışdır"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Bu əməliyyat üçün icazə yoxdur")
+    })
     public ResponseEntity<ApiResponse<CoverImageResponse>> uploadCoverImage(
             @PathVariable Long gymId,
             @RequestParam("file") MultipartFile file
@@ -98,6 +123,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/cover-image")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Cover şəkli sil", description = "Zalın cover şəklini silir.")
     public ResponseEntity<Void> deleteCoverImage(@PathVariable Long gymId) {
         gymAdminWriteService.deleteCoverImage(gymId);
         return ResponseEntity.noContent().build();
@@ -105,6 +131,7 @@ public class AdminPanelGymController {
 
     @PostMapping("/{gymId}/gallery-images")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Qalereya şəkli əlavə et", description = "Zala yeni qalereya şəkli əlavə edir.")
     public ResponseEntity<ApiResponse<Void>> addGalleryImage(
             @PathVariable Long gymId,
             @RequestParam("file") MultipartFile file,
@@ -116,6 +143,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/gallery-images")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Qalereya şəkilləri", description = "Verilən zalın bütün qalereya şəkillərini qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Qalereya şəkilləri qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<ApiResponse<List<AdminPanelGymImageDto>>> getGalleryImages(
             @PathVariable Long gymId
     ) {
@@ -124,6 +156,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/gallery-images/{imageId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Qalereya şəklini sil", description = "Seçilmiş qalereya şəklini silir.")
     public ResponseEntity<Void> deleteGalleryImage(
             @PathVariable Long gymId,
             @PathVariable Long imageId
@@ -134,6 +167,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/gallery-images/order")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Şəkil sırasını yenilə", description = "Qalereya şəkillərinin sırasını yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateImageOrder(
             @PathVariable Long gymId,
             @RequestBody @Valid UpdateImageOrderRequest request
@@ -144,6 +178,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/working-hours")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - İş saatları", description = "Zalın iş saatlarını qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "İş saatları qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<ApiResponse<List<WorkingHourDto>>> getWorkingHours(
             @PathVariable Long gymId
     ) {
@@ -152,6 +191,11 @@ public class AdminPanelGymController {
 
     @PostMapping("/{gymId}/working-hours")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - İş saatı əlavə et", description = "Zala yeni iş saatı əlavə edir.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "İş saatı yaradıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Daxil edilən məlumat yanlışdır")
+    })
     public ResponseEntity<ApiResponse<WorkingHourDto>> addWorkingHour(
             @PathVariable Long gymId,
             @RequestBody @Valid WorkingHourRequest request
@@ -162,6 +206,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/working-hours/{workingHourId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - İş saatını yenilə", description = "Mövcud iş saatını yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateWorkingHour(
             @PathVariable Long gymId,
             @PathVariable Long workingHourId,
@@ -173,6 +218,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/working-hours/{workingHourId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - İş saatını sil", description = "Mövcud iş saatını silir.")
     public ResponseEntity<Void> deleteWorkingHour(
             @PathVariable Long gymId,
             @PathVariable Long workingHourId
@@ -183,6 +229,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/trainers")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Məşqçilərin siyahısı", description = "Seçilmiş zal üçün məşqçiləri paginated qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Məşqçilər qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<PaginatedResponse<TrainerListDto>> getTrainers(
             @PathVariable Long gymId,
             @RequestParam(required = false) String search,
@@ -194,6 +245,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/trainers/{trainerId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Məşqçi detalı", description = "Seçilmiş məşqçi haqqında detal qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Məşqçi detalları qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Məşqçi tapılmadı")
+    })
     public ResponseEntity<ApiResponse<TrainerDetailDto>> getTrainer(
             @PathVariable Long gymId,
             @PathVariable Long trainerId
@@ -203,6 +259,11 @@ public class AdminPanelGymController {
 
     @PostMapping(value = "/{gymId}/trainers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Məşqçi əlavə et", description = "Zala yeni məşqçi əlavə edir, lazım olsa şəkil də yükləyir.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Məşqçi yaradıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Daxil edilən məlumat yanlışdır")
+    })
     public ResponseEntity<ApiResponse<TrainerDetailDto>> addTrainer(
             @PathVariable Long gymId,
             @RequestPart("data") @Valid AdminPanelTrainerRequest request,
@@ -214,6 +275,7 @@ public class AdminPanelGymController {
 
     @PutMapping(value = "/{gymId}/trainers/{trainerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Məşqçi yenilə", description = "Mövcud məşqçi məlumatlarını yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateTrainer(
             @PathVariable Long gymId,
             @PathVariable Long trainerId,
@@ -226,6 +288,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/trainers/{trainerId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Məşqçini sil", description = "Seçilmiş məşqçini sistemdən silir.")
     public ResponseEntity<Void> deleteTrainer(
             @PathVariable Long gymId,
             @PathVariable Long trainerId
@@ -236,12 +299,21 @@ public class AdminPanelGymController {
 
     @GetMapping("/subscription-types")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Subscription tipləri", description = "Sistemdə mövcud subscription tiplərini qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Subscription tipləri qaytarıldı")
+    })
     public ResponseEntity<ApiResponse<List<SubscriptionTypeDto>>> getSubscriptionTypes() {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getSubscriptionTypes()));
     }
 
     @GetMapping("/{gymId}/subscriptions")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal subscription-ları", description = "Seçilmiş zalın subscription-larını qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Subscription-lar qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<ApiResponse<List<GymSubscriptionDto>>> getGymSubscriptions(
             @PathVariable Long gymId
     ) {
@@ -250,6 +322,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/subscriptions")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal subscription-larını yenilə", description = "Zal üçün subscription seçimlərini yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateGymSubscriptions(
             @PathVariable Long gymId,
             @RequestBody @Valid UpdateGymSubscriptionRequest request
@@ -260,12 +333,21 @@ public class AdminPanelGymController {
 
     @GetMapping("/service-types")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Service tipləri", description = "Sistemdə mövcud olan service tiplərini qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Service tipləri qaytarıldı")
+    })
     public ResponseEntity<ApiResponse<List<ServiceTypeDto>>> getServiceTypes() {
         return ResponseEntity.ok(ApiResponse.success(gymAdminReadService.getServiceTypes()));
     }
 
     @GetMapping("/{gymId}/services")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal servisləri", description = "Seçilmiş zalın servislərini qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Servislər qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<ApiResponse<List<GymServiceItemDto>>> getGymServices(
             @PathVariable Long gymId
     ) {
@@ -274,6 +356,11 @@ public class AdminPanelGymController {
 
     @PostMapping("/service-types")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Service tipi yarat", description = "Yeni service tipi yaradır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Service tipi yaradıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Daxil edilən məlumat yanlışdır")
+    })
     public ResponseEntity<ApiResponse<ServiceTypeDto>> createServiceType(
             @RequestBody @Valid CreateServiceTypeRequest request
     ) {
@@ -283,6 +370,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/services")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal servislərini yenilə", description = "Zalın servislərini yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateGymServices(
             @PathVariable Long gymId,
             @RequestBody @Valid UpdateGymServiceRequest request
@@ -293,6 +381,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/admins")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal adminləri", description = "Seçilmiş zala bağlı adminləri qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Adminlər qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<ApiResponse<List<GymAdminListDto>>> getAdmins(
             @PathVariable Long gymId
     ) {
@@ -301,6 +394,11 @@ public class AdminPanelGymController {
 
     @PostMapping("/{gymId}/admins")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal admini yarat", description = "Seçilmiş zala yeni admin əlavə edir.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Admin yaradıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Daxil edilən məlumat yanlışdır")
+    })
     public ResponseEntity<ApiResponse<GymAdminListDto>> createAdmin(
             @PathVariable Long gymId,
             @RequestBody @Valid CreateGymAdminRequest request
@@ -311,6 +409,7 @@ public class AdminPanelGymController {
 
     @PutMapping("/{gymId}/admins/{adminId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal adminini yenilə", description = "Mövcud zal admin məlumatlarını yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> updateAdmin(
             @PathVariable Long gymId,
             @PathVariable Long adminId,
@@ -322,6 +421,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/admins/{adminId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Zal adminini sil", description = "Seçilmiş zal adminini silir.")
     public ResponseEntity<Void> deleteAdmin(
             @PathVariable Long gymId,
             @PathVariable Long adminId
@@ -332,6 +432,7 @@ public class AdminPanelGymController {
 
     @PostMapping("/{gymId}/admins/{adminId}/reset-password")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Admin şifrəsini yenilə", description = "Seçilmiş zal admininin şifrəsini yeniləyir.")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
             @PathVariable Long gymId,
             @PathVariable Long adminId,
@@ -343,6 +444,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/ratings")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Reytinq", description = "Zal üçün reytinqləri paginated şəkildə qaytarır.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Reytinqlər qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Zal tapılmadı")
+    })
     public ResponseEntity<PaginatedResponse<RatingListDto>> getRatings(
             @PathVariable Long gymId,
             @RequestParam(required = false) String search,
@@ -359,6 +465,11 @@ public class AdminPanelGymController {
 
     @GetMapping("/{gymId}/ratings/{ratingId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Reytinq detalı", description = "Seçilmiş reyting və rəyi detallı göstərir.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Reytinq detalı qaytarıldı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Rəy tapılmadı")
+    })
     public ResponseEntity<ApiResponse<RatingDetailDto>> getRating(
             @PathVariable Long gymId,
             @PathVariable Long ratingId
@@ -368,6 +479,7 @@ public class AdminPanelGymController {
 
     @PatchMapping("/{gymId}/ratings/{ratingId}/approve")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Rəyi təsdiqlə", description = "Seçilmiş rəyi təsdiqləyir.")
     public ResponseEntity<ApiResponse<Void>> approveRating(
             @PathVariable Long gymId,
             @PathVariable Long ratingId,
@@ -379,6 +491,7 @@ public class AdminPanelGymController {
 
     @PatchMapping("/{gymId}/ratings/{ratingId}/reject")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Rəyi rədd et", description = "Seçilmiş rəyi rədd edir.")
     public ResponseEntity<ApiResponse<Void>> rejectRating(
             @PathVariable Long gymId,
             @PathVariable Long ratingId,
@@ -390,6 +503,7 @@ public class AdminPanelGymController {
 
     @DeleteMapping("/{gymId}/ratings/{ratingId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Admin - Rəyi sil", description = "Seçilmiş rəyi sistemdən silir.")
     public ResponseEntity<Void> deleteRating(
             @PathVariable Long gymId,
             @PathVariable Long ratingId
