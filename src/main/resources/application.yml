@@ -72,13 +72,13 @@ spring:
 
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:redis.fitnest-development.svc.cluster.local}
+      host: ${SPRING_DATA_REDIS_HOST:redis.fitnest-production.svc.cluster.local}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
       timeout: 2000ms
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service.fitnest-development.svc.cluster.local:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service.fitnest-production.svc.cluster.local:9092}
     consumer:
       group-id: catalog-backend
       auto-offset-reset: earliest
@@ -169,13 +169,13 @@ grpc:
   client:
     # ✅ Updated gRPC client addresses
     user-backend:
-      address: 'dns:///user-backend.fitnest-development.svc.cluster.local:9090'
+      address: 'dns:///user-backend.fitnest-production.svc.cluster.local:9090'
       negotiation-type: plaintext
     storage-backend:
-      address: 'dns:///storage-backend.fitnest-development.svc.cluster.local:9090'
+      address: 'dns:///storage-backend.fitnest-production.svc.cluster.local:9090'
       negotiation-type: plaintext
     order-backend:
-      address: 'dns:///order-backend.fitnest-development.svc.cluster.local:9090'
+      address: 'dns:///order-backend.fitnest-production.svc.cluster.local:9090'
       negotiation-type: plaintext
       deadline-after: 10s
       enable-keep-alive: true
