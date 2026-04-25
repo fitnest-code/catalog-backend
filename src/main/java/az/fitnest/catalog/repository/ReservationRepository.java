@@ -12,8 +12,14 @@ import java.util.List;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
     Page<Reservation> findByUserId(Long userId, Pageable pageable);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND (r.reservationDate.date > CURRENT_DATE OR (r.reservationDate.date = CURRENT_DATE AND r.reservationDate.startTime >= CURRENT_TIME))")
+    Page<Reservation> findUpcomingByUserId(@org.springframework.data.repository.query.Param("userId") Long userId, Pageable pageable);
 
     Page<Reservation> findByUserIdAndStatus(Long userId, az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND r.status = :status AND (r.reservationDate.date > CURRENT_DATE OR (r.reservationDate.date = CURRENT_DATE AND r.reservationDate.startTime >= CURRENT_TIME))")
+    Page<Reservation> findUpcomingByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("status") az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
 
     List<Reservation> findByTrainerIdAndReservationDateId(Long trainerId, Long reservationDateId);
 

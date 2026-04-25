@@ -137,9 +137,12 @@ public class ReservationQueryService {
                                     .emptySpaces(emptySpaces)
                                     .isRegisterAcceptable(isAcceptable)
                                     .build();
-                        }).collect(Collectors.toList()))
+                        })
+                        .filter(slot -> slot.getEmptySpaces() > 0)
+                        .collect(Collectors.toList()))
                         .build();
                 })
+                .filter(day -> !day.getSlots().isEmpty())
                 .collect(Collectors.toList());
     }
 
@@ -171,10 +174,10 @@ public class ReservationQueryService {
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> getMyReservations(Long userId, int page, int pageSize, ReservationStatus status) {
-        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by("createdDate").descending());
+        Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by("reservationDate.date").ascending());
         var result = status != null
-                ? reservationRepository.findByUserIdAndStatus(userId, status, pageable)
-                : reservationRepository.findByUserId(userId, pageable);
+                ? reservationRepository.findUpcomingByUserIdAndStatus(userId, status, pageable)
+                : reservationRepository.findUpcomingByUserId(userId, pageable);
         return result.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -213,10 +216,16 @@ public class ReservationQueryService {
     @Transactional(readOnly = true)
     public ReservationWidgetResponse getReservationWidget(Long userId) {
         List<ReservationStatus> activeStatuses = List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED);
-        List<ReservationResponse> active = reservationRepository.findByUserId(userId, PageRequest.of(0, 2, Sort.by("reservationDate.date").ascending()))
+        LocalDateTime now = LocalDateTime.now();
+        List<ReservationResponse> active = reservationRepository.findByUserId(userId, PageRequest.of(0, 50, Sort.by("reservationDate.date").ascending()))
                 .stream()
                 .filter(r -> activeStatuses.contains(r.getStatus()))
                 .map(this::mapToResponse)
+                .filter(r -> {
+                    LocalDateTime resDateTime = LocalDateTime.of(r.getDate(), r.getFromHour());
+                    return !resDateTime.isBefore(now);
+                })
+                .limit(2)
                 .collect(Collectors.toList());
 
         return new ReservationWidgetResponse(active);
@@ -280,6 +289,7 @@ public class ReservationQueryService {
                             .availableSpaces(Math.max(0, slot.getEmptySpaces() - booked))
                             .build();
                 })
+                .filter(dto -> dto.getAvailableSpaces() > 0)
                 .collect(Collectors.toList());
 
         return TrainerDailyAvailabilityResponse.builder()
