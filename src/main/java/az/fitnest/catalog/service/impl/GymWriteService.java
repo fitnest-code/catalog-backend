@@ -4,7 +4,6 @@ import az.fitnest.catalog.dto.GeocodingResponse;
 
 import az.fitnest.catalog.dto.GymRequest;
 import az.fitnest.catalog.dto.CheckInResponseDto;
-import az.fitnest.catalog.dto.UpdateGymStatusRequest;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
@@ -37,12 +36,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 @Service
 @RequiredArgsConstructor
@@ -205,23 +201,6 @@ public class GymWriteService {
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
-        gymRepository.save(gym);
-    }
-
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
-    })
-    public void updateGymStatus(Long id, UpdateGymStatusRequest request) {
-        Gym gym = gymRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        if (request.status() == GymStatus.ACTIVE) {
-            validateActivationRequirements(gym);
-        }
-
-        gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
-        log.info("Updating gym (ID: {}) status to {}", id, request.status());
         gymRepository.save(gym);
     }
 
@@ -582,24 +561,5 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setIsReservationEnabled(enabled);
         gymRepository.save(gym);
-    }
-
-    private void validateActivationRequirements(Gym gym) {
-        List<String> missing = new ArrayList<>();
-
-        if (isBlank(gym.getName())) missing.add("name");
-        if (isBlank(gym.getPhone())) missing.add("phoneNumber");
-        if (gym.getAddress() == null || isBlank(gym.getAddress().getAddressText())) missing.add("address");
-        if (isBlank(gym.getCoverImageUrl())) missing.add("cover image");
-
-        if (gym.getGeneralWorkHours() == null || gym.getGeneralWorkHours().isEmpty()) {
-            missing.add("ən azı 1 iş saatı");
-        }
-
-        if (!missing.isEmpty()) {
-            throw new BadRequestException(
-                    "ACTIVE etmək üçün aşağıdakılar tamamlanmalıdır: " + String.join(", ", missing)
-            );
-        }
     }
 }
