@@ -201,5 +201,27 @@ public class GymAdminController {
     public ResponseEntity<List<GymEntranceHistoryAdminResponse>> getGymEntranceHistory(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
+    @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/list")
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.AdminGymResponse>> getAllGyms(
+            @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış")
+            @RequestParam(required = false) String query,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
+                    + "name_asc - Ad : A-Z, "
+                    + "name_desc - Ad : Z-A, "
+                    + "address_asc - Şəhər + Ünvan (A-Z), "
+                    + "newest - Yeni əlavə edilmiş (son 1 həftə), "
+                    + "deactivated - Deaktiv zallar",
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
+                            "name_asc", "name_desc", "address_asc", "newest", "deactivated"
+                    }))
+            @RequestParam(required = false) String sort,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReadService.getAllGymsAdmin(query, sort, page, pageSize));
+    }
 
 }

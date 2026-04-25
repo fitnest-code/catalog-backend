@@ -30,6 +30,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -55,6 +58,7 @@ public class GymReadService {
     private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
+    private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
 
     public String getUserLanguage(Long userId) {
         String language = "AZ";
@@ -460,6 +464,78 @@ public class GymReadService {
                 .page(page)
                 .pageSize(pageSize)
                 .message(message)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<AdminGymResponse> getAllGymsAdmin(String query, String sort, int page, int pageSize) {
+        Sort springSort = Sort.unsorted();
+        if (sort != null) {
+            switch (sort) {
+                case "name_asc":
+                    springSort = Sort.by(Sort.Direction.ASC, "name");
+                    break;
+                case "name_desc":
+                    springSort = Sort.by(Sort.Direction.DESC, "name");
+                    break;
+                case "address_asc":
+                    springSort = Sort.by(Sort.Direction.ASC, "address.city", "address.addressText");
+                    break;
+                case "newest":
+                    springSort = Sort.by(Sort.Direction.DESC, "createdDate");
+                    break;
+                case "deactivated":
+                    springSort = Sort.by(Sort.Direction.DESC, "status");
+                    break;
+                default:
+                    springSort = Sort.by(Sort.Direction.DESC, "createdDate");
+            }
+        } else {
+            springSort = Sort.by(Sort.Direction.DESC, "createdDate");
+        }
+
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), pageSize, springSort);
+        
+        Specification<Gym> spec = (root, criteriaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            if (query != null && !query.isBlank()) {
+                String pattern = "%" + query.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("name")), pattern),
+                    cb.like(cb.lower(root.get("address").get("addressText")), pattern),
+                    cb.like(cb.lower(root.get("address").get("city")), pattern)
+                ));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Gym> gymPage = gymRepository.findAll(spec, pageable);
+        
+        List<AdminGymResponse> items = gymPage.getContent().stream().map(gym -> {
+            String ownerName = gymAdminRepository.findFirstByGymId(gym.getId())
+                    .map(admin -> admin.getName() + " " + admin.getSurname())
+                    .orElse("N/A");
+            
+            String fullAddress = (gym.getAddress() != null) 
+                    ? (gym.getAddress().getCity() + ", " + gym.getAddress().getAddressText()) 
+                    : "N/A";
+            
+            return AdminGymResponse.builder()
+                    .id(gym.getId())
+                    .name(gym.getName())
+                    .fullAddress(fullAddress)
+                    .ownerName(ownerName)
+                    .status(gym.getStatus())
+                    .build();
+        }).collect(Collectors.toList());
+
+        return PaginatedResponse.<AdminGymResponse>builder()
+                .items(items)
+                .total(gymPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
                 .build();
     }
 

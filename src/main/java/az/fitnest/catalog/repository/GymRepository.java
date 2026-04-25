@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface GymRepository
-        extends JpaRepository<Gym, Long> {
+        extends JpaRepository<Gym, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Gym> {
     public List<Gym> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4);
 
     @org.springframework.data.jpa.repository.Query(value = "SELECT * FROM gyms WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLng AND :maxLng " +
