@@ -92,7 +92,13 @@ public class ReservationQueryService {
                 .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(sub.getPackageId()));
         final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
 
+        LocalDateTime now = LocalDateTime.now();
+
         return sessions.stream()
+                .filter(session -> {
+                    LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
+                    return !sessionStart.isBefore(now);
+                })
                 .collect(Collectors.groupingBy(TrainerReservationDate::getDate))
                 .entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -108,11 +114,6 @@ public class ReservationQueryService {
                             boolean isAcceptable = isGymEnabled;
 
                             if (emptySpaces <= 0) {
-                                isAcceptable = false;
-                            }
-
-                            LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
-                            if (sessionStart.isBefore(LocalDateTime.now())) {
                                 isAcceptable = false;
                             }
 
@@ -263,7 +264,10 @@ public class ReservationQueryService {
 
         List<TrainerReservationDate> slots = sessionRepository.findByTrainerIdAndDate(trainerId, date);
 
+        LocalDateTime now = LocalDateTime.now();
+
         List<GymReservationDetailsResponse.TimeSlotDto> timeSlots = slots.stream()
+                .filter(slot -> !LocalDateTime.of(slot.getDate(), slot.getStartTime()).isBefore(now))
                 .sorted(Comparator.comparing(TrainerReservationDate::getStartTime))
                 .map(slot -> {
                     int booked = reservationRepository.countByReservationDateId(slot.getId());
