@@ -202,6 +202,13 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Success",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PaginatedResponse.class)
+            )
+    )
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.AdminGymResponse>> getAllGyms(

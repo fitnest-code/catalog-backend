@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 @Schema(description = "Paginated response wrapper")
 public record PaginatedResponse<T>(
-        @ArraySchema(schema = @Schema(description = "List of items in the current page", implementation = Object.class))
+        @ArraySchema(schema = @Schema(description = "List of items in the current page"))
         List<T> items,
 
         @Schema(description = "Total number of items available")
