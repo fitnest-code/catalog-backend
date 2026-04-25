@@ -7,6 +7,7 @@ import lombok.Builder;
 
 
 @Builder
+@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)
 @Schema(description = "Admin view of a gym, including name, address, owner, and status.")
 public record AdminGymResponse(
     @Schema(description = "Unique identifier of the gym", example = "123")
