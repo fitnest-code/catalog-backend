@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest;
 import az.fitnest.catalog.dto.GymReviewDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.TrainerRequest;
+import az.fitnest.catalog.dto.UpdateGymStatusRequest;
 import az.fitnest.catalog.service.impl.GymWriteService;
 import az.fitnest.catalog.service.impl.GymReviewService;
 import az.fitnest.catalog.service.impl.GymTrainerService;
@@ -66,6 +67,16 @@ public class GymAdminController {
     @PutMapping("/{id}/subscriptions/{planId}/benefits")
     public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId, @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
         gymWriteService.updateGymSubscriptionBenefits(id, planId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "İdman zalının statusunu aktiv və ya deaktiv edin", description = "İdman zalının fəaliyyət statusunu dəyişir." +
+            " Aktivləşdirilmiş idman zalları istifadəçilər tərəfindən görünür və axtarış nəticələrində göstərilir, deaktiv edilmiş idman zalları isə gizlədilir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Void> updateGymStatus(@PathVariable Long id,
+                                                @Valid @RequestBody UpdateGymStatusRequest request) {
+        gymWriteService.updateGymStatus(id, request);
         return ResponseEntity.ok().build();
     }
 
