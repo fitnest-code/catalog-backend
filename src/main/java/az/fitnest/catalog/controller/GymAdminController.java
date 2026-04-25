@@ -64,7 +64,8 @@ public class GymAdminController {
     @Operation(summary = "Aktivləşdirilmiş abunəlik üçün üstünlükləri yeniləyin", description = "İdman zalı üçün artıq aktivləşdirilmiş olan müəyyən bir abunəliyin üstünlüklərini (benefits) yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/subscriptions/{planId}/benefits")
-    public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId, @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
+    public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId,
+            @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
         gymWriteService.updateGymSubscriptionBenefits(id, planId, request);
         return ResponseEntity.ok().build();
     }
@@ -167,10 +168,12 @@ public class GymAdminController {
     @Operation(summary = "Abunəliyi silin", description = "İdman zalı üçün müəyyən bir abunəliyi silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/subscriptions/{subscriptionId}")
-    public ResponseEntity<Void> deleteGymSubscriptionById(@PathVariable("id") Long gymId, @PathVariable("subscriptionId") Long subscriptionId) {
+    public ResponseEntity<Void> deleteGymSubscriptionById(@PathVariable("id") Long gymId,
+            @PathVariable("subscriptionId") Long subscriptionId) {
         gymWriteService.deleteGymSubscriptionById(gymId, subscriptionId);
         return ResponseEntity.noContent().build();
     }
+
     @Operation(summary = "İdman zalı üçün təlimçi yaradın", description = "İdman zalına yeni təlimçi əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/trainers")
@@ -182,7 +185,8 @@ public class GymAdminController {
     @Operation(summary = "Təlimçini yeniləyin", description = "İdman zalına aid təlimçinin məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/trainers/{trainerId}")
-    public ResponseEntity<Void> updateTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId, @Valid @RequestBody TrainerRequest request) {
+    public ResponseEntity<Void> updateTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId,
+            @Valid @RequestBody TrainerRequest request) {
         gymTrainerService.updateTrainer(gymId, trainerId, request);
         return ResponseEntity.ok().build();
     }
@@ -190,7 +194,8 @@ public class GymAdminController {
     @Operation(summary = "Təlimçini silin", description = "İdman zalına aid təlimçini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/trainers/{trainerId}")
-    public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId) {
+    public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId,
+            @PathVariable("trainerId") Long trainerId) {
         gymTrainerService.deleteTrainer(gymId, trainerId);
         return ResponseEntity.noContent().build();
     }
@@ -201,33 +206,22 @@ public class GymAdminController {
     public ResponseEntity<List<GymEntranceHistoryAdminResponse>> getGymEntranceHistory(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
+
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Success",
-            content = @io.swagger.v3.oas.annotations.media.Content(
-                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PaginatedResponse.class)
-            )
-    )
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.AdminGymResponse>> getAllGyms(
-            @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış")
-            @RequestParam(required = false) String query,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
             @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
                     + "name_asc - Ad : A-Z, "
                     + "name_desc - Ad : Z-A, "
                     + "address_asc - Şəhər + Ünvan (A-Z), "
                     + "newest - Yeni əlavə edilmiş (son 1 həftə), "
-                    + "deactivated - Deaktiv zallar",
-                    schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
+                    + "deactivated - Deaktiv zallar", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
                             "name_asc", "name_desc", "address_asc", "newest", "deactivated"
-                    }))
-            @RequestParam(required = false) String sort,
-            @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1")
-            @RequestParam(defaultValue = "1") int page,
-            @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10")
-            @RequestParam(defaultValue = "10") int pageSize) {
+                    })) @RequestParam(required = false) String sort,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1") @RequestParam(defaultValue = "1") int page,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10") @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(gymReadService.getAllGymsAdmin(query, sort, page, pageSize));
     }
 
