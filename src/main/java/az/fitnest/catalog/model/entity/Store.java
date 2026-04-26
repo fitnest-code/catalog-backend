@@ -1,7 +1,7 @@
 package az.fitnest.catalog.model.entity;
 
+import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.BaseAuditableEntity;
-import az.fitnest.catalog.model.entity.StoreAddress;
 import az.fitnest.catalog.model.entity.StoreDiscount;
 import az.fitnest.catalog.model.entity.StoreImage;
 import az.fitnest.catalog.model.entity.StoreSocialLink;
@@ -32,8 +32,13 @@ public class Store
     @Column(name = "status")
     private String status;
     @Embedded
-    @AttributeOverrides(value = {@AttributeOverride(name = "addressText", column = @Column(name = "address_text")), @AttributeOverride(name = "latitude", column = @Column(name = "address_lat")), @AttributeOverride(name = "longitude", column = @Column(name = "address_lng"))})
-    private StoreAddress address;
+    @AttributeOverrides(value = {
+        @AttributeOverride(name = "addressText", column = @Column(name = "address_text")),
+        @AttributeOverride(name = "city", column = @Column(name = "city")),
+        @AttributeOverride(name = "latitude", column = @Column(name = "address_lat")),
+        @AttributeOverride(name = "longitude", column = @Column(name = "address_lng"))
+    })
+    private Address address;
     @Column(name = "phone")
     private String phone;
 

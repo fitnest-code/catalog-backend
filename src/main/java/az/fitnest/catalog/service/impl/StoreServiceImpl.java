@@ -292,7 +292,7 @@ public class StoreServiceImpl implements StoreService {
                 ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
                 : resolveGeocoding(reqLat, reqLng);
 
-        store.setAddress(request.address() != null ? new StoreAddress(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
+        store.setAddress(request.address() != null ? new Address(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
 
         store.setPhone(request.phone());
         store.setCategory(request.category());
@@ -347,7 +347,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional(readOnly = true)
     public LocationDto getStoreLocation(Long storeId) {
         Store store = getStoreEntityById(storeId);
-        StoreAddress addr = store.getAddress();
+        Address addr = store.getAddress();
         if (addr == null) return LocationDto.builder().build();
         return LocationDto.builder().addressText(addr.getAddressText()).latitude(addr.getLatitude()).longitude(addr.getLongitude()).build();
     }
@@ -412,7 +412,7 @@ public class StoreServiceImpl implements StoreService {
         storeRepository.save(store);
     }
 
-    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.StoreAddress address, String fieldName, String userLanguage) {
+    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null) return null;
         String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
         if (localized == null || localized.isEmpty()) {

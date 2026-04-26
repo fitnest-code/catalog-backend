@@ -96,4 +96,21 @@ public class StoreAdminController {
     public ResponseEntity<String> uploadStoreImage(@PathVariable Long storeId, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(storeService.uploadStoreImage(storeId, file));
     }
+
+    @Operation(summary = "Mağazaların siyahısını alın", description = "Mağazaların adını, ünvanını və telefon nömrəsini qaytarır. Axtarış və sıralama dəstəklənir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/list")
+    public ResponseEntity<az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.AdminStoreResponse>> getAllStores(
+            @io.swagger.v3.oas.annotations.Parameter(description = "Mağaza adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
+                    + "name_asc - Ad : A-Z, "
+                    + "name_desc - Ad : Z-A, "
+                    + "address_asc - Şəhər + Ünvan (A-Z), "
+                    + "newest - Yeni əlavə edilmiş (son 1 həftə)", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
+                            "name_asc", "name_desc", "address_asc", "newest"
+                    })) @RequestParam(required = false) String sort,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1") @RequestParam(defaultValue = "1") int page,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10") @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(storeAdminService.getAllStoresAdmin(query, sort, page, pageSize));
+    }
 }
