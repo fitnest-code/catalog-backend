@@ -228,7 +228,21 @@ public class GymAdminController {
     @Operation(summary = "İstifadəçinin QR skan tarixçəsini alın", description = "Müəyyən bir istifadəçinin bütün QR skan cəhdlərinin (uğurlu/uğursuz) siyahısını, zal adlarını və platforma məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users/{userId}/qr-history")
-    public ResponseEntity<List<az.fitnest.catalog.dto.AdminQrScanHistoryResponse>> getUserQrScanHistory(@PathVariable Long userId) {
-        return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId));
+    public ResponseEntity<List<az.fitnest.catalog.dto.AdminQrScanHistoryResponse>> getUserQrScanHistory(
+            @PathVariable Long userId,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı üzrə axtarış") @RequestParam(required = false) String query,
+            @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
+                    + "gymName_asc - Zal adı : A-Z, "
+                    + "gymName_desc - Zal adı : Z-A, "
+                    + "date_asc - Tarix : Köhnə -> Yeni, "
+                    + "date_desc - Tarix : Yeni -> Köhnə, "
+                    + "status_asc - Status : A-Z, "
+                    + "status_desc - Status : Z-A, "
+                    + "platform_asc - Platforma : A-Z, "
+                    + "platform_desc - Platforma : Z-A", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
+                            "gymName_asc", "gymName_desc", "date_asc", "date_desc",
+                            "status_asc", "status_desc", "platform_asc", "platform_desc"
+                    })) @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId, query, sort));
     }
 }

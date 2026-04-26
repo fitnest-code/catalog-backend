@@ -19,5 +19,8 @@ public record AdminQrScanHistoryResponse(
     String failedReason,
 
     @Schema(description = "Platforma", example = "iOS")
-    String platform
+    String platform,
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    java.time.LocalDateTime rawDate
 ) {}

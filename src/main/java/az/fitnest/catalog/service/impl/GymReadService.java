@@ -542,8 +542,8 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId) {
-        log.info("Admin: Fetching QR scan history for user: {}", userId);
+    public List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId, String query, String sort) {
+        log.info("Admin: Fetching QR scan history for user: {}, query: {}, sort: {}", userId, query, sort);
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
         
         List<GymEntranceHistory> historyList = gymEntranceHistoryRepository.findAllByUserIdOrderByScanDateDesc(userId);
@@ -555,7 +555,7 @@ public class GymReadService {
         Map<Long, String> gymNames = gymRepository.findAllById(gymIds).stream()
                 .collect(Collectors.toMap(Gym::getId, Gym::getName));
 
-        return historyList.stream()
+        java.util.stream.Stream<AdminQrScanHistoryResponse> stream = historyList.stream()
                 .map(h -> {
                     String status = h.getStatus();
                     if ("ELIGIBLE".equalsIgnoreCase(status)) status = "Uğurlu";
@@ -567,9 +567,47 @@ public class GymReadService {
                             .status(status)
                             .failedReason(h.getReason())
                             .platform(h.getPlatform() != null ? h.getPlatform() : "N/A")
+                            .rawDate(h.getScanDate()) // For sorting
                             .build();
-                })
-                .collect(Collectors.toList());
+                });
+
+        if (query != null && !query.isBlank()) {
+            String lowerQuery = query.toLowerCase();
+            stream = stream.filter(res -> res.gymName().toLowerCase().contains(lowerQuery));
+        }
+
+        List<AdminQrScanHistoryResponse> result = stream.collect(Collectors.toList());
+
+        if (sort != null) {
+            switch (sort) {
+                case "gymName_asc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER));
+                    break;
+                case "gymName_desc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER).reversed());
+                    break;
+                case "date_asc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate, Comparator.nullsLast(Comparator.naturalOrder())));
+                    break;
+                case "date_desc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                    break;
+                case "status_asc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER));
+                    break;
+                case "status_desc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER).reversed());
+                    break;
+                case "platform_asc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER));
+                    break;
+                case "platform_desc":
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER).reversed());
+                    break;
+            }
+        }
+
+        return result;
     }
 
     private PaginatedResponse<GymMainPageDto> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q, Long categoryId) {
