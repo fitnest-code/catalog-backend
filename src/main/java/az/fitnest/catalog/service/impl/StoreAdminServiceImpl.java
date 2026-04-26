@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     private final StoreRepository storeRepository;
 
     @Override
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStoreStatus(Long storeId, String status) {
         log.info("Updating store status. Store ID: {}, New Status: {}", storeId, status);
         Store store = storeRepository.findById(storeId)
@@ -38,6 +41,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "admin-stores", key = "{#query, #sort, #page, #pageSize}")
     public PaginatedResponse<AdminStoreResponse> getAllStoresAdmin(String query, String sort, int page, int pageSize) {
         Sort springSort = Sort.unsorted();
         if (sort != null) {

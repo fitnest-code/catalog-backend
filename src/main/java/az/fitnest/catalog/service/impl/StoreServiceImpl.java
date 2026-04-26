@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -224,6 +225,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public StoreDetailResponseDto createStore(StoreRequest request) {
         Store store = new Store();
         updateStoreFromRequest(store, request);
@@ -233,6 +235,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public StoreDetailResponseDto updateStore(Long storeId, StoreRequest request) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
@@ -242,6 +245,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void deleteStore(Long storeId) {
         log.info("Mağazanı silmə prosesi başladı. ID: {}", storeId);
 
@@ -373,6 +377,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStoreLogoUrl(Long storeId, String logoUrl) {
         Store store = getStoreEntityById(storeId);
         store.setLogoUrl(logoUrl);
@@ -381,6 +386,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl) {
         Store store = getStoreEntityById(storeId);
         store.setCoverImageUrl(coverImageUrl);
@@ -389,6 +395,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void deleteAllStores() {
         List<Store> stores = storeRepository.findAll();
         for (Store store : stores) {
@@ -398,6 +405,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void addDiscount(Long storeId, AddDiscountRequest request) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));

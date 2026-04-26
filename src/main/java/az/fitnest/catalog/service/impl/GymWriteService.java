@@ -58,7 +58,10 @@ public class GymWriteService {
     private GymWriteService self;
 
     @Transactional
-    @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
+        @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
+    })
     public void createGym(GymRequest request) {
         if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
@@ -130,7 +133,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void updateGym(Long gymId, GymRequest request) {
@@ -206,7 +209,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void enableGymSubscription(Long gymId, Long subscriptionId) {
@@ -226,7 +229,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
@@ -250,7 +253,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteGym(Long gymId) {
@@ -371,7 +374,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
@@ -414,7 +417,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteAllGymRooms(Long gymId) {
@@ -440,7 +443,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteGymRoomById(Long gymId, Long roomId) {
@@ -469,7 +472,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteRoomImageById(Long gymId, Long imageId) {
@@ -496,7 +499,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void updateCoverImage(Long gymId, MultipartFile file) {
@@ -518,7 +521,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteAllGymSubscriptions(Long gymId) {
@@ -530,7 +533,7 @@ public class GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true),
+        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
         @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void deleteGymSubscriptionById(Long gymId, Long subscriptionId) {
@@ -553,9 +556,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms"}, allEntries = true)
-    })
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void toggleGymReservation(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));

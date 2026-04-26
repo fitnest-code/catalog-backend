@@ -64,7 +64,7 @@ public class GymTrainerService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void addTrainer(Long gymId, TrainerRequest request) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -77,7 +77,7 @@ public class GymTrainerService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -90,7 +90,7 @@ public class GymTrainerService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void deleteTrainer(Long gymId, Long trainerId) {
         Trainer trainerToDelete = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -117,7 +117,7 @@ public class GymTrainerService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void updateTrainerPhoto(Long gymId, Long trainerId, MultipartFile file) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -186,6 +186,7 @@ public class GymTrainerService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled, Long lessonId) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));

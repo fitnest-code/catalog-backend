@@ -470,6 +470,7 @@ public class GymReadService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "admin-gyms", key = "{#query, #sort, #page, #pageSize}")
     public PaginatedResponse<AdminGymResponse> getAllGymsAdmin(String query, String sort, int page, int pageSize) {
         Sort springSort = Sort.unsorted();
         if (sort != null) {
