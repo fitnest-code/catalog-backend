@@ -23,6 +23,7 @@ import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GymReadService {
     private final GymRepository gymRepository;
     private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
