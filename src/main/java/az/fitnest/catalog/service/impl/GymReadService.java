@@ -539,6 +539,37 @@ public class GymReadService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId) {
+        log.info("Admin: Fetching QR scan history for user: {}", userId);
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+        
+        List<GymEntranceHistory> historyList = gymEntranceHistoryRepository.findAllByUserIdOrderByScanDateDesc(userId);
+        if (historyList.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<Long> gymIds = historyList.stream().map(GymEntranceHistory::getGymId).distinct().toList();
+        Map<Long, String> gymNames = gymRepository.findAllById(gymIds).stream()
+                .collect(Collectors.toMap(Gym::getId, Gym::getName));
+
+        return historyList.stream()
+                .map(h -> {
+                    String status = h.getStatus();
+                    if ("ELIGIBLE".equalsIgnoreCase(status)) status = "Uğurlu";
+                    else if ("UNSUCCESSFUL".equalsIgnoreCase(status)) status = "Uğursuz";
+
+                    return AdminQrScanHistoryResponse.builder()
+                            .dateTime(h.getScanDate() != null ? h.getScanDate().format(formatter) : "N/A")
+                            .gymName(gymNames.getOrDefault(h.getGymId(), "Unknown Gym"))
+                            .status(status)
+                            .failedReason(h.getReason())
+                            .platform(h.getPlatform() != null ? h.getPlatform() : "N/A")
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     private PaginatedResponse<GymMainPageDto> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q, Long categoryId) {
         java.util.stream.Stream<Gym> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
@@ -872,7 +903,7 @@ public class GymReadService {
     }
 
     @Transactional
-    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng) {
+    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String platform) {
         Long userId = extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("Unauthorized");
@@ -949,6 +980,7 @@ public class GymReadService {
             .scanDate(LocalDateTime.now(java.time.ZoneId.of("Asia/Baku")))
             .status(status)
             .reason(reason)
+            .platform(platform)
             .build();
         gymEntranceHistoryRepository.save(history);
 

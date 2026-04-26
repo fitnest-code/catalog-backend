@@ -184,15 +184,28 @@ public class GymController {
             @AuthenticationPrincipal Object principal,
             @RequestParam String qrCodeValue,
             @RequestParam Double lat,
-            @RequestParam Double lng) {
+            @RequestParam Double lng,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng);
+            String platform = detectPlatform(userAgent);
+            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, platform);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();
         } catch (IllegalStateException e) {
             return ResponseEntity.status(403).build();
         }
+    }
+
+    private String detectPlatform(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("iphone") || ua.contains("ipad") || ua.contains("ipod") || ua.contains("ios")) return "iOS";
+        if (ua.contains("android")) return "Android";
+        if (ua.contains("windows")) return "Windows";
+        if (ua.contains("macintosh") || ua.contains("mac os")) return "macOS";
+        if (ua.contains("linux")) return "Linux";
+        return "Web/Other";
     }
 
     @PostMapping("/entrance/eligibility")

@@ -225,4 +225,10 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getAllGymsAdmin(query, sort, page, pageSize));
     }
 
+    @Operation(summary = "İstifadəçinin QR skan tarixçəsini alın", description = "Müəyyən bir istifadəçinin bütün QR skan cəhdlərinin (uğurlu/uğursuz) siyahısını, zal adlarını və platforma məlumatlarını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/users/{userId}/qr-history")
+    public ResponseEntity<List<az.fitnest.catalog.dto.AdminQrScanHistoryResponse>> getUserQrScanHistory(@PathVariable Long userId) {
+        return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId));
+    }
 }
