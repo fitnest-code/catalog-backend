@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceHistory, Long> {
     List<GymEntranceHistory> findByGymIdOrderByScanDateDesc(Long gymId);
+    List<GymEntranceHistory> findAllByUserIdOrderByScanDateDesc(Long userId);
 }
