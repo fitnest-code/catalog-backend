@@ -19,6 +19,7 @@ import az.fitnest.catalog.util.UserContext;
 import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -84,10 +85,6 @@ public class GymTrainerService {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        if (request.picture() != null && !request.picture().equals(trainer.getPicture())) {
-            safeDeleteFile(trainer.getPicture());
-        }
-
         updateTrainerFromRequest(trainer, request);
         trainerRepository.save(trainer);
     }
@@ -115,9 +112,22 @@ public class GymTrainerService {
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
         trainer.setProfession(profession);
 
-        trainer.setPicture(request.picture());
         trainer.setPhone(request.phone());
         trainer.setEmail(request.email());
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    public void updateTrainerPhoto(Long gymId, Long trainerId, MultipartFile file) {
+        Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        if (!gymId.equals(trainer.getGymId())) {
+            throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
+        }
+
+        String fsId = fileStorageService.saveFile(file, "/trainers", trainer.getPicture());
+        trainer.setPicture("/api/v1/media/stream/" + fsId);
+        trainerRepository.save(trainer);
     }
 
     private void safeDeleteFile(String url) {

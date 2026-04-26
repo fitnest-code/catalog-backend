@@ -20,9 +20,6 @@ public record TrainerRequest(
     @Schema(description = "ID of the assigned Profession entity", example = "1")
     Long professionId,
 
-    @Schema(description = "Profile image URL")
-    String picture,
-
     @Schema(description = "Contact phone number", example = "+1234567890")
     String phone,
 

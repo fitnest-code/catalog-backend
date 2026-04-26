@@ -200,6 +200,17 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Təlimçinin şəklini yeniləyin", description = "İdman zalına aid təlimçi üçün profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/trainers/{trainerId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateTrainerPhoto(
+            @PathVariable("id") Long gymId,
+            @PathVariable("trainerId") Long trainerId,
+            @RequestParam("file") MultipartFile file) {
+        gymTrainerService.updateTrainerPhoto(gymId, trainerId, file);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı giriş tarixçəsini alın", description = "İdman zalı üçün bütün giriş cəhdlərinin (uğurlu/uğursuz) siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/history")
