@@ -1016,6 +1016,17 @@ public class GymReadService {
             }
         }
 
+        if (allowed) {
+            try {
+                orderServiceGrpcClient.checkIn(userId, gymId);
+            } catch (Exception e) {
+                allowed = false;
+                status = "UNSUCCESSFUL";
+                reason = "CHECKIN_FAILED";
+                org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to record check-in for userId={} at gymId={}: {}", userId, gymId, e.getMessage());
+            }
+        }
+
         if (!allowed) {
             status = "UNSUCCESSFUL";
         }
