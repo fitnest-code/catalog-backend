@@ -256,4 +256,84 @@ public class GymAdminController {
                     })) @RequestParam(required = false) String sort) {
         return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId, query, sort));
     }
+    @Operation(summary = "Step 1: Yeni idman zalı yaradın (DRAFT)", description = "Sistemə yeni idman zalı layihəsini əlavə edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/step1")
+    public ResponseEntity<az.fitnest.catalog.dto.GymCreateStep1Response> createGymStep1(@Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep1Request request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1(request));
+    }
+
+    @Operation(summary = "Step 2: İdman zalının iş saatlarını qeyd edin", description = "İdman zalının iş saatlarını qeyd edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step2")
+    public ResponseEntity<Void> createGymStep2(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep2Request request) {
+        gymWriteService.createGymStep2(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 3: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step3")
+    public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep3Request request) {
+        gymWriteService.createGymStep3(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 4: İdman zalına şəkillər əlavə edin", description = "İdman zalı üçün üz qabığı və otaq şəkilləri yükləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/step4", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep4(
+            @PathVariable Long id,
+            @RequestParam("coverPhoto") MultipartFile coverPhoto,
+            @RequestParam(value = "roomNames", required = false) java.util.List<String> roomNames,
+            @RequestParam(value = "roomPhotos", required = false) java.util.List<MultipartFile> roomPhotos) {
+        gymWriteService.createGymStep4(id, coverPhoto, roomNames, roomPhotos);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 5: İdman zalına təlimçi əlavə edin", description = "İdman zalına yeni təlimçi əlavə edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step5")
+    public ResponseEntity<Void> createGymStep5(@PathVariable Long id, @Valid @RequestBody TrainerRequest request) {
+        gymTrainerService.addTrainer(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin", description = "İdman zalı üçün abunəlikləri və dəstəklənən xidmətləri əlavə edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step6")
+    public ResponseEntity<Void> createGymStep6(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep6Request request) {
+        gymWriteService.createGymStep6(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 7: İdman zalı üçün admin yaradın və aktivləşdirin", description = "İdman zalı üçün admin yaradır və idman zalını ACTIVE edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step7")
+    public ResponseEntity<Void> createGymStep7(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep7Request request) {
+        gymWriteService.createGymStep7(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/services")
+    public ResponseEntity<Void> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.SupportedServiceRequest request) {
+        gymWriteService.createSupportedService(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+    @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki bütün dəstəklənən xidmətləri qaytarır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/services")
+    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.SupportedServiceResponse>> getSupportedServices() {
+        return ResponseEntity.ok(gymReadService.getAllSupportedServices());
+    }
+
+    @Operation(summary = "Dəstəklənən xidməti silin", description = "ID-yə görə dəstəklənən xidməti silir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/services/{id}")
+    public ResponseEntity<Void> deleteSupportedService(@PathVariable Long id) {
+        gymWriteService.deleteSupportedService(id);
+        return ResponseEntity.ok().build();
+    }
 }

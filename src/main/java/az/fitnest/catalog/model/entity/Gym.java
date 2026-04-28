@@ -30,6 +30,8 @@ public class Gym
     private String name;
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+    @Column(name = "daily_price")
+    private Double dailyPrice;
 
     @Column(name = "cover_image_url")
     private String coverImageUrl;

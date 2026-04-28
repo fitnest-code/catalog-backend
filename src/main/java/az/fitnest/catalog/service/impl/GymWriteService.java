@@ -52,6 +52,9 @@ public class GymWriteService {
     private final FileStorageService fileStorageService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final az.fitnest.catalog.repository.GymImageRepository gymImageRepository;
+    private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
+    private final az.fitnest.catalog.client.IdentityServiceGrpcClient identityServiceGrpcClient;
+    private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -222,7 +225,7 @@ public class GymWriteService {
         GymSubscription subscription = new GymSubscription();
         subscription.setGym(gym);
         subscription.setPackageId(subscriptionId);
-        subscription.setBenefits(new java.util.HashSet<>());
+        subscription.setSupportedServices(new java.util.HashSet<>());
         gym.getSubscriptions().add(subscription);
         gymRepository.save(gym);
     }
@@ -237,7 +240,8 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         GymSubscription subscription = gym.getSubscriptions().stream().findFirst()
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
-        subscription.getBenefits().clear();
+        subscription.getSupportedServices().clear();
+        /* OLD BENEFITS LOGIC REMOVED
         if (request.benefits() != null) {
             List<GymSubscriptionBenefit> newBenefits = request.benefits().stream().map(b -> {
                 GymSubscriptionBenefit benefit = new GymSubscriptionBenefit();
@@ -247,6 +251,7 @@ public class GymWriteService {
             }).toList();
             subscription.getBenefits().addAll(newBenefits);
         }
+        */
 
         gymRepository.save(gym);
     }
@@ -562,5 +567,110 @@ public class GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setIsReservationEnabled(enabled);
         gymRepository.save(gym);
+    }
+
+    @Transactional
+    public az.fitnest.catalog.dto.GymCreateStep1Response createGymStep1(az.fitnest.catalog.dto.GymCreateStep1Request request) {
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+        Gym gym = new Gym();
+        gym.setName(request.name());
+        gym.setDailyPrice(request.dailyPrice());
+        gym.setDescription(request.description());
+        gym.setPhone(request.phone());
+        gym.setEmail(request.email());
+        gym.setCategories(new HashSet<>(categories));
+        gym.setStatus(GymStatus.DRAFT);
+        gym = gymRepository.save(gym);
+        return new az.fitnest.catalog.dto.GymCreateStep1Response(gym.getId());
+    }
+
+    @Transactional
+    public void createGymStep2(Long gymId, az.fitnest.catalog.dto.GymCreateStep2Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        gym.getGeneralWorkHours().clear();
+        if (request.generalWorkHours() != null) {
+            gym.setGeneralWorkHours(request.generalWorkHours().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+        }
+        gym.getWorkHoursWoman().clear();
+        if (request.workHoursWoman() != null) {
+            gym.setWorkHoursWoman(request.workHoursWoman().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+        }
+        gym.getWorkHoursMan().clear();
+        if (request.workHoursMan() != null) {
+            gym.setWorkHoursMan(request.workHoursMan().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+        }
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    public void createGymStep3(Long gymId, az.fitnest.catalog.dto.GymCreateStep3Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Address address = new Address();
+        address.setLatitude(request.latitude());
+        address.setLongitude(request.longitude());
+        GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.latitude(), request.longitude());
+        if (geocoding != null) {
+            address.setAddressText(geocoding.addressText());
+            address.setCity(geocoding.city());
+        }
+        gym.setAddress(address);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    public void createGymStep4(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
+        updateCoverImage(gymId, coverPhoto);
+        if (roomNames != null && roomPhotos != null && roomNames.size() == roomPhotos.size() && !roomNames.isEmpty()) {
+            addRoomImages(gymId, roomNames, roomPhotos);
+        }
+    }
+
+    @Transactional
+    public void createGymStep6(Long gymId, az.fitnest.catalog.dto.GymCreateStep6Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        gym.getSubscriptions().clear();
+        for (az.fitnest.catalog.dto.GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
+            GymSubscription subscription = new GymSubscription();
+            subscription.setGym(gym);
+            subscription.setPackageId(subReq.packageId());
+            if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
+                List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId());
+                subscription.setSupportedServices(new HashSet<>(services));
+            }
+            gym.getSubscriptions().add(subscription);
+        }
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    public void createGymStep7(Long gymId, az.fitnest.catalog.dto.GymCreateStep7Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), request.phoneNumber(), request.email(), request.password());
+        
+        az.fitnest.catalog.model.entity.GymAdmin admin = new az.fitnest.catalog.model.entity.GymAdmin();
+        admin.setName(request.name());
+        admin.setSurname(request.surname());
+        admin.setPhoneNumber(request.phoneNumber());
+        admin.setEmail(request.email());
+        admin.setGym(gym);
+        gymAdminRepository.save(admin);
+
+        gym.setStatus(GymStatus.ACTIVE);
+        self.generateAndSaveQrCode(gym);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    public void createSupportedService(az.fitnest.catalog.dto.SupportedServiceRequest request) {
+        az.fitnest.catalog.model.entity.SupportedService service = new az.fitnest.catalog.model.entity.SupportedService();
+        service.setName(request.name());
+        supportedServiceRepository.save(service);
+    }
+    @Transactional
+    public void deleteSupportedService(Long id) {
+        supportedServiceRepository.deleteById(id);
     }
 }

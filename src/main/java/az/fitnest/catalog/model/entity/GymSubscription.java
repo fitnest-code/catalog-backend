@@ -24,7 +24,11 @@ public class GymSubscription extends BaseAuditableEntity {
     @Column(name = "package_id")
     private Long packageId;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "gym_subscription_benefits", joinColumns = @JoinColumn(name = "gym_subscription_id"))
-    private Set<GymSubscriptionBenefit> benefits = new HashSet<>();
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "gym_subscription_services",
+        joinColumns = @JoinColumn(name = "gym_subscription_id"),
+        inverseJoinColumns = @JoinColumn(name = "supported_service_id")
+    )
+    private Set<SupportedService> supportedServices = new HashSet<>();
 }

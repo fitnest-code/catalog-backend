@@ -60,7 +60,14 @@ public class GymReadService {
     private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
+    private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
+
+    public List<az.fitnest.catalog.dto.SupportedServiceResponse> getAllSupportedServices() {
+        return supportedServiceRepository.findAll().stream()
+                .map(s -> new az.fitnest.catalog.dto.SupportedServiceResponse(s.getId(), s.getName()))
+                .toList();
+    }
 
     public String getUserLanguage(Long userId) {
         String language = "AZ";
@@ -237,11 +244,11 @@ public class GymReadService {
                         String planId = sub.getPackageId().toString();
                         String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
                         String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : info.getName();
-                        List<GymPlanBenefitDto> benefitsList = sub.getBenefits().stream()
+                        List<GymPlanBenefitDto> benefitsList = sub.getSupportedServices().stream()
                             .map(b -> {
-                                String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_"), "benefit", userLanguage);
+                                String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
                                 return GymPlanBenefitDto.builder()
-                                    .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getBenefit())
+                                    .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
                                     .build();
                             })
                             .toList();
@@ -684,12 +691,11 @@ public class GymReadService {
                     String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
                     String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName :
                                     (info != null ? info.getName() : "Bronze Plan");
-                    List<GymPlanBenefitDto> benefitsList = sub.getBenefits().stream()
+                    List<GymPlanBenefitDto> benefitsList = sub.getSupportedServices().stream()
                         .map(b -> {
-                            String ebId = sub.getId() + "_" + b.getBenefit().replaceAll("\\s+", "_");
-                            String localizedBenefit = translationService.getTranslatedValue("GYMSUBSCRIPTIONBENEFIT", ebId, "benefit", userLanguage);
+                            String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
                             return GymPlanBenefitDto.builder()
-                                .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getBenefit())
+                                .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
                                 .build();
                         })
                         .toList();
@@ -710,7 +716,7 @@ public class GymReadService {
                     return GymPlanItemDto.builder()
                         .plan_id(planId)
                         .packageName(fallbackName)
-                        .benefits(sub.getBenefits().stream().map(b -> GymPlanBenefitDto.builder().description(b.getBenefit()).build()).toList())
+                        .benefits(sub.getSupportedServices().stream().map(b -> GymPlanBenefitDto.builder().description(b.getName()).build()).toList())
                         .build();
                 }).collect(java.util.stream.Collectors.toList());
             }
