@@ -10,7 +10,7 @@ import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
 
 @Builder
 public record GymWorkHourDto(
-    @Schema(description = "Period", example = "WEEKDAYS") GymWorkHourPeriod period,
+    @Schema(description = "Period", example = "Monday-Wednesday") String period,
     @Schema(description = "Start time", example = "09:00") @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm") LocalTime from,
     @Schema(description = "End time", example = "21:00") @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm") LocalTime to
 ) {}

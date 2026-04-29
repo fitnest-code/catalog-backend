@@ -81,10 +81,57 @@ public final class GymMapper {
                 .build();
     }
 
+    private static final java.util.Map<az.fitnest.catalog.model.enums.GymWorkHourPeriod, String> AZ_DAYS = java.util.Map.of(
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.MONDAY, "Bazar ertəsi",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.TUESDAY, "Çərşənbə axşamı",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEDNESDAY, "Çərşənbə",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.THURSDAY, "Cümə axşamı",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.FRIDAY, "Cümə",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY, "Şənbə",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY, "Bazar"
+    );
+
+    public static List<GymWorkHourDto> toGroupedWorkHourDtos(java.util.Collection<GymWorkHour> workHours) {
+        if (workHours == null || workHours.isEmpty()) return java.util.Collections.emptyList();
+
+        List<GymWorkHour> sorted = workHours.stream()
+                .sorted(java.util.Comparator.comparingInt(wh -> wh.getPeriod().ordinal()))
+                .toList();
+
+        List<GymWorkHourDto> grouped = new java.util.ArrayList<>();
+        int i = 0;
+        while (i < sorted.size()) {
+            GymWorkHour start = sorted.get(i);
+            int j = i + 1;
+            while (j < sorted.size() &&
+                    sorted.get(j).getPeriod().ordinal() == sorted.get(j - 1).getPeriod().ordinal() + 1 &&
+                    java.util.Objects.equals(sorted.get(j).getFromTime(), start.getFromTime()) &&
+                    java.util.Objects.equals(sorted.get(j).getToTime(), start.getToTime())) {
+                j++;
+            }
+
+            String periodStr;
+            if (j - i > 1) {
+                periodStr = AZ_DAYS.get(start.getPeriod()) + " – " + AZ_DAYS.get(sorted.get(j - 1).getPeriod());
+            } else {
+                periodStr = AZ_DAYS.get(start.getPeriod());
+            }
+
+            grouped.add(GymWorkHourDto.builder()
+                    .period(periodStr)
+                    .from(start.getFromTime())
+                    .to(start.getToTime())
+                    .build());
+            i = j;
+        }
+
+        return grouped;
+    }
+
     public static GymWorkHourDto toWorkHourDto(GymWorkHour wh) {
         if (wh == null) return null;
         return GymWorkHourDto.builder()
-                .period(wh.getPeriod())
+                .period(wh.getPeriod() != null ? AZ_DAYS.getOrDefault(wh.getPeriod(), wh.getPeriod().name()) : null)
                 .from(wh.getFromTime())
                 .to(wh.getToTime())
                 .build();

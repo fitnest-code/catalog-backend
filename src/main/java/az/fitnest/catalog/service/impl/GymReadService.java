@@ -130,9 +130,7 @@ public class GymReadService {
                 })
                 .collect(Collectors.toList()), executor);
         CompletableFuture<List<GymWorkHourDto>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() ->
-            gymRepository.findGeneralWorkHoursByGymId(gymId).stream()
-                .map(GymMapper::toWorkHourDto)
-                .collect(Collectors.toList()), executor);
+            GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId)), executor);
         CompletableFuture<List<CategoryDto>> categoryDtosFuture = gymFuture.thenApplyAsync(gym -> {
             if (gym != null && gym.getCategories() != null) {
                 return gym.getCategories().stream()
@@ -169,10 +167,9 @@ public class GymReadService {
         boolean isSaved = isSavedFuture.join();
         String userLanguage = getUserLanguage(userId);
         List<GymReviewDto> recentReviews = recentReviewsFuture.join();
-        java.util.Set<GymWorkHourDto> generalWorkHours = null;
-        List<GymWorkHourDto> generalWorkHoursList = generalWorkHoursFuture.join();
-        if (generalWorkHoursList != null && !generalWorkHoursList.isEmpty()) {
-            generalWorkHours = new java.util.HashSet<>(generalWorkHoursList);
+        List<GymWorkHourDto> generalWorkHours = generalWorkHoursFuture.join();
+        if (generalWorkHours != null && generalWorkHours.isEmpty()) {
+            generalWorkHours = null;
         }
         List<CategoryDto> categoryDtos = categoryDtosFuture.join();
         if (categoryDtos != null) {
@@ -209,17 +206,13 @@ public class GymReadService {
             return t;
         }).collect(Collectors.toList());
 
-        java.util.Set<GymWorkHourDto> workHoursWoman = null;
+        List<GymWorkHourDto> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
-            workHoursWoman = gym.getWorkHoursWoman().stream()
-                .map(GymMapper::toWorkHourDto)
-                .collect(java.util.stream.Collectors.toSet());
+            workHoursWoman = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursWoman());
         }
-        java.util.Set<GymWorkHourDto> workHoursMan = null;
+        List<GymWorkHourDto> workHoursMan = null;
         if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
-            workHoursMan = gym.getWorkHoursMan().stream()
-                .map(GymMapper::toWorkHourDto)
-                .collect(java.util.stream.Collectors.toSet());
+            workHoursMan = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan());
         }
         if (generalWorkHours != null && generalWorkHours.isEmpty()) generalWorkHours = null;
 
@@ -1136,15 +1129,7 @@ public class GymReadService {
 
         java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku"));
         java.time.DayOfWeek day = now.getDayOfWeek();
-        az.fitnest.catalog.model.enums.GymWorkHourPeriod period;
-
-        if (day == java.time.DayOfWeek.SATURDAY) {
-            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY;
-        } else if (day == java.time.DayOfWeek.SUNDAY) {
-            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY;
-        } else {
-            period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEEKDAYS;
-        }
+        az.fitnest.catalog.model.enums.GymWorkHourPeriod period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(day.name());
 
         java.time.LocalTime currentTime = now.toLocalTime();
         

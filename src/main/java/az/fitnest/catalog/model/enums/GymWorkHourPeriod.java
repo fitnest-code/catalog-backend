@@ -1,7 +1,11 @@
 package az.fitnest.catalog.model.enums;
 
 public enum GymWorkHourPeriod {
-    WEEKDAYS,
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
     SATURDAY,
     SUNDAY
 }
