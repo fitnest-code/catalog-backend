@@ -129,8 +129,10 @@ public class GymReadService {
                     return GymMapper.toReviewDto(r, fullName, avatarUrl);
                 })
                 .collect(Collectors.toList()), executor);
-        CompletableFuture<List<GymWorkHourDto>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() ->
-            GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId)), executor);
+        CompletableFuture<List<GymWorkHourDto>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() -> {
+            String userLang = getUserLanguage(userId);
+            return GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId), userLang);
+        }, executor);
         CompletableFuture<List<CategoryDto>> categoryDtosFuture = gymFuture.thenApplyAsync(gym -> {
             if (gym != null && gym.getCategories() != null) {
                 return gym.getCategories().stream()
@@ -208,11 +210,11 @@ public class GymReadService {
 
         List<GymWorkHourDto> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
-            workHoursWoman = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursWoman());
+            workHoursWoman = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursWoman(), userLanguage);
         }
         List<GymWorkHourDto> workHoursMan = null;
         if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
-            workHoursMan = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan());
+            workHoursMan = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan(), userLanguage);
         }
         if (generalWorkHours != null && generalWorkHours.isEmpty()) generalWorkHours = null;
 

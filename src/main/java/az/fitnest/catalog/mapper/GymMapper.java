@@ -91,7 +91,34 @@ public final class GymMapper {
             az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY, "Bazar"
     );
 
-    public static List<GymWorkHourDto> toGroupedWorkHourDtos(java.util.Collection<GymWorkHour> workHours) {
+    private static final java.util.Map<az.fitnest.catalog.model.enums.GymWorkHourPeriod, String> EN_DAYS = java.util.Map.of(
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.MONDAY, "Monday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.TUESDAY, "Tuesday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEDNESDAY, "Wednesday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.THURSDAY, "Thursday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.FRIDAY, "Friday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY, "Saturday",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY, "Sunday"
+    );
+
+    private static final java.util.Map<az.fitnest.catalog.model.enums.GymWorkHourPeriod, String> RU_DAYS = java.util.Map.of(
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.MONDAY, "Понедельник",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.TUESDAY, "Вторник",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.WEDNESDAY, "Среда",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.THURSDAY, "Четверг",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.FRIDAY, "Пятница",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SATURDAY, "Суббота",
+            az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY, "Воскресенье"
+    );
+
+    private static String getLocalizedDay(az.fitnest.catalog.model.enums.GymWorkHourPeriod period, String lang) {
+        if (period == null) return null;
+        if (lang != null && lang.equalsIgnoreCase("RU")) return RU_DAYS.getOrDefault(period, period.name());
+        if (lang != null && lang.equalsIgnoreCase("EN")) return EN_DAYS.getOrDefault(period, period.name());
+        return AZ_DAYS.getOrDefault(period, period.name());
+    }
+
+    public static List<GymWorkHourDto> toGroupedWorkHourDtos(java.util.Collection<GymWorkHour> workHours, String lang) {
         if (workHours == null || workHours.isEmpty()) return java.util.Collections.emptyList();
 
         List<GymWorkHour> sorted = workHours.stream()
@@ -112,9 +139,9 @@ public final class GymMapper {
 
             String periodStr;
             if (j - i > 1) {
-                periodStr = AZ_DAYS.get(start.getPeriod()) + " – " + AZ_DAYS.get(sorted.get(j - 1).getPeriod());
+                periodStr = getLocalizedDay(start.getPeriod(), lang) + " – " + getLocalizedDay(sorted.get(j - 1).getPeriod(), lang);
             } else {
-                periodStr = AZ_DAYS.get(start.getPeriod());
+                periodStr = getLocalizedDay(start.getPeriod(), lang);
             }
 
             grouped.add(GymWorkHourDto.builder()
@@ -128,10 +155,10 @@ public final class GymMapper {
         return grouped;
     }
 
-    public static GymWorkHourDto toWorkHourDto(GymWorkHour wh) {
+    public static GymWorkHourDto toWorkHourDto(GymWorkHour wh, String lang) {
         if (wh == null) return null;
         return GymWorkHourDto.builder()
-                .period(wh.getPeriod() != null ? AZ_DAYS.getOrDefault(wh.getPeriod(), wh.getPeriod().name()) : null)
+                .period(getLocalizedDay(wh.getPeriod(), lang))
                 .from(wh.getFromTime())
                 .to(wh.getToTime())
                 .build();
