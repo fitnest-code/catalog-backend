@@ -15,6 +15,7 @@ import java.time.LocalTime;
 @Builder
 @Embeddable
 public class GymWorkHour {
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     private GymWorkHourPeriod period;
     private LocalTime fromTime;
     private LocalTime toTime;
