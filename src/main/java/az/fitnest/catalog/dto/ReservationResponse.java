@@ -29,4 +29,5 @@ public class ReservationResponse {
     private LocalTime toHour;
     private ReservationStatus status;
     private Long sessionId;
+    private String cancelReasonText;
 }

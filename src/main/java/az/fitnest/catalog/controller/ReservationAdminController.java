@@ -73,6 +73,25 @@ public class ReservationAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Rezervasiyanı təsdiqləyin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{reservationId}/approve")
+    public ResponseEntity<Void> approveReservation(@PathVariable Long reservationId) {
+        reservationCommandService.approveReservation(reservationId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rezervasiyanı rədd edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{reservationId}/reject")
+    public ResponseEntity<Void> rejectReservation(
+            @PathVariable Long reservationId,
+            @RequestBody(required = false) ReservationRejectRequest request) {
+        String reason = (request != null) ? request.getReason() : null;
+        reservationCommandService.rejectReservation(reservationId, reason);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalına dərs növü əlavə edin")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/gyms/{id}/lesson-types")

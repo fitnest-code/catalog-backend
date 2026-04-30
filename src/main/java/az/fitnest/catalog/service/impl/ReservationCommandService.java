@@ -129,6 +129,41 @@ public class ReservationCommandService {
     }
 
     @Transactional
+    public void approveReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new BadRequestException("INVALID_STATUS", "error.reservation_not_pending");
+        }
+
+        String oldStatus = reservation.getStatus().name();
+        reservation.setStatus(ReservationStatus.APPROVED);
+        reservation.setApprovedAt(LocalDateTime.now());
+        reservationRepository.save(reservation);
+
+        auditService.log(reservationId, null, "APPROVE", oldStatus, "APPROVED", "Admin approval");
+    }
+
+    @Transactional
+    public void rejectReservation(Long reservationId, String reason) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new BadRequestException("INVALID_STATUS", "error.reservation_not_pending");
+        }
+
+        String oldStatus = reservation.getStatus().name();
+        reservation.setStatus(ReservationStatus.REJECTED);
+        reservation.setCancelledAt(LocalDateTime.now());
+        reservation.setCancelReasonText(reason);
+        reservationRepository.save(reservation);
+
+        auditService.log(reservationId, null, "REJECT", oldStatus, "REJECTED", reason);
+    }
+
+    @Transactional
     public void saveOrUpdateRules(Long gymId, Long categoryId, Long lessonId, ReservationRuleUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
