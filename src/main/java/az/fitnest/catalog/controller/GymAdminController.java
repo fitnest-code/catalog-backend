@@ -263,40 +263,47 @@ public class GymAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1(request));
     }
 
-    @Operation(summary = "Step 2: İdman zalının iş saatlarını qeyd edin", description = "İdman zalının iş saatlarını qeyd edir.")
+    @Operation(summary = "Step 2: İdman zalına təlimçilər əlavə edin", description = "İdman zalına çoxlu təlimçi əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step2")
-    public ResponseEntity<Void> createGymStep2(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep2Request request) {
-        gymWriteService.createGymStep2(id, request);
+    @PostMapping(value = "/{id}/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep2(
+            @PathVariable Long id,
+            @RequestParam("names") List<String> names,
+            @RequestParam("surnames") List<String> surnames,
+            @RequestParam("professionIds") List<Long> professionIds,
+            @RequestParam("emails") List<String> emails,
+            @RequestParam("phones") List<String> phones,
+            @RequestParam("photos") List<MultipartFile> photos) {
+        gymWriteService.createGymStep2(id, names, surnames, professionIds, emails, phones, photos);
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Step 3: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
+    @Operation(summary = "Step 3: İdman zalının iş saatlarını qeyd edin", description = "İdman zalının iş saatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step3")
-    public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep3Request request) {
+    public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep2Request request) {
         gymWriteService.createGymStep3(id, request);
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Step 4: İdman zalına şəkillər əlavə edin", description = "İdman zalı üçün üz qabığı və otaq şəkilləri yükləyir.")
+    @Operation(summary = "Step 4: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/step4", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> createGymStep4(
+    @PostMapping("/{id}/step4")
+    public ResponseEntity<Void> createGymStep4(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep3Request request) {
+        gymWriteService.createGymStep4(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 5: İdman zalına şəkillər əlavə edin", description = "İdman zalı üçün üz qabığı və otaq şəkilləri yükləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep5(
             @PathVariable Long id,
             @RequestParam("coverPhoto") MultipartFile coverPhoto,
             @RequestParam(value = "roomNames", required = false) java.util.List<String> roomNames,
             @RequestParam(value = "roomPhotos", required = false) java.util.List<MultipartFile> roomPhotos) {
-        gymWriteService.createGymStep4(id, coverPhoto, roomNames, roomPhotos);
+        gymWriteService.createGymStep5(id, coverPhoto, roomNames, roomPhotos);
         return ResponseEntity.ok().build();
-    }
-
-    @Operation(summary = "Step 5: İdman zalına təlimçi əlavə edin", description = "İdman zalına yeni təlimçi əlavə edir.")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step5")
-    public ResponseEntity<Void> createGymStep5(@PathVariable Long id, @Valid @RequestBody TrainerRequest request) {
-        gymTrainerService.addTrainer(id, request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin", description = "İdman zalı üçün abunəlikləri və dəstəklənən xidmətləri əlavə edir.")

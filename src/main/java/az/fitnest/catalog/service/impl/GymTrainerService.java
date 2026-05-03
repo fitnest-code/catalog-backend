@@ -238,4 +238,32 @@ public class GymTrainerService {
                 .build();
         trainerReservationDateRepository.save(availability);
     }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    public void addTrainers(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
+                           List<String> emails, List<String> phones, List<MultipartFile> photos) {
+        az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        for (int i = 0; i < names.size(); i++) {
+            Trainer trainer = new Trainer();
+            trainer.setName(names.get(i));
+            trainer.setSurname(surnames.get(i));
+            trainer.setEmail(emails.get(i));
+            trainer.setPhone(phones.get(i));
+
+            Profession profession = professionRepository.findById(professionIds.get(i))
+                    .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
+            trainer.setProfession(profession);
+
+            if (photos != null && i < photos.size() && photos.get(i) != null && !photos.get(i).isEmpty()) {
+                String fsId = fileStorageService.saveFile(photos.get(i), "/trainers");
+                trainer.setPicture("/api/v1/media/stream/" + fsId);
+            }
+
+            gym.getTrainers().add(trainer);
+        }
+        gymRepository.save(gym);
+    }
 }

@@ -11,8 +11,8 @@ import java.util.Set;
 
 @Builder
 public record GymCreateStep1Request(
-    @NotEmpty(message = "Kateqoriyalar boş ola bilməz")
-    Set<Long> categoryIds,
+    @NotNull(message = "Kateqoriya tələb olunur")
+    Long categoryId,
 
     @NotBlank(message = "Ad boş ola bilməz")
     String name,

@@ -500,10 +500,10 @@ public class GymReadService {
         }
 
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), pageSize, springSort);
-        
+
         Specification<Gym> spec = (root, criteriaQuery, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            
+
             if (query != null && !query.isBlank()) {
                 String pattern = "%" + query.toLowerCase() + "%";
                 predicates.add(cb.or(
@@ -512,21 +512,21 @@ public class GymReadService {
                     cb.like(cb.lower(root.get("address").get("city")), pattern)
                 ));
             }
-            
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<Gym> gymPage = gymRepository.findAll(spec, pageable);
-        
+
         List<AdminGymResponse> items = gymPage.getContent().stream().map(gym -> {
             String ownerName = gymAdminRepository.findFirstByGymId(gym.getId())
                     .map(admin -> admin.getName() + " " + admin.getSurname())
                     .orElse("N/A");
-            
-            String fullAddress = (gym.getAddress() != null) 
-                    ? (gym.getAddress().getCity() + ", " + gym.getAddress().getAddressText()) 
+
+            String fullAddress = (gym.getAddress() != null)
+                    ? (gym.getAddress().getCity() + ", " + gym.getAddress().getAddressText())
                     : "N/A";
-            
+
             return AdminGymResponse.builder()
                     .id(gym.getId())
                     .name(gym.getName())
@@ -548,7 +548,7 @@ public class GymReadService {
     public List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId, String query, String sort) {
         log.info("Admin: Fetching QR scan history for user: {}, query: {}, sort: {}", userId, query, sort);
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
-        
+
         List<GymEntranceHistory> historyList = gymEntranceHistoryRepository.findAllByUserIdOrderByScanDateDesc(userId);
         if (historyList.isEmpty()) {
             return java.util.Collections.emptyList();
@@ -570,7 +570,7 @@ public class GymReadService {
                             .status(status)
                             .failedReason(h.getReason())
                             .platform(h.getPlatform() != null ? h.getPlatform() : "N/A")
-                            .rawDate(h.getScanDate()) // For sorting
+                            .rawDate(h.getScanDate())
                             .build();
                 });
 
@@ -960,7 +960,7 @@ public class GymReadService {
         boolean allowed = true;
         String reason = null;
         String status = "ELIGIBLE";
-        
+
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
@@ -1026,7 +1026,6 @@ public class GymReadService {
             status = "UNSUCCESSFUL";
         }
 
-        // Save history
         GymEntranceHistory history = GymEntranceHistory.builder()
             .userId(userId)
             .gymId(gymId)
@@ -1124,7 +1123,7 @@ public class GymReadService {
         boolean noHours = (gym.getGeneralWorkHours() == null || gym.getGeneralWorkHours().isEmpty()) &&
                 (gym.getWorkHoursMan() == null || gym.getWorkHoursMan().isEmpty()) &&
                 (gym.getWorkHoursWoman() == null || gym.getWorkHoursWoman().isEmpty());
-        
+
         if (noHours) {
             return true;
         }
@@ -1134,12 +1133,12 @@ public class GymReadService {
         az.fitnest.catalog.model.enums.GymWorkHourPeriod period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(day.name());
 
         java.time.LocalTime currentTime = now.toLocalTime();
-        
+
         boolean allowedInGeneral = gym.getGeneralWorkHours() != null && gym.getGeneralWorkHours().stream()
                 .filter(h -> h.getPeriod() == period)
                 .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
                                 (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
-        
+
         if (allowedInGeneral) return true;
 
         if ("MALE".equalsIgnoreCase(gender)) {

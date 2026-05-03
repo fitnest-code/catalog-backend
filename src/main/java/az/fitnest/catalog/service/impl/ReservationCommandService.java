@@ -94,8 +94,7 @@ public class ReservationCommandService {
         policyService.validateCancellationAllowed(reservation);
 
         var reason = reasonService.getByCode(reasonCode);
-        
-        // Enforce: only OTHER accepts additionalNote
+
         String finalNote = additionalNote;
         if (!"OTHER".equalsIgnoreCase(reasonCode)) {
             finalNote = null;

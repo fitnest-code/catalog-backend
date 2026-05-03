@@ -1,10 +1,8 @@
 package az.fitnest.catalog.dto;
 
-
 import az.fitnest.catalog.model.enums.GymStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
-
 
 @Builder
 @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)

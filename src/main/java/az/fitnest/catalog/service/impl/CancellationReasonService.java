@@ -30,8 +30,6 @@ public class CancellationReasonService {
                 .collect(Collectors.toList());
     }
 
-
-
     @Transactional
     public void createReason(CancelReasonRequest request) {
         if (reasonRepository.findByCode(request.code()).isPresent()) {
