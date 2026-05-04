@@ -55,6 +55,7 @@ public class GymWriteService {
     private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
     private final az.fitnest.catalog.client.IdentityServiceGrpcClient identityServiceGrpcClient;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
+    private final GymTrainerService gymTrainerService;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -171,7 +172,7 @@ public class GymWriteService {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> newGeneralWorkHours = request.generalWorkHours().stream()
                     .map(dto -> {
                         if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
                     })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getGeneralWorkHours().addAll(newGeneralWorkHours);
@@ -182,7 +183,7 @@ public class GymWriteService {
             Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
                     .map(dto -> {
                         if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(dto.period(), dto.from(), dto.to());
+                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
                     })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursWoman().addAll(newWorkHoursWoman);
@@ -645,8 +646,8 @@ public class GymWriteService {
         gymAdminRepository.save(admin);
 
         gym.setStatus(GymStatus.ACTIVE);
-        self.generateAndSaveQrCode(gym);
         gymRepository.save(gym);
+        self.generateAndSaveQrCode(gym);
     }
 
     @Transactional
