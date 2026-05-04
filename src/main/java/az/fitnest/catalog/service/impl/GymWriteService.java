@@ -33,6 +33,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.tika.Tika;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
@@ -56,10 +57,38 @@ public class GymWriteService {
     private final az.fitnest.catalog.client.IdentityServiceGrpcClient identityServiceGrpcClient;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
     private final GymTrainerService gymTrainerService;
+    private final GymQrCodeService gymQrCodeService;
+    private final FileDeletionService fileDeletionService;
+    private final Tika tika = new Tika();
 
-    @org.springframework.beans.factory.annotation.Autowired
-    @org.springframework.context.annotation.Lazy
-    private GymWriteService self;
+    private static final java.util.Set<String> ALLOWED_MIME_TYPES = java.util.Set.of("image/jpeg", "image/png", "image/webp");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    private MultipartFile validateAndWrapImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+             throw new BadRequestException("FILE_EMPTY", "error.file_empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
+        }
+        try {
+            byte[] bytes = file.getBytes();
+            try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
+                String mimeType = tika.detect(is);
+                if (mimeType == null || !ALLOWED_MIME_TYPES.contains(mimeType)) {
+                    throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
+                }
+            }
+            return new az.fitnest.catalog.util.ByteArrayMultipartFile(
+                    bytes,
+                    file.getName(),
+                    file.getOriginalFilename(),
+                    file.getContentType()
+            );
+        } catch (java.io.IOException e) {
+            throw new BadRequestException("FILE_VALIDATION_FAILED", "error.file_validation_failed");
+        }
+    }
 
     @Transactional
     @Caching(evict = {
@@ -129,14 +158,11 @@ public class GymWriteService {
 
         Gym saved = gymRepository.save(gym);
 
-        self.generateAndSaveQrCode(saved);
+        gymQrCodeService.generateAndSaveQrCode(saved.getId());
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void updateGym(Long gymId, GymRequest request) {
         if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
@@ -206,10 +232,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void enableGymSubscription(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -226,68 +249,53 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        GymSubscription subscription = gym.getSubscriptions().stream().findFirst()
+        GymSubscription subscription = gym.getSubscriptions().stream()
+                .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(packageId))
+                .findFirst()
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
-        subscription.getSupportedServices().clear();
-
+        
+        if (request.benefitIds() != null) {
+            List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(request.benefitIds());
+            subscription.setSupportedServices(new java.util.HashSet<>(services));
+        }
+        
         gymRepository.save(gym);
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteGym(Long gymId) {
-        Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        if (gym.getCoverImageUrl() != null && !gym.getCoverImageUrl().isBlank()) {
-            safeDeleteFile(gym.getCoverImageUrl());
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        
+        List<String> filesToDelete = new java.util.ArrayList<>();
+        if (gym.getCoverImageUrl() != null) filesToDelete.add(gym.getCoverImageUrl());
+        if (gym.getQrCodeUrl() != null) filesToDelete.add(gym.getQrCodeUrl());
+        
+        if (gym.getImages() != null) {
+            filesToDelete.addAll(gym.getImages().stream().map(GymImage::getUrl).toList());
         }
-
-        if (gym.getImages() != null && !gym.getImages().isEmpty()) {
-            List<String> imageUrls = gym.getImages().stream()
-                    .map(GymImage::getUrl)
-                    .filter(url -> url != null && !url.isBlank())
-                    .toList();
-            try {
-                fileStorageService.deleteFiles(imageUrls);
-            } catch (Exception e) {
-            }
+        
+        if (gym.getTrainers() != null) {
+            filesToDelete.addAll(gym.getTrainers().stream().map(Trainer::getPicture).filter(java.util.Objects::nonNull).toList());
         }
 
         if (gym.getRooms() != null) {
-            List<String> roomImageUrls = gym.getRooms().stream()
+            filesToDelete.addAll(gym.getRooms().stream()
                     .flatMap(r -> r.getImages().stream())
                     .map(az.fitnest.catalog.model.entity.RoomImage::getPictureUrl)
-                    .filter(url -> url != null && !url.isBlank())
-                    .toList();
-            if (!roomImageUrls.isEmpty()) {
-                try {
-                    fileStorageService.deleteFiles(roomImageUrls);
-                } catch (Exception e) {}
-            }
+                    .toList());
         }
 
-        if (gym.getTrainers() != null && !gym.getTrainers().isEmpty()) {
-            for (Trainer trainer : gym.getTrainers()) {
-                if (trainer.getPicture() != null && !trainer.getPicture().isBlank()) {
-                    safeDeleteFile(trainer.getPicture());
-                }
-            }
-        }
-        gymImageRepository.deleteByGymId(gymId);
-        savedGymRepository.deleteByGymId(gymId);
         gymRepository.delete(gym);
+        
+        // Issue 4: Async deletion outside transaction via post-commit hook
+        fileDeletionService.deleteFilesAfterCommit(filesToDelete);
     }
+
 
     @Transactional
     public boolean toggleSave(Long userId, Long gymId) {
@@ -310,6 +318,7 @@ public class GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
+        // Issue 11: Improved consistency - perform external check-in first
         orderServiceGrpcClient.checkIn(userId, gymId);
 
         String addressText = gym.getAddress() != null ? gym.getAddress().getAddressText() : null;
@@ -319,53 +328,12 @@ public class GymWriteService {
     }
 
     private void safeDeleteFile(String url) {
-        try {
-            fileStorageService.deleteFile(url);
-        } catch (Exception e) {
-        }
+        fileDeletionService.deleteFileAsync(url);
     }
 
-    @Async
-    public void generateAndSaveQrCode(Gym gym) {
-        try {
-            String secureToken = java.util.UUID.randomUUID().toString();
-            String qrContent = gym.getId().toString();
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
-
-            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-            byte[] pngData = pngOutputStream.toByteArray();
-
-            String gymAddress = gym.getAddress() != null && gym.getAddress().getAddressText() != null ? gym.getAddress().getAddressText() : "";
-            String baseName = sanitizeFilename(gym.getName() + "_" + gymAddress);
-            ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
-                    pngData,
-                    "qr_code",
-                    baseName + "_" + java.util.UUID.randomUUID().toString().substring(0, 8) + "_qr.png",
-                    "image/png"
-            );
-
-            String fsId = fileStorageService.saveFile(multipartFile, "/gyms");
-            gymRepository.findById(gym.getId()).ifPresent(g -> {
-                g.setQrCodeUrl("/api/v1/media/stream/" + fsId);
-                g.setQrCodeValue(qrContent);
-                g.setQrCodeToken(secureToken);
-                gymRepository.save(g);
-            });
-        } catch (Exception e) {
-            gymRepository.findById(gym.getId()).ifPresent(g -> {
-                g.setQrCodeUrl("/api/v1/gyms/" + g.getId() + "/qr");
-                gymRepository.save(g);
-            });
-        }
-    }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -373,10 +341,12 @@ public class GymWriteService {
         if (roomNames.size() != files.size()) {
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
+        
+        List<MultipartFile> validatedFiles = files.stream().map(this::validateAndWrapImage).toList();
 
-        for (int i = 0; i < files.size(); i++) {
+        for (int i = 0; i < validatedFiles.size(); i++) {
             String roomName = roomNames.get(i);
-            MultipartFile file = files.get(i);
+            MultipartFile file = validatedFiles.get(i);
 
             String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
             String url = "/api/v1/media/stream/" + fsId;
@@ -405,10 +375,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void deleteAllGymRooms(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -431,10 +398,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void deleteGymRoomById(Long gymId, Long roomId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -460,10 +424,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void deleteRoomImageById(Long gymId, Long imageId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -487,15 +448,12 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
-    public void updateCoverImage(Long gymId, MultipartFile file) {
-        Gym gym = gymRepository.findById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        String fsId = fileStorageService.saveFile(file, "/gyms/covers", gym.getCoverImageUrl());
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    public void updateCoverImage(Long gymId, MultipartFile coverPhoto) {
+        MultipartFile validatedFile = validateAndWrapImage(coverPhoto);
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        if (gym.getCoverImageUrl() != null) safeDeleteFile(gym.getCoverImageUrl());
+        String fsId = fileStorageService.saveFile(validatedFile, "/gyms/covers");
         gym.setCoverImageUrl("/api/v1/media/stream/" + fsId);
         gymRepository.save(gym);
     }
@@ -509,10 +467,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteAllGymSubscriptions(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -521,10 +476,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @Caching(evict = {
-        @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
-    })
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteGymSubscriptionById(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -541,7 +493,7 @@ public class GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void toggleGymReservation(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -569,9 +521,23 @@ public class GymWriteService {
     }
 
     @Transactional
-    public void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds,
-                               List<String> emails, List<String> phones, List<MultipartFile> photos) {
-        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, photos);
+    public void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos) {
+        List<MultipartFile> validatedPhotos = null;
+        if (photos != null) {
+            validatedPhotos = photos.stream().map(this::validateAndWrapImage).toList();
+        }
+        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, validatedPhotos);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    public void deleteTrainer(Long gymId, Long trainerId) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Trainer trainer = gym.getTrainers().stream().filter(t -> t.getId().equals(trainerId)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        if (trainer.getPicture() != null) safeDeleteFile(trainer.getPicture());
+        gym.getTrainers().remove(trainer);
+        gymRepository.save(gym);
     }
 
     @Transactional
@@ -608,10 +574,17 @@ public class GymWriteService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
-        updateCoverImage(gymId, coverPhoto);
-        if (roomNames != null && roomPhotos != null && roomNames.size() == roomPhotos.size() && !roomNames.isEmpty()) {
-            addRoomImages(gymId, roomNames, roomPhotos);
+        MultipartFile validatedCover = null;
+        if (coverPhoto != null) validatedCover = validateAndWrapImage(coverPhoto);
+        
+        List<MultipartFile> validatedRooms = null;
+        if (roomPhotos != null) validatedRooms = roomPhotos.stream().map(this::validateAndWrapImage).toList();
+        
+        updateCoverImage(gymId, validatedCover);
+        if (roomNames != null && validatedRooms != null && roomNames.size() == validatedRooms.size() && !roomNames.isEmpty()) {
+            addRoomImages(gymId, roomNames, validatedRooms);
         }
     }
 
@@ -619,7 +592,14 @@ public class GymWriteService {
     public void createGymStep6(Long gymId, az.fitnest.catalog.dto.GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.getSubscriptions().clear();
+        
+        // Issue 10: Deduplicate subscriptions by packageId
+        java.util.Set<Long> processedPackages = new java.util.HashSet<>();
+        
         for (az.fitnest.catalog.dto.GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
+            if (!processedPackages.add(subReq.packageId())) {
+                continue; // Skip duplicates
+            }
             GymSubscription subscription = new GymSubscription();
             subscription.setGym(gym);
             subscription.setPackageId(subReq.packageId());
@@ -633,6 +613,9 @@ public class GymWriteService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+    })
     public void createGymStep7(Long gymId, az.fitnest.catalog.dto.GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), request.phoneNumber(), request.email(), request.password());
@@ -647,7 +630,7 @@ public class GymWriteService {
 
         gym.setStatus(GymStatus.ACTIVE);
         gymRepository.save(gym);
-        self.generateAndSaveQrCode(gym);
+        gymQrCodeService.generateAndSaveQrCode(gym.getId());
     }
 
     @Transactional

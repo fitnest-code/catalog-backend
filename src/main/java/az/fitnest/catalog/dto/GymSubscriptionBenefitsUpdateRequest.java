@@ -5,5 +5,6 @@ import java.util.List;
 
 @Builder
 public record GymSubscriptionBenefitsUpdateRequest(
+    List<Long> benefitIds,
     List<GymSubscriptionBenefitRequestDto> benefits
 ) {}

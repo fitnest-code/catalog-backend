@@ -41,8 +41,23 @@ public class FileStorageServiceImpl
         }
         this.validateFile(file);
         try {
+            String extension = "";
+            String originalName = file.getOriginalFilename();
+            if (originalName != null && originalName.contains(".")) {
+                extension = originalName.substring(originalName.lastIndexOf("."));
+            }
+            String randomFilename = java.util.UUID.randomUUID() + extension;
+            
+            // Wrap the file to provide the randomized filename
+            MultipartFile randomizedFile = new az.fitnest.catalog.util.ByteArrayMultipartFile(
+                    file.getBytes(),
+                    file.getName(),
+                    randomFilename,
+                    file.getContentType()
+            );
+
             String extractedOldPath = this.extractIdFromUrl(oldPath);
-            StorageFileData data = this.storageGrpcClient.uploadFile(file, directory, extractedOldPath);
+            StorageFileData data = this.storageGrpcClient.uploadFile(randomizedFile, directory, extractedOldPath);
             return String.valueOf(data.getFsId());
         } catch (Exception e) {
             throw new BadRequestException("error.file_upload_failed");
