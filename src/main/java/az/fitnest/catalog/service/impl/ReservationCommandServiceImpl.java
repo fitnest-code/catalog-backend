@@ -11,12 +11,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import az.fitnest.catalog.service.ReservationPolicyService;
+import az.fitnest.catalog.service.ReservationAvailabilityService;
+import az.fitnest.catalog.service.ReservationAuditService;
+import az.fitnest.catalog.service.CancellationReasonService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationCommandService {
+public class ReservationCommandServiceImpl implements az.fitnest.catalog.service.ReservationCommandService {
 
     private final ReservationRepository reservationRepository;
     private final GymRepository gymRepository;

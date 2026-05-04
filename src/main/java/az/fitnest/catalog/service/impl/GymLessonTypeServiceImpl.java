@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GymLessonTypeService {
+public class GymLessonTypeServiceImpl implements az.fitnest.catalog.service.GymLessonTypeService {
 
     private final GymRepository gymRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;

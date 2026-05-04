@@ -19,7 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GymQrCodeService {
+public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCodeService {
 
     private final GymRepository gymRepository;
     private final FileStorageService fileStorageService;

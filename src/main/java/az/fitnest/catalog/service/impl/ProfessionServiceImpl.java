@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ProfessionService {
+public class ProfessionServiceImpl implements az.fitnest.catalog.service.ProfessionService {
 
     private final ProfessionRepository professionRepository;
     private final TrainerRepository trainerRepository;

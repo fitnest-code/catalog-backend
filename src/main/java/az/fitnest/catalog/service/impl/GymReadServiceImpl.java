@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GymReadService {
+public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
     private final GymRepository gymRepository;
     private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
     private final GymImageRepository gymImageRepository;
@@ -879,33 +879,32 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
-        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
-        logger.info("[getGymCountBySubscription] Start fetching gyms and aggregating by subscription.");
+        log.info("[getGymCountBySubscription] Start fetching gyms and aggregating by subscription.");
         List<Gym> gyms = gymRepository.findAll();
-        logger.debug("[getGymCountBySubscription] Total gyms fetched: {}", gyms.size());
+        log.debug("[getGymCountBySubscription] Total gyms fetched: {}", gyms.size());
         java.util.Map<Long, java.util.Set<Long>> packageIdToGyms = new java.util.HashMap<>();
         for (Gym gym : gyms) {
             if (gym.getSubscriptions() != null) {
-                logger.debug("[getGymCountBySubscription] Gym ID {} has {} subscriptions.", gym.getId(), gym.getSubscriptions().size());
+                log.debug("[getGymCountBySubscription] Gym ID {} has {} subscriptions.", gym.getId(), gym.getSubscriptions().size());
                 for (var subscription : gym.getSubscriptions()) {
                     Long packageId = subscription.getPackageId();
-                    logger.debug("[getGymCountBySubscription] Gym ID {} subscription packageId: {}", gym.getId(), packageId);
+                    log.debug("[getGymCountBySubscription] Gym ID {} subscription packageId: {}", gym.getId(), packageId);
                     if (packageId != null) {
                         packageIdToGyms.computeIfAbsent(packageId, k -> new java.util.HashSet<>()).add(gym.getId());
                     }
                 }
             } else {
-                logger.debug("[getGymCountBySubscription] Gym ID {} has no subscriptions.", gym.getId());
+                log.debug("[getGymCountBySubscription] Gym ID {} has no subscriptions.", gym.getId());
             }
         }
-        logger.info("[getGymCountBySubscription] Aggregated packageIdToGyms: {}", packageIdToGyms);
+        log.info("[getGymCountBySubscription] Aggregated packageIdToGyms: {}", packageIdToGyms);
         java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
-        logger.info("[getGymCountBySubscription] Package IDs to fetch: {}", packageIds);
+        log.info("[getGymCountBySubscription] Package IDs to fetch: {}", packageIds);
         java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-        logger.info("[getGymCountBySubscription] Fetched packageNames: {}", packageNames);
+        log.info("[getGymCountBySubscription] Fetched packageNames: {}", packageNames);
         java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
         for (az.fitnest.order.grpc.PackageNameInfo info : packageNames) {
-            logger.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
+            log.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
             packageIdToName.put(info.getPackageId(), info.getName());
         }
         return packageIdToGyms.entrySet().stream()
@@ -992,7 +991,7 @@ public class GymReadService {
                 az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
                 gender = userResp.getGender();
             } catch (Exception e) {
-                org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
+                log.error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
             }
 
             boolean withinHours = isWithinWorkingHours(gym, gender);
@@ -1018,7 +1017,7 @@ public class GymReadService {
                 allowed = false;
                 status = "UNSUCCESSFUL";
                 reason = "CHECKIN_FAILED";
-                org.slf4j.LoggerFactory.getLogger(GymReadService.class).error("[scanGymQrEntrance] Failed to record check-in for userId={} at gymId={}: {}", userId, gymId, e.getMessage());
+                log.error("[scanGymQrEntrance] Failed to record check-in for userId={} at gymId={}: {}", userId, gymId, e.getMessage());
             }
         }
 
@@ -1088,34 +1087,33 @@ public class GymReadService {
 
     @Transactional(readOnly = true)
     public GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal) {
-        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GymReadService.class);
         Long userId = extractUserId(principal);
-        logger.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
+        log.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
         if (userId == null) {
-            logger.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
+            log.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
             throw new IllegalArgumentException("Unauthorized");
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
-            logger.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
+            log.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
         } catch (Exception e) {
-            logger.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
+            log.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
             throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         String status = subResp.getSubscriptionStatus();
-        logger.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
+        log.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
-            logger.info("[checkGymEntranceEligibility] No active subscription found for userId={}, status={}", userId, status);
+            log.info("[checkGymEntranceEligibility] No active subscription found for userId={}, status={}", userId, status);
             throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
-        logger.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
+        log.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
         if (visitLimitRemaining <= 0) {
-            logger.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
+            log.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
             throw new ForbiddenException("Your visit limit has been exceeded", "VISIT_LIMIT_EXCEEDED");
         }
-        logger.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
+        log.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return new GymEntranceEligibilityResponse(true);
     }
 

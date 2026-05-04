@@ -1,11 +1,11 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.service.impl.CancellationReasonService;
-import az.fitnest.catalog.service.impl.GymLessonTypeService;
-import az.fitnest.catalog.service.impl.GymTrainerService;
-import az.fitnest.catalog.service.impl.GymWriteService;
-import az.fitnest.catalog.service.impl.ReservationCommandService;
+import az.fitnest.catalog.service.CancellationReasonService;
+import az.fitnest.catalog.service.GymLessonTypeService;
+import az.fitnest.catalog.service.GymTrainerService;
+import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.service.ReservationCommandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

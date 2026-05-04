@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class GymTrainerService {
+public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrainerService {
 
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
@@ -99,7 +99,7 @@ public class GymTrainerService {
         }
 
         if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {
-            safeDeleteFile(trainerToDelete.getPicture());
+            fileStorageService.deleteFileAsync(trainerToDelete.getPicture());
         }
         trainerRepository.delete(trainerToDelete);
     }
@@ -125,16 +125,10 @@ public class GymTrainerService {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        String fsId = fileStorageService.saveFile(file, "/trainers", trainer.getPicture());
+        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
+        String fsId = fileStorageService.saveFile(validatedFile, "/trainers", trainer.getPicture());
         trainer.setPicture("/api/v1/media/stream/" + fsId);
         trainerRepository.save(trainer);
-    }
-
-    private void safeDeleteFile(String url) {
-        try {
-            fileStorageService.deleteFile(url);
-        } catch (Exception e) {
-        }
     }
 
     private GymTrainerDto toGymTrainerDto(Trainer t, String language) {
@@ -258,7 +252,8 @@ public class GymTrainerService {
             trainer.setProfession(profession);
 
             if (photos != null && i < photos.size() && photos.get(i) != null && !photos.get(i).isEmpty()) {
-                String fsId = fileStorageService.saveFile(photos.get(i), "/trainers");
+                MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photos.get(i));
+                String fsId = fileStorageService.saveFile(validatedPhoto, "/trainers");
                 trainer.setPicture("/api/v1/media/stream/" + fsId);
             }
 

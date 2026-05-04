@@ -21,7 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class GymImageService {
+public class GymImageServiceImpl implements az.fitnest.catalog.service.GymImageService {
 
     private final GymRepository gymRepository;
     private final GymImageRepository gymImageRepository;

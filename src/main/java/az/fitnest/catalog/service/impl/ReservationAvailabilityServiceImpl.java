@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationAvailabilityService {
+public class ReservationAvailabilityServiceImpl implements az.fitnest.catalog.service.ReservationAvailabilityService {
 
     private final ReservationRepository reservationRepository;
 

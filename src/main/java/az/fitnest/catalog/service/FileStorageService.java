@@ -12,9 +12,17 @@ public interface FileStorageService {
 
     public String saveFile(MultipartFile var1, String var2, String var3);
 
-    public void deleteFile(String var1);
+    void deleteFile(String var1);
 
-    public void deleteFiles(List<String> var1);
+    void deleteFiles(List<String> var1);
+
+    void deleteFilesAsync(List<String> urls);
+
+    void deleteFileAsync(String url);
+
+    void deleteFilesAfterCommit(List<String> urls);
 
     void streamFileToOutput(String fsId, OutputStream outputStream);
+
+    MultipartFile validateAndWrapImage(MultipartFile file);
 }

@@ -17,9 +17,11 @@ import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.SavedGymRepository;
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
-import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.service.GymTrainerService;
+import az.fitnest.catalog.service.GymQrCodeService;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -44,7 +46,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GymWriteService {
+public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteService {
 
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;
@@ -58,37 +60,9 @@ public class GymWriteService {
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
     private final GymTrainerService gymTrainerService;
     private final GymQrCodeService gymQrCodeService;
-    private final FileDeletionService fileDeletionService;
-    private final Tika tika = new Tika();
 
     private static final java.util.Set<String> ALLOWED_MIME_TYPES = java.util.Set.of("image/jpeg", "image/png", "image/webp");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-    private MultipartFile validateAndWrapImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-             throw new BadRequestException("FILE_EMPTY", "error.file_empty");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
-        }
-        try {
-            byte[] bytes = file.getBytes();
-            try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
-                String mimeType = tika.detect(is);
-                if (mimeType == null || !ALLOWED_MIME_TYPES.contains(mimeType)) {
-                    throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
-                }
-            }
-            return new az.fitnest.catalog.util.ByteArrayMultipartFile(
-                    bytes,
-                    file.getName(),
-                    file.getOriginalFilename(),
-                    file.getContentType()
-            );
-        } catch (java.io.IOException e) {
-            throw new BadRequestException("FILE_VALIDATION_FAILED", "error.file_validation_failed");
-        }
-    }
 
     @Transactional
     @Caching(evict = {
@@ -294,7 +268,7 @@ public class GymWriteService {
 
         gymRepository.delete(gym);
 
-        fileDeletionService.deleteFilesAfterCommit(filesToDelete);
+        fileStorageService.deleteFilesAfterCommit(filesToDelete);
     }
 
     @Transactional
@@ -327,7 +301,7 @@ public class GymWriteService {
     }
 
     private void safeDeleteFile(String url) {
-        fileDeletionService.deleteFileAsync(url);
+        fileStorageService.deleteFileAsync(url);
     }
 
     @Transactional
@@ -340,7 +314,7 @@ public class GymWriteService {
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
 
-        List<MultipartFile> validatedFiles = files.stream().map(this::validateAndWrapImage).toList();
+        List<MultipartFile> validatedFiles = files.stream().map(fileStorageService::validateAndWrapImage).toList();
 
         for (int i = 0; i < validatedFiles.size(); i++) {
             String roomName = roomNames.get(i);
@@ -448,7 +422,7 @@ public class GymWriteService {
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void updateCoverImage(Long gymId, MultipartFile coverPhoto) {
-        MultipartFile validatedFile = validateAndWrapImage(coverPhoto);
+        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(coverPhoto);
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         if (gym.getCoverImageUrl() != null) safeDeleteFile(gym.getCoverImageUrl());
         String fsId = fileStorageService.saveFile(validatedFile, "/gyms/covers");
@@ -522,7 +496,7 @@ public class GymWriteService {
     public void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos) {
         List<MultipartFile> validatedPhotos = null;
         if (photos != null) {
-            validatedPhotos = photos.stream().map(this::validateAndWrapImage).toList();
+            validatedPhotos = photos.stream().map(fileStorageService::validateAndWrapImage).toList();
         }
         gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, validatedPhotos);
     }
@@ -575,10 +549,10 @@ public class GymWriteService {
     @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
         MultipartFile validatedCover = null;
-        if (coverPhoto != null) validatedCover = validateAndWrapImage(coverPhoto);
+        if (coverPhoto != null) validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
 
         List<MultipartFile> validatedRooms = null;
-        if (roomPhotos != null) validatedRooms = roomPhotos.stream().map(this::validateAndWrapImage).toList();
+        if (roomPhotos != null) validatedRooms = roomPhotos.stream().map(fileStorageService::validateAndWrapImage).toList();
 
         updateCoverImage(gymId, validatedCover);
         if (roomNames != null && validatedRooms != null && roomNames.size() == validatedRooms.size() && !roomNames.isEmpty()) {

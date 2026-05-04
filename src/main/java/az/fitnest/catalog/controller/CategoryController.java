@@ -2,7 +2,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.CategoryDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.service.impl.CategoryService;
+import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

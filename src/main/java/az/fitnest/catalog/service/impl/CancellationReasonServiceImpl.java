@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class CancellationReasonService {
+public class CancellationReasonServiceImpl implements az.fitnest.catalog.service.CancellationReasonService {
 
     private final ReservationCancelReasonRepository reasonRepository;
 

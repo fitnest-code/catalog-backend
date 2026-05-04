@@ -5,7 +5,7 @@ import az.fitnest.catalog.dto.CategoryRequest;
 import az.fitnest.catalog.exception.ValidationException;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.service.impl.CategoryService;
+import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

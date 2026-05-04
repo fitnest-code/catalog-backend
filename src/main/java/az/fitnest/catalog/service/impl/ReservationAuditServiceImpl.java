@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationAuditService {
+public class ReservationAuditServiceImpl implements az.fitnest.catalog.service.ReservationAuditService {
 
     private final ReservationAuditLogRepository auditLogRepository;
 

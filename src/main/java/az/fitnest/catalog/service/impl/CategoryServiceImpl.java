@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class CategoryService {
+public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final GymRepository gymRepository;
@@ -105,10 +105,10 @@ public class CategoryService {
 
     @Transactional
     public void updateCategoryPhoto(Long categoryId, MultipartFile file) {
-        validateImageFile(file);
+        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        String fsId = fileStorageService.saveFile(file, "/categories/" + categoryId);
+        String fsId = fileStorageService.saveFile(validatedFile, "/categories/" + categoryId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
         category.setPhotoUrl(fullUrl);
         categoryRepository.save(category);
@@ -116,10 +116,10 @@ public class CategoryService {
 
     @Transactional
     public void updateCategoryIcon(Long categoryId, MultipartFile file) {
-        validateImageFile(file);
+        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        String fsId = fileStorageService.saveFile(file, "/categories/icons/" + categoryId);
+        String fsId = fileStorageService.saveFile(validatedFile, "/categories/icons/" + categoryId);
         String fullUrl = "/api/v1/media/stream/" + fsId;
         category.setIconUrl(fullUrl);
         categoryRepository.save(category);
@@ -156,17 +156,4 @@ public class CategoryService {
         return "AZ";
     }
 
-    private void validateImageFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new BadRequestException("FILE_EMPTY", "error.file_empty");
-        }
-        long maxSize = 5 * 1024 * 1024;
-        if (file.getSize() > maxSize) {
-            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
-        }
-        String contentType = file.getContentType();
-        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
-            throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
-        }
-    }
 }

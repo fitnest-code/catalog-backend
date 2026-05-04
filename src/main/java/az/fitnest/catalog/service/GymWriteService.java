@@ -1,0 +1,34 @@
+package az.fitnest.catalog.service;
+
+import az.fitnest.catalog.dto.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
+
+public interface GymWriteService {
+    void createGym(GymRequest request);
+    void updateGym(Long gymId, GymRequest request);
+    void enableGymSubscription(Long gymId, Long subscriptionId);
+    void updateGymSubscriptionBenefits(Long gymId, Long packageId, GymSubscriptionBenefitsUpdateRequest request);
+    void deleteGym(Long gymId);
+    boolean toggleSave(Long userId, Long gymId);
+    CheckInResponseDto checkIn(Long userId, Long gymId);
+    void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files);
+    void deleteAllGymRooms(Long gymId);
+    void deleteGymRoomById(Long gymId, Long roomId);
+    void deleteRoomImageById(Long gymId, Long imageId);
+    void updateCoverImage(Long gymId, MultipartFile coverPhoto);
+    void deleteAllGyms();
+    void deleteAllGymSubscriptions(Long gymId);
+    void deleteGymSubscriptionById(Long gymId, Long subscriptionId);
+    void toggleGymReservation(Long gymId, boolean enabled);
+    void createSupportedService(SupportedServiceRequest request);
+    void deleteSupportedService(Long id);
+
+    GymCreateStep1Response createGymStep1(GymCreateStep1Request request);
+    void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos);
+    void createGymStep3(Long id, GymCreateStep2Request request);
+    void createGymStep4(Long id, GymCreateStep3Request request);
+    void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos);
+    void createGymStep6(Long gymId, GymCreateStep6Request request);
+    void createGymStep7(Long gymId, GymCreateStep7Request request);
+}

@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationQueryService {
+public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.ReservationQueryService {
 
     private final CategoryRepository categoryRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;

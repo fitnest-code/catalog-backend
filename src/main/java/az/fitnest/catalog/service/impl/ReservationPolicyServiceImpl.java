@@ -17,7 +17,7 @@ import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationPolicyService {
+public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.ReservationPolicyService {
 
     private final UserServiceGrpcClient userServiceClient;
     private final OrderServiceGrpcClient orderServiceClient;

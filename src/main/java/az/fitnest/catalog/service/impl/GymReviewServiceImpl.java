@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class GymReviewService {
+public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
     private final UserServiceGrpcClient userServiceGrpcClient;

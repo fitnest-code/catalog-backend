@@ -2,7 +2,7 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.ProfessionDto;
 import az.fitnest.catalog.dto.ProfessionRequest;
-import az.fitnest.catalog.service.impl.ProfessionService;
+import az.fitnest.catalog.service.ProfessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;

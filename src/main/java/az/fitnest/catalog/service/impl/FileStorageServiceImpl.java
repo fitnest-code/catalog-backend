@@ -11,14 +11,22 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import az.fitnest.catalog.service.FileStorageService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.apache.tika.Tika;
 import java.io.OutputStream;
 
 @Service
+@Slf4j
 public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
     private final StorageGrpcClient storageGrpcClient;
+    private final Tika tika = new Tika();
 
     public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
         this.storageGrpcClient = storageGrpcClient;
@@ -92,6 +100,39 @@ public class FileStorageServiceImpl
                 this.storageGrpcClient.deleteFiles(ids);
             }
         } catch (Exception exception) {
+            log.error("Failed to delete files: {}", fileUrls, exception);
+        }
+    }
+
+    @Override
+    @Async("fileDeletionExecutor")
+    public void deleteFilesAsync(List<String> urls) {
+        if (urls == null || urls.isEmpty()) return;
+        log.info("Starting asynchronous file deletion for {} files", urls.size());
+        this.deleteFiles(urls);
+    }
+
+    @Override
+    @Async("fileDeletionExecutor")
+    public void deleteFileAsync(String url) {
+        if (url == null || url.isBlank()) return;
+        log.info("Starting asynchronous file deletion for file: {}", url);
+        this.deleteFile(url);
+    }
+
+    @Override
+    public void deleteFilesAfterCommit(List<String> urls) {
+        if (urls == null || urls.isEmpty()) return;
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteFilesAsync(urls);
+                }
+            });
+        } else {
+            deleteFilesAsync(urls);
         }
     }
 
@@ -117,8 +158,32 @@ public class FileStorageServiceImpl
                 }
             }
         });
+    }
+
+    @Override
+    public MultipartFile validateAndWrapImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("error.file_empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BadRequestException("error.file_too_large");
+        }
         try {
-            outputStream.flush();
-        } catch (Exception ignored) {}
+            byte[] bytes = file.getBytes();
+            try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
+                String mimeType = tika.detect(is);
+                if (mimeType == null || !ALLOWED_CONTENT_TYPES.contains(mimeType)) {
+                    throw new BadRequestException("error.invalid_file_type");
+                }
+            }
+            return new az.fitnest.catalog.util.ByteArrayMultipartFile(
+                    bytes,
+                    file.getName(),
+                    file.getOriginalFilename(),
+                    file.getContentType()
+            );
+        } catch (java.io.IOException e) {
+            throw new BadRequestException("error.file_validation_failed");
+        }
     }
 }
