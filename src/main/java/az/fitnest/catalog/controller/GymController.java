@@ -26,6 +26,7 @@ import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.GymReviewService;
 import az.fitnest.catalog.service.GymTrainerService;
 import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.util.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -75,7 +76,7 @@ public class GymController {
     @Operation(summary = "İdman zalı təfərrüatlarını əldə edin", description = "Xüsusi bir idman zalının tam təfərrüatlarını, o cümlədən yerləşmə yeri, obyektləri və istifadəçiyə xüsusi favorit statusunu əldə edir.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalı təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymDetailResponse.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
     public ResponseEntity<GymDetailResponse> getGymDetail(@AuthenticationPrincipal Object principal, @Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
-        Long userId = this.extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         return ResponseEntity.ok(this.gymReadService.getGymDetail(userId, gymId));
     }
 
@@ -119,7 +120,7 @@ public class GymController {
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Rəy uğurla əlavə edildi"), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
     public ResponseEntity<Void> addReview(@AuthenticationPrincipal Object principal, @PathVariable Long gymId, @Valid @RequestBody ReviewRequest request) {
-        Long userId = this.extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
@@ -143,7 +144,7 @@ public class GymController {
             @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
             @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
             @Parameter(description = "Sıralama istiqaməti. ASC (Artan sıra, A-dan Z-yə, ən aşağıdan ən yuxarıya), DESC (Azalan sıra, Z-dən A-ya, ən yuxarıdan ən aşağıya", schema = @Schema(implementation = SortDirection.class, example = "DESC")) @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir) {
-        Long userId = this.extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         int safePageSize = Math.min(page_size, 100);
         return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
     }
@@ -158,7 +159,7 @@ public class GymController {
             @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class))})
     })
     public ResponseEntity<az.fitnest.catalog.dto.ToggleSaveResponse> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
-        Long userId = this.extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
@@ -187,25 +188,13 @@ public class GymController {
             @RequestParam Double lng,
             @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            String platform = detectPlatform(userAgent);
-            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, platform);
+            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();
         } catch (IllegalStateException e) {
             return ResponseEntity.status(403).build();
         }
-    }
-
-    private String detectPlatform(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        String ua = userAgent.toLowerCase();
-        if (ua.contains("iphone") || ua.contains("ipad") || ua.contains("ipod") || ua.contains("ios")) return "iOS";
-        if (ua.contains("android")) return "Android";
-        if (ua.contains("windows")) return "Windows";
-        if (ua.contains("macintosh") || ua.contains("mac os")) return "macOS";
-        if (ua.contains("linux")) return "Linux";
-        return "Web/Other";
     }
 
     @PostMapping("/entrance/eligibility")
@@ -253,42 +242,5 @@ public class GymController {
     @Operation(summary = "Get gym count by gender", description = "Returns count of gyms with gender-specific work hours (male/female).")
     public ResponseEntity<GymTypeCountResponse> getGymCountByGender(@RequestParam("gender") String gender) {
         return ResponseEntity.ok(gymReadService.getGymCountByGender(gender));
-    }
-
-    public GymEntranceEligibilityResponse testEligibilityResponse() {
-        return new GymEntranceEligibilityResponse(true);
-    }
-
-    private Long extractUserId(Object principal) {
-        if (principal instanceof Long) {
-            return (Long) principal;
-        }
-        return null;
-    }
-
-    private az.fitnest.catalog.dto.GymRequest mapToGymRequest(CreateGymRequest request) {
-        return GymProtoMapper.mapToGymRequest(request);
-    }
-
-    private az.fitnest.catalog.dto.GymRequest mapToGymRequest(UpdateGymRequest request) {
-        return GymProtoMapper.mapToGymRequest(request);
-    }
-
-    private Long extractGymIdFromQr(String qrCodeValue) {
-        if (qrCodeValue == null || qrCodeValue.isBlank()) return null;
-        try {
-            return Long.parseLong(qrCodeValue.trim());
-        } catch (NumberFormatException e) {
-            try {
-                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("/gym/(\\d+)");
-                java.util.regex.Matcher matcher = pattern.matcher(qrCodeValue);
-                if (matcher.find()) {
-                    return Long.parseLong(matcher.group(1));
-                }
-                return null;
-            } catch (Exception ex) {
-                return null;
-            }
-        }
     }
 }

@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import az.fitnest.catalog.util.UserContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -44,7 +44,7 @@ public class StoreController {
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
             @Parameter(description = "Çeşidləmə qaydası (asc, desc)") @RequestParam(value = "sort_dir", defaultValue = "desc") String sortDir) {
-        Long userId = this.getCurrentUserId();
+        Long userId = UserContext.getCurrentUserId();
 
         return ResponseEntity.ok(this.storeService.getStores(userId, q, type, lat, lng, page, page_size, sortDir));
     }
@@ -58,7 +58,7 @@ public class StoreController {
     })
     @GetMapping("/{storeId:\\d+}")
     public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
-        Long userId = this.getCurrentUserId();
+        Long userId = UserContext.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
     }
 
@@ -83,16 +83,9 @@ public class StoreController {
     })
     @PostMapping("/{storeId}/save")
     public ResponseEntity<Map<String, Boolean>> saveStore(@PathVariable Long storeId) {
-        Long userId = this.getCurrentUserId();
+        Long userId = UserContext.getCurrentUserId();
         boolean isSaved = this.storeService.toggleSave(userId, storeId);
         return ResponseEntity.ok(Map.of("is_saved", isSaved));
     }
 
-    private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof Long) {
-            return (Long) auth.getPrincipal();
-        }
-        return null;
-    }
 }

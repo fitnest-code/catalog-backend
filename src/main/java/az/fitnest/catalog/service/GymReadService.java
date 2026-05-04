@@ -26,7 +26,7 @@ public interface GymReadService {
     List<GymSubscriptionCountResponse> getGymCountBySubscription();
     double calculateDistanceRaw(double lat1, double lng1, double lat2, double lng2);
     String getGymQrUrl(Long gymId);
-    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String platform);
+    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent);
     List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId);
     GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal);
     GymTypeCountResponse getGymCountByGender(String gender);

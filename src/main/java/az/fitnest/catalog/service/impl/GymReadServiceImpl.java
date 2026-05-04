@@ -19,6 +19,8 @@ import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
 import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.util.PlatformUtil;
+import az.fitnest.catalog.util.UserContext;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.user.grpc.UserResponse;
@@ -779,7 +781,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public boolean checkGymEntranceEligibilitySimple(Object principal) {
-        Long userId = extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("error.unauthorized");
         }
@@ -944,8 +946,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional
-    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String platform) {
-        Long userId = extractUserId(principal);
+    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent) {
+        String platform = PlatformUtil.detectPlatform(userAgent);
+        Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("error.unauthorized");
         }
@@ -1087,7 +1090,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal) {
-        Long userId = extractUserId(principal);
+        Long userId = UserContext.extractUserId(principal);
         log.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
         if (userId == null) {
             log.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
@@ -1154,12 +1157,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return false;
     }
 
-    private Long extractUserId(Object principal) {
-        if (principal instanceof Long) {
-            return (Long) principal;
-        }
-        return null;
-    }
     private Long extractGymIdFromQr(String qrCodeValue) {
         if (qrCodeValue == null || qrCodeValue.isBlank()) return null;
         try {
