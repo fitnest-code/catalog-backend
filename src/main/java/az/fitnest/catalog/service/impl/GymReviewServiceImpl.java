@@ -1,10 +1,13 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.UserServiceGrpcClient;
-import az.fitnest.catalog.dto.GymReviewAuthorDto;
-import az.fitnest.catalog.dto.GymReviewDto;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymReviewAuthorResponse;
+import az.fitnest.catalog.dto.response.GymReviewResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.ReviewRequest;
+import az.fitnest.catalog.dto.request.ReviewRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.model.entity.Gym;
@@ -32,15 +35,15 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymReviewDto> getReviews(Long gymId, int page, int pageSize, String sort) {
+    public PaginatedResponse<GymReviewResponse> getReviews(Long gymId, int page, int pageSize, String sort) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         Page<Review> reviewPage = reviewRepository.findByGymId(gymId, pageable(page, pageSize, sortForReviews(sort)));
-        List<GymReviewDto> items = reviewPage.getContent().stream()
+        List<GymReviewResponse> items = reviewPage.getContent().stream()
                 .map(this::mapReviewToDto)
                 .collect(Collectors.toList());
-        return PaginatedResponse.<GymReviewDto>builder()
+        return PaginatedResponse.<GymReviewResponse>builder()
                 .items(items)
                 .total(reviewPage.getTotalElements())
                 .page(page)
@@ -87,12 +90,12 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymReviewDto> getPendingReviews(int page, int pageSize) {
+    public PaginatedResponse<GymReviewResponse> getPendingReviews(int page, int pageSize) {
         Page<Review> reviewPage = reviewRepository.findByStatus(az.fitnest.catalog.model.enums.ReviewStatus.PENDING, pageable(page, pageSize, Sort.by(Sort.Direction.DESC, "createdDate")));
-        List<GymReviewDto> items = reviewPage.getContent().stream()
+        List<GymReviewResponse> items = reviewPage.getContent().stream()
                 .map(this::mapReviewToDto)
                 .collect(Collectors.toList());
-        return PaginatedResponse.<GymReviewDto>builder()
+        return PaginatedResponse.<GymReviewResponse>builder()
                 .items(items)
                 .total(reviewPage.getTotalElements())
                 .page(page)
@@ -100,7 +103,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 .build();
     }
 
-    private GymReviewDto mapReviewToDto(Review r) {
+    private GymReviewResponse mapReviewToDto(Review r) {
         UserResponse user = null;
         String fullName = "";
         String avatarUrl = null;
@@ -128,13 +131,13 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 .orElse(0.0);
     }
 
-    private GymReviewDto toGymReviewDto(Review r) {
-        return GymReviewDto.builder()
+    private GymReviewResponse toGymReviewDto(Review r) {
+        return GymReviewResponse.builder()
                 .review_id(r.getId() != null ? r.getId().toString() : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
                 .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
-                .author(GymReviewAuthorDto.builder()
+                .author(GymReviewAuthorResponse.builder()
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
                         .build())

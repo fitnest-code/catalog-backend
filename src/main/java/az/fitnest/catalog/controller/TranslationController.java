@@ -1,5 +1,8 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.ApiResponse;
 import az.fitnest.catalog.dto.request.CreateTranslationRequest;
 import az.fitnest.catalog.model.entity.Translation;

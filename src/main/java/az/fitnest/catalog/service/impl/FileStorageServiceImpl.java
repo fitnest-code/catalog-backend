@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.StorageGrpcClient;
-import az.fitnest.catalog.dto.StorageFileData;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.StorageFileData;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.service.FileStorageService;
 
@@ -11,7 +14,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import az.fitnest.catalog.service.FileStorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -65,7 +67,7 @@ public class FileStorageServiceImpl
 
             String extractedOldPath = this.extractIdFromUrl(oldPath);
             StorageFileData data = this.storageGrpcClient.uploadFile(randomizedFile, directory, extractedOldPath);
-            return String.valueOf(data.getFsId());
+            return String.valueOf(data.fsId());
         } catch (Exception e) {
             throw new BadRequestException("error.file_upload_failed");
         }

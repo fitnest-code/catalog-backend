@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.CancelReasonRequest;
-import az.fitnest.catalog.dto.CancelReasonResponse;
+import az.fitnest.catalog.dto.request.CancelReasonRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.CancelReasonResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.ReservationCancelReason;
 import az.fitnest.catalog.repository.ReservationCancelReasonRepository;

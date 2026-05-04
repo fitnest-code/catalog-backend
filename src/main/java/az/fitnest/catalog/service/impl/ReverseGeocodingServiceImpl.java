@@ -1,6 +1,9 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.GeocodingResponse;
+import az.fitnest.catalog.dto.response.GeocodingResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;

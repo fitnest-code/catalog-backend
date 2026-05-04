@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.model.enums.ReservationStatus;

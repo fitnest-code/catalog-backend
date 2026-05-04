@@ -1,15 +1,18 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.GymRequest;
-import az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest;
-import az.fitnest.catalog.dto.GymReviewDto;
+import az.fitnest.catalog.dto.request.GymRequest;
+import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymReviewResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.TrainerRequest;
+import az.fitnest.catalog.dto.request.TrainerRequest;
 import az.fitnest.catalog.service.GymWriteService;
 import az.fitnest.catalog.service.GymReviewService;
 import az.fitnest.catalog.service.GymTrainerService;
 import az.fitnest.catalog.service.GymReadService;
-import az.fitnest.catalog.dto.GymEntranceHistoryAdminResponse;
+import az.fitnest.catalog.dto.response.GymEntranceHistoryAdminResponse;
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -151,7 +154,7 @@ public class GymAdminController {
     @Operation(summary = "Təsdiq gözləyən rəyləri alın", description = "Sistemdə təsdiq gözləyən (PENDING) rəylərin siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/reviews/pending")
-    public ResponseEntity<PaginatedResponse<GymReviewDto>> getPendingReviews(
+    public ResponseEntity<PaginatedResponse<GymReviewResponse>> getPendingReviews(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(gymReviewService.getPendingReviews(page, pageSize));
@@ -221,7 +224,7 @@ public class GymAdminController {
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")
-    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.AdminGymResponse>> getAllGyms(
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.AdminGymResponse>> getAllGyms(
             @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
             @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
                     + "name_asc - Ad : A-Z, "
@@ -239,7 +242,7 @@ public class GymAdminController {
     @Operation(summary = "İstifadəçinin QR skan tarixçəsini alın", description = "Müəyyən bir istifadəçinin bütün QR skan cəhdlərinin (uğurlu/uğursuz) siyahısını, zal adlarını və platforma məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users/{userId}/qr-history")
-    public ResponseEntity<List<az.fitnest.catalog.dto.AdminQrScanHistoryResponse>> getUserQrScanHistory(
+    public ResponseEntity<List<az.fitnest.catalog.dto.response.AdminQrScanHistoryResponse>> getUserQrScanHistory(
             @PathVariable Long userId,
             @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı üzrə axtarış") @RequestParam(required = false) String query,
             @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
@@ -259,7 +262,7 @@ public class GymAdminController {
     @Operation(summary = "Step 1: Yeni idman zalı yaradın (DRAFT)", description = "Sistemə yeni idman zalı layihəsini əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/step1")
-    public ResponseEntity<az.fitnest.catalog.dto.GymCreateStep1Response> createGymStep1(@Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep1Request request) {
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymCreateStep1Response> createGymStep1(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1(request));
     }
 
@@ -281,7 +284,7 @@ public class GymAdminController {
     @Operation(summary = "Step 3: İdman zalının iş saatlarını qeyd edin", description = "İdman zalının iş saatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step3")
-    public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep2Request request) {
+    public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         gymWriteService.createGymStep3(id, request);
         return ResponseEntity.ok().build();
     }
@@ -289,7 +292,7 @@ public class GymAdminController {
     @Operation(summary = "Step 4: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step4")
-    public ResponseEntity<Void> createGymStep4(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep3Request request) {
+    public ResponseEntity<Void> createGymStep4(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         gymWriteService.createGymStep4(id, request);
         return ResponseEntity.ok().build();
     }
@@ -309,7 +312,7 @@ public class GymAdminController {
     @Operation(summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin", description = "İdman zalı üçün abunəlikləri və dəstəklənən xidmətləri əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step6")
-    public ResponseEntity<Void> createGymStep6(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep6Request request) {
+    public ResponseEntity<Void> createGymStep6(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
         gymWriteService.createGymStep6(id, request);
         return ResponseEntity.ok().build();
     }
@@ -317,7 +320,7 @@ public class GymAdminController {
     @Operation(summary = "Step 7: İdman zalı üçün admin yaradın və aktivləşdirin", description = "İdman zalı üçün admin yaradır və idman zalını ACTIVE edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step7")
-    public ResponseEntity<Void> createGymStep7(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.GymCreateStep7Request request) {
+    public ResponseEntity<Void> createGymStep7(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         gymWriteService.createGymStep7(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -325,14 +328,14 @@ public class GymAdminController {
     @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/services")
-    public ResponseEntity<Void> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.SupportedServiceRequest request) {
+    public ResponseEntity<Void> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
         gymWriteService.createSupportedService(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
     @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki bütün dəstəklənən xidmətləri qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/services")
-    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.SupportedServiceResponse>> getSupportedServices() {
+    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.response.SupportedServiceResponse>> getSupportedServices() {
         return ResponseEntity.ok(gymReadService.getAllSupportedServices());
     }
 

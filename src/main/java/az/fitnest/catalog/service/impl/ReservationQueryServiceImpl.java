@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;

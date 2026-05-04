@@ -1,7 +1,10 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.CategoryDto;
-import az.fitnest.catalog.dto.CategoryRequest;
+import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.CategoryRequest;
 import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -68,8 +71,8 @@ public class CategoryAdminController {
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Kateqoriya uğurla yaradıldı")})
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
-        CategoryDto categoryDto = categoryService.createCategory(request);
+    public ResponseEntity<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
+        CategoryResponse categoryDto = categoryService.createCategory(request);
         return ResponseEntity.created(URI.create("/api/v1/admin/categories/" + categoryDto.id())).body(categoryDto);
     }
 
@@ -77,8 +80,8 @@ public class CategoryAdminController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriya uğurla yeniləndi")})
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
-        CategoryDto categoryDto = categoryService.updateCategory(id, request);
+    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
+        CategoryResponse categoryDto = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(categoryDto);
     }
 

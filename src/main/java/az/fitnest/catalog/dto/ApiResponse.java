@@ -1,5 +1,6 @@
 package az.fitnest.catalog.dto;
 
+import az.fitnest.catalog.dto.response.ApiError;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Map;

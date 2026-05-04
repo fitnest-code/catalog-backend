@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
@@ -11,7 +13,7 @@ public interface GymWriteService {
     void updateGymSubscriptionBenefits(Long gymId, Long packageId, GymSubscriptionBenefitsUpdateRequest request);
     void deleteGym(Long gymId);
     boolean toggleSave(Long userId, Long gymId);
-    CheckInResponseDto checkIn(Long userId, Long gymId);
+    CheckInResponse checkIn(Long userId, Long gymId);
     void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files);
     void deleteAllGymRooms(Long gymId);
     void deleteGymRoomById(Long gymId, Long roomId);

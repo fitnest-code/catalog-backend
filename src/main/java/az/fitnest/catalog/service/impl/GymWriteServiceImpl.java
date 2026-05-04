@@ -1,9 +1,12 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.GeocodingResponse;
+import az.fitnest.catalog.dto.response.GeocodingResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 
-import az.fitnest.catalog.dto.GymRequest;
-import az.fitnest.catalog.dto.CheckInResponseDto;
+import az.fitnest.catalog.dto.request.GymRequest;
+import az.fitnest.catalog.dto.response.CheckInResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
@@ -224,7 +227,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
 
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
-    public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.GymSubscriptionBenefitsUpdateRequest request) {
+    public void updateGymSubscriptionBenefits(Long gymId, Long packageId, az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         GymSubscription subscription = gym.getSubscriptions().stream()
@@ -288,7 +291,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public CheckInResponseDto checkIn(Long userId, Long gymId) {
+    public CheckInResponse checkIn(Long userId, Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -297,7 +300,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         String addressText = gym.getAddress() != null ? gym.getAddress().getAddressText() : null;
         LocalDateTime now = LocalDateTime.now();
 
-        return new CheckInResponseDto(addressText, now.toLocalDate(), now.toLocalTime());
+        return new CheckInResponse(addressText, now.toLocalDate(), now.toLocalTime());
     }
 
     private void safeDeleteFile(String url) {
@@ -474,7 +477,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public az.fitnest.catalog.dto.GymCreateStep1Response createGymStep1(az.fitnest.catalog.dto.GymCreateStep1Request request) {
+    public az.fitnest.catalog.dto.response.GymCreateStep1Response createGymStep1(az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
         if (request.categoryId() == null) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
         }
@@ -489,7 +492,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         gym.setCategories(new HashSet<>(List.of(category)));
         gym.setStatus(GymStatus.DRAFT);
         gym = gymRepository.save(gym);
-        return new az.fitnest.catalog.dto.GymCreateStep1Response(gym.getId());
+        return new az.fitnest.catalog.dto.response.GymCreateStep1Response(gym.getId());
     }
 
     @Transactional
@@ -513,7 +516,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public void createGymStep3(Long gymId, az.fitnest.catalog.dto.GymCreateStep2Request request) {
+    public void createGymStep3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.getGeneralWorkHours().clear();
         if (request.generalWorkHours() != null) {
@@ -531,7 +534,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public void createGymStep4(Long gymId, az.fitnest.catalog.dto.GymCreateStep3Request request) {
+    public void createGymStep4(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Address address = new Address();
         address.setLatitude(request.latitude());
@@ -561,13 +564,13 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public void createGymStep6(Long gymId, az.fitnest.catalog.dto.GymCreateStep6Request request) {
+    public void createGymStep6(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.getSubscriptions().clear();
 
         java.util.Set<Long> processedPackages = new java.util.HashSet<>();
 
-        for (az.fitnest.catalog.dto.GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
+        for (az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
             if (!processedPackages.add(subReq.packageId())) {
                 continue;
             }
@@ -587,7 +590,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     @Caching(evict = {
         @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
-    public void createGymStep7(Long gymId, az.fitnest.catalog.dto.GymCreateStep7Request request) {
+    public void createGymStep7(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), request.phoneNumber(), request.email(), request.password());
 
@@ -605,7 +608,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public void createSupportedService(az.fitnest.catalog.dto.SupportedServiceRequest request) {
+    public void createSupportedService(az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
         az.fitnest.catalog.model.entity.SupportedService service = new az.fitnest.catalog.model.entity.SupportedService();
         service.setName(request.name());
         supportedServiceRepository.save(service);

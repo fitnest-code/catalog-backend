@@ -1,6 +1,8 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.model.entity.Store;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +38,7 @@ public class StoreController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public ResponseEntity<PaginatedResponse<StoreMainPageDto>> getStores(
+    public ResponseEntity<PaginatedResponse<StoreMainPageResponse>> getStores(
             @Parameter(description = "Axtarış sorğusu (ad və ya ünvana görə)") @RequestParam(value = "q", required = false) String q,
             @Parameter(description = "Filtr növü (ALL, NEW, DISCOUNTED, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
             @Parameter(description = "İstifadəçinin enliyi (CLOSEST növü üçün tələb olunur)") @RequestParam(value = "lat", required = false) Double lat,
@@ -53,11 +55,11 @@ public class StoreController {
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Mağaza təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = StoreDetailResponseDto.class))}),
+            @ApiResponse(responseCode = "200", description = "Mağaza təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = StoreDetailResponse.class))}),
             @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı", content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     })
     @GetMapping("/{storeId:\\d+}")
-    public ResponseEntity<StoreDetailResponseDto> getStoreDetail(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
+    public ResponseEntity<StoreDetailResponse> getStoreDetail(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
         Long userId = UserContext.getCurrentUserId();
         return ResponseEntity.ok(this.storeService.getStoreDetail(userId, storeId));
     }
@@ -66,11 +68,11 @@ public class StoreController {
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Mağaza məkanı əldə edildi", content = {@Content(schema = @Schema(implementation = LocationDto.class))}),
+            @ApiResponse(responseCode = "200", description = "Mağaza məkanı əldə edildi", content = {@Content(schema = @Schema(implementation = LocationResponse.class))}),
             @ApiResponse(responseCode = "404", description = "Mağaza tapılmadı")
     })
     @GetMapping("/{storeId:\\d+}/location")
-    public ResponseEntity<LocationDto> getStoreLocation(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
+    public ResponseEntity<LocationResponse> getStoreLocation(@Parameter(description = "Mağazanın ID-si") @PathVariable Long storeId) {
         return ResponseEntity.ok(this.storeService.getStoreLocation(storeId));
     }
 

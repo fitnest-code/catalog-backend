@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.repository.SavedStoreRepository;
@@ -41,7 +43,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
+    public PaginatedResponse<StoreMainPageResponse> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(direction, "createdDate"));
         Page<Store> storePage;
@@ -74,11 +76,11 @@ public class StoreServiceImpl implements StoreService {
             }
         }
 
-        List<StoreMainPageDto> items = storePage.getContent().stream()
+        List<StoreMainPageResponse> items = storePage.getContent().stream()
                 .map(s -> mapToSummary(s, userId, lat, lng))
                 .collect(Collectors.toList());
 
-        return PaginatedResponse.<StoreMainPageDto>builder()
+        return PaginatedResponse.<StoreMainPageResponse>builder()
                 .items(items)
                 .total(storePage.getTotalElements())
                 .page(page)
@@ -86,7 +88,7 @@ public class StoreServiceImpl implements StoreService {
                 .build();
     }
 
-    private PaginatedResponse<StoreMainPageDto> manualPaginate(List<Store> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
+    private PaginatedResponse<StoreMainPageResponse> manualPaginate(List<Store> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
         Stream<Store> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
@@ -94,17 +96,17 @@ public class StoreServiceImpl implements StoreService {
                     (s.getAddress() != null && s.getAddress().getAddressText() != null && s.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
         }
 
-        List<StoreMainPageDto> all = stream.map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
+        List<StoreMainPageResponse> all = stream.map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
 
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(StoreMainPageDto::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            all.sort(Comparator.comparing(StoreMainPageResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
         }
 
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(all.size(), from + pageSize);
-        List<StoreMainPageDto> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
+        List<StoreMainPageResponse> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
 
-        return PaginatedResponse.<StoreMainPageDto>builder()
+        return PaginatedResponse.<StoreMainPageResponse>builder()
                 .items(pageItems)
                 .total(all.size())
                 .page(page)
@@ -112,8 +114,8 @@ public class StoreServiceImpl implements StoreService {
                 .build();
     }
 
-    private PaginatedResponse<StoreMainPageDto> emptyResponse(int page, int pageSize) {
-        return PaginatedResponse.<StoreMainPageDto>builder().items(Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
+    private PaginatedResponse<StoreMainPageResponse> emptyResponse(int page, int pageSize) {
+        return PaginatedResponse.<StoreMainPageResponse>builder().items(Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
     }
 
     private String getUserLanguage(Long userId) {
@@ -130,7 +132,7 @@ public class StoreServiceImpl implements StoreService {
         return language;
     }
 
-    private StoreMainPageDto mapToSummary(Store store, Long userId, Double lat, Double lng) {
+    private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng) {
         Double distance = null;
         if (lat != null && lng != null && store.getAddress() != null && store.getAddress().getLatitude() != null && store.getAddress().getLongitude() != null) {
             distance = calculateDistance(lat, lng, store.getAddress().getLatitude(), store.getAddress().getLongitude());
@@ -145,14 +147,14 @@ public class StoreServiceImpl implements StoreService {
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
 
-        return StoreMainPageDto.builder()
+        return StoreMainPageResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
                 .address(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
                 .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
                 .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
-                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
+                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .isSaved(isSaved)
                 .distanceKm(distance)
                 .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
@@ -166,7 +168,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public StoreDetailResponseDto getStoreDetail(Long userId, Long storeId) {
+    public StoreDetailResponse getStoreDetail(Long userId, Long storeId) {
         Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         boolean isSaved = false;
         if (userId != null) {
@@ -175,10 +177,10 @@ public class StoreServiceImpl implements StoreService {
         String userLanguage = getUserLanguage(userId);
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
-        return StoreDetailResponseDto.builder()
+        return StoreDetailResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? AddressDto.builder()
+                .address(store.getAddress() != null ? AddressResponse.builder()
                         .addressText(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage))
                         .city(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage))
                         .latitude(store.getAddress().getLatitude())
@@ -188,7 +190,7 @@ public class StoreServiceImpl implements StoreService {
                 .category(store.getCategory())
                 .status(store.getStatus())
 
-                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
+                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).toList() : Collections.emptyList())
                 .isSaved(isSaved)
@@ -214,10 +216,10 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public FilterResponseDto getFilters() {
-        return FilterResponseDto.builder()
-                .tabs(List.of(new FilterResponseDto.TabDto("all", "All"), new FilterResponseDto.TabDto("popular", "Popular"),
-                        new FilterResponseDto.TabDto("nearby", "Near you"), new FilterResponseDto.TabDto("new", "New")))
+    public FilterResponse getFilters() {
+        return FilterResponse.builder()
+                .tabs(List.of(new FilterResponse.TabDto("all", "All"), new FilterResponse.TabDto("popular", "Popular"),
+                        new FilterResponse.TabDto("nearby", "Near you"), new FilterResponse.TabDto("new", "New")))
                 .sortOptions(List.of("popular", "newest", "distance", "discount_desc", "name_asc"))
                 .defaultRadiusKm(20)
                 .build();
@@ -226,7 +228,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     @CacheEvict(value = "admin-stores", allEntries = true)
-    public StoreDetailResponseDto createStore(StoreRequest request) {
+    public StoreDetailResponse createStore(StoreRequest request) {
         Store store = new Store();
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
@@ -236,7 +238,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     @CacheEvict(value = "admin-stores", allEntries = true)
-    public StoreDetailResponseDto updateStore(Long storeId, StoreRequest request) {
+    public StoreDetailResponse updateStore(Long storeId, StoreRequest request) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
@@ -349,11 +351,11 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public LocationDto getStoreLocation(Long storeId) {
+    public LocationResponse getStoreLocation(Long storeId) {
         Store store = getStoreEntityById(storeId);
         Address addr = store.getAddress();
-        if (addr == null) return LocationDto.builder().build();
-        return LocationDto.builder().addressText(addr.getAddressText()).latitude(addr.getLatitude()).longitude(addr.getLongitude()).build();
+        if (addr == null) return LocationResponse.builder().build();
+        return LocationResponse.builder().addressText(addr.getAddressText()).latitude(addr.getLatitude()).longitude(addr.getLongitude()).build();
     }
 
     @Override

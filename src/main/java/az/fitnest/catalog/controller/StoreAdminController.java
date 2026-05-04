@@ -1,8 +1,11 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.AddDiscountRequest;
-import az.fitnest.catalog.dto.StoreDetailResponseDto;
-import az.fitnest.catalog.dto.StoreRequest;
+import az.fitnest.catalog.dto.request.AddDiscountRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.StoreDetailResponse;
+import az.fitnest.catalog.dto.request.StoreRequest;
 import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,14 +33,14 @@ public class StoreAdminController {
     @Operation(summary = "Yeni mağaza yaradın", description = "Sistemə yeni mağaza əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<StoreDetailResponseDto> createStore(@Valid @RequestBody StoreRequest request) {
+    public ResponseEntity<StoreDetailResponse> createStore(@Valid @RequestBody StoreRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(storeService.createStore(request));
     }
 
     @Operation(summary = "Mağazanı yeniləyin", description = "Mövcud mağazanın məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<StoreDetailResponseDto> updateStore(@PathVariable Long id, @Valid @RequestBody StoreRequest request) {
+    public ResponseEntity<StoreDetailResponse> updateStore(@PathVariable Long id, @Valid @RequestBody StoreRequest request) {
         return ResponseEntity.ok(storeService.updateStore(id, request));
     }
 
@@ -100,7 +103,7 @@ public class StoreAdminController {
     @Operation(summary = "Mağazaların siyahısını alın", description = "Mağazaların adını, ünvanını və telefon nömrəsini qaytarır. Axtarış və sıralama dəstəklənir.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")
-    public ResponseEntity<az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.AdminStoreResponse>> getAllStores(
+    public ResponseEntity<az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.response.AdminStoreResponse>> getAllStores(
             @io.swagger.v3.oas.annotations.Parameter(description = "Mağaza adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
             @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
                     + "name_asc - Ad : A-Z, "

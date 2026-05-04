@@ -1,13 +1,15 @@
 package az.fitnest.catalog.mapper;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.grpc.*;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class GymProtoMapper {
-    public static az.fitnest.catalog.grpc.GymDetailResponse toProto(az.fitnest.catalog.dto.GymDetailResponse dto) {
+    public static az.fitnest.catalog.grpc.GymDetailResponse toProto(az.fitnest.catalog.dto.response.GymDetailResponse dto) {
         az.fitnest.catalog.grpc.GymDetailResponse.Builder builder = az.fitnest.catalog.grpc.GymDetailResponse.newBuilder()
                 .setGymId(dto.gym_id() != null ? dto.gym_id() : "")
                 .setName(dto.name() != null ? dto.name() : "")
@@ -24,7 +26,7 @@ public class GymProtoMapper {
                     .build());
         }
         if (dto.general_work_hours() != null) {
-            for (az.fitnest.catalog.dto.GymWorkHourDto wh : dto.general_work_hours()) {
+            for (az.fitnest.catalog.dto.response.GymWorkHourResponse wh : dto.general_work_hours()) {
                 builder.addWorkHours(az.fitnest.catalog.grpc.GymWorkHour.newBuilder()
                         .setDay(wh.period() != null ? wh.period() : "")
                         .setFrom(wh.from() != null ? wh.from().toString() : "")
@@ -35,10 +37,10 @@ public class GymProtoMapper {
         return builder.build();
     }
 
-    public static az.fitnest.catalog.grpc.GymImageResponse toProto(az.fitnest.catalog.dto.GymImageResponse dto) {
+    public static az.fitnest.catalog.grpc.GymImageResponse toProto(az.fitnest.catalog.dto.response.GymImageResponse dto) {
         az.fitnest.catalog.grpc.GymImageResponse.Builder builder = az.fitnest.catalog.grpc.GymImageResponse.newBuilder();
         if (dto.items() != null) {
-            for (az.fitnest.catalog.dto.GymImageItemDto item : dto.items()) {
+            for (az.fitnest.catalog.dto.response.GymImageItemResponse item : dto.items()) {
                 builder.addItems(az.fitnest.catalog.grpc.GymImageItem.newBuilder()
                         .setImageId(item.image_id() != null ? item.image_id() : "")
                         .setUrl(item.url())
@@ -69,7 +71,7 @@ public class GymProtoMapper {
                 }
             }
         }
-        AddressDto addressDto = AddressDto.builder()
+        AddressResponse addressDto = AddressResponse.builder()
                 .addressText(addrText)
                 .latitude(lat == 0.0 ? null : lat)
                 .longitude(lng == 0.0 ? null : lng)
@@ -97,7 +99,7 @@ public class GymProtoMapper {
                 }
             }
         }
-        AddressDto addressDto = AddressDto.builder()
+        AddressResponse addressDto = AddressResponse.builder()
                 .addressText(addrText)
                 .latitude(lat == 0.0 ? null : lat)
                 .longitude(lng == 0.0 ? null : lng)
@@ -109,7 +111,7 @@ public class GymProtoMapper {
     public static GymRequest mapToGymRequest(
         String name,
         String description,
-        AddressDto address,
+        AddressResponse address,
         String phone,
         String email,
         Set<Long> categoryIds

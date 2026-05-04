@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.CategoryDto;
-import az.fitnest.catalog.dto.CategoryRequest;
+import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.request.CategoryRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
@@ -34,7 +37,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<CategoryDto> getCategories(String q, int page, int size) {
+    public PaginatedResponse<CategoryResponse> getCategories(String q, int page, int size) {
         if (page < 1) {
             throw new BadRequestException("PAGE_INVALID", "error.page_index_invalid");
         }
@@ -49,11 +52,11 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
         String userLanguage = resolveUserLanguage();
 
-        List<CategoryDto> items = categories.getContent().stream()
+        List<CategoryResponse> items = categories.getContent().stream()
                 .map(c -> mapToDto(c, userLanguage))
                 .collect(Collectors.toList());
 
-        return PaginatedResponse.<CategoryDto>builder()
+        return PaginatedResponse.<CategoryResponse>builder()
                 .items(items)
                 .total(categories.getTotalElements())
                 .page(page)
@@ -122,12 +125,12 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         categoryRepository.save(category);
     }
 
-    private CategoryDto mapToDto(Category category, String language) {
+    private CategoryResponse mapToDto(Category category, String language) {
         String localizedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(category.getId()), "name", language);
         if (localizedName == null || localizedName.isEmpty()) {
             localizedName = category.getName();
         }
-        return CategoryDto.builder()
+        return CategoryResponse.builder()
                 .id(category.getId())
                 .name(localizedName)
                 .photoUrl(category.getPhotoUrl())
@@ -154,18 +157,18 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
-    public CategoryDto createCategory(CategoryRequest request) {
+    public CategoryResponse createCategory(CategoryRequest request) {
         Category category = Category.builder().name(request.name()).build();
         category = categoryRepository.save(category);
-        return CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+        return CategoryResponse.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
     }
 
     @Transactional
-    public CategoryDto updateCategory(Long id, CategoryRequest request) {
+    public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         category.setName(request.name());
         category = categoryRepository.save(category);
-        return CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+        return CategoryResponse.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
     }
 }

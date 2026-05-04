@@ -1,6 +1,10 @@
 package az.fitnest.catalog.mapper;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.response.ProfessionResponse;
 import az.fitnest.catalog.model.entity.*;
 
 import java.util.List;
@@ -11,17 +15,17 @@ public final class GymMapper {
     private GymMapper() {
     }
 
-    public static GymTrainerDto toTrainerDto(Trainer t) {
+    public static GymTrainerResponse toTrainerDto(Trainer t) {
         if (t == null) return null;
-        ProfessionDto professionDto = null;
+        ProfessionResponse professionDto = null;
         if (t.getProfession() != null) {
-            professionDto = ProfessionDto.builder()
+            professionDto = ProfessionResponse.builder()
                     .id(t.getProfession().getId())
                     .name(t.getProfession().getName())
                     .build();
         }
 
-        return GymTrainerDto.builder()
+        return GymTrainerResponse.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
                 .name(t.getName())
                 .surname(t.getSurname())
@@ -32,28 +36,28 @@ public final class GymMapper {
                 .build();
     }
 
-    public static GymReviewDto toReviewDto(Review r) {
+    public static GymReviewResponse toReviewDto(Review r) {
         if (r == null) return null;
-        return GymReviewDto.builder()
+        return GymReviewResponse.builder()
                 .review_id(r.getId() != null ? r.getId().toString() : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
                 .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
-                .author(GymReviewAuthorDto.builder()
+                .author(GymReviewAuthorResponse.builder()
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
                         .build())
                 .build();
     }
 
-    public static GymReviewDto toReviewDto(Review r, String fullName, String profileImageUrl) {
+    public static GymReviewResponse toReviewDto(Review r, String fullName, String profileImageUrl) {
         if (r == null) return null;
-        return GymReviewDto.builder()
+        return GymReviewResponse.builder()
                 .review_id(r.getId() != null ? r.getId().toString() : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
                 .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
-                .author(GymReviewAuthorDto.builder()
+                .author(GymReviewAuthorResponse.builder()
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name(fullName)
                         .avatar_url(profileImageUrl)
@@ -71,9 +75,9 @@ public final class GymMapper {
                 .build();
     }
 
-    public static GymImageItemDto toImageItemDto(GymImage img) {
+    public static GymImageItemResponse toImageItemDto(GymImage img) {
         if (img == null) return null;
-        return GymImageItemDto.builder()
+        return GymImageItemResponse.builder()
                 .image_id(img.getId() != null ? img.getId().toString() : "img_" + System.identityHashCode(img))
                 .url(img.getUrl())
                 .type(img.getType() != null ? img.getType() : "other")
@@ -118,14 +122,14 @@ public final class GymMapper {
         return AZ_DAYS.getOrDefault(period, period.name());
     }
 
-    public static List<GymWorkHourDto> toGroupedWorkHourDtos(java.util.Collection<GymWorkHour> workHours, String lang) {
+    public static List<GymWorkHourResponse> toGroupedWorkHourDtos(java.util.Collection<GymWorkHour> workHours, String lang) {
         if (workHours == null || workHours.isEmpty()) return java.util.Collections.emptyList();
 
         List<GymWorkHour> sorted = workHours.stream()
                 .sorted(java.util.Comparator.comparingInt(wh -> wh.getPeriod().ordinal()))
                 .toList();
 
-        List<GymWorkHourDto> grouped = new java.util.ArrayList<>();
+        List<GymWorkHourResponse> grouped = new java.util.ArrayList<>();
         int i = 0;
         while (i < sorted.size()) {
             GymWorkHour start = sorted.get(i);
@@ -144,7 +148,7 @@ public final class GymMapper {
                 periodStr = getLocalizedDay(start.getPeriod(), lang);
             }
 
-            grouped.add(GymWorkHourDto.builder()
+            grouped.add(GymWorkHourResponse.builder()
                     .period(periodStr)
                     .from(start.getFromTime())
                     .to(start.getToTime())
@@ -155,18 +159,18 @@ public final class GymMapper {
         return grouped;
     }
 
-    public static GymWorkHourDto toWorkHourDto(GymWorkHour wh, String lang) {
+    public static GymWorkHourResponse toWorkHourDto(GymWorkHour wh, String lang) {
         if (wh == null) return null;
-        return GymWorkHourDto.builder()
+        return GymWorkHourResponse.builder()
                 .period(getLocalizedDay(wh.getPeriod(), lang))
                 .from(wh.getFromTime())
                 .to(wh.getToTime())
                 .build();
     }
 
-    public static CategoryDto toCategoryDto(Category category) {
+    public static CategoryResponse toCategoryResponse(Category category) {
         if (category == null) return null;
-        return CategoryDto.builder()
+        return CategoryResponse.builder()
                 .id(category.getCategoryId())
                 .name(category.getName())
                 .photoUrl(category.getPhotoUrl())

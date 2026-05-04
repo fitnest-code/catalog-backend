@@ -1,14 +1,17 @@
 package az.fitnest.catalog.service;
 
-import az.fitnest.catalog.dto.GymTrainerDto;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymTrainerResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.TrainerRequest;
-import az.fitnest.catalog.dto.TrainerAvailabilityRequest;
+import az.fitnest.catalog.dto.request.TrainerRequest;
+import az.fitnest.catalog.dto.request.TrainerAvailabilityRequest;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface GymTrainerService {
-    PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir);
+    PaginatedResponse<GymTrainerResponse> getTrainers(Long gymId, int page, int pageSize, String sortDir);
     void addTrainer(Long gymId, TrainerRequest request);
     void updateTrainer(Long gymId, Long trainerId, TrainerRequest request);
     void deleteTrainer(Long gymId, Long trainerId);

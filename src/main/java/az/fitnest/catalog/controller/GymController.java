@@ -1,24 +1,27 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.GymDetailResponse;
-import az.fitnest.catalog.dto.GymImageDto;
-import az.fitnest.catalog.dto.LocationDto;
-import az.fitnest.catalog.dto.GymQrResponse;
-import az.fitnest.catalog.dto.GymImageResponse;
-import az.fitnest.catalog.dto.GymMainPageDto;
+import az.fitnest.catalog.dto.response.GymDetailResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymImageDto;
+import az.fitnest.catalog.dto.response.LocationResponse;
+import az.fitnest.catalog.dto.response.GymQrResponse;
+import az.fitnest.catalog.dto.response.GymImageResponse;
+import az.fitnest.catalog.dto.response.GymMainPageResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.GymCountResponse;
-import az.fitnest.catalog.dto.GymTypeCountResponse;
-import az.fitnest.catalog.dto.GymCategoryCountResponse;
-import az.fitnest.catalog.dto.GymSubscriptionCountResponse;
+import az.fitnest.catalog.dto.response.GymCountResponse;
+import az.fitnest.catalog.dto.response.GymTypeCountResponse;
+import az.fitnest.catalog.dto.response.GymCategoryCountResponse;
+import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
 
-import az.fitnest.catalog.dto.GymRequest;
-import az.fitnest.catalog.dto.GymSubscriptionsUpdateRequest;
-import az.fitnest.catalog.dto.GymReviewDto;
-import az.fitnest.catalog.dto.GymTrainerDto;
-import az.fitnest.catalog.dto.ReviewRequest;
-import az.fitnest.catalog.dto.TrainerRequest;
-import az.fitnest.catalog.dto.UpdateImageUrlRequest;
+import az.fitnest.catalog.dto.request.GymRequest;
+import az.fitnest.catalog.dto.request.GymSubscriptionsUpdateRequest;
+import az.fitnest.catalog.dto.response.GymReviewResponse;
+import az.fitnest.catalog.dto.response.GymTrainerResponse;
+import az.fitnest.catalog.dto.request.ReviewRequest;
+import az.fitnest.catalog.dto.request.TrainerRequest;
+import az.fitnest.catalog.dto.request.UpdateImageUrlRequest;
 import az.fitnest.catalog.grpc.CreateGymRequest;
 import az.fitnest.catalog.grpc.UpdateGymRequest;
 import az.fitnest.catalog.service.GymImageService;
@@ -58,8 +61,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import az.fitnest.catalog.dto.SortDirection;
 import az.fitnest.catalog.mapper.GymProtoMapper;
-import az.fitnest.catalog.dto.GymEntranceEligibilityResponse;
-import az.fitnest.catalog.dto.GymEntranceScanResponse;
+import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
+import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
 
 @RestController
 @RequestMapping("/api/v1/gyms")
@@ -98,7 +101,7 @@ public class GymController {
     @GetMapping("/{gymId}/trainers")
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
-    public ResponseEntity<PaginatedResponse<GymTrainerDto>> getTrainers(
+    public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
             @PathVariable Long gymId,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
@@ -110,7 +113,7 @@ public class GymController {
     @GetMapping("/{gymId}/reviews")
     @Operation(summary = "İdman zalı rəylərini əldə edin", description = "İdman zalı üçün istifadəçi rəylərinin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Rəylər uğurla əldə edildi")})
-    public ResponseEntity<PaginatedResponse<GymReviewDto>> getReviews(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (məsələn, ən yeni, ən yüksək reytinq)") @RequestParam(required = false) String sort) {
+    public ResponseEntity<PaginatedResponse<GymReviewResponse>> getReviews(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (məsələn, ən yeni, ən yüksək reytinq)") @RequestParam(required = false) String sort) {
         int safePageSize = Math.min(page_size, 100);
         return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, safePageSize, sort));
     }
@@ -133,7 +136,7 @@ public class GymController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PaginatedResponse<GymMainPageDto>> getGyms(
+    public ResponseEntity<PaginatedResponse<GymMainPageResponse>> getGyms(
             @AuthenticationPrincipal Object principal,
             @Parameter(description = "Axtarış sorğusu") @RequestParam(value = "q", required = false) String q,
             @Parameter(description = "Filtr növü (ALL, NEW, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
@@ -154,23 +157,23 @@ public class GymController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Dəyişiklik uğurludur", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ToggleSaveResponse.class))}),
-            @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class))}),
-            @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class))})
+            @ApiResponse(responseCode = "200", description = "Dəyişiklik uğurludur", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ToggleSaveResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class))}),
+            @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class))})
     })
-    public ResponseEntity<az.fitnest.catalog.dto.ToggleSaveResponse> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
+    public ResponseEntity<az.fitnest.catalog.dto.response.ToggleSaveResponse> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             return ResponseEntity.status(401).build();
         }
         boolean isSaved = this.gymWriteService.toggleSave(userId, gymId);
-        return ResponseEntity.ok(new az.fitnest.catalog.dto.ToggleSaveResponse(isSaved));
+        return ResponseEntity.ok(new az.fitnest.catalog.dto.response.ToggleSaveResponse(isSaved));
     }
 
     @GetMapping("/{gymId}/location")
     @Operation(summary = "İdman zalının yerləşdiyi yeri əldə edin", description = "İdman zalı üçün həll edilmiş ünvan mətni ilə birlikdə enlik və uzunluq koordinatlarını qaytarır.")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məkan uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = LocationDto.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
-    public ResponseEntity<LocationDto> getGymLocation(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məkan uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = LocationResponse.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
+    public ResponseEntity<LocationResponse> getGymLocation(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymLocation(gymId));
     }
 
@@ -178,8 +181,8 @@ public class GymController {
     @Operation(summary = "Scan gym QR code for entrance (proximity only)", description = "Checks if user is close to the gym location. Returns gym name, address, enterDate, enterHour, notAllowed.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.GymEntranceScanResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not close enough", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.GymEntranceScanResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Not close enough", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class)))
     })
     public ResponseEntity<GymEntranceScanResponse> scanGymQrEntrance(
             @AuthenticationPrincipal Object principal,
@@ -202,7 +205,7 @@ public class GymController {
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Eligibility check passed", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION or VISIT_LIMIT_EXCEEDED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.ApiError.class)))
+        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION or VISIT_LIMIT_EXCEEDED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class)))
     })
     public ResponseEntity<GymEntranceEligibilityResponse> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal) {

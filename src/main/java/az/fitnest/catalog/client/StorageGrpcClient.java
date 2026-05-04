@@ -1,7 +1,10 @@
 package az.fitnest.catalog.client;
 
 import lombok.extern.slf4j.Slf4j;
-import az.fitnest.catalog.dto.StorageFileData;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.StorageFileData;
 import az.fitnest.storage.grpc.DeleteFilesRequest;
 import az.fitnest.storage.grpc.DeleteFilesResponse;
 import az.fitnest.storage.grpc.DownloadFileRequest;
@@ -58,11 +61,12 @@ public class StorageGrpcClient {
                 log.info("gRPC responseObserver onNext received success={}", response.getSuccess());
                 if (response.getSuccess()) {
                     az.fitnest.storage.grpc.StorageFileData grpcData = response.getData();
-                    StorageFileData data = new StorageFileData();
-                    data.setPath(grpcData.getPath());
-                    data.setSize(grpcData.getSize());
-                    data.setMd5(grpcData.getMd5());
-                    data.setFsId(grpcData.getFsId());
+                    StorageFileData data = new StorageFileData(
+                        grpcData.getPath(),
+                        grpcData.getSize(),
+                        grpcData.getMd5(),
+                        grpcData.getFsId()
+                    );
                     responseData.set(data);
                 } else {
                     log.error("gRPC upload response indicated failure: {}", response.getMessage());
@@ -122,7 +126,7 @@ public class StorageGrpcClient {
                 log.error("gRPC responseData was null after successful completion");
                 throw new RuntimeException("error.file_upload_failed");
             }
-            log.info("gRPC upload completed successfully, returning final responseData fsId={}", finalData.getFsId());
+            log.info("gRPC upload completed successfully, returning final responseData fsId={}", finalData.fsId());
             return finalData;
         } catch (IOException | InterruptedException e) {
             log.error("gRPC upload interrupted or threw IOException", e);

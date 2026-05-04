@@ -1,6 +1,8 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.service.CancellationReasonService;

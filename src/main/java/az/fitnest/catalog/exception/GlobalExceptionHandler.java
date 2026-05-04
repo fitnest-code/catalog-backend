@@ -1,7 +1,10 @@
 package az.fitnest.catalog.exception;
 
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.ApiResponse;
-import az.fitnest.catalog.dto.ApiError;
+import az.fitnest.catalog.dto.response.ApiError;
 import az.fitnest.catalog.exception.BaseException;
 import az.fitnest.catalog.exception.ValidationException;
 import com.fasterxml.jackson.core.JsonParseException;

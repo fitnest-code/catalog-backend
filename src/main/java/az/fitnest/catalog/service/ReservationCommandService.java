@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service;
 
-import az.fitnest.catalog.dto.ReservationRuleUpdateRequest;
-import az.fitnest.catalog.dto.ReservationStatusUpdateRequest;
+import az.fitnest.catalog.dto.request.ReservationRuleUpdateRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.ReservationStatusUpdateRequest;
 import az.fitnest.catalog.model.entity.Reservation;
 
 public interface ReservationCommandService {

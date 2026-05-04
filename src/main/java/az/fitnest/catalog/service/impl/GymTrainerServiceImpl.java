@@ -1,9 +1,13 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.UserServiceGrpcClient;
-import az.fitnest.catalog.dto.GymTrainerDto;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymTrainerResponse;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.TrainerRequest;
+import az.fitnest.catalog.dto.request.TrainerRequest;
+import az.fitnest.catalog.dto.response.ProfessionResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Profession;
 import az.fitnest.catalog.model.entity.Trainer;
@@ -44,18 +48,18 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     private final GymLessonTypeRepository gymLessonTypeRepository;
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymTrainerDto> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
+    public PaginatedResponse<GymTrainerResponse> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.by(direction, "id")));
         String userLanguage = resolveUserLanguage();
-        List<GymTrainerDto> items = trainerPage.getContent().stream()
+        List<GymTrainerResponse> items = trainerPage.getContent().stream()
                 .map(t -> toGymTrainerDto(t, userLanguage))
                 .collect(Collectors.toList());
 
-        return PaginatedResponse.<GymTrainerDto>builder()
+        return PaginatedResponse.<GymTrainerResponse>builder()
                 .items(items)
                 .total(trainerPage.getTotalElements())
                 .page(page)
@@ -131,20 +135,20 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         trainerRepository.save(trainer);
     }
 
-    private GymTrainerDto toGymTrainerDto(Trainer t, String language) {
-        az.fitnest.catalog.dto.ProfessionDto professionDto = null;
+    private GymTrainerResponse toGymTrainerDto(Trainer t, String language) {
+        ProfessionResponse professionDto = null;
         if (t.getProfession() != null) {
             String localizedName = translationService.getTranslatedValue("PROFESSION", String.valueOf(t.getProfession().getId()), "name", language);
             if (localizedName == null || localizedName.isEmpty()) {
                 localizedName = t.getProfession().getName();
             }
-            professionDto = az.fitnest.catalog.dto.ProfessionDto.builder()
+            professionDto = ProfessionResponse.builder()
                     .id(t.getProfession().getId())
                     .name(localizedName)
                     .build();
         }
 
-        return GymTrainerDto.builder()
+        return GymTrainerResponse.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
                 .name(t.getName())
                 .surname(t.getSurname())
@@ -203,7 +207,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    public void addTrainerAvailability(Long gymId, Long trainerId, Long lessonId, az.fitnest.catalog.dto.TrainerAvailabilityRequest request) {
+    public void addTrainerAvailability(Long gymId, Long trainerId, Long lessonId, az.fitnest.catalog.dto.request.TrainerAvailabilityRequest request) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {

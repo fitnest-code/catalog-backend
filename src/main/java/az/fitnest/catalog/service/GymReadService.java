@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import java.util.List;
 import java.util.Map;
 
@@ -11,12 +13,12 @@ public interface GymReadService {
     GymImageResponse getGymImages(Long gymId);
     boolean isReservationEnabled(Long gymId);
     Map<String, Object> getReservationRules(Long gymId);
-    List<GymNearbyResponseDto> getNearbyGyms(double lat, double lng, double radiusKm);
-    PaginatedResponse<GymMainPageDto> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng);
-    PaginatedResponse<GymMainPageDto> getGyms(Long userId, String q, String type, Long categoryId, Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir);
+    List<GymNearbyResponse> getNearbyGyms(double lat, double lng, double radiusKm);
+    PaginatedResponse<GymMainPageResponse> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng);
+    PaginatedResponse<GymMainPageResponse> getGyms(Long userId, String q, String type, Long categoryId, Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir);
     PaginatedResponse<AdminGymResponse> getAllGymsAdmin(String query, String sort, int page, int pageSize);
     List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId, String query, String sort);
-    LocationDto getGymLocation(Long gymId);
+    LocationResponse getGymLocation(Long gymId);
     boolean gymSupportsPlan(Long gymId, Long planId);
     GymEntranceResponse checkProximity(Double lat, Double lng, Long gymId);
     boolean checkGymEntranceEligibilitySimple(Object principal);

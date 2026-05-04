@@ -1,8 +1,11 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.UserServiceGrpcClient;
-import az.fitnest.catalog.dto.ProfessionDto;
-import az.fitnest.catalog.dto.ProfessionRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.ProfessionResponse;
+import az.fitnest.catalog.dto.request.ProfessionRequest;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Profession;
 import az.fitnest.catalog.repository.ProfessionRepository;
@@ -27,7 +30,7 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
     private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
-    public List<ProfessionDto> getAllProfessions() {
+    public List<ProfessionResponse> getAllProfessions() {
         String language = resolveUserLanguage();
         return professionRepository.findAll().stream()
                 .map(p -> toDto(p, language))
@@ -35,14 +38,14 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
     }
 
     @Transactional(readOnly = true)
-    public ProfessionDto getProfessionById(Long id) {
+    public ProfessionResponse getProfessionById(Long id) {
         Profession p = professionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
         return toDto(p, resolveUserLanguage());
     }
 
     @Transactional
-    public ProfessionDto createProfession(ProfessionRequest request) {
+    public ProfessionResponse createProfession(ProfessionRequest request) {
         if (professionRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("error.profession_already_exists");
         }
@@ -53,7 +56,7 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
     }
 
     @Transactional
-    public ProfessionDto updateProfession(Long id, ProfessionRequest request) {
+    public ProfessionResponse updateProfession(Long id, ProfessionRequest request) {
         Profession p = professionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
 
@@ -79,12 +82,12 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
         professionRepository.deleteAll();
     }
 
-    private ProfessionDto toDto(Profession profession, String language) {
+    private ProfessionResponse toDto(Profession profession, String language) {
         String localizedName = translationService.getTranslatedValue("PROFESSION", String.valueOf(profession.getId()), "name", language);
         if (localizedName == null || localizedName.isEmpty()) {
             localizedName = profession.getName();
         }
-        return ProfessionDto.builder()
+        return ProfessionResponse.builder()
                 .id(profession.getId())
                 .name(localizedName)
                 .build();

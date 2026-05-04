@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.GymLessonTypeRequest;
-import az.fitnest.catalog.dto.GymLessonTypeResponse;
+import az.fitnest.catalog.dto.request.GymLessonTypeRequest;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.GymLessonTypeResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.repository.CategoryRepository;
