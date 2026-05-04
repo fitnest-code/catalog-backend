@@ -30,9 +30,8 @@ public class GymQrCodeService {
         gymRepository.findById(gymId).ifPresent(gym -> {
             try {
                 String secureToken = UUID.randomUUID().toString();
-                // Issue 7: Use secure token instead of just ID to prevent information leakage
-                String qrContent = secureToken; 
-                
+                String qrContent = secureToken;
+
                 QRCodeWriter qrCodeWriter = new QRCodeWriter();
                 BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
 
@@ -40,9 +39,8 @@ public class GymQrCodeService {
                 MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
                 byte[] pngData = pngOutputStream.toByteArray();
 
-                // Issue 6: Randomized filename to prevent path traversal and naming conflicts
                 String filename = "qr_" + UUID.randomUUID() + ".png";
-                
+
                 ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
                         pngData,
                         "qr_code",
@@ -51,16 +49,15 @@ public class GymQrCodeService {
                 );
 
                 String fsId = fileStorageService.saveFile(multipartFile, "/gyms/qrs");
-                
+
                 gym.setQrCodeUrl("/api/v1/media/stream/" + fsId);
                 gym.setQrCodeValue(qrContent);
                 gym.setQrCodeToken(secureToken);
                 gymRepository.save(gym);
-                
+
                 log.info("Successfully generated and saved QR code for gym ID: {}", gymId);
             } catch (Exception e) {
                 log.error("Failed to generate QR code for gym ID: {}", gymId, e);
-                // Fallback URL if generation fails
                 gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");
                 gymRepository.save(gym);
             }

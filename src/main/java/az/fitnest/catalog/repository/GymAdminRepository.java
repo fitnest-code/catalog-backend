@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     Optional<GymAdmin> findFirstByGymId(Long gymId);
+    void deleteAllByGymId(Long gymId);
 }

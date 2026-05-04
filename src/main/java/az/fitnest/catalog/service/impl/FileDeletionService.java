@@ -39,12 +39,9 @@ public class FileDeletionService {
         }
     }
 
-    /**
-     * Schedules file deletion after the current transaction successfully commits.
-     */
     public void deleteFilesAfterCommit(List<String> urls) {
         if (urls == null || urls.isEmpty()) return;
-        
+
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

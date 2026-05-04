@@ -62,7 +62,7 @@ public class GymWriteService {
     private final Tika tika = new Tika();
 
     private static final java.util.Set<String> ALLOWED_MIME_TYPES = java.util.Set.of("image/jpeg", "image/png", "image/webp");
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     private MultipartFile validateAndWrapImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -257,12 +257,12 @@ public class GymWriteService {
                 .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(packageId))
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
-        
+
         if (request.benefitIds() != null) {
             List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(request.benefitIds());
             subscription.setSupportedServices(new java.util.HashSet<>(services));
         }
-        
+
         gymRepository.save(gym);
     }
 
@@ -270,18 +270,20 @@ public class GymWriteService {
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        
+
         List<String> filesToDelete = new java.util.ArrayList<>();
         if (gym.getCoverImageUrl() != null) filesToDelete.add(gym.getCoverImageUrl());
         if (gym.getQrCodeUrl() != null) filesToDelete.add(gym.getQrCodeUrl());
-        
+
         if (gym.getImages() != null) {
             filesToDelete.addAll(gym.getImages().stream().map(GymImage::getUrl).toList());
         }
-        
+
         if (gym.getTrainers() != null) {
             filesToDelete.addAll(gym.getTrainers().stream().map(Trainer::getPicture).filter(java.util.Objects::nonNull).toList());
         }
+
+        gymAdminRepository.deleteAllByGymId(gymId);
 
         if (gym.getRooms() != null) {
             filesToDelete.addAll(gym.getRooms().stream()
@@ -291,11 +293,9 @@ public class GymWriteService {
         }
 
         gymRepository.delete(gym);
-        
-        // Issue 4: Async deletion outside transaction via post-commit hook
+
         fileDeletionService.deleteFilesAfterCommit(filesToDelete);
     }
-
 
     @Transactional
     public boolean toggleSave(Long userId, Long gymId) {
@@ -318,7 +318,6 @@ public class GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        // Issue 11: Improved consistency - perform external check-in first
         orderServiceGrpcClient.checkIn(userId, gymId);
 
         String addressText = gym.getAddress() != null ? gym.getAddress().getAddressText() : null;
@@ -331,7 +330,6 @@ public class GymWriteService {
         fileDeletionService.deleteFileAsync(url);
     }
 
-
     @Transactional
     @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     public void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files) {
@@ -341,7 +339,7 @@ public class GymWriteService {
         if (roomNames.size() != files.size()) {
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
-        
+
         List<MultipartFile> validatedFiles = files.stream().map(this::validateAndWrapImage).toList();
 
         for (int i = 0; i < validatedFiles.size(); i++) {
@@ -578,10 +576,10 @@ public class GymWriteService {
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
         MultipartFile validatedCover = null;
         if (coverPhoto != null) validatedCover = validateAndWrapImage(coverPhoto);
-        
+
         List<MultipartFile> validatedRooms = null;
         if (roomPhotos != null) validatedRooms = roomPhotos.stream().map(this::validateAndWrapImage).toList();
-        
+
         updateCoverImage(gymId, validatedCover);
         if (roomNames != null && validatedRooms != null && roomNames.size() == validatedRooms.size() && !roomNames.isEmpty()) {
             addRoomImages(gymId, roomNames, validatedRooms);
@@ -592,13 +590,12 @@ public class GymWriteService {
     public void createGymStep6(Long gymId, az.fitnest.catalog.dto.GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.getSubscriptions().clear();
-        
-        // Issue 10: Deduplicate subscriptions by packageId
+
         java.util.Set<Long> processedPackages = new java.util.HashSet<>();
-        
+
         for (az.fitnest.catalog.dto.GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
             if (!processedPackages.add(subReq.packageId())) {
-                continue; // Skip duplicates
+                continue;
             }
             GymSubscription subscription = new GymSubscription();
             subscription.setGym(gym);

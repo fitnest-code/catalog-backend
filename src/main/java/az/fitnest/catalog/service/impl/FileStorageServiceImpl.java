@@ -47,8 +47,7 @@ public class FileStorageServiceImpl
                 extension = originalName.substring(originalName.lastIndexOf("."));
             }
             String randomFilename = java.util.UUID.randomUUID() + extension;
-            
-            // Wrap the file to provide the randomized filename
+
             MultipartFile randomizedFile = new az.fitnest.catalog.util.ByteArrayMultipartFile(
                     file.getBytes(),
                     file.getName(),
