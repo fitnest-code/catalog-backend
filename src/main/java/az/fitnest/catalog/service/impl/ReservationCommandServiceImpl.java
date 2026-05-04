@@ -95,7 +95,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
 
     @Transactional
     public void cancelReservation(Long sessionId, Long userId, String reasonCode, String additionalNote) {
-        Reservation reservation = reservationRepository.findByUserIdAndReservationDateIdAndStatusIn(
+        Reservation reservation = reservationRepository.findFirstByUserIdAndReservationDateIdAndStatusIn(
                         userId, sessionId, List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 

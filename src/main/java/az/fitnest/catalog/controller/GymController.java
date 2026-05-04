@@ -83,14 +83,14 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymDetail(userId, gymId));
     }
 
-    @GetMapping("/{gymId}/images")
+    @GetMapping("/{gymId:\\d+}/images")
     @Operation(summary = "İdman zalı şəkillərini əldə edin", description = "İdman zalı ilə əlaqəli bütün şəkillərin (loqo, üz qabığı, interyer) siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Şəkillər uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymImageResponse.class))})})
     public ResponseEntity<GymImageResponse> getGymImages(@PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymImages(gymId));
     }
 
-    @GetMapping("/{gymId}/qr")
+    @GetMapping("/{gymId:\\d+}/qr")
     @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "QR kod URL-i uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymQrResponse.class))})})
     public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
@@ -98,7 +98,7 @@ public class GymController {
         return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
     }
 
-    @GetMapping("/{gymId}/trainers")
+    @GetMapping("/{gymId:\\d+}/trainers")
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
     public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
@@ -110,7 +110,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, safePageSize, sortDir.name().toLowerCase()));
     }
 
-    @GetMapping("/{gymId}/reviews")
+    @GetMapping("/{gymId:\\d+}/reviews")
     @Operation(summary = "İdman zalı rəylərini əldə edin", description = "İdman zalı üçün istifadəçi rəylərinin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Rəylər uğurla əldə edildi")})
     public ResponseEntity<PaginatedResponse<GymReviewResponse>> getReviews(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (məsələn, ən yeni, ən yüksək reytinq)") @RequestParam(required = false) String sort) {
@@ -118,7 +118,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, safePageSize, sort));
     }
 
-    @PostMapping("/{gymId}/reviews")
+    @PostMapping("/{gymId:\\d+}/reviews")
     @Operation(summary = "Rəy əlavə edin", description = "İdman zalı üçün yeni istifadəçi rəyi və reytinqi əlavə edir. Reytinq 1-5 arasında olmalıdır.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Rəy uğurla əlavə edildi"), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
@@ -152,7 +152,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
     }
 
-    @PostMapping("/{gymId}/save")
+    @PostMapping("/{gymId:\\d+}/save")
     @Operation(summary = "İdman zalını saxla/sil", description = "Autentifikasiya olunmuş istifadəçi üçün idman zalının 'saxlanılanlar' statusunu dəyişir.")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
@@ -170,7 +170,7 @@ public class GymController {
         return ResponseEntity.ok(new az.fitnest.catalog.dto.response.ToggleSaveResponse(isSaved));
     }
 
-    @GetMapping("/{gymId}/location")
+    @GetMapping("/{gymId:\\d+}/location")
     @Operation(summary = "İdman zalının yerləşdiyi yeri əldə edin", description = "İdman zalı üçün həll edilmiş ünvan mətni ilə birlikdə enlik və uzunluq koordinatlarını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məkan uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = LocationResponse.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
     public ResponseEntity<LocationResponse> getGymLocation(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
