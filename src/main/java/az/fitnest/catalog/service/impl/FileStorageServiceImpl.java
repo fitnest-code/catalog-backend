@@ -14,7 +14,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -22,7 +21,6 @@ import org.apache.tika.Tika;
 import java.io.OutputStream;
 
 @Service
-@Slf4j
 public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
@@ -102,7 +100,6 @@ public class FileStorageServiceImpl
                 this.storageGrpcClient.deleteFiles(ids);
             }
         } catch (Exception exception) {
-            log.error("Failed to delete files: {}", fileUrls, exception);
         }
     }
 
@@ -110,7 +107,6 @@ public class FileStorageServiceImpl
     @Async("fileDeletionExecutor")
     public void deleteFilesAsync(List<String> urls) {
         if (urls == null || urls.isEmpty()) return;
-        log.info("Starting asynchronous file deletion for {} files", urls.size());
         this.deleteFiles(urls);
     }
 
@@ -118,7 +114,6 @@ public class FileStorageServiceImpl
     @Async("fileDeletionExecutor")
     public void deleteFileAsync(String url) {
         if (url == null || url.isBlank()) return;
-        log.info("Starting asynchronous file deletion for file: {}", url);
         this.deleteFile(url);
     }
 

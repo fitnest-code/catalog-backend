@@ -31,7 +31,6 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import az.fitnest.catalog.util.ByteArrayMultipartFile;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.scheduling.annotation.Async;
@@ -48,7 +47,6 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteService {
 
     private final GymRepository gymRepository;

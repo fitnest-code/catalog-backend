@@ -29,7 +29,6 @@ import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -52,7 +51,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
     private final GymRepository gymRepository;
     private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
@@ -552,7 +550,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId, String query, String sort) {
-        log.info("Admin: Fetching QR scan history for user: {}, query: {}, sort: {}", userId, query, sort);
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
         List<GymEntranceHistory> historyList = gymEntranceHistoryRepository.findAllByUserIdOrderByScanDateDesc(userId);
@@ -885,32 +882,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
-        log.info("[getGymCountBySubscription] Start fetching gyms and aggregating by subscription.");
         List<Gym> gyms = gymRepository.findAll();
-        log.debug("[getGymCountBySubscription] Total gyms fetched: {}", gyms.size());
         java.util.Map<Long, java.util.Set<Long>> packageIdToGyms = new java.util.HashMap<>();
         for (Gym gym : gyms) {
             if (gym.getSubscriptions() != null) {
-                log.debug("[getGymCountBySubscription] Gym ID {} has {} subscriptions.", gym.getId(), gym.getSubscriptions().size());
                 for (var subscription : gym.getSubscriptions()) {
                     Long packageId = subscription.getPackageId();
-                    log.debug("[getGymCountBySubscription] Gym ID {} subscription packageId: {}", gym.getId(), packageId);
                     if (packageId != null) {
                         packageIdToGyms.computeIfAbsent(packageId, k -> new java.util.HashSet<>()).add(gym.getId());
                     }
                 }
             } else {
-                log.debug("[getGymCountBySubscription] Gym ID {} has no subscriptions.", gym.getId());
             }
         }
-        log.info("[getGymCountBySubscription] Aggregated packageIdToGyms: {}", packageIdToGyms);
         java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
-        log.info("[getGymCountBySubscription] Package IDs to fetch: {}", packageIds);
         java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-        log.info("[getGymCountBySubscription] Fetched packageNames: {}", packageNames);
         java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
         for (az.fitnest.order.grpc.PackageNameInfo info : packageNames) {
-            log.debug("[getGymCountBySubscription] Mapping packageId {} to name {}", info.getPackageId(), info.getName());
             packageIdToName.put(info.getPackageId(), info.getName());
         }
         return packageIdToGyms.entrySet().stream()
@@ -998,7 +986,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
                 gender = userResp.getGender();
             } catch (Exception e) {
-                log.error("[scanGymQrEntrance] Failed to fetch user gender for userId={}: {}", userId, e.getMessage());
             }
 
             boolean withinHours = isWithinWorkingHours(gym, gender);
@@ -1024,7 +1011,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 allowed = false;
                 status = "UNSUCCESSFUL";
                 reason = "CHECKIN_FAILED";
-                log.error("[scanGymQrEntrance] Failed to record check-in for userId={} at gymId={}: {}", userId, gymId, e.getMessage());
             }
         }
 
@@ -1095,32 +1081,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Transactional(readOnly = true)
     public GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal) {
         Long userId = UserContext.extractUserId(principal);
-        log.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
         if (userId == null) {
-            log.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
             throw new IllegalArgumentException("error.unauthorized");
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
-            log.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
         } catch (Exception e) {
-            log.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
             throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         String status = subResp.getSubscriptionStatus();
-        log.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
-            log.info("[checkGymEntranceEligibility] No active subscription found for userId={}, status={}", userId, status);
             throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
-        log.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
         if (visitLimitRemaining <= 0) {
-            log.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
             throw new ForbiddenException("error.visit_limit_exceeded", "VISIT_LIMIT_EXCEEDED");
         }
-        log.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return new GymEntranceEligibilityResponse(true);
     }
 

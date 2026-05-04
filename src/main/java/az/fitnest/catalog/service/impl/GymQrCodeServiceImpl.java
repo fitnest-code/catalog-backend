@@ -9,7 +9,6 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +17,6 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCodeService {
 
     private final GymRepository gymRepository;
@@ -26,7 +24,6 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
 
     @Async("qrcodeExecutor")
     public void generateAndSaveQrCode(Long gymId) {
-        log.info("Starting asynchronous QR code generation for gym ID: {}", gymId);
         gymRepository.findById(gymId).ifPresent(gym -> {
             try {
                 String secureToken = UUID.randomUUID().toString();
@@ -55,9 +52,7 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
                 gym.setQrCodeToken(secureToken);
                 gymRepository.save(gym);
 
-                log.info("Successfully generated and saved QR code for gym ID: {}", gymId);
             } catch (Exception e) {
-                log.error("Failed to generate QR code for gym ID: {}", gymId, e);
                 gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");
                 gymRepository.save(gym);
             }
