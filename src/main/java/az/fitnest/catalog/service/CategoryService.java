@@ -3,6 +3,7 @@ package az.fitnest.catalog.service;
 import az.fitnest.catalog.dto.CategoryDto;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.model.entity.Category;
+import az.fitnest.catalog.dto.CategoryRequest;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
@@ -14,4 +15,6 @@ public interface CategoryService {
     void updateCategoryName(Long categoryId, String newName);
     void updateCategoryPhoto(Long categoryId, MultipartFile file);
     void updateCategoryIcon(Long categoryId, MultipartFile file);
+    CategoryDto createCategory(CategoryRequest request);
+    CategoryDto updateCategory(Long id, CategoryRequest request);
 }

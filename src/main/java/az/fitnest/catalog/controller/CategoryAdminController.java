@@ -2,9 +2,6 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.CategoryDto;
 import az.fitnest.catalog.dto.CategoryRequest;
-import az.fitnest.catalog.exception.ValidationException;
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,7 +25,6 @@ import java.net.URI;
 @SecurityRequirement(name = "bearerAuth")
 public class CategoryAdminController {
     private final CategoryService categoryService;
-    private final CategoryRepository categoryRepository;
 
     @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -73,9 +69,7 @@ public class CategoryAdminController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
-        Category category = Category.builder().name(request.name()).build();
-        category = categoryRepository.save(category);
-        CategoryDto categoryDto = CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+        CategoryDto categoryDto = categoryService.createCategory(request);
         return ResponseEntity.created(URI.create("/api/v1/admin/categories/" + categoryDto.id())).body(categoryDto);
     }
 
@@ -84,10 +78,7 @@ public class CategoryAdminController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
-        Category category = categoryRepository.findById(id).orElseThrow(() -> new ValidationException("Kateqoriya tapılmadı", null));
-        category.setName(request.name());
-        category = categoryRepository.save(category);
-        CategoryDto categoryDto = CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+        CategoryDto categoryDto = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(categoryDto);
     }
 

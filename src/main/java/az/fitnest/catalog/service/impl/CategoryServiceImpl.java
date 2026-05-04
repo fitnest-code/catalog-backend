@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.CategoryDto;
+import az.fitnest.catalog.dto.CategoryRequest;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
@@ -79,11 +80,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
         if (!category.getGyms().isEmpty()) {
-            String gymNames = category.getGyms().stream()
-                    .map(gym -> gym.getName() + " (ID: " + gym.getId() + ")")
-                    .collect(Collectors.joining(", "));
-            throw new BadRequestException("CATEGORY_IN_USE",
-                    "Cannot delete category '" + category.getName() + "' because it is assigned to: " + gymNames);
+            throw new BadRequestException("CATEGORY_IN_USE", "error.category_in_use");
         }
 
         categoryRepository.delete(category);
@@ -156,4 +153,19 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         return "AZ";
     }
 
+    @Transactional
+    public CategoryDto createCategory(CategoryRequest request) {
+        Category category = Category.builder().name(request.name()).build();
+        category = categoryRepository.save(category);
+        return CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+    }
+
+    @Transactional
+    public CategoryDto updateCategory(Long id, CategoryRequest request) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        category.setName(request.name());
+        category = categoryRepository.save(category);
+        return CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+    }
 }

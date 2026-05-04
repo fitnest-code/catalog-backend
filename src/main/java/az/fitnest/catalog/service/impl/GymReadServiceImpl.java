@@ -781,13 +781,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public boolean checkGymEntranceEligibilitySimple(Object principal) {
         Long userId = extractUserId(principal);
         if (userId == null) {
-            throw new IllegalArgumentException("Unauthorized");
+            throw new IllegalArgumentException("error.unauthorized");
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to fetch subscription: " + e.getMessage());
+            throw new IllegalStateException("error.subscription_fetch_failed");
         }
         String status = subResp.getSubscriptionStatus();
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
@@ -947,11 +947,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String platform) {
         Long userId = extractUserId(principal);
         if (userId == null) {
-            throw new IllegalArgumentException("Unauthorized");
+            throw new IllegalArgumentException("error.unauthorized");
         }
         Long gymId = extractGymIdFromQr(qrCodeValue);
         if (gymId == null) {
-            throw new IllegalArgumentException("Invalid QR code");
+            throw new IllegalArgumentException("error.invalid_qr_code");
         }
         Gym gym = gymRepository.findById(gymId)
             .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -1091,7 +1091,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         log.info("[checkGymEntranceEligibility] Checking eligibility for userId={}", userId);
         if (userId == null) {
             log.warn("[checkGymEntranceEligibility] Unauthorized: principal is null or invalid");
-            throw new IllegalArgumentException("Unauthorized");
+            throw new IllegalArgumentException("error.unauthorized");
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
@@ -1099,19 +1099,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             log.info("[checkGymEntranceEligibility] Received ActiveSubscriptionResponse: {}", subResp);
         } catch (Exception e) {
             log.error("[checkGymEntranceEligibility] Error fetching subscription for userId={}: {}", userId, e.getMessage(), e);
-            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
+            throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         String status = subResp.getSubscriptionStatus();
         log.debug("[checkGymEntranceEligibility] Subscription status for userId={}: {}", userId, status);
         if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
             log.info("[checkGymEntranceEligibility] No active subscription found for userId={}, status={}", userId, status);
-            throw new ForbiddenException("You have no active subscription", "NO_ACTIVE_SUBSCRIPTION");
+            throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
         log.debug("[checkGymEntranceEligibility] Remaining visit limit for userId={}: {}", userId, visitLimitRemaining);
         if (visitLimitRemaining <= 0) {
             log.info("[checkGymEntranceEligibility] No visits left for userId={}", userId);
-            throw new ForbiddenException("Your visit limit has been exceeded", "VISIT_LIMIT_EXCEEDED");
+            throw new ForbiddenException("error.visit_limit_exceeded", "VISIT_LIMIT_EXCEEDED");
         }
         log.info("[checkGymEntranceEligibility] Eligibility check PASSED for userId={}, remainingLimit={}", userId, visitLimitRemaining);
         return new GymEntranceEligibilityResponse(true);
@@ -1182,7 +1182,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<Gym> gyms = gymRepository.findAll();
         long count;
         if (gender == null) {
-            throw new BadRequestException("GENDER_REQUIRED", "Gender parameter is required");
+            throw new BadRequestException("GENDER_REQUIRED", "error.gender_required");
         }
         switch (gender.toLowerCase()) {
             case "female":
@@ -1192,7 +1192,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 count = gyms.stream().filter(g -> g.getWorkHoursMan() != null && !g.getWorkHoursMan().isEmpty()).count();
                 break;
             default:
-                throw new BadRequestException("INVALID_GENDER", "Gender must be 'male' or 'female'");
+                throw new BadRequestException("INVALID_GENDER", "error.invalid_gender");
         }
         return new GymTypeCountResponse(gender, count);
     }

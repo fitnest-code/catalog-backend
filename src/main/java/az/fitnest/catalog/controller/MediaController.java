@@ -1,6 +1,6 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.client.StorageGrpcClient;
+import az.fitnest.catalog.service.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,10 +27,10 @@ import java.util.Objects;
 @RequestMapping(value = {"/api/v1/media"})
 @Tag(name = "Media", description = "Media məzmununu yayımlamaq üçün ucluqlar")
 public class MediaController {
-    private final StorageGrpcClient storageGrpcClient;
+    private final FileStorageService fileStorageService;
 
-    public MediaController(StorageGrpcClient storageGrpcClient) {
-        this.storageGrpcClient = storageGrpcClient;
+    public MediaController(FileStorageService fileStorageService) {
+        this.fileStorageService = fileStorageService;
     }
 
     @Operation(summary = "Media faylını yayımlayın", description = "Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
@@ -61,16 +61,7 @@ public class MediaController {
                     try {
                         SecurityContextHolder.setContext(securityContext);
 
-                        storageGrpcClient.downloadFile(fsId, response -> {
-                            if (response.hasFileData()) {
-                                try {
-                                    outputStream.write(response.getFileData().toByteArray());
-                                } catch (java.io.IOException e) {
-                                    log.error("[MediaController] error writing chunk for fsId={}", fsId, e);
-                                    throw new RuntimeException("Failed to stream file", e);
-                                }
-                            }
-                        });
+                        fileStorageService.streamFileToOutput(fsId, outputStream);
 
                         try {
                             outputStream.flush();
