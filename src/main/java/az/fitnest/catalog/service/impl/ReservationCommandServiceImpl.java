@@ -18,6 +18,7 @@ import az.fitnest.catalog.service.ReservationPolicyService;
 import az.fitnest.catalog.service.ReservationAvailabilityService;
 import az.fitnest.catalog.service.ReservationAuditService;
 import az.fitnest.catalog.service.CancellationReasonService;
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
