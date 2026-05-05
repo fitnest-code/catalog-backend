@@ -37,6 +37,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     private final ReservationAuditService auditService;
     private final CancellationReasonService reasonService;
     private final ReservationRuleRepository ruleRepository;
+    private final OrderServiceGrpcClient orderServiceClient;
 
     @Transactional
     public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long lessonId, Long trainerId, Long sessionId) {
@@ -120,6 +121,10 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
 
         reservationRepository.save(reservation);
 
+        if (oldStatus.equals(ReservationStatus.APPROVED.name())) {
+            orderServiceClient.restoreSession(userId);
+        }
+
         auditService.log(reservation.getId(), userId, "CANCEL", oldStatus, "CANCELLED", reasonCode);
     }
 
@@ -131,6 +136,11 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         String oldStatus = reservation.getStatus().name();
         reservation.setStatus(request.getStatus());
         reservationRepository.save(reservation);
+
+        if (oldStatus.equals(ReservationStatus.APPROVED.name()) && 
+            (request.getStatus() == ReservationStatus.CANCELLED || request.getStatus() == ReservationStatus.REJECTED)) {
+            orderServiceClient.restoreSession(reservation.getUserId());
+        }
 
         auditService.log(reservationId, null, "UPDATE_STATUS", oldStatus, request.getStatus().name(), "Admin update");
     }
@@ -148,6 +158,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setStatus(ReservationStatus.APPROVED);
         reservation.setApprovedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
+
+        orderServiceClient.freezeSession(reservation.getUserId());
 
         auditService.log(reservationId, null, "APPROVE", oldStatus, "APPROVED", "Admin approval");
     }

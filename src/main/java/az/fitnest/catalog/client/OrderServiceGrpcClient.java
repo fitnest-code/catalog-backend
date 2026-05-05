@@ -63,4 +63,18 @@ public class OrderServiceGrpcClient {
         az.fitnest.order.grpc.ActiveSubscriptionResponse response = userSubscriptionStub.getActiveSubscription(request);
         return response;
     }
+
+    public void freezeSession(Long userId) {
+        az.fitnest.order.grpc.FreezeSessionRequest request = az.fitnest.order.grpc.FreezeSessionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        userSubscriptionStub.freezeSession(request);
+    }
+
+    public void restoreSession(Long userId) {
+        az.fitnest.order.grpc.RestoreSessionRequest request = az.fitnest.order.grpc.RestoreSessionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        userSubscriptionStub.restoreSession(request);
+    }
 }

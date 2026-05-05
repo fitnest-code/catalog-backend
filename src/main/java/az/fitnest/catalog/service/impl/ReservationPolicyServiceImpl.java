@@ -46,6 +46,10 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
         if (sessionStart.isBefore(LocalDateTime.now())) {
             throw new BadRequestException("SESSION_EXPIRED", "error.session_expired");
         }
+
+        if (ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart) < 2) {
+            throw new BadRequestException("BOOKING_RESTRICTED", "error.booking_must_be_2_hours_before");
+        }
     }
 
     public boolean isFreeCancellationAllowed(Reservation reservation) {
@@ -55,7 +59,7 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
         );
 
         long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart);
-        return hoursUntilSession >= 24;
+        return hoursUntilSession >= 12;
     }
 
     public void validateCancellationAllowed(Reservation reservation) {
@@ -68,8 +72,9 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
                 reservation.getReservationDate().getStartTime()
         );
 
-        if (LocalDateTime.now().isAfter(sessionStart)) {
-            throw new BadRequestException("SESSION_ALREADY_STARTED", "error.session_already_started");
+        long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart);
+        if (hoursUntilSession < 12) {
+            throw new BadRequestException("CANCELLATION_DISABLED", "error.cancellation_disabled_less_than_12_hours");
         }
     }
 }
