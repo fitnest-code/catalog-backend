@@ -1,16 +1,11 @@
 package az.fitnest.catalog.dto.request;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.dto.*;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Builder;
 
 @Builder
 public record GymCreateStep7Request(
-    @NotBlank String name,
-    @NotBlank String surname,
-    @NotBlank String phoneNumber,
-    @NotBlank @Email String email,
-    @NotBlank String password
+    @NotEmpty @Valid List<GymAdminCreateRequest> admins
 ) {}
