@@ -346,4 +346,11 @@ public class GymAdminController {
         gymWriteService.deleteSupportedService(id);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Koordinatlara görə ünvanı alın", description = "Verilmiş enlik (latitude) və uzunluq (longitude) koordinatlarına uyğun ünvanı qaytarır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/geocoding/reverse")
+    public ResponseEntity<GeocodingResponse> reverseGeocode(@RequestParam Double lat, @RequestParam Double lng) {
+        return ResponseEntity.ok(gymWriteService.reverseGeocode(lat, lng));
+    }
 }

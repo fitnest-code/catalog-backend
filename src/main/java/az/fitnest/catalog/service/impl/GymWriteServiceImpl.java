@@ -615,4 +615,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     public void deleteSupportedService(Long id) {
         supportedServiceRepository.deleteById(id);
     }
+
+    @Override
+    public GeocodingResponse reverseGeocode(Double lat, Double lng) {
+        return reverseGeocodingService.reverseGeocode(lat, lng);
+    }
 }
