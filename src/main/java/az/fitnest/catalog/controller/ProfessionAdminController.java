@@ -64,12 +64,12 @@ public class ProfessionAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Bütün ixtisasları silin (Kritik)", description = "Sistemdəki BÜTÜN ixtisasları silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
+    @Operation(summary = "Bütün ixtisasları silin (Kritik)", description = "Sistemdəki BÜTÜN ixtisasları silir. Bu əməliyyat üçün ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Bütün ixtisaslar uğurla silindi")
     })
     @DeleteMapping("/all")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteAllProfessions() {
         professionService.deleteAllProfessions();
         return ResponseEntity.noContent().build();

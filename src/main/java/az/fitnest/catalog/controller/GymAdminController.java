@@ -127,8 +127,8 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Bütün idman zallarını silin (Kritik)", description = "Sistemdəki BÜTÜN idman zallarını silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur və bu hərəkət geri qaytarıla bilməz.")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Bütün idman zallarını silin (Kritik)", description = "Sistemdəki BÜTÜN idman zallarını silir. Bu əməliyyat üçün ADMIN rolu tələb olunur və bu hərəkət geri qaytarıla bilməz.")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllGyms() {
         gymWriteService.deleteAllGyms();

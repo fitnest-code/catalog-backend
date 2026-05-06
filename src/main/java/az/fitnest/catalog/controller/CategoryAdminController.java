@@ -29,8 +29,8 @@ import java.net.URI;
 public class CategoryAdminController {
     private final CategoryService categoryService;
 
-    @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllCategories() {
         categoryService.deleteAllCategories();

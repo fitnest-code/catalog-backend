@@ -70,8 +70,8 @@ public class StoreAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Bütün mağazaları silin (Kritik)", description = "Sistemdəki BÜTÜN mağazaları silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Bütün mağazaları silin (Kritik)", description = "Sistemdəki BÜTÜN mağazaları silir. Bu əməliyyat üçün ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllStores() {
         storeService.deleteAllStores();
