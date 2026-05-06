@@ -34,4 +34,5 @@ public interface GymWriteService {
     void createGymStep6(Long gymId, GymCreateStep6Request request);
     void createGymStep7(Long gymId, GymCreateStep7Request request);
     GeocodingResponse reverseGeocode(Double lat, Double lng);
+    void toggleGymStatus(Long gymId, boolean enabled);
 }

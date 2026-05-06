@@ -133,11 +133,11 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = request.restDays().stream()
                     .map(r -> az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(r.period().toUpperCase()))
                     .collect(java.util.stream.Collectors.toSet());
-            
+
             validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
             validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
             validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
-            
+
             gym.setRestDays(restDays);
         }
 
@@ -541,7 +541,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     @Transactional
     public void createGymStep3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        
+
         java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
         if (request.restDays() != null) {
             restDays = request.restDays().stream()
@@ -565,10 +565,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         if (request.workHoursMan() != null) {
             gym.setWorkHoursMan(request.workHoursMan().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period().toUpperCase()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
         }
-        
+
         gym.getRestDays().clear();
         gym.getRestDays().addAll(restDays);
-        
+
         gymRepository.save(gym);
     }
 
@@ -638,17 +638,21 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     @Caching(evict = {
         @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
+    @Transactional
     public void createGymStep7(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), request.phoneNumber(), request.email(), request.password());
 
-        az.fitnest.catalog.model.entity.GymAdmin admin = new az.fitnest.catalog.model.entity.GymAdmin();
-        admin.setName(request.name());
-        admin.setSurname(request.surname());
-        admin.setPhoneNumber(request.phoneNumber());
-        admin.setEmail(request.email());
-        admin.setGym(gym);
-        gymAdminRepository.save(admin);
+        for (az.fitnest.catalog.dto.request.GymAdminCreateRequest adminReq : request.admins()) {
+            identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), adminReq.phoneNumber(), adminReq.email(), adminReq.password());
+
+            az.fitnest.catalog.model.entity.GymAdmin admin = new az.fitnest.catalog.model.entity.GymAdmin();
+            admin.setName(adminReq.name());
+            admin.setSurname(adminReq.surname());
+            admin.setPhoneNumber(adminReq.phoneNumber());
+            admin.setEmail(adminReq.email());
+            admin.setGym(gym);
+            gymAdminRepository.save(admin);
+        }
 
         gym.setStatus(GymStatus.ACTIVE);
         gymRepository.save(gym);
@@ -669,5 +673,13 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     @Override
     public GeocodingResponse reverseGeocode(Double lat, Double lng) {
         return reverseGeocodingService.reverseGeocode(lat, lng);
+    }
+
+    @Override
+    @Transactional
+    public void toggleGymStatus(Long gymId, boolean enabled) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
+        gymRepository.save(gym);
     }
 }

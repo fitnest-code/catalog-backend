@@ -138,7 +138,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setStatus(request.getStatus());
         reservationRepository.save(reservation);
 
-        if (oldStatus.equals(ReservationStatus.APPROVED.name()) && 
+        if (oldStatus.equals(ReservationStatus.APPROVED.name()) &&
             (request.getStatus() == ReservationStatus.CANCELLED || request.getStatus() == ReservationStatus.REJECTED)) {
             orderServiceClient.restoreSession(reservation.getUserId());
         }

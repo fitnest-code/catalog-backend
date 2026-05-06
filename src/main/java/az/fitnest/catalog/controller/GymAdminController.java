@@ -353,4 +353,12 @@ public class GymAdminController {
     public ResponseEntity<GeocodingResponse> reverseGeocode(@RequestParam Double lat, @RequestParam Double lng) {
         return ResponseEntity.ok(gymWriteService.reverseGeocode(lat, lng));
     }
+
+    @Operation(summary = "İdman zalını aktivləşdirin və ya deaktiv edin", description = "İdman zalının statusunu ACTIVE və ya INACTIVE olaraq dəyişir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> toggleGymStatus(@PathVariable Long id, @RequestParam boolean enabled) {
+        gymWriteService.toggleGymStatus(id, enabled);
+        return ResponseEntity.ok().build();
+    }
 }
