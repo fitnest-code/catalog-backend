@@ -129,6 +129,18 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             gym.setWorkHoursMan(workHoursMan);
         }
 
+        if (request.restDays() != null) {
+            Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = request.restDays().stream()
+                    .map(r -> az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(r.period().toUpperCase()))
+                    .collect(java.util.stream.Collectors.toSet());
+            
+            validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+            validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+            validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+            
+            gym.setRestDays(restDays);
+        }
+
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         Gym saved = gymRepository.save(gym);
@@ -199,6 +211,19 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
                     })
                     .collect(java.util.stream.Collectors.toSet());
             gym.getWorkHoursMan().addAll(newWorkHoursMan);
+        }
+
+        if (request.restDays() != null) {
+            Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = request.restDays().stream()
+                    .map(r -> az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(r.period().toUpperCase()))
+                    .collect(java.util.stream.Collectors.toSet());
+
+            validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+            validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+            validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+
+            gym.getRestDays().clear();
+            gym.getRestDays().addAll(restDays);
         }
 
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
@@ -516,19 +541,44 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     @Transactional
     public void createGymStep3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        
+        java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
+        if (request.restDays() != null) {
+            restDays = request.restDays().stream()
+                    .map(r -> az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(r.period().toUpperCase()))
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+        validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+        validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+
         gym.getGeneralWorkHours().clear();
         if (request.generalWorkHours() != null) {
-            gym.setGeneralWorkHours(request.generalWorkHours().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+            gym.setGeneralWorkHours(request.generalWorkHours().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period().toUpperCase()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
         }
         gym.getWorkHoursWoman().clear();
         if (request.workHoursWoman() != null) {
-            gym.setWorkHoursWoman(request.workHoursWoman().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+            gym.setWorkHoursWoman(request.workHoursWoman().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period().toUpperCase()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
         }
         gym.getWorkHoursMan().clear();
         if (request.workHoursMan() != null) {
-            gym.setWorkHoursMan(request.workHoursMan().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
+            gym.setWorkHoursMan(request.workHoursMan().stream().map(dto -> new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period().toUpperCase()), dto.from(), dto.to())).collect(java.util.stream.Collectors.toSet()));
         }
+        
+        gym.getRestDays().clear();
+        gym.getRestDays().addAll(restDays);
+        
         gymRepository.save(gym);
+    }
+
+    private void validateNoWorkHoursOnRestDays(java.util.Set<az.fitnest.catalog.dto.response.GymWorkHourResponse> workHours, java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays, String type) {
+        if (workHours == null || restDays.isEmpty()) return;
+        for (az.fitnest.catalog.dto.response.GymWorkHourResponse wh : workHours) {
+            if (restDays.contains(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(wh.period().toUpperCase()))) {
+                throw new BadRequestException("WORK_HOURS_ON_REST_DAY", "error.work_hours_on_rest_day");
+            }
+        }
     }
 
     @Transactional

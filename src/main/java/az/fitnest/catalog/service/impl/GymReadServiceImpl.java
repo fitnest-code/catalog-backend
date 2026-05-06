@@ -265,6 +265,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String localizedName = getLocalizedGymName(gym, userLanguage);
         String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedDescription == null || localizedDescription.isEmpty()) localizedDescription = gym.getDescription();
+        List<RestDayRequest> restDays = gym.getRestDays() != null
+                ? gym.getRestDays().stream()
+                        .map(rd -> new RestDayRequest(rd.name()))
+                        .collect(java.util.stream.Collectors.toList())
+                : java.util.Collections.emptyList();
+
         GymDetailResponse response = GymDetailResponse.builder()
                 .gym_id(gym.getId().toString())
                 .name(localizedName)
@@ -291,6 +297,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .qr_code_url(gym.getQrCodeUrl())
                 .status(gym.getStatus())
                 .supportedSubscriptions(supportedSubscriptions)
+                .rest_days(restDays)
                 .build();
         executor.shutdown();
         return response;

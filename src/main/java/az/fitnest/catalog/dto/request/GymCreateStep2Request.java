@@ -9,5 +9,6 @@ import lombok.Builder;
 public record GymCreateStep2Request(
     Set<GymWorkHourResponse> generalWorkHours,
     Set<GymWorkHourResponse> workHoursWoman,
-    Set<GymWorkHourResponse> workHoursMan
+    Set<GymWorkHourResponse> workHoursMan,
+    Set<RestDayRequest> restDays
 ) {}

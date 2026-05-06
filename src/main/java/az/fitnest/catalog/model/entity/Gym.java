@@ -73,6 +73,15 @@ public class Gym
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Set<GymWorkHour> workHoursMan = new java.util.HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(name = "gym_rest_days", joinColumns = {@JoinColumn(name = "gym_id")})
+    @Column(name = "period")
+    @Enumerated(EnumType.ORDINAL)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default

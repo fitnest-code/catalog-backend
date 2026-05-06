@@ -51,5 +51,7 @@ public record GymRequest(
     @Schema(description = "Qadınlar zalı iş saatları")
     java.util.Set<GymWorkHourResponse> workHoursWoman,
     @Schema(description = "Kişilər zalı iş saatları")
-    java.util.Set<GymWorkHourResponse> workHoursMan
+    java.util.Set<GymWorkHourResponse> workHoursMan,
+    @Schema(description = "İstirahət günləri")
+    java.util.Set<RestDayRequest> restDays
 ) {}

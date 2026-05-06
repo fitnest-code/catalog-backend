@@ -30,5 +30,6 @@ public record GymDetailResponse(
     Integer reviewsCount,
     String qr_code_url,
     GymStatus status,
-    List<GymPlanItemResponse> supportedSubscriptions
+    List<GymPlanItemResponse> supportedSubscriptions,
+    List<RestDayRequest> rest_days
 ) {}
