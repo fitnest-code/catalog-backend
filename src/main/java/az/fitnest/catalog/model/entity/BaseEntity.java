@@ -16,5 +16,5 @@ public abstract class BaseEntity {
     private Long id;
 
     @jakarta.persistence.Version
-    private Long version;
+    private Long version = 0L;
 }
