@@ -673,8 +673,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     private void validateStep(Gym gym, int requiredStep) {
-        if (gym.getStatus() == az.fitnest.catalog.model.enums.GymStatus.ACTIVE) {
-            throw new BadRequestException("GYM_ALREADY_ACTIVE", "error.gym_already_active");
+        if (gym.getStatus() == az.fitnest.catalog.model.enums.GymStatus.ACTIVE ||
+            gym.getStatus() == az.fitnest.catalog.model.enums.GymStatus.INACTIVE) {
+            throw new BadRequestException("GYM_NOT_EDITABLE", "error.gym_not_editable_via_steps");
         }
         Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
         if (currentStep < requiredStep) {
