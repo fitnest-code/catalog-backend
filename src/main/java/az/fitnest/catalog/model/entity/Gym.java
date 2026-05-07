@@ -136,6 +136,10 @@ public class Gym
     @Builder.Default
     private Boolean isReservationEnabled = false;
 
+    @Column(name = "creation_step")
+    @Builder.Default
+    private Integer creationStep = 1;
+
     public Long getGymId() {
         return getId();
     }
