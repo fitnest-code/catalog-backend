@@ -673,13 +673,15 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     private void validateStep(Gym gym, int requiredStep) {
-        if (gym.getCreationStep() < requiredStep) {
+        Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
+        if (currentStep < requiredStep) {
             throw new BadRequestException("INVALID_STEP", "error.invalid_step");
         }
     }
 
     private void updateStep(Gym gym, int completedStep) {
-        if (gym.getCreationStep() == completedStep) {
+        Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
+        if (currentStep == completedStep) {
             gym.setCreationStep(completedStep + 1);
             gymRepository.save(gym);
         }
