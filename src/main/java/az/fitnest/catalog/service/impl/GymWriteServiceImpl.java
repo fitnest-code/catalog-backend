@@ -340,13 +340,16 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
 
-        List<MultipartFile> validatedFiles = files.stream().map(fileStorageService::validateAndWrapImage).toList();
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile originalFile = files.get(i);
+            if (originalFile == null || originalFile.isEmpty()) {
+                continue;
+            }
 
-        for (int i = 0; i < validatedFiles.size(); i++) {
             String roomName = roomNames.get(i);
-            MultipartFile file = validatedFiles.get(i);
+            MultipartFile validatedFile = fileStorageService.validateAndWrapImage(originalFile);
 
-            String fsId = fileStorageService.saveFile(file, "/gyms/rooms");
+            String fsId = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
             String url = "/api/v1/media/stream/" + fsId;
 
             az.fitnest.catalog.model.entity.Room room = gym.getRooms().stream()
@@ -371,6 +374,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
 
         gymRepository.save(gym);
     }
+
 
     @Transactional
     @CacheEvict(cacheNames = "gym-images", key = "#gymId")
@@ -524,11 +528,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         Gym gym = gymRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 1);
 
-        List<MultipartFile> validatedPhotos = null;
-        if (photos != null) {
-            validatedPhotos = photos.stream().map(fileStorageService::validateAndWrapImage).toList();
-        }
-        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, validatedPhotos);
+        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, photos);
 
         updateStep(gym, 1);
     }
@@ -609,15 +609,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 4);
-        MultipartFile validatedCover = null;
-        if (coverPhoto != null) validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
-
-        List<MultipartFile> validatedRooms = null;
-        if (roomPhotos != null) validatedRooms = roomPhotos.stream().map(fileStorageService::validateAndWrapImage).toList();
-
-        updateCoverImage(gymId, validatedCover);
-        if (roomNames != null && validatedRooms != null && roomNames.size() == validatedRooms.size() && !roomNames.isEmpty()) {
-            addRoomImages(gymId, roomNames, validatedRooms);
+        updateCoverImage(gymId, coverPhoto);
+        if (roomNames != null && roomPhotos != null && roomNames.size() == roomPhotos.size() && !roomNames.isEmpty()) {
+            addRoomImages(gymId, roomNames, roomPhotos);
         }
         updateStep(gym, 4);
     }

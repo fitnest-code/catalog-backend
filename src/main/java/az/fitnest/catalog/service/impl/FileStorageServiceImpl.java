@@ -24,7 +24,9 @@ import java.io.OutputStream;
 public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
-    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
+    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
+            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp"
+    );
     private final StorageGrpcClient storageGrpcClient;
     private final Tika tika = new Tika();
 
@@ -169,7 +171,7 @@ public class FileStorageServiceImpl
             byte[] bytes = file.getBytes();
             try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
                 String mimeType = tika.detect(is);
-                if (mimeType == null || !ALLOWED_CONTENT_TYPES.contains(mimeType)) {
+                if (mimeType == null || !ALLOWED_CONTENT_TYPES.contains(mimeType.toLowerCase())) {
                     throw new BadRequestException("error.invalid_file_type");
                 }
             }
@@ -184,3 +186,4 @@ public class FileStorageServiceImpl
         }
     }
 }
+

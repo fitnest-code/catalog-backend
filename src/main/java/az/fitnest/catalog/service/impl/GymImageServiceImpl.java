@@ -119,9 +119,10 @@ public class GymImageServiceImpl implements az.fitnest.catalog.service.GymImageS
             throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
         }
         String contentType = file.getContentType();
-        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
+        if (contentType == null || (!contentType.equalsIgnoreCase("image/jpeg") && !contentType.equalsIgnoreCase("image/jpg") && !contentType.equalsIgnoreCase("image/png") && !contentType.equalsIgnoreCase("image/webp"))) {
             throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
         }
+
     }
 
     private String sanitizeFilename(String filename) {
