@@ -707,6 +707,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
 
     @Transactional
     public void createSupportedService(az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
+        if (supportedServiceRepository.findByName(request.name()).isPresent()) {
+            throw new BadRequestException("SERVICE_ALREADY_EXISTS", "error.service_already_exists");
+        }
         az.fitnest.catalog.model.entity.SupportedService service = new az.fitnest.catalog.model.entity.SupportedService();
         service.setName(request.name());
         service.setGymId(request.gymId());

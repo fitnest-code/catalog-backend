@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SupportedServiceRepository extends JpaRepository<SupportedService, Long> {
     java.util.List<SupportedService> findAllByGymId(Long gymId);
+    java.util.Optional<SupportedService> findByName(String name);
 }
