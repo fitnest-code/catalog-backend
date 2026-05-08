@@ -540,7 +540,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     public void createGymStep4(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 3);
-        gym.setAddress(mapAddress(new az.fitnest.catalog.dto.request.AddressRequest(request.latitude(), request.longitude())));
+        gym.setAddress(mapAddress(az.fitnest.catalog.dto.response.AddressResponse.builder()
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .build()));
         updateStep(gym, 3);
     }
 
@@ -653,7 +656,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         gymRepository.save(gym);
     }
 
-    private Address mapAddress(az.fitnest.catalog.dto.request.AddressRequest dto) {
+    private Address mapAddress(az.fitnest.catalog.dto.response.AddressResponse dto) {
         if (dto == null) return null;
         Address address = new Address();
         address.setLatitude(dto.latitude());
