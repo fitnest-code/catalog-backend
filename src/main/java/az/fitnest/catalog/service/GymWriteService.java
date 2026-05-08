@@ -12,8 +12,8 @@ public interface GymWriteService {
     void enableGymSubscription(Long gymId, Long subscriptionId);
     void updateGymSubscriptionBenefits(Long gymId, Long packageId, GymSubscriptionBenefitsUpdateRequest request);
     void deleteGym(Long gymId);
-    boolean toggleSave(Long userId, Long gymId);
-    CheckInResponse checkIn(Long userId, Long gymId);
+    boolean toggleSave(Object principal, Long gymId);
+    CheckInResponse checkIn(Object principal, Long gymId);
     void addRoomImages(Long gymId, List<String> roomNames, List<MultipartFile> files);
     void deleteAllGymRooms(Long gymId);
     void deleteGymRoomById(Long gymId, Long roomId);

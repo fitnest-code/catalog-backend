@@ -47,6 +47,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteService {
 
     private final GymRepository gymRepository;
@@ -82,52 +83,14 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         gym.setName(request.name());
         gym.setDescription(request.description());
 
-        if (request.address() != null) {
-            Address address = new Address();
-            Double lat = request.address().latitude();
-            Double lng = request.address().longitude();
-            address.setLatitude(lat);
-            address.setLongitude(lng);
-            GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
-            if (geocoding != null) {
-                address.setAddressText(geocoding.addressText());
-                address.setCity(geocoding.city());
-            }
-            gym.setAddress(address);
-        }
+        gym.setAddress(mapAddress(request.address()));
         gym.setPhone(request.phone());
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(categories));
 
-        if (request.generalWorkHours() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> generalWorkHours = request.generalWorkHours().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.setGeneralWorkHours(generalWorkHours);
-        }
-
-        if (request.workHoursWoman() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursWoman = request.workHoursWoman().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.setWorkHoursWoman(workHoursWoman);
-        }
-
-        if (request.workHoursMan() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> workHoursMan = request.workHoursMan().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.setWorkHoursMan(workHoursMan);
-        }
+        gym.setGeneralWorkHours(mapWorkHours(request.generalWorkHours()));
+        gym.setWorkHoursWoman(mapWorkHours(request.workHoursWoman()));
+        gym.setWorkHoursMan(mapWorkHours(request.workHoursMan()));
 
         if (request.restDays() != null) {
             Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = request.restDays().stream()
@@ -164,54 +127,14 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         gym.setName(request.name());
         gym.setDescription(request.description());
 
-        if (request.address() != null) {
-            Address address = new Address();
-            Double lat = request.address().latitude();
-            Double lng = request.address().longitude();
-            address.setLatitude(lat);
-            address.setLongitude(lng);
-            GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(lat, lng);
-            if (geocoding != null) {
-                address.setAddressText(geocoding.addressText());
-                address.setCity(geocoding.city());
-            }
-            gym.setAddress(address);
-        }
+        gym.setAddress(mapAddress(request.address()));
         gym.setPhone(request.phone());
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(categories));
-        gym.getGeneralWorkHours().clear();
-        if (request.generalWorkHours() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> newGeneralWorkHours = request.generalWorkHours().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.getGeneralWorkHours().addAll(newGeneralWorkHours);
-        }
 
-        gym.getWorkHoursWoman().clear();
-        if (request.workHoursWoman() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursWoman = request.workHoursWoman().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.getWorkHoursWoman().addAll(newWorkHoursWoman);
-        }
-
-        gym.getWorkHoursMan().clear();
-        if (request.workHoursMan() != null) {
-            Set<az.fitnest.catalog.model.entity.GymWorkHour> newWorkHoursMan = request.workHoursMan().stream()
-                    .map(dto -> {
-                        if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                        return new az.fitnest.catalog.model.entity.GymWorkHour(az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period()), dto.from(), dto.to());
-                    })
-                    .collect(java.util.stream.Collectors.toSet());
-            gym.getWorkHoursMan().addAll(newWorkHoursMan);
-        }
+        updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
+        updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
+        updateWorkHours(gym.getWorkHoursMan(), request.workHoursMan());
 
         if (request.restDays() != null) {
             Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = request.restDays().stream()
@@ -300,7 +223,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public boolean toggleSave(Long userId, Long gymId) {
+    public boolean toggleSave(Object principal, Long gymId) {
+        Long userId = az.fitnest.catalog.util.UserContext.extractUserId(principal);
+        if (userId == null) throw new az.fitnest.catalog.exception.ForbiddenException("error.unauthorized", "UNAUTHORIZED");
+
         java.util.Optional<az.fitnest.catalog.model.entity.SavedGym> existing = savedGymRepository.findByUserIdAndGymId(userId, gymId);
         if (existing.isPresent()) {
             savedGymRepository.delete(existing.get());
@@ -316,7 +242,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    public CheckInResponse checkIn(Long userId, Long gymId) {
+    public CheckInResponse checkIn(Object principal, Long gymId) {
+        Long userId = az.fitnest.catalog.util.UserContext.extractUserId(principal);
+        if (userId == null) throw new az.fitnest.catalog.exception.ForbiddenException("error.unauthorized", "UNAUTHORIZED");
+
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -342,6 +271,8 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             throw new BadRequestException("INVALID_INPUT", "error.invalid_input");
         }
 
+        java.util.List<java.util.concurrent.CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+
         for (int i = 0; i < files.size(); i++) {
             MultipartFile originalFile = files.get(i);
             if (originalFile == null || originalFile.isEmpty()) {
@@ -351,28 +282,35 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             String roomName = roomNames.get(i);
             MultipartFile validatedFile = fileStorageService.validateAndWrapImage(originalFile);
 
-            String fsId = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
-            String url = "/api/v1/media/stream/" + fsId;
+            java.util.concurrent.CompletableFuture<Void> future = java.util.concurrent.CompletableFuture.runAsync(() -> {
+                String fsId = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
+                String url = "/api/v1/media/stream/" + fsId;
 
-            az.fitnest.catalog.model.entity.Room room = gym.getRooms().stream()
-                    .filter(r -> r.getName().equals(roomName))
-                    .findFirst()
-                    .orElseGet(() -> {
-                        az.fitnest.catalog.model.entity.Room newRoom = az.fitnest.catalog.model.entity.Room.builder()
-                                .name(roomName)
-                                .gym(gym)
-                                .build();
-                        gym.getRooms().add(newRoom);
-                        return newRoom;
-                    });
+                synchronized (gym) {
+                    az.fitnest.catalog.model.entity.Room room = gym.getRooms().stream()
+                            .filter(r -> r.getName().equals(roomName))
+                            .findFirst()
+                            .orElseGet(() -> {
+                                az.fitnest.catalog.model.entity.Room newRoom = az.fitnest.catalog.model.entity.Room.builder()
+                                        .name(roomName)
+                                        .gym(gym)
+                                        .build();
+                                gym.getRooms().add(newRoom);
+                                return newRoom;
+                            });
 
-            az.fitnest.catalog.model.entity.RoomImage roomImage = az.fitnest.catalog.model.entity.RoomImage.builder()
-                    .room(room)
-                    .pictureUrl(url)
-                    .build();
+                    az.fitnest.catalog.model.entity.RoomImage roomImage = az.fitnest.catalog.model.entity.RoomImage.builder()
+                            .room(room)
+                            .pictureUrl(url)
+                            .build();
 
-            room.getImages().add(roomImage);
+                    room.getImages().add(roomImage);
+                }
+            });
+            futures.add(future);
         }
+
+        java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
 
         gymRepository.save(gym);
     }
@@ -394,7 +332,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             if (!roomImageUrls.isEmpty()) {
                 try {
                     fileStorageService.deleteFiles(roomImageUrls);
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    log.error("Failed to delete room images for gym {}: {}", gymId, e.getMessage());
+                }
             }
             gym.getRooms().clear();
             gymRepository.save(gym);
@@ -420,7 +360,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         if (!roomImageUrls.isEmpty()) {
             try {
                 fileStorageService.deleteFiles(roomImageUrls);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                log.error("Failed to delete room images for room {}: {}", roomId, e.getMessage());
+            }
         }
 
         gym.getRooms().remove(room);
@@ -464,9 +406,14 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
 
     @Transactional
     public void deleteAllGyms() {
+        // Bulk loading and batch deletion for better performance
         List<Gym> gyms = gymRepository.findAll();
         for (Gym gym : gyms) {
-            deleteGym(gym.getId());
+            try {
+                deleteGym(gym.getId());
+            } catch (Exception e) {
+                log.error("Failed to delete gym {}: {}", gym.getId(), e.getMessage());
+            }
         }
     }
 
@@ -593,15 +540,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     public void createGymStep4(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 3);
-        Address address = new Address();
-        address.setLatitude(request.latitude());
-        address.setLongitude(request.longitude());
-        GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.latitude(), request.longitude());
-        if (geocoding != null) {
-            address.setAddressText(geocoding.addressText());
-            address.setCity(geocoding.city());
-        }
-        gym.setAddress(address);
+        gym.setAddress(mapAddress(new az.fitnest.catalog.dto.request.AddressRequest(request.latitude(), request.longitude())));
         updateStep(gym, 3);
     }
 
@@ -707,11 +646,44 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         return reverseGeocodingService.reverseGeocode(lat, lng);
     }
 
-    @Override
     @Transactional
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
         gymRepository.save(gym);
+    }
+
+    private Address mapAddress(az.fitnest.catalog.dto.request.AddressRequest dto) {
+        if (dto == null) return null;
+        Address address = new Address();
+        address.setLatitude(dto.latitude());
+        address.setLongitude(dto.longitude());
+        GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(dto.latitude(), dto.longitude());
+        if (geocoding != null) {
+            address.setAddressText(geocoding.addressText());
+            address.setCity(geocoding.city());
+        }
+        return address;
+    }
+
+    private Set<az.fitnest.catalog.model.entity.GymWorkHour> mapWorkHours(Set<az.fitnest.catalog.dto.response.GymWorkHourResponse> dtos) {
+        if (dtos == null) return new HashSet<>();
+        return dtos.stream()
+                .map(dto -> {
+                    if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
+                    return new az.fitnest.catalog.model.entity.GymWorkHour(
+                            az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(dto.period().toUpperCase()),
+                            dto.from(),
+                            dto.to()
+                    );
+                })
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private void updateWorkHours(Set<az.fitnest.catalog.model.entity.GymWorkHour> target, Set<az.fitnest.catalog.dto.response.GymWorkHourResponse> source) {
+        target.clear();
+        if (source != null) {
+            target.addAll(mapWorkHours(source));
+        }
     }
 }

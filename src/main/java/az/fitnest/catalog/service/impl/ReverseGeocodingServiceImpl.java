@@ -23,6 +23,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(cacheNames = "geocoding", key = "{#latitude, #longitude}")
     public GeocodingResponse reverseGeocode(Double latitude, Double longitude) {
         if (latitude == null || longitude == null) {
             return null;

@@ -77,7 +77,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .toList();
         }
         return services.stream()
-                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName()))
+                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId()))
                 .toList();
     }
 

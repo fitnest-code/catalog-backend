@@ -7,5 +7,6 @@ import lombok.Builder;
 @Builder
 public record SupportedServiceResponse(
     Long id,
-    String name
+    String name,
+    Long gymId
 ) {}

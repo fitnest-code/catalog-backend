@@ -161,12 +161,8 @@ public class GymController {
             @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class))}),
             @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb", content = {@Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class))})
     })
-    public ResponseEntity<az.fitnest.catalog.dto.response.ToggleSaveResponse> toggleSave(@AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
-        Long userId = UserContext.extractUserId(principal);
-        if (userId == null) {
-            return ResponseEntity.status(401).build();
-        }
-        boolean isSaved = this.gymWriteService.toggleSave(userId, gymId);
+    public ResponseEntity<az.fitnest.catalog.dto.response.ToggleSaveResponse> toggleSave(@org.springframework.security.core.annotation.AuthenticationPrincipal Object principal, @PathVariable Long gymId) {
+        boolean isSaved = this.gymWriteService.toggleSave(principal, gymId);
         return ResponseEntity.ok(new az.fitnest.catalog.dto.response.ToggleSaveResponse(isSaved));
     }
 
