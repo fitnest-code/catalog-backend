@@ -70,7 +70,7 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT g.qrCodeUrl FROM Gym g WHERE g.qrCodeUrl IS NOT NULL")
     List<String> findAllQrCodeUrls();
 
-    @org.springframework.data.jpa.repository.Query("SELECT t.picture FROM Gym g JOIN g.trainers t WHERE t.picture IS NOT NULL")
+    @org.springframework.data.jpa.repository.Query("SELECT t.profileImageUrl FROM Gym g JOIN g.trainers t WHERE t.profileImageUrl IS NOT NULL")
     List<String> findAllTrainerPictureUrls();
 
     @org.springframework.data.jpa.repository.Query("SELECT ri.pictureUrl FROM Gym g JOIN g.rooms r JOIN r.images ri WHERE ri.pictureUrl IS NOT NULL")
