@@ -7,6 +7,6 @@ import java.util.List;
 public record GymPlanItemResponse(
     String plan_id,
     String packageName,
-    Double price,
+    Double dailyPrice,
     List<GymPlanBenefitResponse> benefits
 ) {}

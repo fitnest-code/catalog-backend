@@ -24,8 +24,8 @@ public class GymSubscription extends BaseAuditableEntity {
     @Column(name = "package_id")
     private Long packageId;
 
-    @Column(name = "price")
-    private Double price;
+    @Column(name = "daily_price")
+    private Double dailyPrice;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
