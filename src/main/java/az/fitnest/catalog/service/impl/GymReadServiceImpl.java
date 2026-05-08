@@ -254,7 +254,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         return GymPlanItemResponse.builder()
                             .plan_id(planId)
                             .packageName(packageName)
-                            .price(sub.getPrice())
+                            .dailyPrice(sub.getDailyPrice())
                             .benefits(benefitsList)
                             .build();
                     })
@@ -708,7 +708,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     return GymPlanItemResponse.builder()
                         .plan_id(planId)
                         .packageName(packageName)
-                        .price(sub.getPrice())
+                        .dailyPrice(sub.getDailyPrice())
                         .benefits(benefitsList)
                         .build();
                 }).collect(java.util.stream.Collectors.toList());
@@ -723,7 +723,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     return GymPlanItemResponse.builder()
                         .plan_id(planId)
                         .packageName(fallbackName)
-                        .price(sub.getPrice())
+                        .dailyPrice(sub.getDailyPrice())
                         .benefits(sub.getSupportedServices().stream().map(b -> GymPlanBenefitResponse.builder().description(b.getName()).build()).toList())
                         .build();
                 }).collect(java.util.stream.Collectors.toList());

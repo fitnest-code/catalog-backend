@@ -630,7 +630,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             GymSubscription subscription = new GymSubscription();
             subscription.setGym(gym);
             subscription.setPackageId(subReq.packageId());
-            subscription.setPrice(subReq.price());
+            subscription.setDailyPrice(subReq.dailyPrice());
             if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
                 List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId());
                 subscription.setSupportedServices(new HashSet<>(services));
