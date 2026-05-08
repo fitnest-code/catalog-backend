@@ -116,7 +116,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
         trainer.setProfession(profession);
 
-        trainer.setPhone(request.phone());
+        trainer.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         trainer.setEmail(request.email());
     }
 
@@ -257,7 +257,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 trainer.setEmail(emails.get(i));
             }
             if (phones != null && i < phones.size()) {
-                trainer.setPhone(phones.get(i));
+                trainer.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(phones.get(i)));
             }
 
             if (professionIds != null && i < professionIds.size()) {

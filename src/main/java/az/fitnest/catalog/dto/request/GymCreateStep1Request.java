@@ -20,14 +20,12 @@ public record GymCreateStep1Request(
     @jakarta.validation.constraints.Size(min = 2, max = 100)
     String name,
 
+    @NotBlank(message = "Telefon boş ola bilməz")
+    @Pattern(regexp = "^(\\+994|0)?\\s?(10|50|51|55|60|70|77|99)(\\s?\\d){7}$", message = "Yanlış mobil nömrə formatı")
+    String phone,
+
     @jakarta.validation.constraints.Size(max = 2000)
     String description,
 
-    @NotBlank(message = "Telefon boş ola bilməz")
-    @Pattern(regexp = "^(050|051|010|055|099|070|077|060)\\d{7}$", message = "Yanlış mobil nömrə formatı")
-    String phone,
-
-    @NotBlank(message = "Email boş ola bilməz")
-    @Email(message = "Yanlış email formatı")
     String email
 ) {}

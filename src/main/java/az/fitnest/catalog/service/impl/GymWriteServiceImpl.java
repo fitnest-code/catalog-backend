@@ -102,7 +102,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         }
         gym.setAddress(address);
 
-        gym.setPhone(request.phone());
+        gym.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(categories));
 
@@ -163,7 +163,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         }
         gym.setAddress(address);
 
-        gym.setPhone(request.phone());
+        gym.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(categories));
 
@@ -516,7 +516,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
-        gym.setPhone(request.phone());
+        gym.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(List.of(category)));
         gym.setStatus(GymStatus.DRAFT);
@@ -658,7 +658,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     })
     public void createGymStep7(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         for (az.fitnest.catalog.dto.request.GymAdminCreateRequest adminReq : request.admins()) {
-            identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), adminReq.phoneNumber(), adminReq.email(), adminReq.password());
+            identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), az.fitnest.catalog.util.PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
             saveAdminInternal(gymId, adminReq);
         }
         finalizeGymStep7Internal(gymId);
@@ -670,7 +670,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         az.fitnest.catalog.model.entity.GymAdmin admin = new az.fitnest.catalog.model.entity.GymAdmin();
         admin.setName(adminReq.name());
         admin.setSurname(adminReq.surname());
-        admin.setPhoneNumber(adminReq.phoneNumber());
+        admin.setPhoneNumber(az.fitnest.catalog.util.PhoneUtil.normalize(adminReq.phoneNumber()));
         admin.setEmail(adminReq.email());
         admin.setGym(gym);
         gymAdminRepository.save(admin);
@@ -692,6 +692,12 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             throw new BadRequestException("GYM_NOT_EDITABLE", "error.gym_not_editable_via_steps");
         }
         Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
+        
+        // Step 2 is optional, so we allow proceeding to Step 3 (requiredStep 2) from Step 1
+        if (requiredStep == 2 && currentStep == 1) {
+            return;
+        }
+
         if (currentStep < requiredStep) {
             throw new BadRequestException("INVALID_STEP", "error.invalid_step");
         }
@@ -699,7 +705,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
 
     private void updateStep(Gym gym, int completedStep) {
         Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
-        if (currentStep == completedStep) {
+        if (currentStep <= completedStep) {
             gym.setCreationStep(completedStep + 1);
             gymRepository.save(gym);
         }

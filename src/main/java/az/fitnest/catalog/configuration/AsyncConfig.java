@@ -35,4 +35,17 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("taskExecutor")
+    @org.springframework.context.annotation.Primary
+    public Executor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setThreadNamePrefix("async-");
+        executor.initialize();
+        return executor;
+    }
 }

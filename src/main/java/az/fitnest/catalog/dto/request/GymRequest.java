@@ -31,11 +31,10 @@ public record GymRequest(
     AddressResponse address,
 
     @NotBlank(message = "Telefon boş ola bilməz")
-    @Pattern(regexp = "^(050|051|010|055|099|070|077|060)\\d{7}$", message = "Yanlış mobil nömrə formatı. 050, 051, 010, 055, 099, 070, 077 və ya 060 ilə başlamalı və 7 rəqəmlə davam etməlidir.")
+    @Pattern(regexp = "^(\\+994|0|994)?\\s?\\d{2}\\s?\\d{3}\\s?\\d{2}\\s?\\d{2}$", message = "Yanlış mobil nömrə formatı.")
     @Schema(description = "Əlaqə telefonu", example = "0501234567")
     String phone,
 
-    @NotBlank(message = "Email boş ola bilməz")
     @Email(message = "Yanlış email formatı")
     @Schema(description = "Əlaqə emaili", example = "info@fitlife.az")
     String email,
