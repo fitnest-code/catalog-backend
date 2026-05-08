@@ -21,4 +21,7 @@ public class SupportedService extends BaseAuditableEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "gym_id")
+    private Long gymId;
+
 }

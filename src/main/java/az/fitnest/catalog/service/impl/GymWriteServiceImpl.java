@@ -259,7 +259,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
                 .orElseThrow(() -> new BadRequestException("SUBSCRIPTION_NOT_ENABLED", "error.subscription_not_enabled"));
 
         if (request.benefitIds() != null) {
-            List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(request.benefitIds());
+            List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(request.benefitIds()).stream()
+                    .filter(s -> s.getGymId() == null || s.getGymId().equals(gymId))
+                    .toList();
             subscription.setSupportedServices(new java.util.HashSet<>(services));
         }
 
@@ -632,7 +634,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             subscription.setPackageId(subReq.packageId());
             subscription.setDailyPrice(subReq.dailyPrice());
             if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
-                List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId());
+                List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId()).stream()
+                        .filter(s -> s.getGymId() == null || s.getGymId().equals(gymId))
+                        .toList();
                 subscription.setSupportedServices(new HashSet<>(services));
             }
             gym.getSubscriptions().add(subscription);
@@ -689,8 +693,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     public void createSupportedService(az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
         az.fitnest.catalog.model.entity.SupportedService service = new az.fitnest.catalog.model.entity.SupportedService();
         service.setName(request.name());
+        service.setGymId(request.gymId());
         supportedServiceRepository.save(service);
     }
+
     @Transactional
     public void deleteSupportedService(Long id) {
         supportedServiceRepository.deleteById(id);

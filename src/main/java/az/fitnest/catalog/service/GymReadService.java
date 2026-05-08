@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface GymReadService {
-    List<SupportedServiceResponse> getAllSupportedServices();
+    List<SupportedServiceResponse> getAllSupportedServices(Long gymId);
     String getUserLanguage(Long userId);
     GymDetailResponse getGymDetail(Long userId, Long gymId);
     GymImageResponse getGymImages(Long gymId);

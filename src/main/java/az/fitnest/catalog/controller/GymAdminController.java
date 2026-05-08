@@ -332,11 +332,11 @@ public class GymAdminController {
         gymWriteService.createSupportedService(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
-    @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki bütün dəstəklənən xidmətləri qaytarır.")
+    @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki dəstəklənən xidmətləri qaytarır. gymId göndərilərsə həmin idman zalına aid xidmətləri qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/services")
-    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.response.SupportedServiceResponse>> getSupportedServices() {
-        return ResponseEntity.ok(gymReadService.getAllSupportedServices());
+    public ResponseEntity<java.util.List<az.fitnest.catalog.dto.response.SupportedServiceResponse>> getSupportedServices(@RequestParam(required = false) Long gymId) {
+        return ResponseEntity.ok(gymReadService.getAllSupportedServices(gymId));
     }
 
     @Operation(summary = "Dəstəklənən xidməti silin", description = "ID-yə görə dəstəklənən xidməti silir.")
