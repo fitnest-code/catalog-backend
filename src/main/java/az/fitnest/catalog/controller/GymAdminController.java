@@ -289,6 +289,14 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Step 3 (Validation): İdman zalının iş saatlarını yoxlayın", description = "İş saatlarını yadda saxlamadan əvvəl onların doğruluğunu yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/step3/validate")
+    public ResponseEntity<Void> validateGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
+        gymWriteService.validateGymStep3(id, request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "Step 4: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step4")

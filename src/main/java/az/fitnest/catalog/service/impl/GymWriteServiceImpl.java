@@ -566,6 +566,23 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         updateStep(gym, 2);
     }
 
+    public void validateGymStep3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        validateStep(gym, 2);
+
+        java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
+        if (request.restDays() != null) {
+            restDays = request.restDays().stream()
+                    .flatMap(r -> expandPeriods(r.period()).stream())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+        validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+        validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+    }
+
+
     private void validateNoWorkHoursOnRestDays(java.util.Set<az.fitnest.catalog.dto.response.GymWorkHourResponse> workHours, java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays, String type) {
         if (workHours == null || restDays.isEmpty()) return;
         for (az.fitnest.catalog.dto.response.GymWorkHourResponse wh : workHours) {
