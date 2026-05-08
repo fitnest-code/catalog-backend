@@ -171,6 +171,9 @@ grpc:
     user-backend:
       address: ${USER_BACKEND_GRPC_ADDRESS}
       negotiation-type: plaintext
+    identity-service:
+      address: ${IDENTITY_BACKEND_GRPC_ADDRESS}
+      negotiation-type: plaintext
     storage-backend:
       address: ${STORAGE_BACKEND_GRPC_ADDRESS}
       negotiation-type: plaintext
