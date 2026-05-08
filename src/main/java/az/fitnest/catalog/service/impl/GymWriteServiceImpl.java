@@ -64,6 +64,9 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     private final GymQrCodeService gymQrCodeService;
     private final java.util.concurrent.Executor qrcodeExecutor;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     private record RoomImageUploadResult(String roomName, String url) {}
 
     private final java.util.Map<String, java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod>> periodCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -322,7 +325,10 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
                 .toList();
 
         if (!results.isEmpty()) {
-            applyRoomImagesUpdateInternal(gymId, results);
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(status -> {
+                applyRoomImagesUpdateInternal(gymId, results);
+                return null;
+            });
         }
     }
 
