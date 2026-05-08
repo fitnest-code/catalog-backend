@@ -9,5 +9,6 @@ import lombok.Builder;
 @Builder
 public record GymCreateStep6SubscriptionRequest(
     @NotNull Long packageId,
+    @NotNull Double price,
     List<Long> supportedServicesId
 ) {}

@@ -512,7 +512,6 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         Gym gym = new Gym();
         gym.setName(request.name());
-        gym.setDailyPrice(request.dailyPrice());
         gym.setDescription(request.description());
         gym.setPhone(request.phone());
         gym.setEmail(request.email());
@@ -631,6 +630,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             GymSubscription subscription = new GymSubscription();
             subscription.setGym(gym);
             subscription.setPackageId(subReq.packageId());
+            subscription.setPrice(subReq.price());
             if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
                 List<az.fitnest.catalog.model.entity.SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId());
                 subscription.setSupportedServices(new HashSet<>(services));

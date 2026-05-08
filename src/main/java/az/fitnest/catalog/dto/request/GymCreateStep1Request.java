@@ -19,8 +19,6 @@ public record GymCreateStep1Request(
     @NotBlank(message = "Ad boş ola bilməz")
     String name,
 
-    Double dailyPrice,
-
     String description,
 
     @NotBlank(message = "Telefon boş ola bilməz")

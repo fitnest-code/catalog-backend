@@ -24,6 +24,9 @@ public class GymSubscription extends BaseAuditableEntity {
     @Column(name = "package_id")
     private Long packageId;
 
+    @Column(name = "price")
+    private Double price;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "gym_subscription_services",
