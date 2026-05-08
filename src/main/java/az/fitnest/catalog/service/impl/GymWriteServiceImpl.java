@@ -126,7 +126,11 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         gymQrCodeService.generateAndSaveQrCode(saved.getId());
     }
 
-    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+        @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+    })
     public void updateGym(Long gymId, GymRequest request) {
         GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.address().latitude(), request.address().longitude());
         updateGymInternal(gymId, request, geocoding);
@@ -220,7 +224,11 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+        @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+    })
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -492,6 +500,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public az.fitnest.catalog.dto.response.GymCreateStep1Response createGymStep1(az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
         if (request.categoryId() == null) {
             throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
@@ -706,6 +715,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
