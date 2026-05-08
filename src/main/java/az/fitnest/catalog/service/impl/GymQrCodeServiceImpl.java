@@ -17,6 +17,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCodeService {
 
     private final GymRepository gymRepository;
@@ -24,20 +25,27 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
 
     @Async("qrcodeExecutor")
     public void generateAndSaveQrCode(Long gymId) {
+        log.info("Starting QR code generation for gymId: {}", gymId);
+
         gymRepository.findById(gymId).ifPresent(gym -> {
+            if (gym.getQrCodeToken() != null && gym.getQrCodeUrl() != null) {
+                log.info("QR code already exists for gymId: {}, skipping generation", gymId);
+                return;
+            }
+
             try {
                 String secureToken = UUID.randomUUID().toString();
-                String qrContent = secureToken;
 
                 QRCodeWriter qrCodeWriter = new QRCodeWriter();
-                BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
+                BitMatrix bitMatrix = qrCodeWriter.encode(secureToken, BarcodeFormat.QR_CODE, 500, 500);
 
-                ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-                MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-                byte[] pngData = pngOutputStream.toByteArray();
+                byte[] pngData;
+                try (ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream()) {
+                    MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+                    pngData = pngOutputStream.toByteArray();
+                }
 
                 String filename = "qr_" + UUID.randomUUID() + ".png";
-
                 ByteArrayMultipartFile multipartFile = new ByteArrayMultipartFile(
                         pngData,
                         "qr_code",
@@ -46,14 +54,25 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
                 );
 
                 String fsId = fileStorageService.saveFile(multipartFile, "/gyms/qrs");
+                String url = "/api/v1/media/stream/" + fsId;
 
-                gym.setQrCodeUrl("/api/v1/media/stream/" + fsId);
-                gym.setQrCodeValue(qrContent);
-                gym.setQrCodeToken(secureToken);
-                gymRepository.save(gym);
+                synchronized (this) {
+                    Gym currentGym = gymRepository.findById(gymId).orElse(gym);
+                    currentGym.setQrCodeUrl(url);
+                    currentGym.setQrCodeValue(secureToken);
+                    currentGym.setQrCodeToken(secureToken);
+                    gymRepository.save(currentGym);
+                }
+
+                log.info("Successfully generated and saved QR code for gymId: {}", gymId);
 
             } catch (Exception e) {
+                log.error("Failed to generate QR code for gymId: {}. Error: {}", gymId, e.getMessage(), e);
+
                 gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");
+                if (gym.getQrCodeToken() == null) {
+                    gym.setQrCodeToken("PENDING_" + UUID.randomUUID());
+                }
                 gymRepository.save(gym);
             }
         });

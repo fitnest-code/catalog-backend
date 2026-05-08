@@ -244,16 +244,27 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
+        if (names == null) return;
+
         for (int i = 0; i < names.size(); i++) {
             Trainer trainer = new Trainer();
             trainer.setName(names.get(i));
-            trainer.setSurname(surnames.get(i));
-            trainer.setEmail(emails.get(i));
-            trainer.setPhone(phones.get(i));
 
-            Profession profession = professionRepository.findById(professionIds.get(i))
-                    .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
-            trainer.setProfession(profession);
+            if (surnames != null && i < surnames.size()) {
+                trainer.setSurname(surnames.get(i));
+            }
+            if (emails != null && i < emails.size()) {
+                trainer.setEmail(emails.get(i));
+            }
+            if (phones != null && i < phones.size()) {
+                trainer.setPhone(phones.get(i));
+            }
+
+            if (professionIds != null && i < professionIds.size()) {
+                Profession profession = professionRepository.findById(professionIds.get(i))
+                        .orElseThrow(() -> new ResourceNotFoundException("PROFESSION_NOT_FOUND", "error.profession_not_found"));
+                trainer.setProfession(profession);
+            }
 
             if (photos != null && i < photos.size() && photos.get(i) != null && !photos.get(i).isEmpty()) {
                 MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photos.get(i));
