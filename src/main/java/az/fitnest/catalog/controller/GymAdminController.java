@@ -276,7 +276,7 @@ public class GymAdminController {
             @RequestParam("professionIds") List<Long> professionIds,
             @RequestParam("emails") List<String> emails,
             @RequestParam("phones") List<String> phones,
-            @RequestParam("photos") List<MultipartFile> photos) {
+            @RequestParam(value = "photos", required = false) List<MultipartFile> photos) {
         gymWriteService.createGymStep2(id, names, surnames, professionIds, emails, phones, photos);
         return ResponseEntity.ok().build();
     }
