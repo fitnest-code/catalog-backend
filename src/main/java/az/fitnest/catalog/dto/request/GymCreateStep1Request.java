@@ -17,8 +17,10 @@ public record GymCreateStep1Request(
     Long categoryId,
 
     @NotBlank(message = "Ad boş ola bilməz")
+    @jakarta.validation.constraints.Size(min = 2, max = 100)
     String name,
 
+    @jakarta.validation.constraints.Size(max = 2000)
     String description,
 
     @NotBlank(message = "Telefon boş ola bilməz")

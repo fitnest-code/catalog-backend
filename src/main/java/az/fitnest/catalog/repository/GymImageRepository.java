@@ -17,4 +17,7 @@ public interface GymImageRepository
     public Optional<GymImage> findFirstByGymIdAndImageName(Long gymId, String imageName);
 
     void deleteByGymId(Long gymId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT gi.url FROM GymImage gi")
+    List<String> findAllUrls();
 }

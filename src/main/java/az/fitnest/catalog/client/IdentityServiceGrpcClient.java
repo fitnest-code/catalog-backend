@@ -13,6 +13,7 @@ public class IdentityServiceGrpcClient {
     @GrpcClient("identity-service")
     private IdentityServiceGrpc.IdentityServiceBlockingStub identityServiceBlockingStub;
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "identityService")
     public Long createGymAdmin(String name, String surname, String phone, String email, String password) {
         CreateGymAdminRequest request = CreateGymAdminRequest.newBuilder()
                 .setName(name)
@@ -21,6 +22,8 @@ public class IdentityServiceGrpcClient {
                 .setEmail(email)
                 .setPassword(password)
                 .build();
-        return identityServiceBlockingStub.createGymAdmin(request).getUserId();
+        return identityServiceBlockingStub
+                .withDeadlineAfter(10, java.util.concurrent.TimeUnit.SECONDS)
+                .createGymAdmin(request).getUserId();
     }
 }

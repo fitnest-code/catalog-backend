@@ -402,7 +402,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional(readOnly = true)
-    @Cacheable("main-page-gyms")
+    @Cacheable(value = "main-page-gyms", key = "{#userId, #page, #pageSize, #userLat, #userLng}")
     public PaginatedResponse<GymMainPageResponse> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
         return getGyms(userId, null, "CLOSEST", null, null, page, pageSize, userLat, userLng, "desc");
     }

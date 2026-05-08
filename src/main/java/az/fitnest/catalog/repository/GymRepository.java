@@ -64,6 +64,23 @@ public interface GymRepository
     @Query(value = "DELETE FROM gym_categories", nativeQuery = true)
     void truncateGymCategories();
 
+    @org.springframework.data.jpa.repository.Query("SELECT g.coverImageUrl FROM Gym g WHERE g.coverImageUrl IS NOT NULL")
+    List<String> findAllCoverImageUrls();
+
+    @org.springframework.data.jpa.repository.Query("SELECT g.qrCodeUrl FROM Gym g WHERE g.qrCodeUrl IS NOT NULL")
+    List<String> findAllQrCodeUrls();
+
+    @org.springframework.data.jpa.repository.Query("SELECT t.picture FROM Gym g JOIN g.trainers t WHERE t.picture IS NOT NULL")
+    List<String> findAllTrainerPictureUrls();
+
+    @org.springframework.data.jpa.repository.Query("SELECT ri.pictureUrl FROM Gym g JOIN g.rooms r JOIN r.images ri WHERE ri.pictureUrl IS NOT NULL")
+    List<String> findAllRoomImageUrls();
+
     @org.springframework.data.jpa.repository.Query("SELECT g.qrCodeUrl FROM Gym g WHERE g.id = :gymId")
     String findQrCodeUrlById(@org.springframework.data.repository.query.Param("gymId") Long gymId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM room_images; DELETE FROM rooms; DELETE FROM gym_subscriptions; DELETE FROM reviews; DELETE FROM trainers; DELETE FROM gym_images; DELETE FROM gym_categories; DELETE FROM gym_social_links; DELETE FROM gym_general_work_hours; DELETE FROM gym_work_hours_woman; DELETE FROM gym_work_hours_man; DELETE FROM gym_rest_days; DELETE FROM gyms;", nativeQuery = true)
+    void truncateAllGymData();
 }

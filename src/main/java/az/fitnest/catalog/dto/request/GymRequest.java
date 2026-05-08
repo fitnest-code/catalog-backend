@@ -17,9 +17,11 @@ import java.util.Set;
 @Builder
 public record GymRequest(
     @NotBlank(message = "Ad boş ola bilməz")
+    @jakarta.validation.constraints.Size(min = 2, max = 100, message = "Ad 2-100 simvol arası olmalıdır")
     @Schema(description = "İdman zalının adı", example = "FitLife Premium")
     String name,
 
+    @jakarta.validation.constraints.Size(max = 2000, message = "Təsvir çox uzundur")
     @Schema(description = "İdman zalının təsviri", example = "Bakının mərkəzində müasir idman zalı")
     String description,
 

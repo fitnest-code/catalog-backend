@@ -24,6 +24,7 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
     private final FileStorageService fileStorageService;
 
     @Async("qrcodeExecutor")
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void generateAndSaveQrCode(Long gymId) {
         log.info("Starting QR code generation for gymId: {}", gymId);
 

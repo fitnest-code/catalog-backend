@@ -15,11 +15,14 @@ public class OrderServiceGrpcClient {
     @GrpcClient("order-backend")
     private UserSubscriptionServiceGrpc.UserSubscriptionServiceBlockingStub userSubscriptionStub;
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public boolean checkPlanExists(Long packageId) {
         az.fitnest.order.grpc.CheckPlanExistsRequest request = az.fitnest.order.grpc.CheckPlanExistsRequest.newBuilder()
                 .setPackageId(packageId)
                 .build();
-        az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub.checkPlanExists(request);
+        az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkPlanExists(request);
         return response.getExists() && response.getIsActive();
     }
 
@@ -27,21 +30,27 @@ public class OrderServiceGrpcClient {
         return checkPlanExists(packageId);
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public List<az.fitnest.order.grpc.SubscriptionPackageInfo> getPlansByIds(List<Long> packageIds) {
         az.fitnest.order.grpc.GetPlansByIdsRequest request = az.fitnest.order.grpc.GetPlansByIdsRequest.newBuilder()
                 .addAllPackageIds(packageIds)
                 .build();
-        az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub.getPlansByIds(request);
+        az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .getPlansByIds(request);
         return response.getPackagesList();
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public void checkIn(Long userId, Long gymId) {
         az.fitnest.order.grpc.CheckInRequest request = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
                 .build();
 
-        az.fitnest.order.grpc.CheckInResponse response = blockingStub.checkIn(request);
+        az.fitnest.order.grpc.CheckInResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkIn(request);
 
         if (!response.getSuccess()) {
             throw new RuntimeException("error.rpc_failed");
