@@ -26,7 +26,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @EnableCaching
-@org.springframework.data.redis.repository.configuration.EnableRedisRepositories(enabled = false)
+@org.springframework.data.redis.repository.configuration.EnableRedisRepositories
 public class RedisConfig {
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
