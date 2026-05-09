@@ -157,18 +157,44 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
-    public CategoryResponse createCategory(CategoryRequest request) {
-        Category category = Category.builder().name(request.name()).build();
+    public CategoryResponse createCategory(String name, MultipartFile photo) {
+        Category category = Category.builder().name(name).build();
         category = categoryRepository.save(category);
-        return CategoryResponse.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+
+        if (photo != null && !photo.isEmpty()) {
+            MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
+            String fsId = fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId());
+            category.setPhotoUrl("/api/v1/media/stream/" + fsId);
+            category = categoryRepository.save(category);
+        }
+
+        return CategoryResponse.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .photoUrl(category.getPhotoUrl())
+                .iconUrl(category.getIconUrl())
+                .build();
     }
 
     @Transactional
-    public CategoryResponse updateCategory(Long id, CategoryRequest request) {
+    public CategoryResponse updateCategory(Long id, String name, MultipartFile photo) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        category.setName(request.name());
+        category.setName(name);
+
+        if (photo != null && !photo.isEmpty()) {
+            MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
+            String fsId = fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId());
+            category.setPhotoUrl("/api/v1/media/stream/" + fsId);
+        }
+
         category = categoryRepository.save(category);
-        return CategoryResponse.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+
+        return CategoryResponse.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .photoUrl(category.getPhotoUrl())
+                .iconUrl(category.getIconUrl())
+                .build();
     }
 }

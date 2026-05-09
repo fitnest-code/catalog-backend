@@ -289,8 +289,6 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-
-
     @Operation(summary = "Step 4: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/step4")

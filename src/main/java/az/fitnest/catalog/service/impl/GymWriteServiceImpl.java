@@ -572,9 +572,6 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
         updateStep(gym, 2);
     }
 
-
-
-
     private void validateNoWorkHoursOnRestDays(java.util.Set<az.fitnest.catalog.dto.response.GymWorkHourResponse> workHours, java.util.Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays, String type) {
         if (workHours == null || restDays.isEmpty()) return;
         for (az.fitnest.catalog.dto.response.GymWorkHourResponse wh : workHours) {
@@ -692,8 +689,7 @@ public class GymWriteServiceImpl implements az.fitnest.catalog.service.GymWriteS
             throw new BadRequestException("GYM_NOT_EDITABLE", "error.gym_not_editable_via_steps");
         }
         Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
-        
-        // Step 2 is optional, so we allow proceeding to Step 3 (requiredStep 2) from Step 1
+
         if (requiredStep == 2 && currentStep == 1) {
             return;
         }

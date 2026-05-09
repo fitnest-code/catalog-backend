@@ -69,19 +69,24 @@ public class CategoryAdminController {
 
     @Operation(summary = "Kateqoriya yaradın", description = "Yeni bir kateqoriya yaradır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Kateqoriya uğurla yaradıldı")})
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
-        CategoryResponse categoryDto = categoryService.createCategory(request);
+    public ResponseEntity<CategoryResponse> createCategory(
+            @RequestParam("name") String name,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
+        CategoryResponse categoryDto = categoryService.createCategory(name, photo);
         return ResponseEntity.created(URI.create("/api/v1/admin/categories/" + categoryDto.id())).body(categoryDto);
     }
 
     @Operation(summary = "Kateqoriyanı yeniləyin", description = "Mövcud bir kateqoriyanı yeniləyir.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriya uğurla yeniləndi")})
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
-        CategoryResponse categoryDto = categoryService.updateCategory(id, request);
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long id,
+            @RequestParam("name") String name,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
+        CategoryResponse categoryDto = categoryService.updateCategory(id, name, photo);
         return ResponseEntity.ok(categoryDto);
     }
 
