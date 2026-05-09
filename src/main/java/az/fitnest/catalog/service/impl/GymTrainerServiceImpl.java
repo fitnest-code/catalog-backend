@@ -103,7 +103,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         }
 
         if (trainerToDelete.getPicture() != null && !trainerToDelete.getPicture().isBlank()) {
-            fileStorageService.deleteFileAsync(trainerToDelete.getPicture());
+            fileStorageService.deleteFilesAfterCommit(java.util.List.of(trainerToDelete.getPicture()));
         }
         trainerRepository.delete(trainerToDelete);
     }
@@ -120,18 +120,26 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         trainer.setEmail(request.email());
     }
 
-    @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void updateTrainerPhoto(Long gymId, Long trainerId, MultipartFile file) {
+        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
+
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         String fsId = fileStorageService.saveFile(validatedFile, "/trainers", trainer.getPicture());
-        trainer.setPicture("/api/v1/media/stream/" + fsId);
+        String newUrl = "/api/v1/media/stream/" + fsId;
+
+        updateTrainerPhotoInternal(trainerId, newUrl);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    protected void updateTrainerPhotoInternal(Long trainerId, String newUrl) {
+        Trainer trainer = trainerRepository.findById(trainerId).get();
+        trainer.setPicture(newUrl);
         trainerRepository.save(trainer);
     }
 
@@ -237,14 +245,32 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         trainerReservationDateRepository.save(availability);
     }
 
-    @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     public void addTrainers(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
                            List<String> emails, List<String> phones, List<MultipartFile> photos) {
+        if (names == null) return;
+
+        java.util.List<String> photoUrls = new java.util.ArrayList<>();
+        if (photos != null) {
+            for (MultipartFile photo : photos) {
+                if (photo != null && !photo.isEmpty()) {
+                    MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
+                    String fsId = fileStorageService.saveFile(validated, "/trainers");
+                    photoUrls.add("/api/v1/media/stream/" + fsId);
+                } else {
+                    photoUrls.add(null);
+                }
+            }
+        }
+
+        addTrainersInternal(gymId, names, surnames, professionIds, emails, phones, photoUrls);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    protected void addTrainersInternal(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
+                                      List<String> emails, List<String> phones, List<String> photoUrls) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-
-        if (names == null) return;
 
         for (int i = 0; i < names.size(); i++) {
             Trainer trainer = new Trainer();
@@ -266,10 +292,8 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 trainer.setProfession(profession);
             }
 
-            if (photos != null && i < photos.size() && photos.get(i) != null && !photos.get(i).isEmpty()) {
-                MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photos.get(i));
-                String fsId = fileStorageService.saveFile(validatedPhoto, "/trainers");
-                trainer.setPicture("/api/v1/media/stream/" + fsId);
+            if (photoUrls != null && i < photoUrls.size()) {
+                trainer.setPicture(photoUrls.get(i));
             }
 
             gym.getTrainers().add(trainer);
