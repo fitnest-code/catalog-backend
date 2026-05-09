@@ -271,11 +271,11 @@ public class GymAdminController {
     @PostMapping(value = "/{id}/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createGymStep2(
             @PathVariable Long id,
-            @RequestParam("names") List<String> names,
-            @RequestParam("surnames") List<String> surnames,
-            @RequestParam("professionIds") List<Long> professionIds,
-            @RequestParam("emails") List<String> emails,
-            @RequestParam("phones") List<String> phones,
+            @RequestParam(value = "names", required = false) List<String> names,
+            @RequestParam(value = "surnames", required = false) List<String> surnames,
+            @RequestParam(value = "professionIds", required = false) List<Long> professionIds,
+            @RequestParam(value = "emails", required = false) List<String> emails,
+            @RequestParam(value = "phones", required = false) List<String> phones,
             @RequestParam(value = "photos", required = false) List<MultipartFile> photos) {
         gymWriteService.createGymStep2(id, names, surnames, professionIds, emails, phones, photos);
         return ResponseEntity.ok().build();
