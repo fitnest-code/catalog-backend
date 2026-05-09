@@ -26,8 +26,8 @@ spring:
     allow-bean-definition-overriding: true
   servlet:
     multipart:
-      max-file-size: 20MB
-      max-request-size: 150MB
+      max-file-size: 50MB
+      max-request-size: 500MB
       enabled: true
   messages:
     encoding: UTF-8
