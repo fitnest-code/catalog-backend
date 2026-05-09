@@ -48,4 +48,16 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("qrcodeExecutor")
+    public Executor qrcodeExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(50);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setThreadNamePrefix("qrcode-");
+        executor.initialize();
+        return executor;
+    }
 }
