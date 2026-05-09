@@ -1,124 +1,42 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.dto.response.GeocodingResponse;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-
-import az.fitnest.catalog.dto.request.GymRequest;
-import az.fitnest.catalog.dto.response.CheckInResponse;
-import az.fitnest.catalog.exception.BadRequestException;
-import az.fitnest.catalog.exception.ResourceNotFoundException;
-import az.fitnest.catalog.model.entity.Address;
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymImage;
-import az.fitnest.catalog.model.entity.GymSubscription;
-import az.fitnest.catalog.model.entity.GymSubscriptionBenefit;
-import az.fitnest.catalog.model.entity.Trainer;
-import az.fitnest.catalog.model.enums.GymStatus;
-import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.repository.GymRepository;
-import az.fitnest.catalog.repository.SavedGymRepository;
-import az.fitnest.catalog.client.OrderServiceGrpcClient;
-import az.fitnest.catalog.service.FileStorageService;
-import az.fitnest.catalog.service.ReverseGeocodingService;
-import az.fitnest.catalog.service.GymTrainerService;
-import az.fitnest.catalog.service.GymQrCodeService;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
-import az.fitnest.catalog.util.ByteArrayMultipartFile;
-import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.apache.tika.Tika;
-
-import java.io.ByteArrayOutputStream;
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import az.fitnest.catalog.client.IdentityServiceGrpcClient;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
-import az.fitnest.catalog.dto.request.GymAdminCreateRequest;
-import az.fitnest.catalog.dto.request.GymCreateStep1Request;
-import az.fitnest.catalog.dto.request.GymCreateStep2Request;
-import az.fitnest.catalog.dto.request.GymCreateStep3Request;
-import az.fitnest.catalog.dto.request.GymCreateStep6Request;
-import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequest;
-import az.fitnest.catalog.dto.request.GymCreateStep7Request;
-import az.fitnest.catalog.dto.request.GymRequest;
-import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
-import az.fitnest.catalog.dto.request.SupportedServiceRequest;
-import az.fitnest.catalog.dto.response.CheckInResponse;
-import az.fitnest.catalog.dto.response.GeocodingResponse;
-import az.fitnest.catalog.dto.response.GymCreateStep1Response;
-import az.fitnest.catalog.dto.response.GymWorkHourResponse;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
-import az.fitnest.catalog.model.entity.Address;
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymAdmin;
-import az.fitnest.catalog.model.entity.GymImage;
-import az.fitnest.catalog.model.entity.GymSubscription;
-import az.fitnest.catalog.model.entity.GymSubscriptionBenefit;
-import az.fitnest.catalog.model.entity.GymWorkHour;
-import az.fitnest.catalog.model.entity.Room;
-import az.fitnest.catalog.model.entity.RoomImage;
-import az.fitnest.catalog.model.entity.SavedGym;
-import az.fitnest.catalog.model.entity.SupportedService;
-import az.fitnest.catalog.model.entity.Trainer;
+import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
-import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.repository.GymAdminRepository;
-import az.fitnest.catalog.repository.GymImageRepository;
-import az.fitnest.catalog.repository.GymRepository;
-import az.fitnest.catalog.repository.SavedGymRepository;
-import az.fitnest.catalog.repository.SupportedServiceRepository;
-import az.fitnest.catalog.service.FileStorageService;
-import az.fitnest.catalog.service.GymQrCodeService;
-import az.fitnest.catalog.service.GymTrainerService;
-import az.fitnest.catalog.service.GymWriteService;
-import az.fitnest.catalog.service.ReverseGeocodingService;
-import az.fitnest.catalog.util.ByteArrayMultipartFile;
+import az.fitnest.catalog.repository.*;
+import az.fitnest.catalog.service.*;
 import az.fitnest.catalog.util.PhoneUtil;
 import az.fitnest.catalog.util.UserContext;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class GymWriteServiceImpl implements GymWriteService {
 
     private final GymRepository gymRepository;
@@ -133,28 +51,15 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final GymAdminRepository gymAdminRepository;
     private final GymTrainerService gymTrainerService;
     private final GymQrCodeService gymQrCodeService;
+    private final Executor imageUploadExecutor;
 
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
-
-    private final Executor imageUploadExecutor = createUploadExecutor();
-
-    private Executor createUploadExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(50);
-        executor.setThreadNamePrefix("ImageUpload-");
-        executor.initialize();
-        return executor;
-    }
 
     @Autowired
     private PlatformTransactionManager transactionManager;
 
     private record RoomImageUploadResult(String roomName, String url) {}
-
-    private final Map<String, Set<GymWorkHourPeriod>> periodCache = new ConcurrentHashMap<>();
 
     @Caching(evict = {
         @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
@@ -191,13 +96,13 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setEmail(request.email());
         gym.setCategories(new HashSet<>(categories));
 
-        gym.setGeneralWorkHours(mapWorkHours(request.generalWorkHours()));
-        gym.setWorkHoursWoman(mapWorkHours(request.workHoursWoman()));
-        gym.setWorkHoursMan(mapWorkHours(request.workHoursMan()));
+        gym.setGeneralWorkHours(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.generalWorkHours()));
+        gym.setWorkHoursWoman(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.workHoursWoman()));
+        gym.setWorkHoursMan(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.workHoursMan()));
 
         if (request.restDays() != null) {
             Set<GymWorkHourPeriod> restDays = request.restDays().stream()
-                    .flatMap(r -> expandPeriods(r.period()).stream())
+                    .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
                     .collect(java.util.stream.Collectors.toSet());
 
             validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
@@ -212,7 +117,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym saved = gymRepository.save(gym);
 
         TransactionSynchronizationManager.registerSynchronization(
-            new TransactionSynchronization() {
+            new org.springframework.transaction.support.TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
                     gymQrCodeService.generateAndSaveQrCode(saved.getId());
@@ -268,7 +173,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         if (request.restDays() != null) {
             Set<GymWorkHourPeriod> restDays = request.restDays().stream()
-                    .flatMap(r -> expandPeriods(r.period()).stream())
+                    .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
                     .collect(java.util.stream.Collectors.toSet());
 
             validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
@@ -635,7 +540,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         Set<GymWorkHourPeriod> restDays = new HashSet<>();
         if (request.restDays() != null) {
             restDays = request.restDays().stream()
-                    .flatMap(r -> expandPeriods(r.period()).stream())
+                    .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
                     .collect(java.util.stream.Collectors.toSet());
         }
 
@@ -656,7 +561,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private void validateNoWorkHoursOnRestDays(Set<GymWorkHourResponse> workHours, Set<GymWorkHourPeriod> restDays, String type) {
         if (workHours == null || restDays.isEmpty()) return;
         for (GymWorkHourResponse wh : workHours) {
-            Set<GymWorkHourPeriod> whPeriods = expandPeriods(wh.period());
+            Set<GymWorkHourPeriod> whPeriods = az.fitnest.catalog.mapper.GymMapper.expandPeriods(wh.period());
             for (GymWorkHourPeriod p : whPeriods) {
                 if (restDays.contains(p)) {
                     throw new BadRequestException("WORK_HOURS_ON_REST_DAY", "error.work_hours_on_rest_day");
@@ -735,23 +640,12 @@ public class GymWriteServiceImpl implements GymWriteService {
         @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         for (GymAdminCreateRequest adminReq : request.admins()) {
             identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            saveAdminInternal(gymId, adminReq);
+            gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq));
         }
         finalizeGymStep7Internal(gymId);
-    }
-
-    @Transactional
-    protected void saveAdminInternal(Long gymId, GymAdminCreateRequest adminReq) {
-        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        GymAdmin admin = new GymAdmin();
-        admin.setName(adminReq.name());
-        admin.setSurname(adminReq.surname());
-        admin.setPhoneNumber(PhoneUtil.normalize(adminReq.phoneNumber()));
-        admin.setEmail(adminReq.email());
-        admin.setGym(gym);
-        gymAdminRepository.save(admin);
     }
 
     @Transactional
@@ -817,66 +711,10 @@ public class GymWriteServiceImpl implements GymWriteService {
         gymRepository.save(gym);
     }
 
-    private Set<GymWorkHour> mapWorkHours(Set<GymWorkHourResponse> dtos) {
-        if (dtos == null) return new HashSet<>();
-        return dtos.stream()
-                .flatMap(dto -> {
-                    if (dto.period() == null) throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-                    return expandPeriods(dto.period()).stream()
-                            .map(p -> new GymWorkHour(p, dto.from(), dto.to()));
-                })
-                .collect(java.util.stream.Collectors.toSet());
-    }
-
-    private Set<GymWorkHourPeriod> expandPeriods(String periodStr) {
-        if (periodStr == null || periodStr.isBlank()) return Collections.emptySet();
-
-        String upper = periodStr.toUpperCase().trim();
-        return periodCache.computeIfAbsent(upper, k -> {
-            if (k.contains("-")) {
-                String[] parts = k.split("-");
-                if (parts.length == 2) {
-                    try {
-                        GymWorkHourPeriod start = GymWorkHourPeriod.valueOf(parts[0].trim());
-                        GymWorkHourPeriod end = GymWorkHourPeriod.valueOf(parts[1].trim());
-
-                        Set<GymWorkHourPeriod> result = new HashSet<>();
-                        int startIdx = start.ordinal();
-                        int endIdx = end.ordinal();
-
-                        if (startIdx <= endIdx) {
-                            for (int i = startIdx; i <= endIdx; i++) {
-                                result.add(GymWorkHourPeriod.values()[i]);
-                            }
-                        } else {
-                            for (int i = startIdx; i < 7; i++) {
-                                result.add(GymWorkHourPeriod.values()[i]);
-                            }
-                            for (int i = 0; i <= endIdx; i++) {
-                                result.add(GymWorkHourPeriod.values()[i]);
-                            }
-                        }
-                        return Collections.unmodifiableSet(result);
-                    } catch (Exception e) {
-                        log.error("Failed to expand period range: {}", k, e);
-                        throw new BadRequestException("INVALID_PERIOD_RANGE", "error.invalid_period_range");
-                    }
-                }
-            }
-
-            try {
-                return Set.of(GymWorkHourPeriod.valueOf(k));
-            } catch (IllegalArgumentException e) {
-                log.error("Invalid work hour period: {}", k);
-                throw new BadRequestException("INVALID_PERIOD", "error.invalid_period");
-            }
-        });
-    }
-
     private void updateWorkHours(Set<GymWorkHour> target, Set<GymWorkHourResponse> source) {
         target.clear();
         if (source != null) {
-            target.addAll(mapWorkHours(source));
+            target.addAll(az.fitnest.catalog.mapper.GymMapper.toWorkHours(source));
         }
     }
 }

@@ -12,14 +12,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class AsyncConfig {
 
-    @Bean("qrcodeExecutor")
-    public Executor qrcodeExecutor() {
+    @Bean("imageUploadExecutor")
+    public Executor imageUploadExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(4);
-        executor.setQueueCapacity(10);
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setThreadNamePrefix("qrcode-");
+        executor.setThreadNamePrefix("image-upload-");
         executor.initialize();
         return executor;
     }
