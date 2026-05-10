@@ -10,5 +10,5 @@ public record GymSubscriptionsAdminResponse(
     Long gymId,
     
     @Schema(description = "Aktiv abunəlik planları və onların xidmətləri")
-    List<GymPlanItemResponse> subscriptions
+    List<GymPlanItemAdminResponse> subscriptions
 ) {}

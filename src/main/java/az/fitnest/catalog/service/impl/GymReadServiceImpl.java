@@ -48,7 +48,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
@@ -1402,46 +1404,54 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
+        List<az.fitnest.catalog.dto.response.GymPlanItemAdminResponse> subscriptions = new java.util.ArrayList<>();
+        
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-            List<Long> packageIds = gym.getSubscriptions().stream()
-                .map(sub -> sub.getPackageId())
-                .filter(java.util.Objects::nonNull)
-                .toList();
-            List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-            java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                    az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                    p -> p
-                ));
-            supportedSubscriptions = gym.getSubscriptions().stream()
-                .filter(sub -> sub.getPackageId() != null)
-                .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
-                .map(sub -> {
-                    az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                    String localizedName = translationService.getTranslatedValue("PACKAGE", sub.getPackageId().toString(), "name", "az");
-                    if (localizedName == null || localizedName.isEmpty()) localizedName = info.getName();
+            try {
+                List<Long> packageIds = gym.getSubscriptions().stream()
+                    .map(sub -> sub.getPackageId())
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+                
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                        az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                        p -> p
+                    ));
+                
+                subscriptions = gym.getSubscriptions().stream()
+                    .filter(sub -> sub.getPackageId() != null)
+                    .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
+                    .map(sub -> {
+                        az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                        String localizedName = translationService.getTranslatedValue("GYMSUBSCRIPTION", sub.getPackageId().toString(), "name", "az");
+                        if (localizedName == null || localizedName.isEmpty()) localizedName = info.getName();
 
-                    List<GymPlanBenefitResponse> benefits = sub.getSupportedServices().stream()
-                        .map(b -> {
-                            String localizedBenefit = translationService.getTranslatedValue("BENEFIT", b.getId().toString(), "description", "az");
-                            return GymPlanBenefitResponse.builder()
-                                .description(localizedBenefit != null ? localizedBenefit : b.getName())
-                                .build();
-                        }).collect(java.util.stream.Collectors.toList());
+                        List<az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse> benefits = sub.getSupportedServices().stream()
+                            .map(b -> {
+                                String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", "az");
+                                return az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse.builder()
+                                    .id(b.getId())
+                                    .name(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
+                                    .build();
+                            }).collect(java.util.stream.Collectors.toList());
 
-                    return GymPlanItemResponse.builder()
-                        .plan_id(sub.getPackageId().toString())
-                        .packageName(localizedName)
-                        .dailyPrice(sub.getDailyPrice())
-                        .benefits(benefits)
-                        .build();
-                }).collect(java.util.stream.Collectors.toList());
+                        return az.fitnest.catalog.dto.response.GymPlanItemAdminResponse.builder()
+                            .packageId(sub.getPackageId())
+                            .packageName(localizedName)
+                            .dailyPrice(sub.getDailyPrice())
+                            .benefits(benefits)
+                            .build();
+                    }).collect(java.util.stream.Collectors.toList());
+            } catch (Exception e) {
+                log.error("Error fetching package names for gym: {}", gymId, e);
+            }
         }
 
         return az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponse.builder()
-                .gymId(gym.getId())
-                .subscriptions(supportedSubscriptions)
+                .gymId(gymId)
+                .subscriptions(subscriptions)
                 .build();
     }
 }
