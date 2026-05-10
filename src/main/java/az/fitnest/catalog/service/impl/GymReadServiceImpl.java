@@ -20,6 +20,7 @@ import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
+import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
@@ -63,6 +64,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final GymImageRepository gymImageRepository;
     private final TrainerRepository trainerRepository;
     private final ReviewRepository reviewRepository;
+    private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final ReservationRepository reservationRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final UserServiceGrpcClient userServiceGrpcClient;
@@ -1689,5 +1691,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         long cancelled = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CANCELLED);
         
         return new ReservationStatsResponse(total, pending, confirmed, cancelled);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId) {
+        return trainerReservationDateRepository.findByGymId(gymId).stream()
+                .map(trd -> new az.fitnest.catalog.dto.response.LessonHourResponse(
+                        trd.getId(),
+                        trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",
+                        trd.getClassType() != null ? trd.getClassType().getName() : "N/A",
+                        trd.getDate(),
+                        trd.getStartTime() + " - " + trd.getEndTime(),
+                        trd.getEmptySpaces(),
+                        trd.getStatus()
+                ))
+                .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
+                        .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
+                .collect(Collectors.toList());
     }
 }

@@ -512,4 +512,27 @@ public class GymAdminController {
     public ResponseEntity<az.fitnest.catalog.dto.response.ReservationStatsResponse> getGymReservationStats(@PathVariable Long id) {
         return ResponseEntity.ok(gymReadService.getGymReservationStats(id));
     }
+
+    @Operation(summary = "Dərs saatlarını alın", description = "İdman zalına aid dərs saatlarının siyahısını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/lesson-hours")
+    public ResponseEntity<List<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(@PathVariable Long id) {
+        return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id));
+    }
+
+    @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/lesson-hours")
+    public ResponseEntity<Void> addLessonHour(@PathVariable Long id, @RequestBody az.fitnest.catalog.dto.request.LessonHourRequest request) {
+        gymWriteService.addLessonHourAdmin(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "Dərs saatını silin", description = "ID-yə görə dərs saatını silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/lesson-hours/{lessonHourId}")
+    public ResponseEntity<Void> deleteLessonHour(@PathVariable Long lessonHourId) {
+        gymWriteService.deleteLessonHourAdmin(lessonHourId);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface TrainerReservationDateRepository extends JpaRepository<TrainerReservationDate, Long> {
+    List<TrainerReservationDate> findByGymId(Long gymId);
 
     List<TrainerReservationDate> findByTrainerId(Long trainerId);
 

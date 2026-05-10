@@ -40,4 +40,6 @@ public interface GymWriteService {
     void addGymAdmin(Long gymId, GymAdminCreateRequest request);
     void deleteGymAdmin(Long gymId, Long adminId);
     void updateReservationStatusAdmin(Long reservationId, az.fitnest.catalog.model.enums.ReservationStatus status, String reason);
+    void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request);
+    void deleteLessonHourAdmin(Long lessonHourId);
 }

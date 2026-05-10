@@ -48,6 +48,9 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final GymImageRepository gymImageRepository;
     private final SupportedServiceRepository supportedServiceRepository;
     private final IdentityServiceGrpcClient identityServiceGrpcClient;
+    private final TrainerRepository trainerRepository;
+    private final GymLessonTypeRepository gymLessonTypeRepository;
+    private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymAdminRepository gymAdminRepository;
     private final ReservationRepository reservationRepository;
     private final GymTrainerService gymTrainerService;
@@ -799,5 +802,34 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
         
         reservationRepository.save(reservation);
+    }
+
+    @Override
+    @Transactional
+    public void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request) {
+        Trainer trainer = trainerRepository.findById(request.trainerId())
+                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        
+        GymLessonType lessonType = gymLessonTypeRepository.findById(request.lessonTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+
+        TrainerReservationDate trd = TrainerReservationDate.builder()
+                .gymId(gymId)
+                .trainer(trainer)
+                .classType(lessonType)
+                .date(request.date())
+                .startTime(request.startTime())
+                .endTime(request.endTime())
+                .emptySpaces(request.maxSlots())
+                .status(az.fitnest.catalog.model.enums.SessionStatus.OPEN)
+                .build();
+
+        trainerReservationDateRepository.save(trd);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLessonHourAdmin(Long lessonHourId) {
+        trainerReservationDateRepository.deleteById(lessonHourId);
     }
 }

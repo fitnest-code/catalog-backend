@@ -41,4 +41,5 @@ public interface GymReadService {
     az.fitnest.catalog.dto.response.ReservationDetailAdminResponse getReservationDetailAdmin(Long reservationId);
 
     az.fitnest.catalog.dto.response.ReservationStatsResponse getGymReservationStats(Long gymId);
+    List<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId);
 }
