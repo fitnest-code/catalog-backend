@@ -30,6 +30,7 @@ public interface GymReadService {
     String getGymQrUrl(Long gymId);
     GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent);
     List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId);
+    az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String status, String sort, int page, int pageSize);
     GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal);
     GymTypeCountResponse getGymCountByGender(String gender);
 }

@@ -221,6 +221,20 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
 
+    @Operation(summary = "İdman zalı analitikasını alın", description = "İdman zalı üçün ümumi gəlir, uğurlu/uğursuz girişlər və tarixçə siyahısını gətirir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymAnalyticsResponse> getGymAnalytics(
+            @PathVariable("id") Long gymId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReadService.getGymAnalytics(gymId, startDate, endDate, status, sort, page, pageSize));
+    }
+
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")

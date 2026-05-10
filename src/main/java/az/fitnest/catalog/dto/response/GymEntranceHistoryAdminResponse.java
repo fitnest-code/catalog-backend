@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Builder
 public record GymEntranceHistoryAdminResponse(
+    @Schema(description = "History ID")
+    Long id,
     @Schema(description = "User ID")
     Long userId,
     @Schema(description = "User first name")
@@ -20,5 +22,7 @@ public record GymEntranceHistoryAdminResponse(
     @Schema(description = "Status of the scan (e.g., SUCCESSFUL, UNSUCCESSFUL)")
     String status,
     @Schema(description = "Reason for failure if unsuccessful")
-    String reason
+    String reason,
+    @Schema(description = "Scan amount/price")
+    Double amount
 ) {}

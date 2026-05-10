@@ -973,6 +973,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String reason = null;
         String status = "ELIGIBLE";
 
+        Double amount = 0.0;
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
@@ -985,12 +986,15 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 reason = "VISIT_LIMIT_EXCEEDED";
             } else {
                 long userPackageId = subResp.getPackageId();
-                boolean gymSupportsPackage = gym.getSubscriptions() != null &&
-                    gym.getSubscriptions().stream()
-                        .anyMatch(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId));
-                if (!gymSupportsPackage) {
+                var matchedSub = gym.getSubscriptions() != null ? gym.getSubscriptions().stream()
+                        .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId))
+                        .findFirst() : java.util.Optional.<az.fitnest.catalog.model.entity.GymSubscription>empty();
+                
+                if (matchedSub.isEmpty()) {
                     allowed = false;
                     reason = "GYM_NOT_SUPPORTED";
+                } else {
+                    amount = matchedSub.get().getDailyPrice();
                 }
             }
         } catch (Exception e) {
@@ -1043,6 +1047,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             .status(status)
             .reason(reason)
             .platform(platform)
+            .amount(amount)
             .build();
         gymEntranceHistoryRepository.save(history);
 
@@ -1084,16 +1089,129 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 lastName = String.valueOf(h.getUserId());
             }
             String formattedDate = h.getScanDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            String displayStatus = "Uğursuz";
+            if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
+                displayStatus = "Uğurlu";
+            }
             return GymEntranceHistoryAdminResponse.builder()
+                .id(h.getId())
                 .userId(h.getUserId())
                 .firstName(firstName)
                 .lastName(lastName)
                 .phone(phone)
                 .scanDateTime(formattedDate)
-                .status(h.getStatus())
+                .status(displayStatus)
                 .reason(h.getReason())
+                .amount(h.getAmount() != null ? h.getAmount() : 0.0)
                 .build();
         }).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String statusFilter, String sort, int page, int pageSize) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        List<GymEntranceHistory> historyList;
+        if (startDate != null && endDate != null) {
+            historyList = gymEntranceHistoryRepository.findByGymIdAndScanDateBetweenOrderByScanDateDesc(gymId, startDate, endDate);
+        } else {
+            historyList = gymEntranceHistoryRepository.findByGymIdOrderByScanDateDesc(gymId);
+        }
+
+        long successfulScans = 0;
+        long failedScans = 0;
+        double totalProfit = 0.0;
+
+        for (GymEntranceHistory h : historyList) {
+            if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
+                successfulScans++;
+                if (h.getAmount() != null) {
+                    totalProfit += h.getAmount();
+                }
+            } else {
+                failedScans++;
+            }
+        }
+
+        java.util.stream.Stream<GymEntranceHistory> stream = historyList.stream();
+        if (statusFilter != null && !statusFilter.isBlank()) {
+            if ("SUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğurlu".equalsIgnoreCase(statusFilter) || "ELIGIBLE".equalsIgnoreCase(statusFilter)) {
+                stream = stream.filter(h -> "ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus()));
+            } else if ("UNSUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğursuz".equalsIgnoreCase(statusFilter) || "Xəta".equalsIgnoreCase(statusFilter)) {
+                stream = stream.filter(h -> "UNSUCCESSFUL".equalsIgnoreCase(h.getStatus()) || "Uğursuz".equalsIgnoreCase(h.getStatus()) || "Xəta".equalsIgnoreCase(h.getStatus()));
+            }
+        }
+
+        List<GymEntranceHistory> filteredList = stream.collect(Collectors.toList());
+
+        if (sort != null) {
+            switch (sort) {
+                case "date_asc":
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getScanDate, Comparator.nullsLast(Comparator.naturalOrder())));
+                    break;
+                case "date_desc":
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getScanDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                    break;
+                case "status_asc":
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER));
+                    break;
+                case "status_desc":
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER).reversed());
+                    break;
+            }
+        }
+
+        int from = Math.max(0, (page - 1) * pageSize);
+        int to = Math.min(filteredList.size(), from + pageSize);
+        List<GymEntranceHistory> pageItems = from >= filteredList.size() ? new java.util.ArrayList<>() : new java.util.ArrayList<>(filteredList.subList(from, to));
+
+        List<GymEntranceHistoryAdminResponse> paginatedDtos = pageItems.stream().map(h -> {
+            String firstName = "";
+            String lastName = "";
+            String phone = "";
+            try {
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
+                if (user != null) {
+                    firstName = user.getFirstName();
+                    lastName = user.getLastName();
+                    phone = user.getMobile();
+                }
+            } catch (Exception e) {
+                firstName = "User";
+                lastName = String.valueOf(h.getUserId());
+            }
+            String formattedDate = h.getScanDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            String displayStatus = "Uğursuz";
+            if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
+                displayStatus = "Uğurlu";
+            }
+            return GymEntranceHistoryAdminResponse.builder()
+                .id(h.getId())
+                .userId(h.getUserId())
+                .firstName(firstName)
+                .lastName(lastName)
+                .phone(phone)
+                .scanDateTime(formattedDate)
+                .status(displayStatus)
+                .reason(h.getReason())
+                .amount(h.getAmount() != null ? h.getAmount() : 0.0)
+                .build();
+        }).collect(Collectors.toList());
+
+        PaginatedResponse<GymEntranceHistoryAdminResponse> paginatedResponse = PaginatedResponse.<GymEntranceHistoryAdminResponse>builder()
+                .items(paginatedDtos)
+                .total((long) filteredList.size())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+
+        return az.fitnest.catalog.dto.response.GymAnalyticsResponse.builder()
+            .totalProfit(totalProfit)
+            .successfulScans(successfulScans)
+            .failedScans(failedScans)
+            .history(paginatedResponse)
+            .build();
     }
 
     @Transactional(readOnly = true)
