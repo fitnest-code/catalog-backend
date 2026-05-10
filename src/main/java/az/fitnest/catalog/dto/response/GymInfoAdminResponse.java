@@ -35,14 +35,6 @@ public record GymInfoAdminResponse(
     Double latitude,
     @Schema(description = "Uzunluq")
     Double longitude,
-    @Schema(description = "Work hours")
-    Set<GymWorkHourResponse> generalWorkHours,
-    @Schema(description = "Work hours (Woman)")
-    Set<GymWorkHourResponse> workHoursWoman,
-    @Schema(description = "Work hours (Man)")
-    Set<GymWorkHourResponse> workHoursMan,
-    @Schema(description = "Rest days")
-    Set<RestDayRequest> restDays,
     @Schema(description = "Status")
     GymStatus status,
     @Schema(description = "Yaradılma tarixi")

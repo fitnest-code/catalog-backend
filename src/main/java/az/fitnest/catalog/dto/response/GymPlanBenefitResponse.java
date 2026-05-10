@@ -4,6 +4,5 @@ import az.fitnest.catalog.dto.*;
 import lombok.Builder;
 @Builder
 public record GymPlanBenefitResponse(
-    String logo,
     String description
 ) {}

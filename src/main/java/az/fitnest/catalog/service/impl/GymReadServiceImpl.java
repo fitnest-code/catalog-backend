@@ -1377,19 +1377,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         }
 
-        java.util.Set<GymWorkHourResponse> generalWorkHours = gym.getGeneralWorkHours() != null
-                ? new java.util.HashSet<>(GymMapper.toGroupedWorkHourDtos(gym.getGeneralWorkHours(), "az"))
-                : null;
-        java.util.Set<GymWorkHourResponse> workHoursWoman = gym.getWorkHoursWoman() != null
-                ? new java.util.HashSet<>(GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursWoman(), "az"))
-                : null;
-        java.util.Set<GymWorkHourResponse> workHoursMan = gym.getWorkHoursMan() != null
-                ? new java.util.HashSet<>(GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan(), "az"))
-                : null;
-        java.util.Set<az.fitnest.catalog.dto.request.RestDayRequest> restDays = gym.getRestDays() != null
-                ? gym.getRestDays().stream().map(d -> new az.fitnest.catalog.dto.request.RestDayRequest(d.name())).collect(java.util.stream.Collectors.toSet())
-                : null;
-        
         return az.fitnest.catalog.dto.response.GymInfoAdminResponse.builder()
                 .id(gym.getId())
                 .categoryId(categoryId)
@@ -1404,10 +1391,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .address(addressText)
                 .latitude(lat)
                 .longitude(lng)
-                .generalWorkHours(generalWorkHours)
-                .workHoursWoman(workHoursWoman)
-                .workHoursMan(workHoursMan)
-                .restDays(restDays)
                 .status(gym.getStatus())
                 .createdAt(created)
                 .build();
