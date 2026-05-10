@@ -1,6 +1,7 @@
 package az.fitnest.catalog.dto.response;
 
 import az.fitnest.catalog.dto.request.RestDayRequest;
+import az.fitnest.catalog.model.enums.GymStatus;
 import lombok.Builder;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -42,6 +43,8 @@ public record GymInfoAdminResponse(
     Set<GymWorkHourResponse> workHoursMan,
     @Schema(description = "Rest days")
     Set<RestDayRequest> restDays,
+    @Schema(description = "Status")
+    GymStatus status,
     @Schema(description = "Yaradılma tarixi")
     String createdAt
 ) {}

@@ -1334,7 +1334,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Override
     @Transactional(readOnly = true)
-    public az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymInfoAdmin(Long gymId) {
+    public az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymDetailsAdmin(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         
@@ -1408,6 +1408,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .workHoursWoman(workHoursWoman)
                 .workHoursMan(workHoursMan)
                 .restDays(restDays)
+                .status(gym.getStatus())
                 .createdAt(created)
                 .build();
     }

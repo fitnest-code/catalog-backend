@@ -56,9 +56,9 @@ public class GymAdminController {
 
     @Operation(summary = "Zal məlumatlarını alın", description = "İdman zalı üçün info-tab məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/info")
-    public ResponseEntity<az.fitnest.catalog.dto.response.GymInfoAdminResponse> getGymInfo(@PathVariable("id") Long gymId) {
-        return ResponseEntity.ok(gymReadService.getGymInfoAdmin(gymId));
+    @GetMapping("/{id}/details")
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymInfoAdminResponse> getGymDetails(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymDetailsAdmin(gymId));
     }
 
     @Operation(summary = "Zal abunəliklərini alın", description = "İdman zalı üçün aktiv abunəlik və xidmət məlumatlarını gətirir. ADMIN rolu tələb olunur.")
@@ -70,8 +70,8 @@ public class GymAdminController {
 
     @Operation(summary = "Zal məlumatlarını yeniləyin", description = "İdman zalı üçün yalnız info-tab məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/info")
-    public ResponseEntity<Void> updateGymInfo(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
+    @PutMapping("/{id}/details")
+    public ResponseEntity<Void> updateGymDetails(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
         gymWriteService.updateGymInfo(gymId, request);
         return ResponseEntity.ok().build();
     }
