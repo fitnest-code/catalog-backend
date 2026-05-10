@@ -53,19 +53,13 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
 
     @Override
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymReviewResponse> getGymReviewsAdmin(Long gymId, az.fitnest.catalog.model.enums.ReviewStatus status, int page, int pageSize, String sort) {
+    public PaginatedResponse<GymReviewResponse> getGymReviewsAdmin(Long gymId, az.fitnest.catalog.model.enums.ReviewStatus status, String search, int page, int pageSize, String sort) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         
-        Page<Review> reviewPage;
         Pageable pageable = pageable(page, pageSize, sortForReviews(sort));
-        
-        if (status == null) {
-            reviewPage = reviewRepository.findAllByGymId(gymId, pageable);
-        } else {
-            reviewPage = reviewRepository.findByGymIdAndStatus(gymId, status, pageable);
-        }
+        Page<Review> reviewPage = reviewRepository.findByGymIdAndStatusAndSearch(gymId, status, search, pageable);
 
         List<GymReviewResponse> items = reviewPage.getContent().stream()
                 .map(this::mapReviewToDto)

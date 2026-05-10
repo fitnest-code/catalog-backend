@@ -101,10 +101,11 @@ public class GymAdminController {
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.GymReviewResponse>> getGymReviews(
             @PathVariable("id") Long gymId,
             @RequestParam(required = false) az.fitnest.catalog.model.enums.ReviewStatus status,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        return ResponseEntity.ok(gymReviewService.getGymReviewsAdmin(gymId, status, page, pageSize, sort));
+        return ResponseEntity.ok(gymReviewService.getGymReviewsAdmin(gymId, status, search, page, pageSize, sort));
     }
 
     @Operation(summary = "Rəy detallarını alın", description = "Müəyyən bir rəyin detallarını gətirir.")
