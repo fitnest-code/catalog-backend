@@ -639,9 +639,18 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Caching(evict = {
         @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
+    @Transactional
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        
         for (GymAdminCreateRequest adminReq : request.admins()) {
+            if (gymAdminRepository.existsByEmail(adminReq.email())) {
+                throw new BadRequestException("ADMIN_EMAIL_ALREADY_EXISTS", "error.admin_email_already_exists");
+            }
+            if (gymAdminRepository.existsByPhoneNumber(adminReq.phoneNumber())) {
+                throw new BadRequestException("ADMIN_PHONE_ALREADY_EXISTS", "error.admin_phone_already_exists");
+            }
+            
             identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
             gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq));
         }
