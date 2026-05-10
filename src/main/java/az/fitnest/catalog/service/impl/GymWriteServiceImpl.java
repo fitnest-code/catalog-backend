@@ -794,7 +794,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (status == az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED || status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
             reservation.setCancelReasonText(reason);
             reservation.setCancelledAt(LocalDateTime.now());
-        } else if (status == az.fitnest.catalog.model.enums.ReservationStatus.CONFIRMED) {
+        } else if (status == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED) {
             reservation.setApprovedAt(LocalDateTime.now());
         }
         

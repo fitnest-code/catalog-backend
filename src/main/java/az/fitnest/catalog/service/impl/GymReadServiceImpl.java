@@ -1587,6 +1587,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .role(a.getRole())
                         .build())
                 .collect(Collectors.toList());
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PaginatedResponse<ReservationAdminResponse> getGymReservationsAdmin(Long gymId, ReservationStatus status, int page, int pageSize) {
@@ -1649,9 +1651,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         String userFullName = user != null ? user.getFirstName() + " " + user.getLastName() : "N/A";
-        String userPhone = user != null ? user.getPhoneNumber() : "N/A";
+        String userPhone = user != null ? user.getMobile() : "N/A";
         String userEmail = user != null ? user.getEmail() : "N/A";
-        String birthDate = (user != null && user.getBirthDate() != null) ? user.getBirthDate() : "N/A";
+        String birthDate = "N/A";
         String regDate = r.getCreatedDate() != null ? r.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) : "N/A";
         String platform = "N/A"; // Should be stored in reservation if needed
 
@@ -1683,7 +1685,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public ReservationStatsResponse getGymReservationStats(Long gymId) {
         long total = reservationRepository.countByGymId(gymId);
         long pending = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.PENDING);
-        long confirmed = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CONFIRMED);
+        long confirmed = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.APPROVED);
         long cancelled = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CANCELLED);
         
         return new ReservationStatsResponse(total, pending, confirmed, cancelled);
