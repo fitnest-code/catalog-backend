@@ -613,6 +613,19 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void createGymStep6(Long gymId, GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 5);
+        updateGymSubscriptionsInternal(gym, request);
+        updateStep(gym, 5);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    public void updateGymSubscriptions(Long gymId, GymCreateStep6Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        updateGymSubscriptionsInternal(gym, request);
+    }
+
+    private void updateGymSubscriptionsInternal(Gym gym, GymCreateStep6Request request) {
+        Long gymId = gym.getId();
         gym.getSubscriptions().clear();
 
         Set<Long> processedPackages = new HashSet<>();
@@ -633,7 +646,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
             gym.getSubscriptions().add(subscription);
         }
-        updateStep(gym, 5);
+        gymRepository.save(gym);
     }
 
     @Caching(evict = {

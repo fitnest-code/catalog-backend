@@ -33,6 +33,7 @@ public interface GymWriteService {
     void createGymStep4(Long id, GymCreateStep3Request request);
     void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos);
     void createGymStep6(Long gymId, GymCreateStep6Request request);
+    void updateGymSubscriptions(Long gymId, GymCreateStep6Request request);
     void createGymStep7(Long gymId, GymCreateStep7Request request);
     GeocodingResponse reverseGeocode(Double lat, Double lng);
     void toggleGymStatus(Long gymId, boolean enabled);

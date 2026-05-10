@@ -381,6 +381,13 @@ public class GymAdminController {
         gymWriteService.createGymStep7(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+    @Operation(summary = "İdman zalı abunəliklərini yeniləyin", description = "İdman zalına aid abunəlik paketlərini və onlara daxil olan xidmətləri yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/subscriptions")
+    public ResponseEntity<Void> updateGymSubscriptions(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
+        gymWriteService.updateGymSubscriptions(id, request);
+        return ResponseEntity.ok().build();
+    }
 
     @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
