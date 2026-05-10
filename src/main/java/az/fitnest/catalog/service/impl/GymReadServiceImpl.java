@@ -1331,4 +1331,67 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String translated = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
         return (translated != null && !translated.isEmpty()) ? translated : gym.getName();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymInfoAdmin(Long gymId) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        
+        Long categoryId = null;
+        String categoryName = null;
+        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
+            Category cat = gym.getCategories().iterator().next();
+            categoryId = cat.getId();
+            categoryName = cat.getName();
+        }
+        
+        List<az.fitnest.catalog.dto.response.RoomImageDto> roomDtos = new java.util.ArrayList<>();
+        if (gym.getRooms() != null) {
+            for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
+                String imgUrl = null;
+                if (room.getImages() != null && !room.getImages().isEmpty()) {
+                    imgUrl = room.getImages().get(0).getImageUrl();
+                }
+                roomDtos.add(az.fitnest.catalog.dto.response.RoomImageDto.builder()
+                        .id(room.getId())
+                        .name(room.getName())
+                        .imageUrl(imgUrl)
+                        .build());
+            }
+        }
+        
+        String city = null;
+        String addressText = null;
+        Double lat = null;
+        Double lng = null;
+        if (gym.getAddress() != null) {
+            city = gym.getAddress().getCity();
+            addressText = gym.getAddress().getAddressText();
+            lat = gym.getAddress().getLatitude();
+            lng = gym.getAddress().getLongitude();
+        }
+        
+        String created = "";
+        if (gym.getCreatedDate() != null) {
+            created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        }
+        
+        return az.fitnest.catalog.dto.response.GymInfoAdminResponse.builder()
+                .id(gym.getId())
+                .categoryId(categoryId)
+                .categoryName(categoryName)
+                .name(gym.getName())
+                .description(gym.getDescription())
+                .coverImageUrl(gym.getCoverImageUrl())
+                .rooms(roomDtos)
+                .phone(gym.getPhone())
+                .email(gym.getEmail())
+                .city(city)
+                .address(addressText)
+                .latitude(lat)
+                .longitude(lng)
+                .createdAt(created)
+                .build();
+    }
 }

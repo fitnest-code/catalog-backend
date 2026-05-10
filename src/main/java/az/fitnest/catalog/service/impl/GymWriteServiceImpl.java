@@ -717,4 +717,35 @@ public class GymWriteServiceImpl implements GymWriteService {
             target.addAll(az.fitnest.catalog.mapper.GymMapper.toWorkHours(source));
         }
     }
+
+    @Override
+    @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms", "nearestGyms"}, allEntries = true)
+    public void updateGymInfo(Long gymId, az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+                
+        if (request.categoryId() != null) {
+            Category category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+            gym.getCategories().clear();
+            gym.getCategories().add(category);
+        }
+        
+        if (request.name() != null) gym.setName(request.name());
+        if (request.description() != null) gym.setDescription(request.description());
+        if (request.phone() != null) gym.setPhone(request.phone());
+        if (request.email() != null) gym.setEmail(request.email());
+        
+        if (gym.getAddress() == null) {
+            gym.setAddress(new Address());
+        }
+        
+        if (request.city() != null) gym.getAddress().setCity(request.city());
+        if (request.address() != null) gym.getAddress().setAddressText(request.address());
+        if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
+        if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
+        
+        gymRepository.save(gym);
+    }
 }

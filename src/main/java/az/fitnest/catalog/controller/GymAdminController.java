@@ -54,6 +54,21 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Zal məlumatlarını alın", description = "İdman zalı üçün info-tab məlumatlarını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/info")
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymInfoAdminResponse> getGymInfo(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymInfoAdmin(gymId));
+    }
+
+    @Operation(summary = "Zal məlumatlarını yeniləyin", description = "İdman zalı üçün yalnız info-tab məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/info")
+    public ResponseEntity<Void> updateGymInfo(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
+        gymWriteService.updateGymInfo(gymId, request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı üçün mövcud abunəlik planlarını aktivləşdirin", description = "İdman zalı üçün göstərilən abunəlik planlarını aktivləşdirir. Mövcud planların üstünlükləri qorunur, siyahıda olmayanlar isə silinir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/subscriptions/enable")

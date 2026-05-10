@@ -7,8 +7,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface GymWriteService {
-    void createGym(GymRequest request);
-    void updateGym(Long gymId, GymRequest request);
+    void createGym(az.fitnest.catalog.dto.request.GymRequest request);
+    void updateGym(Long id, az.fitnest.catalog.dto.request.GymRequest request);
+    void updateGymInfo(Long id, az.fitnest.catalog.dto.request.GymInfoUpdateRequest request);
     void enableGymSubscription(Long gymId, Long subscriptionId);
     void updateGymSubscriptionBenefits(Long gymId, Long packageId, GymSubscriptionBenefitsUpdateRequest request);
     void deleteGym(Long gymId);
