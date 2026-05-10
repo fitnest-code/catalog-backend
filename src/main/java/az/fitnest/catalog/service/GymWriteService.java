@@ -39,4 +39,5 @@ public interface GymWriteService {
     void toggleGymStatus(Long gymId, boolean enabled);
     void addGymAdmin(Long gymId, GymAdminCreateRequest request);
     void deleteGymAdmin(Long gymId, Long adminId);
+    void updateReservationStatusAdmin(Long reservationId, az.fitnest.catalog.model.enums.ReservationStatus status, String reason);
 }

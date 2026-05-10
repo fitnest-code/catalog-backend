@@ -49,6 +49,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final SupportedServiceRepository supportedServiceRepository;
     private final IdentityServiceGrpcClient identityServiceGrpcClient;
     private final GymAdminRepository gymAdminRepository;
+    private final ReservationRepository reservationRepository;
     private final GymTrainerService gymTrainerService;
     private final GymQrCodeService gymQrCodeService;
     private final Executor imageUploadExecutor;
@@ -781,5 +782,22 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
         
         gymRepository.save(gym);
+    }
+
+    @Override
+    @Transactional
+    public void updateReservationStatusAdmin(Long reservationId, az.fitnest.catalog.model.enums.ReservationStatus status, String reason) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+        
+        reservation.setStatus(status);
+        if (status == az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED || status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
+            reservation.setCancelReasonText(reason);
+            reservation.setCancelledAt(LocalDateTime.now());
+        } else if (status == az.fitnest.catalog.model.enums.ReservationStatus.CONFIRMED) {
+            reservation.setApprovedAt(LocalDateTime.now());
+        }
+        
+        reservationRepository.save(reservation);
     }
 }

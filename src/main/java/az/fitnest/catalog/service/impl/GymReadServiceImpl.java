@@ -28,6 +28,8 @@ import az.fitnest.catalog.util.PlatformUtil;
 import az.fitnest.catalog.util.UserContext;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
+import az.fitnest.catalog.model.entity.Reservation;
+import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -1585,5 +1587,105 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .role(a.getRole())
                         .build())
                 .collect(Collectors.toList());
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ReservationAdminResponse> getGymReservationsAdmin(Long gymId, ReservationStatus status, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+        Page<Reservation> reservationPage;
+        
+        if (status == null) {
+            reservationPage = reservationRepository.findByGymId(gymId, pageable);
+        } else {
+            reservationPage = reservationRepository.findByGymIdAndStatus(gymId, status, pageable);
+        }
+
+        List<ReservationAdminResponse> items = reservationPage.getContent().stream()
+                .map(r -> {
+                    String userFullName = "N/A";
+                    try {
+                        UserResponse user = userServiceGrpcClient.getUserById(r.getUserId());
+                        if (user != null) {
+                            userFullName = user.getFirstName() + " " + user.getLastName();
+                        }
+                    } catch (Exception e) {
+                        log.warn("Could not fetch user info for reservation list: {}", r.getUserId());
+                    }
+
+                    String dateStr = r.getReservationDate() != null ? r.getReservationDate().getDate().toString() : "N/A";
+                    String timeRange = r.getReservationDate() != null ? 
+                            r.getReservationDate().getStartTime() + " - " + r.getReservationDate().getEndTime() : "N/A";
+                    String trainerName = r.getTrainer() != null ? r.getTrainer().getName() + " " + r.getTrainer().getSurname() : "N/A";
+
+                    return new ReservationAdminResponse(
+                        r.getId(),
+                        userFullName,
+                        dateStr,
+                        timeRange,
+                        r.getStatus(),
+                        trainerName
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return PaginatedResponse.<ReservationAdminResponse>builder()
+                .items(items)
+                .total(reservationPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationDetailAdminResponse getReservationDetailAdmin(Long reservationId) {
+        Reservation r = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+
+        UserResponse user = null;
+        try {
+            user = userServiceGrpcClient.getUserById(r.getUserId());
+        } catch (Exception e) {
+            log.warn("Could not fetch user info for reservation detail: {}", r.getUserId());
+        }
+
+        String userFullName = user != null ? user.getFirstName() + " " + user.getLastName() : "N/A";
+        String userPhone = user != null ? user.getPhoneNumber() : "N/A";
+        String userEmail = user != null ? user.getEmail() : "N/A";
+        String birthDate = (user != null && user.getBirthDate() != null) ? user.getBirthDate() : "N/A";
+        String regDate = r.getCreatedDate() != null ? r.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) : "N/A";
+        String platform = "N/A"; // Should be stored in reservation if needed
+
+        String dateStr = r.getReservationDate() != null ? r.getReservationDate().getDate().toString() : "N/A";
+        String timeRange = r.getReservationDate() != null ? 
+                r.getReservationDate().getStartTime() + " - " + r.getReservationDate().getEndTime() : "N/A";
+        String trainerName = r.getTrainer() != null ? r.getTrainer().getName() + " " + r.getTrainer().getSurname() : "N/A";
+
+        return new ReservationDetailAdminResponse(
+            r.getId(),
+            r.getUserId(),
+            userFullName,
+            userPhone,
+            userEmail,
+            birthDate,
+            regDate,
+            platform,
+            r.getStatus(),
+            trainerName,
+            r.getLessonType(),
+            dateStr,
+            timeRange,
+            r.getCancelReasonText()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationStatsResponse getGymReservationStats(Long gymId) {
+        long total = reservationRepository.countByGymId(gymId);
+        long pending = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.PENDING);
+        long confirmed = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CONFIRMED);
+        long cancelled = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CANCELLED);
+        
+        return new ReservationStatsResponse(total, pending, confirmed, cancelled);
     }
 }

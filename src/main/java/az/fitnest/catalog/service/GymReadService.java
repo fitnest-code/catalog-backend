@@ -36,4 +36,9 @@ public interface GymReadService {
     GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal);
     GymTypeCountResponse getGymCountByGender(String gender);
     List<az.fitnest.catalog.dto.response.GymAdminResponse> getGymAdmins(Long gymId);
+    PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse> getGymReservationsAdmin(Long gymId, az.fitnest.catalog.model.enums.ReservationStatus status, int page, int pageSize);
+
+    az.fitnest.catalog.dto.response.ReservationDetailAdminResponse getReservationDetailAdmin(Long reservationId);
+
+    az.fitnest.catalog.dto.response.ReservationStatsResponse getGymReservationStats(Long gymId);
 }
