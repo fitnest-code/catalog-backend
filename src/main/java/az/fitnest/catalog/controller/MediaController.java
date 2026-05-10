@@ -27,7 +27,6 @@ public class MediaController {
     }
 
     @Operation(summary = "Media faylını yayımlayın", description = "Media faylını (şəkli) birbaşa yaddaşdan yayımlayır.")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @GetMapping(value = {"/stream/{fsId}"})
     public ResponseEntity<StreamingResponseBody> streamFile(@Parameter(description = "Medianın fayl sistemi ID-si") @PathVariable String fsId) {
 

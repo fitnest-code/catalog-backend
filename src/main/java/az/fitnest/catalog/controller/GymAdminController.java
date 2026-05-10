@@ -192,20 +192,48 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/trainers")
+    public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
+            @PathVariable("id") Long gymId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(value = "sort_dir", defaultValue = "DESC") az.fitnest.catalog.dto.SortDirection sortDir) {
+        int safePageSize = Math.min(pageSize, 100);
+        return ResponseEntity.ok(gymTrainerService.getTrainers(gymId, page, safePageSize, sortDir.name().toLowerCase()));
+    }
+
     @Operation(summary = "İdman zalı üçün təlimçi yaradın", description = "İdman zalına yeni təlimçi əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/trainers")
-    public ResponseEntity<Void> addTrainer(@PathVariable("id") Long gymId, @Valid @RequestBody TrainerRequest request) {
-        gymTrainerService.addTrainer(gymId, request);
+    @PostMapping(value = "/{id}/trainers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> addTrainer(
+            @PathVariable("id") Long gymId,
+            @RequestParam("name") String name,
+            @RequestParam("surname") String surname,
+            @RequestParam("professionId") Long professionId,
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
+        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email);
+        gymTrainerService.addTrainer(gymId, request, photo);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Təlimçini yeniləyin", description = "İdman zalına aid təlimçinin məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/trainers/{trainerId}")
-    public ResponseEntity<Void> updateTrainer(@PathVariable("id") Long gymId, @PathVariable("trainerId") Long trainerId,
-            @Valid @RequestBody TrainerRequest request) {
-        gymTrainerService.updateTrainer(gymId, trainerId, request);
+    @PutMapping(value = "/{id}/trainers/{trainerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateTrainer(
+            @PathVariable("id") Long gymId,
+            @PathVariable("trainerId") Long trainerId,
+            @RequestParam("name") String name,
+            @RequestParam("surname") String surname,
+            @RequestParam("professionId") Long professionId,
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
+        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email);
+        gymTrainerService.updateTrainer(gymId, trainerId, request, photo);
         return ResponseEntity.ok().build();
     }
 

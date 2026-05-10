@@ -69,12 +69,18 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
     @Transactional
     @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
-    public void addTrainer(Long gymId, TrainerRequest request) {
+    public void addTrainer(Long gymId, TrainerRequest request, MultipartFile photo) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         Trainer trainer = new Trainer();
         updateTrainerFromRequest(trainer, request);
+
+        if (photo != null && !photo.isEmpty()) {
+            MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
+            String fsId = fileStorageService.saveFile(validated, "/trainers");
+            trainer.setPicture("/api/v1/media/stream/" + fsId);
+        }
 
         gym.getTrainers().add(trainer);
         gymRepository.save(gym);
@@ -82,7 +88,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
     @Transactional
     @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
-    public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request) {
+    public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request, MultipartFile photo) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         if (!gymId.equals(trainer.getGymId())) {
@@ -90,6 +96,13 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         }
 
         updateTrainerFromRequest(trainer, request);
+
+        if (photo != null && !photo.isEmpty()) {
+            MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
+            String fsId = fileStorageService.saveFile(validated, "/trainers", trainer.getPicture());
+            trainer.setPicture("/api/v1/media/stream/" + fsId);
+        }
+
         trainerRepository.save(trainer);
     }
 
