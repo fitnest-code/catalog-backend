@@ -1343,18 +1343,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Long categoryId = null;
         String categoryName = null;
         if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            Category cat = gym.getCategories().iterator().next();
-            categoryId = cat.getId();
-            categoryName = cat.getName();
+            Category cat = gym.getCategories().stream().findFirst().orElse(null);
+            if (cat != null) {
+                categoryId = cat.getId();
+                categoryName = cat.getName();
+            }
         }
         
         List<az.fitnest.catalog.dto.response.RoomImageDto> roomDtos = new java.util.ArrayList<>();
         if (gym.getRooms() != null) {
             for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
-                String imgUrl = null;
-                if (room.getImages() != null && !room.getImages().isEmpty()) {
-                    imgUrl = room.getImages().iterator().next().getPictureUrl();
-                }
+                String imgUrl = room.getImages() != null && !room.getImages().isEmpty() 
+                    ? room.getImages().stream().findFirst().map(RoomImage::getPictureUrl).orElse(null)
+                    : null;
                 roomDtos.add(az.fitnest.catalog.dto.response.RoomImageDto.builder()
                         .id(room.getId())
                         .name(room.getName())
