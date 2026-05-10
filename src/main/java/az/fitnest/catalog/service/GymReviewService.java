@@ -9,6 +9,8 @@ import az.fitnest.catalog.dto.request.ReviewRequest;
 
 public interface GymReviewService {
     PaginatedResponse<GymReviewResponse> getReviews(Long gymId, int page, int pageSize, String sort);
+    PaginatedResponse<GymReviewResponse> getGymReviewsAdmin(Long gymId, az.fitnest.catalog.model.enums.ReviewStatus status, int page, int pageSize, String sort);
+    GymReviewResponse getReviewDetail(Long reviewId);
     void addReview(Long userId, Long gymId, ReviewRequest request);
     Long approveReview(Long reviewId);
     void rejectReview(Long reviewId);

@@ -36,8 +36,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymWriteServiceImpl implements GymWriteService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GymWriteServiceImpl.class);
 
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;

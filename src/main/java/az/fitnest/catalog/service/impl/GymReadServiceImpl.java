@@ -1,4 +1,5 @@
 package az.fitnest.catalog.service.impl;
+
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.RoomImage;
 
@@ -48,12 +49,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
+    private static final Logger log = LoggerFactory.getLogger(GymReadServiceImpl.class);
     private final GymRepository gymRepository;
     private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
     private final GymImageRepository gymImageRepository;
@@ -79,7 +81,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .toList();
         }
         return services.stream()
-                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId()))
+                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(),
+                        s.getGymId()))
                 .toList();
     }
 
@@ -91,10 +94,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     language = user.getLanguage().toUpperCase();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         if (language.equals("AZ")) {
-            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage().toUpperCase();
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
             if (localeLang.equals("EN") || localeLang.equals("RU")) {
                 language = localeLang;
             }
@@ -114,35 +119,39 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             }
             return false;
         }, executor);
-        CompletableFuture<List<GymTrainerResponse>> trainerDtosFuture = CompletableFuture.supplyAsync(() ->
-            trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
-                .getContent().stream()
-                .map(GymMapper::toTrainerDto)
-                .collect(Collectors.toList()), executor);
-        CompletableFuture<List<GymReviewResponse>> recentReviewsFuture = CompletableFuture.supplyAsync(() ->
-            reviewRepository.findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
-                .getContent().stream()
-                .map(r -> {
-                    UserResponse user = null;
-                    String fullName = "";
-                    String avatarUrl = null;
-                    try {
-                        if (r.getUserId() != null) {
-                            user = userServiceGrpcClient.getUserById(r.getUserId());
-                            System.out.println("[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
-                            if (user != null) {
-                                fullName = user.getFirstName() + " " + user.getLastName();
-                                avatarUrl = user.getProfileImageUrl();
-                                System.out.println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
+        CompletableFuture<List<GymTrainerResponse>> trainerDtosFuture = CompletableFuture
+                .supplyAsync(() -> trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
+                        .getContent().stream()
+                        .map(GymMapper::toTrainerDto)
+                        .collect(Collectors.toList()), executor);
+        CompletableFuture<List<GymReviewResponse>> recentReviewsFuture = CompletableFuture
+                .supplyAsync(() -> reviewRepository
+                        .findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
+                        .getContent().stream()
+                        .map(r -> {
+                            UserResponse user = null;
+                            String fullName = "";
+                            String avatarUrl = null;
+                            try {
+                                if (r.getUserId() != null) {
+                                    user = userServiceGrpcClient.getUserById(r.getUserId());
+                                    System.out.println(
+                                            "[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
+                                    if (user != null) {
+                                        fullName = user.getFirstName() + " " + user.getLastName();
+                                        avatarUrl = user.getProfileImageUrl();
+                                        System.out
+                                                .println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                fullName = "User " + r.getUserId();
+                                System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": "
+                                        + e.getMessage());
                             }
-                        }
-                    } catch (Exception e) {
-                        fullName = "User " + r.getUserId();
-                        System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": " + e.getMessage());
-                    }
-                    return GymMapper.toReviewDto(r, fullName, avatarUrl);
-                })
-                .collect(Collectors.toList()), executor);
+                            return GymMapper.toReviewDto(r, fullName, avatarUrl);
+                        })
+                        .collect(Collectors.toList()), executor);
         CompletableFuture<List<GymWorkHourResponse>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() -> {
             String userLang = getUserLanguage(userId);
             return GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId), userLang);
@@ -160,8 +169,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             if (gym != null && gym.getRooms() != null) {
                 String userLang = getUserLanguage(userId);
                 rooms = gym.getRooms().stream().map(room -> {
-                    String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLang);
-                    if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
+                    String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(),
+                            "name", userLang);
+                    if (localizedRoomName == null || localizedRoomName.isEmpty())
+                        localizedRoomName = room.getName();
                     final String finalLocalizedRoomName = localizedRoomName;
                     List<String> imageUrls = room.getImages() != null
                             ? room.getImages().stream().map(RoomImage::getPictureUrl).collect(Collectors.toList())
@@ -177,8 +188,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }, executor);
 
         CompletableFuture.allOf(
-            gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, categoryDtosFuture, roomsFuture
-        ).join();
+                gymFuture, isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture,
+                categoryDtosFuture, roomsFuture).join();
         Gym gym = gymFuture.join();
         boolean isSaved = isSavedFuture.join();
         String userLanguage = getUserLanguage(userId);
@@ -191,7 +202,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (categoryDtos != null) {
             categoryDtos = categoryDtos.stream()
                     .map(c -> {
-                        String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.id().toString(), "name", userLanguage);
+                        String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.id().toString(),
+                                "name", userLanguage);
                         return CategoryResponse.builder()
                                 .id(c.id())
                                 .name(localizedCatName != null ? localizedCatName : c.name())
@@ -203,7 +215,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymRoomResponse> rooms = roomsFuture.join();
         List<GymTrainerResponse> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerResponse>map(t -> {
             if (t.profession() != null && t.profession().id() != null) {
-                String localizedProfession = translationService.getTranslatedValue("PROFESSION", t.profession().id().toString(), "name", userLanguage);
+                String localizedProfession = translationService.getTranslatedValue("PROFESSION",
+                        t.profession().id().toString(), "name", userLanguage);
                 if (localizedProfession != null && !localizedProfession.isEmpty()) {
                     return GymTrainerResponse.builder()
                             .trainer_id(t.trainer_id())
@@ -230,86 +243,96 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
             workHoursMan = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan(), userLanguage);
         }
-        if (generalWorkHours != null && generalWorkHours.isEmpty()) generalWorkHours = null;
+        if (generalWorkHours != null && generalWorkHours.isEmpty())
+            generalWorkHours = null;
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         try {
             if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
                 List<Long> packageIds = gym.getSubscriptions().stream()
-                    .map(sub -> sub.getPackageId())
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                        .map(sub -> sub.getPackageId())
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
+                        .getPackageNamesByIds(packageIds);
                 java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                        az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                        p -> p
-                    ));
+                        .collect(java.util.stream.Collectors.toMap(
+                                az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                                p -> p));
                 supportedSubscriptions = gym.getSubscriptions().stream()
-                    .filter(sub -> sub.getPackageId() != null)
-                    .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
-                    .map(sub -> {
-                        az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                        String planId = sub.getPackageId().toString();
-                        String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
-                        String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName : info.getName();
-                        List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
-                            .map(b -> {
-                                String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
-                                return GymPlanBenefitResponse.builder()
-                                    .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
+                        .filter(sub -> sub.getPackageId() != null)
+                        .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
+                        .map(sub -> {
+                            az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                            String planId = sub.getPackageId().toString();
+                            String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                                    planId, "name", userLanguage);
+                            String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty())
+                                    ? localizedPackageName
+                                    : info.getName();
+                            List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
+                                    .map(b -> {
+                                        String localizedBenefit = translationService.getTranslatedValue(
+                                                "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
+                                        return GymPlanBenefitResponse.builder()
+                                                .description(localizedBenefit != null && !localizedBenefit.isEmpty()
+                                                        ? localizedBenefit
+                                                        : b.getName())
+                                                .build();
+                                    })
+                                    .toList();
+                            return GymPlanItemResponse.builder()
+                                    .plan_id(planId)
+                                    .packageName(packageName)
+                                    .dailyPrice(sub.getDailyPrice())
+                                    .benefits(benefitsList)
                                     .build();
-                            })
-                            .toList();
-                        return GymPlanItemResponse.builder()
-                            .plan_id(planId)
-                            .packageName(packageName)
-                            .dailyPrice(sub.getDailyPrice())
-                            .benefits(benefitsList)
-                            .build();
-                    })
-                    .collect(java.util.stream.Collectors.toList());
+                        })
+                        .collect(java.util.stream.Collectors.toList());
             }
         } catch (Exception e) {
             System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
         }
         String localizedName = getLocalizedGymName(gym, userLanguage);
-        String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
-        if (localizedDescription == null || localizedDescription.isEmpty()) localizedDescription = gym.getDescription();
+        String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(),
+                "description", userLanguage);
+        if (localizedDescription == null || localizedDescription.isEmpty())
+            localizedDescription = gym.getDescription();
         List<RestDayRequest> restDays = gym.getRestDays() != null
                 ? gym.getRestDays().stream()
                         .map(rd -> new RestDayRequest(rd.name()))
                         .collect(java.util.stream.Collectors.toList())
                 : java.util.Collections.emptyList();
 
-        GymDetailResponse response = GymDetailResponse.builder()
-                .gym_id(gym.getId().toString())
-                .name(localizedName)
-                .description(localizedDescription)
-                .isSaved(isSaved)
-                .address(gym.getAddress() != null ? az.fitnest.catalog.dto.response.LocationResponse.builder()
-                        .addressText(getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage))
-                        .city(getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage))
-                        .latitude(gym.getAddress().getLatitude())
-                        .longitude(gym.getAddress().getLongitude())
-                        .build() : null)
-                .phone(gym.getPhone())
-                .email(gym.getEmail())
-                .general_work_hours(generalWorkHours)
-                .work_hours_woman(workHoursWoman)
-                .work_hours_man(workHoursMan)
-                .rooms(rooms)
-                .trainers(trainerDtos)
-                .recent_reviews(recentReviews)
-                .categories(categoryDtos)
-                .coverImageUrl(gym.getCoverImageUrl())
-                .rating(gym.getRating())
-                .reviewsCount(gym.getReviewsCount())
-                .qr_code_url(gym.getQrCodeUrl())
-                .status(gym.getStatus())
-                .supportedSubscriptions(supportedSubscriptions)
-                .rest_days(restDays)
-                .build();
+        GymDetailResponse response = new GymDetailResponse(
+                gym.getId().toString(),
+                localizedName,
+                localizedDescription,
+                gym.getAddress() != null ? new az.fitnest.catalog.dto.response.LocationResponse(
+                        gym.getAddress().getLatitude(),
+                        gym.getAddress().getLongitude(),
+                        getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText",
+                                userLanguage),
+                        getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage)
+                ) : null,
+                isSaved,
+                gym.getPhone(),
+                gym.getEmail(),
+                generalWorkHours,
+                workHoursWoman,
+                workHoursMan,
+                rooms,
+                trainerDtos,
+                recentReviews,
+                categoryDtos,
+                gym.getCoverImageUrl(),
+                gym.getRating() != null ? gym.getRating() : 0.0,
+                gym.getReviewsCount() != null ? gym.getReviewsCount() : 0,
+                gym.getQrCodeUrl(),
+                gym.getStatus(),
+                supportedSubscriptions,
+                restDays
+        );
         executor.shutdown();
         return response;
     }
@@ -353,37 +376,36 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         return Map.of(
-            "cancellation_policy", List.of(
-                "Free cancellation is possible up to 24 hours before the lesson starts",
-                "Cancellation within 24 hours will result in the loss of the session",
-                "In case of no-show, the full amount will be charged"
-            ),
-            "studio_rules", List.of(
-                "Please arrive at least 10 minutes before the lesson",
-                "Bring your own mat or rent one from the studio",
-                "Wear comfortable sportswear",
-                "Drink water before and after the lesson"
-            ),
-            "availability", List.of(
-                "Some classes may require confirmation from the studio",
-                "You will receive a confirmation email within 2 hours",
-                "For urgent bookings, please contact the studio directly"
-            )
-        );
+                "cancellation_policy", List.of(
+                        "Free cancellation is possible up to 24 hours before the lesson starts",
+                        "Cancellation within 24 hours will result in the loss of the session",
+                        "In case of no-show, the full amount will be charged"),
+                "studio_rules", List.of(
+                        "Please arrive at least 10 minutes before the lesson",
+                        "Bring your own mat or rent one from the studio",
+                        "Wear comfortable sportswear",
+                        "Drink water before and after the lesson"),
+                "availability", List.of(
+                        "Some classes may require confirmation from the studio",
+                        "You will receive a confirmation email within 2 hours",
+                        "For urgent bookings, please contact the studio directly"));
     }
 
     @Transactional(readOnly = true)
     public List<GymNearbyResponse> getNearbyGyms(double lat, double lng, double radiusKm) {
         double[] bbox = boundingBox(lat, lng, radiusKm);
-        List<Gym> candidates = gymRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1], bbox[2], bbox[3]);
+        List<Gym> candidates = gymRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1],
+                bbox[2], bbox[3]);
         LocalDateTime newThreshold = LocalDateTime.now().minusDays(30L);
 
         return candidates.stream()
-                .filter(gym -> gym.getAddress() != null && gym.getAddress().getLatitude() != null && gym.getAddress().getLongitude() != null)
+                .filter(gym -> gym.getAddress() != null && gym.getAddress().getLatitude() != null
+                        && gym.getAddress().getLongitude() != null)
                 .map(gym -> {
                     String userLanguage = getUserLanguage(az.fitnest.catalog.util.UserContext.getCurrentUserId());
                     String localizedName = getLocalizedGymName(gym, userLanguage);
-                    double rawDistance = calculateDistanceRaw(lat, lng, gym.getAddress().getLatitude(), gym.getAddress().getLongitude());
+                    double rawDistance = calculateDistanceRaw(lat, lng, gym.getAddress().getLatitude(),
+                            gym.getAddress().getLongitude());
                     boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(newThreshold);
                     return new Object() {
                         GymNearbyResponse dto = GymNearbyResponse.builder()
@@ -405,12 +427,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     @Cacheable(value = "main-page-gyms", key = "{#userId, #page, #pageSize, #userLat, #userLng}")
-    public PaginatedResponse<GymMainPageResponse> getClosestGyms(Long userId, int page, int pageSize, Double userLat, Double userLng) {
+    public PaginatedResponse<GymMainPageResponse> getClosestGyms(Long userId, int page, int pageSize, Double userLat,
+            Double userLng) {
         return getGyms(userId, null, "CLOSEST", null, null, page, pageSize, userLat, userLng, "desc");
     }
 
     @Transactional(readOnly = true)
-    public PaginatedResponse<GymMainPageResponse> getGyms(Long userId, String q, String type, Long categoryId, Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
+    public PaginatedResponse<GymMainPageResponse> getGyms(Long userId, String q, String type, Long categoryId,
+            Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
             throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
         }
@@ -419,7 +443,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
 
         if ("SAVED".equalsIgnoreCase(type)) {
-            if (userId == null) return emptyPaginatedResponse(page, pageSize);
+            if (userId == null)
+                return emptyPaginatedResponse(page, pageSize);
             List<SavedGym> saved = savedGymRepository.findByUserId(userId);
             List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
             return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId);
@@ -429,7 +454,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
             if (q != null && !q.isBlank()) {
                 if (categoryId != null) {
-                    gymPage = gymRepository.searchClosestWithCategory(q, categoryId, userLat, userLng, distancePageable);
+                    gymPage = gymRepository.searchClosestWithCategory(q, categoryId, userLat, userLng,
+                            distancePageable);
                 } else {
                     gymPage = gymRepository.searchClosest(q, userLat, userLng, distancePageable);
                 }
@@ -449,7 +475,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         } else {
             if (q != null && !q.isBlank()) {
                 if (categoryId != null) {
-                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId, pageable);
+                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId,
+                            pageable);
                 } else {
                     gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
                 }
@@ -471,18 +498,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         final List<Long> finalSavedIds = savedGymIds;
-        List<GymMainPageResponse> items = gymPage.getContent().stream().map(gym -> mapToGymMainPageDto(gym, userId, userLat, userLng, finalSavedIds.contains(gym.getId())))
+        List<GymMainPageResponse> items = gymPage.getContent().stream()
+                .map(gym -> mapToGymMainPageDto(gym, userId, userLat, userLng, finalSavedIds.contains(gym.getId())))
                 .filter(gymDto -> {
-                    if (subscriptionId == null) return true;
-                    Gym gym = gymPage.getContent().stream().filter(g -> g.getId().toString().equals(gymDto.gymId())).findFirst().orElse(null);
-                    if (gym == null || gym.getSubscriptions() == null) return false;
+                    if (subscriptionId == null)
+                        return true;
+                    Gym gym = gymPage.getContent().stream().filter(g -> g.getId().toString().equals(gymDto.gymId()))
+                            .findFirst().orElse(null);
+                    if (gym == null || gym.getSubscriptions() == null)
+                        return false;
                     return gym.getSubscriptions().stream().anyMatch(sub -> subscriptionId.equals(sub.getPackageId()));
                 })
                 .collect(Collectors.toList());
 
         String message = null;
         if (items.isEmpty()) {
-            message = messageSource.getMessage("error.gym_not_found", null, org.springframework.context.i18n.LocaleContextHolder.getLocale());
+            message = messageSource.getMessage("error.gym_not_found", null,
+                    org.springframework.context.i18n.LocaleContextHolder.getLocale());
         }
         return PaginatedResponse.<GymMainPageResponse>builder()
                 .items(items)
@@ -529,10 +561,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             if (query != null && !query.isBlank()) {
                 String pattern = "%" + query.toLowerCase() + "%";
                 predicates.add(cb.or(
-                    cb.like(cb.lower(root.get("name")), pattern),
-                    cb.like(cb.lower(root.get("address").get("addressText")), pattern),
-                    cb.like(cb.lower(root.get("address").get("city")), pattern)
-                ));
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("address").get("addressText")), pattern),
+                        cb.like(cb.lower(root.get("address").get("city")), pattern)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -582,8 +613,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         java.util.stream.Stream<AdminQrScanHistoryResponse> stream = historyList.stream()
                 .map(h -> {
                     String status = h.getStatus();
-                    if ("ELIGIBLE".equalsIgnoreCase(status)) status = "Uğurlu";
-                    else if ("UNSUCCESSFUL".equalsIgnoreCase(status)) status = "Uğursuz";
+                    if ("ELIGIBLE".equalsIgnoreCase(status))
+                        status = "Uğurlu";
+                    else if ("UNSUCCESSFUL".equalsIgnoreCase(status))
+                        status = "Uğursuz";
 
                     return AdminQrScanHistoryResponse.builder()
                             .dateTime(h.getScanDate() != null ? h.getScanDate().format(formatter) : "N/A")
@@ -605,28 +638,36 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (sort != null) {
             switch (sort) {
                 case "gymName_asc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER));
+                    result.sort(
+                            Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER));
                     break;
                 case "gymName_desc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER).reversed());
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::gymName, String.CASE_INSENSITIVE_ORDER)
+                            .reversed());
                     break;
                 case "date_asc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate, Comparator.nullsLast(Comparator.naturalOrder())));
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())));
                     break;
                 case "date_desc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::rawDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())).reversed());
                     break;
                 case "status_asc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER));
+                    result.sort(
+                            Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER));
                     break;
                 case "status_desc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER).reversed());
+                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::status, String.CASE_INSENSITIVE_ORDER)
+                            .reversed());
                     break;
                 case "platform_asc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER));
+                    result.sort(
+                            Comparator.comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER));
                     break;
                 case "platform_desc":
-                    result.sort(Comparator.comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER).reversed());
+                    result.sort(Comparator
+                            .comparing(AdminQrScanHistoryResponse::platform, String.CASE_INSENSITIVE_ORDER).reversed());
                     break;
             }
         }
@@ -634,26 +675,32 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return result;
     }
 
-    private PaginatedResponse<GymMainPageResponse> manualPaginate(List<Gym> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q, Long categoryId) {
+    private PaginatedResponse<GymMainPageResponse> manualPaginate(List<Gym> candidates, Long userId, Double lat,
+            Double lng, int page, int pageSize, String q, Long categoryId) {
         java.util.stream.Stream<Gym> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
             stream = stream.filter(g -> (g.getName() != null && g.getName().toLowerCase().contains(lowerQ)) ||
-                    (g.getAddress() != null && g.getAddress().getAddressText() != null && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
+                    (g.getAddress() != null && g.getAddress().getAddressText() != null
+                            && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
         }
         if (categoryId != null) {
-            stream = stream.filter(g -> g.getCategories() != null && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)));
+            stream = stream.filter(g -> g.getCategories() != null
+                    && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)));
         }
 
-        List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true)).collect(Collectors.toList());
+        List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true))
+                .collect(Collectors.toList());
 
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(GymMainPageResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            all.sort(Comparator.comparing(GymMainPageResponse::distanceKm,
+                    Comparator.nullsLast(Comparator.naturalOrder())));
         }
 
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(all.size(), from + pageSize);
-        List<GymMainPageResponse> pageItems = from >= all.size() ? new java.util.ArrayList<>() : new java.util.ArrayList<>(all.subList(from, to));
+        List<GymMainPageResponse> pageItems = from >= all.size() ? new java.util.ArrayList<>()
+                : new java.util.ArrayList<>(all.subList(from, to));
 
         return PaginatedResponse.<GymMainPageResponse>builder()
                 .items(pageItems)
@@ -663,79 +710,92 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .build();
     }
 
-    private GymMainPageResponse mapToGymMainPageDto(Gym gym, Long userId, Double userLat, Double userLng, boolean isSaved) {
+    private GymMainPageResponse mapToGymMainPageDto(Gym gym, Long userId, Double userLat, Double userLng,
+            boolean isSaved) {
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
-        boolean isNew = gym.getCreatedDate() != null && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
+        boolean isNew = gym.getCreatedDate() != null
+                && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
         Address address = gym.getAddress();
         Double distanceKm = null;
-        if (userLat != null && userLng != null && address != null && address.getLatitude() != null && address.getLongitude() != null) {
-            distanceKm = Math.round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0) / 10.0;
+        if (userLat != null && userLng != null && address != null && address.getLatitude() != null
+                && address.getLongitude() != null) {
+            distanceKm = Math
+                    .round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0)
+                    / 10.0;
         }
 
         String userLanguage = getUserLanguage(userId);
-        List<CategoryResponse> categories = gym.getCategories() != null ?
-            gym.getCategories().stream()
+        List<CategoryResponse> categories = gym.getCategories() != null ? gym.getCategories().stream()
                 .map(c -> {
-                    String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
+                    String localizedCatName = translationService.getTranslatedValue("CATEGORY",
+                            c.getCategoryId().toString(), "name", userLanguage);
                     return CategoryResponse.builder()
-                        .id(c.getCategoryId())
-                        .name(localizedCatName != null ? localizedCatName : c.getName())
-                        .photoUrl(c.getPhotoUrl())
-                        .build();
+                            .id(c.getCategoryId())
+                            .name(localizedCatName != null ? localizedCatName : c.getName())
+                            .photoUrl(c.getPhotoUrl())
+                            .build();
                 })
                 .collect(Collectors.toList())
-            : java.util.Collections.emptyList();
+                : java.util.Collections.emptyList();
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         try {
             if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
                 List<Long> packageIds = gym.getSubscriptions().stream()
-                    .map(sub -> sub.getPackageId())
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-                java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                        az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                        p -> p
-                    ));
-                supportedSubscriptions = gym.getSubscriptions().stream()
-                    .filter(sub -> sub.getPackageId() != null)
-                    .map(sub -> {
-                    az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                    String planId = sub.getPackageId().toString();
-                    String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
-                    String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty()) ? localizedPackageName :
-                                    (info != null ? info.getName() : "Bronze Plan");
-                    List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
-                        .map(b -> {
-                            String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
-                            return GymPlanBenefitResponse.builder()
-                                .description(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
-                                .build();
-                        })
+                        .map(sub -> sub.getPackageId())
+                        .filter(java.util.Objects::nonNull)
                         .toList();
-                    return GymPlanItemResponse.builder()
-                        .plan_id(planId)
-                        .packageName(packageName)
-                        .dailyPrice(sub.getDailyPrice())
-                        .benefits(benefitsList)
-                        .build();
-                }).collect(java.util.stream.Collectors.toList());
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
+                        .getPackageNamesByIds(packageIds);
+                java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                                p -> p));
+                supportedSubscriptions = gym.getSubscriptions().stream()
+                        .filter(sub -> sub.getPackageId() != null)
+                        .map(sub -> {
+                            az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                            String planId = sub.getPackageId().toString();
+                            String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                                    planId, "name", userLanguage);
+                            String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty())
+                                    ? localizedPackageName
+                                    : (info != null ? info.getName() : "Bronze Plan");
+                            List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
+                                    .map(b -> {
+                                        String localizedBenefit = translationService.getTranslatedValue(
+                                                "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
+                                        return GymPlanBenefitResponse.builder()
+                                                .description(localizedBenefit != null && !localizedBenefit.isEmpty()
+                                                        ? localizedBenefit
+                                                        : b.getName())
+                                                .build();
+                                    })
+                                    .toList();
+                            return GymPlanItemResponse.builder()
+                                    .plan_id(planId)
+                                    .packageName(packageName)
+                                    .dailyPrice(sub.getDailyPrice())
+                                    .benefits(benefitsList)
+                                    .build();
+                        }).collect(java.util.stream.Collectors.toList());
             }
         } catch (Exception e) {
             System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
             if (gym.getSubscriptions() != null) {
                 supportedSubscriptions = gym.getSubscriptions().stream().map(sub -> {
                     String planId = sub.getPackageId() != null ? sub.getPackageId().toString() : "N/A";
-                    String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId, "name", userLanguage);
+                    String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION", planId,
+                            "name", userLanguage);
                     String fallbackName = localizedPackageName != null ? localizedPackageName : "Bronze Plan";
                     return GymPlanItemResponse.builder()
-                        .plan_id(planId)
-                        .packageName(fallbackName)
-                        .dailyPrice(sub.getDailyPrice())
-                        .benefits(sub.getSupportedServices().stream().map(b -> GymPlanBenefitResponse.builder().description(b.getName()).build()).toList())
-                        .build();
+                            .plan_id(planId)
+                            .packageName(fallbackName)
+                            .dailyPrice(sub.getDailyPrice())
+                            .benefits(sub.getSupportedServices().stream()
+                                    .map(b -> GymPlanBenefitResponse.builder().description(b.getName()).build())
+                                    .toList())
+                            .build();
                 }).collect(java.util.stream.Collectors.toList());
             }
         }
@@ -746,8 +806,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .coverImageUrl(gym.getCoverImageUrl())
                 .stars(stars)
                 .isNew(isNew)
-                .location(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", userLanguage) : null)
-                .city(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage) : null)
+                .location(address != null
+                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", userLanguage)
+                        : null)
+                .city(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage)
+                        : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
                 .categories(categories)
@@ -756,12 +819,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     private PaginatedResponse<GymMainPageResponse> emptyPaginatedResponse(int page, int pageSize) {
-        return PaginatedResponse.<GymMainPageResponse>builder().items(java.util.Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
+        return PaginatedResponse.<GymMainPageResponse>builder().items(java.util.Collections.emptyList()).total(0)
+                .page(page).pageSize(pageSize).build();
     }
 
     @Transactional(readOnly = true)
     public LocationResponse getGymLocation(Long gymId) {
-        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Address addr = gym.getAddress();
         if (addr == null) {
             return LocationResponse.builder().build();
@@ -775,30 +840,30 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public boolean gymSupportsPlan(Long gymId, Long planId) {
-            Gym gym = gymRepository.findById(gymId)
-                    .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-            return orderServiceGrpcClient.checkPackageExists(planId);
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        return orderServiceGrpcClient.checkPackageExists(planId);
     }
 
     public GymEntranceResponse checkProximity(Double lat, Double lng, Long gymId) {
         Gym gym = gymRepository.findById(gymId)
-            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Address address = gym.getAddress();
         if (address == null || address.getLatitude() == null || address.getLongitude() == null) {
             return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
+                    .allowed(false)
+                    .build();
         }
         double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
         double allowedRadiusKm = 0.2;
         if (distance > allowedRadiusKm) {
             return GymEntranceResponse.builder()
-                .allowed(false)
-                .build();
+                    .allowed(false)
+                    .build();
         }
         return GymEntranceResponse.builder()
-            .allowed(true)
-            .build();
+                .allowed(true)
+                .build();
     }
 
     public boolean checkGymEntranceEligibilitySimple(Object principal) {
@@ -828,7 +893,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<Gym> gyms = gymRepository.findAll();
         if (categoryId != null) {
             gyms = gyms.stream()
-                    .filter(g -> g.getCategories() != null && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)))
+                    .filter(g -> g.getCategories() != null
+                            && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)))
                     .toList();
         }
         if (subscriptionId != null) {
@@ -838,17 +904,17 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
         if (type != null && type.equalsIgnoreCase("new")) {
             gyms = gyms.stream()
-                    .filter(g -> g.getCreatedDate() != null && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
+                    .filter(g -> g.getCreatedDate() != null
+                            && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
                     .toList();
         }
         return new GymCountResponse(
-            gyms.stream()
-                .filter(g -> g.getSubscriptions() != null)
-                .count(),
-            type != null ? type : "all",
-            subscriptionId,
-            categoryId
-        );
+                gyms.stream()
+                        .filter(g -> g.getSubscriptions() != null)
+                        .count(),
+                type != null ? type : "all",
+                subscriptionId,
+                categoryId);
     }
 
     @Transactional(readOnly = true)
@@ -857,8 +923,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         long count;
         if (type.equalsIgnoreCase("new")) {
             count = gyms.stream()
-                .filter(g -> g.getCreatedDate() != null && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
-                .count();
+                    .filter(g -> g.getCreatedDate() != null
+                            && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
+                    .count();
         } else {
             count = gyms.size();
         }
@@ -872,32 +939,33 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<Gym> gyms = gymRepository.findAll();
         java.util.Map<Long, Long> categoryCounts = gyms.stream()
-            .flatMap(gym -> gym.getCategories() != null ? gym.getCategories().stream() : java.util.stream.Stream.empty())
-            .collect(java.util.stream.Collectors.groupingBy(
-                category -> category.getCategoryId(),
-                java.util.stream.Collectors.counting()
-            ));
+                .flatMap(gym -> gym.getCategories() != null ? gym.getCategories().stream()
+                        : java.util.stream.Stream.empty())
+                .collect(java.util.stream.Collectors.groupingBy(
+                        category -> category.getCategoryId(),
+                        java.util.stream.Collectors.counting()));
         List<Category> allCategories = categoryRepository.findAllById(categoryCounts.keySet());
         java.util.Map<Long, Category> idToCategory = allCategories.stream()
-            .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, c -> c));
+                .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, c -> c));
         return categoryCounts.entrySet().stream()
-            .map(e -> {
-                Category cat = idToCategory.get(e.getKey());
-                String catName = "UNKNOWN";
-                String iconUrl = null;
-                if (cat != null) {
-                    iconUrl = cat.getIconUrl();
-                    String translatedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(cat.getCategoryId()), "name", language);
-                    catName = (translatedName != null && !translatedName.isEmpty()) ? translatedName : cat.getName();
-                }
-                return new GymCategoryCountResponse(
-                        e.getKey(),
-                        catName,
-                        iconUrl,
-                        e.getValue()
-                );
-            })
-            .toList();
+                .map(e -> {
+                    Category cat = idToCategory.get(e.getKey());
+                    String catName = "UNKNOWN";
+                    String iconUrl = null;
+                    if (cat != null) {
+                        iconUrl = cat.getIconUrl();
+                        String translatedName = translationService.getTranslatedValue("CATEGORY",
+                                String.valueOf(cat.getCategoryId()), "name", language);
+                        catName = (translatedName != null && !translatedName.isEmpty()) ? translatedName
+                                : cat.getName();
+                    }
+                    return new GymCategoryCountResponse(
+                            e.getKey(),
+                            catName,
+                            iconUrl,
+                            e.getValue());
+                })
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -916,14 +984,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             }
         }
         java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
-        java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+        java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient
+                .getPackageNamesByIds(packageIds);
         java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
         for (az.fitnest.order.grpc.PackageNameInfo info : packageNames) {
             packageIdToName.put(info.getPackageId(), info.getName());
         }
         return packageIdToGyms.entrySet().stream()
-            .map(e -> new GymSubscriptionCountResponse(e.getKey(), packageIdToName.getOrDefault(e.getKey(), "UNKNOWN"), (long) e.getValue().size()))
-            .toList();
+                .map(e -> new GymSubscriptionCountResponse(e.getKey(),
+                        packageIdToName.getOrDefault(e.getKey(), "UNKNOWN"), (long) e.getValue().size()))
+                .toList();
     }
 
     private Pageable pageable(int page, int size, Sort sort) {
@@ -937,7 +1007,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         double minLat = lat - Math.toDegrees(radiusRatio);
         double maxLat = lat + Math.toDegrees(radiusRatio);
         double deltaLng = Math.toDegrees(Math.asin(Math.sin(radiusRatio) / Math.cos(Math.toRadians(lat))));
-        return new double[]{minLat, maxLat, lng - deltaLng, lng + deltaLng};
+        return new double[] { minLat, maxLat, lng - deltaLng, lng + deltaLng };
     }
 
     public double calculateDistanceRaw(double lat1, double lng1, double lat2, double lng2) {
@@ -948,6 +1018,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         Math.sin(lonDistance / 2.0) * Math.sin(lonDistance / 2.0);
         return 6371.0 * 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
     }
+
     @Transactional(readOnly = true)
     public String getGymQrUrl(Long gymId) {
         String qrCodeUrl = gymRepository.findQrCodeUrlById(gymId);
@@ -958,7 +1029,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional
-    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent) {
+    public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
+            String userAgent) {
         String platform = PlatformUtil.detectPlatform(userAgent);
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
@@ -969,7 +1041,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             throw new IllegalArgumentException("error.invalid_qr_code");
         }
         Gym gym = gymRepository.findById(gymId)
-            .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         boolean allowed = true;
         String reason = null;
@@ -980,7 +1052,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
             String subStatus = subResp.getSubscriptionStatus();
-            if (subStatus == null || subStatus.isEmpty() || subStatus.equalsIgnoreCase("none") || !subStatus.equalsIgnoreCase("active")) {
+            if (subStatus == null || subStatus.isEmpty() || subStatus.equalsIgnoreCase("none")
+                    || !subStatus.equalsIgnoreCase("active")) {
                 allowed = false;
                 reason = "NO_ACTIVE_SUBSCRIPTION";
             } else if (subResp.getRemainingLimit() <= 0) {
@@ -991,7 +1064,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 var matchedSub = gym.getSubscriptions() != null ? gym.getSubscriptions().stream()
                         .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId))
                         .findFirst() : java.util.Optional.<az.fitnest.catalog.model.entity.GymSubscription>empty();
-                
+
                 if (matchedSub.isEmpty()) {
                     allowed = false;
                     reason = "GYM_NOT_SUPPORTED";
@@ -1018,7 +1091,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 reason = "OUT_OF_WORKING_HOURS";
             } else {
                 Address address = gym.getAddress();
-                if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null && lng != null) {
+                if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null
+                        && lng != null) {
                     double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
                     if (distance > 0.2) {
                         allowed = false;
@@ -1043,14 +1117,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         GymEntranceHistory history = GymEntranceHistory.builder()
-            .userId(userId)
-            .gymId(gymId)
-            .scanDate(LocalDateTime.now(java.time.ZoneId.of("Asia/Baku")))
-            .status(status)
-            .reason(reason)
-            .platform(platform)
-            .amount(amount)
-            .build();
+                .userId(userId)
+                .gymId(gymId)
+                .scanDate(LocalDateTime.now(java.time.ZoneId.of("Asia/Baku")))
+                .status(status)
+                .reason(reason)
+                .platform(platform)
+                .amount(amount)
+                .build();
         gymEntranceHistoryRepository.save(history);
 
         String userLanguage = getUserLanguage(userId);
@@ -1059,14 +1133,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String gymAddress = addr != null ? addr.getAddressText() : null;
 
         return GymEntranceScanResponse.builder()
-            .gymName(allowed ? localizedName : null)
-            .gymAddress(allowed ? gymAddress : null)
-            .enterDate(allowed ? java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku")).toString() : null)
-            .enterHour(allowed ? java.time.LocalTime.now(java.time.ZoneId.of("Asia/Baku")).withSecond(0).withNano(0).toString() : null)
-            .isAllowed(allowed)
-            .status(status)
-            .reason(reason)
-            .build();
+                .gymName(allowed ? localizedName : null)
+                .gymAddress(allowed ? gymAddress : null)
+                .enterDate(allowed ? java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku")).toString() : null)
+                .enterHour(allowed
+                        ? java.time.LocalTime.now(java.time.ZoneId.of("Asia/Baku")).withSecond(0).withNano(0).toString()
+                        : null)
+                .isAllowed(allowed)
+                .status(status)
+                .reason(reason)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -1090,33 +1166,37 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 firstName = "User";
                 lastName = String.valueOf(h.getUserId());
             }
-            String formattedDate = h.getScanDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            String formattedDate = h.getScanDate()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
             String displayStatus = "Uğursuz";
             if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
                 displayStatus = "Uğurlu";
             }
             return GymEntranceHistoryAdminResponse.builder()
-                .id(h.getId())
-                .userId(h.getUserId())
-                .firstName(firstName)
-                .lastName(lastName)
-                .phone(phone)
-                .scanDateTime(formattedDate)
-                .status(displayStatus)
-                .reason(h.getReason())
-                .amount(h.getAmount() != null ? h.getAmount() : 0.0)
-                .build();
+                    .id(h.getId())
+                    .userId(h.getUserId())
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .phone(phone)
+                    .scanDateTime(formattedDate)
+                    .status(displayStatus)
+                    .reason(h.getReason())
+                    .amount(h.getAmount() != null ? h.getAmount() : 0.0)
+                    .build();
         }).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String statusFilter, String sort, int page, int pageSize) {
+    public az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId,
+            java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String statusFilter, String sort,
+            int page, int pageSize) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
         List<GymEntranceHistory> historyList;
         if (startDate != null && endDate != null) {
-            historyList = gymEntranceHistoryRepository.findByGymIdAndScanDateBetweenOrderByScanDateDesc(gymId, startDate, endDate);
+            historyList = gymEntranceHistoryRepository.findByGymIdAndScanDateBetweenOrderByScanDateDesc(gymId,
+                    startDate, endDate);
         } else {
             historyList = gymEntranceHistoryRepository.findByGymIdOrderByScanDateDesc(gymId);
         }
@@ -1138,10 +1218,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         java.util.stream.Stream<GymEntranceHistory> stream = historyList.stream();
         if (statusFilter != null && !statusFilter.isBlank()) {
-            if ("SUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğurlu".equalsIgnoreCase(statusFilter) || "ELIGIBLE".equalsIgnoreCase(statusFilter)) {
-                stream = stream.filter(h -> "ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus()));
-            } else if ("UNSUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğursuz".equalsIgnoreCase(statusFilter) || "Xəta".equalsIgnoreCase(statusFilter)) {
-                stream = stream.filter(h -> "UNSUCCESSFUL".equalsIgnoreCase(h.getStatus()) || "Uğursuz".equalsIgnoreCase(h.getStatus()) || "Xəta".equalsIgnoreCase(h.getStatus()));
+            if ("SUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğurlu".equalsIgnoreCase(statusFilter)
+                    || "ELIGIBLE".equalsIgnoreCase(statusFilter)) {
+                stream = stream.filter(
+                        h -> "ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus()));
+            } else if ("UNSUCCESSFUL".equalsIgnoreCase(statusFilter) || "Uğursuz".equalsIgnoreCase(statusFilter)
+                    || "Xəta".equalsIgnoreCase(statusFilter)) {
+                stream = stream.filter(h -> "UNSUCCESSFUL".equalsIgnoreCase(h.getStatus())
+                        || "Uğursuz".equalsIgnoreCase(h.getStatus()) || "Xəta".equalsIgnoreCase(h.getStatus()));
             }
         }
 
@@ -1150,23 +1234,29 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (sort != null) {
             switch (sort) {
                 case "date_asc":
-                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getScanDate, Comparator.nullsLast(Comparator.naturalOrder())));
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getScanDate,
+                            Comparator.nullsLast(Comparator.naturalOrder())));
                     break;
                 case "date_desc":
-                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getScanDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                    filteredList.sort(Comparator
+                            .comparing(GymEntranceHistory::getScanDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                            .reversed());
                     break;
                 case "status_asc":
-                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER));
+                    filteredList
+                            .sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER));
                     break;
                 case "status_desc":
-                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER).reversed());
+                    filteredList.sort(Comparator.comparing(GymEntranceHistory::getStatus, String.CASE_INSENSITIVE_ORDER)
+                            .reversed());
                     break;
             }
         }
 
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(filteredList.size(), from + pageSize);
-        List<GymEntranceHistory> pageItems = from >= filteredList.size() ? new java.util.ArrayList<>() : new java.util.ArrayList<>(filteredList.subList(from, to));
+        List<GymEntranceHistory> pageItems = from >= filteredList.size() ? new java.util.ArrayList<>()
+                : new java.util.ArrayList<>(filteredList.subList(from, to));
 
         List<GymEntranceHistoryAdminResponse> paginatedDtos = pageItems.stream().map(h -> {
             String firstName = "";
@@ -1183,25 +1273,27 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 firstName = "User";
                 lastName = String.valueOf(h.getUserId());
             }
-            String formattedDate = h.getScanDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            String formattedDate = h.getScanDate()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
             String displayStatus = "Uğursuz";
             if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
                 displayStatus = "Uğurlu";
             }
             return GymEntranceHistoryAdminResponse.builder()
-                .id(h.getId())
-                .userId(h.getUserId())
-                .firstName(firstName)
-                .lastName(lastName)
-                .phone(phone)
-                .scanDateTime(formattedDate)
-                .status(displayStatus)
-                .reason(h.getReason())
-                .amount(h.getAmount() != null ? h.getAmount() : 0.0)
-                .build();
+                    .id(h.getId())
+                    .userId(h.getUserId())
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .phone(phone)
+                    .scanDateTime(formattedDate)
+                    .status(displayStatus)
+                    .reason(h.getReason())
+                    .amount(h.getAmount() != null ? h.getAmount() : 0.0)
+                    .build();
         }).collect(Collectors.toList());
 
-        PaginatedResponse<GymEntranceHistoryAdminResponse> paginatedResponse = PaginatedResponse.<GymEntranceHistoryAdminResponse>builder()
+        PaginatedResponse<GymEntranceHistoryAdminResponse> paginatedResponse = PaginatedResponse
+                .<GymEntranceHistoryAdminResponse>builder()
                 .items(paginatedDtos)
                 .total((long) filteredList.size())
                 .page(page)
@@ -1209,11 +1301,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .build();
 
         return az.fitnest.catalog.dto.response.GymAnalyticsResponse.builder()
-            .totalProfit(totalProfit)
-            .successfulScans(successfulScans)
-            .failedScans(failedScans)
-            .history(paginatedResponse)
-            .build();
+                .totalProfit(totalProfit)
+                .successfulScans(successfulScans)
+                .failedScans(failedScans)
+                .history(paginatedResponse)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -1229,7 +1321,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         String status = subResp.getSubscriptionStatus();
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none") || !status.equalsIgnoreCase("active")) {
+        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")
+                || !status.equalsIgnoreCase("active")) {
             throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
@@ -1250,34 +1343,37 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku"));
         java.time.DayOfWeek day = now.getDayOfWeek();
-        az.fitnest.catalog.model.enums.GymWorkHourPeriod period = az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(day.name());
+        az.fitnest.catalog.model.enums.GymWorkHourPeriod period = az.fitnest.catalog.model.enums.GymWorkHourPeriod
+                .valueOf(day.name());
 
         java.time.LocalTime currentTime = now.toLocalTime();
 
         boolean allowedInGeneral = gym.getGeneralWorkHours() != null && gym.getGeneralWorkHours().stream()
                 .filter(h -> h.getPeriod() == period)
                 .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                                (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+                        (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
 
-        if (allowedInGeneral) return true;
+        if (allowedInGeneral)
+            return true;
 
         if ("MALE".equalsIgnoreCase(gender)) {
             return gym.getWorkHoursMan() != null && gym.getWorkHoursMan().stream()
                     .filter(h -> h.getPeriod() == period)
                     .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                                    (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+                            (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
         } else if ("FEMALE".equalsIgnoreCase(gender)) {
             return gym.getWorkHoursWoman() != null && gym.getWorkHoursWoman().stream()
                     .filter(h -> h.getPeriod() == period)
                     .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                                    (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+                            (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
         }
 
         return false;
     }
 
     private Long extractGymIdFromQr(String qrCodeValue) {
-        if (qrCodeValue == null || qrCodeValue.isBlank()) return null;
+        if (qrCodeValue == null || qrCodeValue.isBlank())
+            return null;
         try {
             return Long.parseLong(qrCodeValue.trim());
         } catch (NumberFormatException e) {
@@ -1293,6 +1389,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             }
         }
     }
+
     @Transactional(readOnly = true)
     public GymTypeCountResponse getGymCountByGender(String gender) {
         List<Gym> gyms = gymRepository.findAll();
@@ -1302,10 +1399,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
         switch (gender.toLowerCase()) {
             case "female":
-                count = gyms.stream().filter(g -> g.getWorkHoursWoman() != null && !g.getWorkHoursWoman().isEmpty()).count();
+                count = gyms.stream().filter(g -> g.getWorkHoursWoman() != null && !g.getWorkHoursWoman().isEmpty())
+                        .count();
                 break;
             case "male":
-                count = gyms.stream().filter(g -> g.getWorkHoursMan() != null && !g.getWorkHoursMan().isEmpty()).count();
+                count = gyms.stream().filter(g -> g.getWorkHoursMan() != null && !g.getWorkHoursMan().isEmpty())
+                        .count();
                 break;
             default:
                 throw new BadRequestException("INVALID_GENDER", "error.invalid_gender");
@@ -1313,23 +1412,29 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return new GymTypeCountResponse(gender, count);
     }
 
-    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
-        if (address == null) return null;
-        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
+    private String getLocalizedAddressField(Long entityId, String entityType,
+            az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
+        if (address == null)
+            return null;
+        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName,
+                userLanguage);
         if (localized == null || localized.isEmpty()) {
             try {
                 java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
                 f.setAccessible(true);
                 Object v = f.get(address);
-                if (v != null) return v.toString();
-            } catch (Exception ignored) {}
+                if (v != null)
+                    return v.toString();
+            } catch (Exception ignored) {
+            }
             return null;
         }
         return localized;
     }
 
     private String getLocalizedGymName(Gym gym, String userLanguage) {
-        if (gym == null) return null;
+        if (gym == null)
+            return null;
         String translated = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
         return (translated != null && !translated.isEmpty()) ? translated : gym.getName();
     }
@@ -1339,7 +1444,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymDetailsAdmin(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        
+
         Long categoryId = null;
         String categoryName = null;
         if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
@@ -1349,13 +1454,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 categoryName = cat.getName();
             }
         }
-        
+
         List<az.fitnest.catalog.dto.response.RoomImageDto> roomDtos = new java.util.ArrayList<>();
         if (gym.getRooms() != null) {
             for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
-                String imgUrl = room.getImages() != null && !room.getImages().isEmpty() 
-                    ? room.getImages().stream().findFirst().map(RoomImage::getPictureUrl).orElse(null)
-                    : null;
+                String imgUrl = room.getImages() != null && !room.getImages().isEmpty()
+                        ? room.getImages().stream().findFirst().map(RoomImage::getPictureUrl).orElse(null)
+                        : null;
                 roomDtos.add(az.fitnest.catalog.dto.response.RoomImageDto.builder()
                         .id(room.getId())
                         .name(room.getName())
@@ -1363,7 +1468,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .build());
             }
         }
-        
+
         String city = null;
         String addressText = null;
         Double lat = null;
@@ -1374,7 +1479,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             lat = gym.getAddress().getLatitude();
             lng = gym.getAddress().getLongitude();
         }
-        
+
         String created = "";
         if (gym.getCreatedDate() != null) {
             created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
@@ -1406,45 +1511,51 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         List<az.fitnest.catalog.dto.response.GymPlanItemAdminResponse> subscriptions = new java.util.ArrayList<>();
-        
+
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
             try {
                 List<Long> packageIds = gym.getSubscriptions().stream()
-                    .map(sub -> sub.getPackageId())
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-                
-                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                        .map(sub -> sub.getPackageId())
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
+                        .getPackageNamesByIds(packageIds);
                 java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                        az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                        p -> p
-                    ));
-                
+                        .collect(java.util.stream.Collectors.toMap(
+                                az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                                p -> p));
+
                 subscriptions = gym.getSubscriptions().stream()
-                    .filter(sub -> sub.getPackageId() != null)
-                    .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
-                    .map(sub -> {
-                        az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                        String localizedName = translationService.getTranslatedValue("GYMSUBSCRIPTION", sub.getPackageId().toString(), "name", "az");
-                        if (localizedName == null || localizedName.isEmpty()) localizedName = info.getName();
+                        .filter(sub -> sub.getPackageId() != null)
+                        .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
+                        .map(sub -> {
+                            az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                            String localizedName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                                    sub.getPackageId().toString(), "name", "az");
+                            if (localizedName == null || localizedName.isEmpty())
+                                localizedName = info.getName();
 
-                        List<az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse> benefits = sub.getSupportedServices().stream()
-                            .map(b -> {
-                                String localizedBenefit = translationService.getTranslatedValue("SUPPORTEDSERVICE", b.getId().toString(), "name", "az");
-                                return az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse.builder()
-                                    .id(b.getId())
-                                    .name(localizedBenefit != null && !localizedBenefit.isEmpty() ? localizedBenefit : b.getName())
+                            List<az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse> benefits = sub
+                                    .getSupportedServices().stream()
+                                    .map(b -> {
+                                        String localizedBenefit = translationService.getTranslatedValue(
+                                                "SUPPORTEDSERVICE", b.getId().toString(), "name", "az");
+                                        return az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse.builder()
+                                                .id(b.getId())
+                                                .name(localizedBenefit != null && !localizedBenefit.isEmpty()
+                                                        ? localizedBenefit
+                                                        : b.getName())
+                                                .build();
+                                    }).collect(java.util.stream.Collectors.toList());
+
+                            return az.fitnest.catalog.dto.response.GymPlanItemAdminResponse.builder()
+                                    .packageId(sub.getPackageId())
+                                    .packageName(localizedName)
+                                    .dailyPrice(sub.getDailyPrice())
+                                    .benefits(benefits)
                                     .build();
-                            }).collect(java.util.stream.Collectors.toList());
-
-                        return az.fitnest.catalog.dto.response.GymPlanItemAdminResponse.builder()
-                            .packageId(sub.getPackageId())
-                            .packageName(localizedName)
-                            .dailyPrice(sub.getDailyPrice())
-                            .benefits(benefits)
-                            .build();
-                    }).collect(java.util.stream.Collectors.toList());
+                        }).collect(java.util.stream.Collectors.toList());
             } catch (Exception e) {
                 log.error("Error fetching package names for gym: {}", gymId, e);
             }
@@ -1462,7 +1573,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
-        
+
         return gymAdminRepository.findByGymId(gymId).stream()
                 .map(a -> GymAdminResponse.builder()
                         .id(a.getId())

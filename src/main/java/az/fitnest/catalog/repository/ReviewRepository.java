@@ -18,6 +18,11 @@ public interface ReviewRepository
 
     public Page<Review> findByStatus(az.fitnest.catalog.model.enums.ReviewStatus status, Pageable pageable);
 
+    public Page<Review> findByGymIdAndStatus(Long gymId, az.fitnest.catalog.model.enums.ReviewStatus status, Pageable pageable);
+
+    @Query("SELECT r FROM Review r WHERE r.gymId = :gymId")
+    public Page<Review> findAllByGymId(@Param("gymId") Long gymId, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Gym g SET g.reviewsCount = g.reviewsCount + 1, g.rating = ((g.rating * g.reviewsCount) + :newRating) / CAST((g.reviewsCount + 1) AS double) WHERE g.id = :gymId")
     public void incrementReviewCountAndRating(@Param("gymId") Long gymId, @Param("newRating") Double newRating);

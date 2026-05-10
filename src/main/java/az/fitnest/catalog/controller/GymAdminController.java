@@ -95,6 +95,27 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "İdman zalına aid rəyləri alın", description = "İdman zalı üçün bütün rəylərin siyahısını gətirir. Status üzrə filtrləmə mümkündür.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.GymReviewResponse>> getGymReviews(
+            @PathVariable("id") Long gymId,
+            @RequestParam(required = false) az.fitnest.catalog.model.enums.ReviewStatus status,
+            @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReviewService.getGymReviewsAdmin(gymId, status, page, pageSize, sort));
+    }
+
+    @Operation(summary = "Rəy detallarını alın", description = "Müəyyən bir rəyin detallarını gətirir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/reviews/{reviewId}")
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymReviewResponse> getReviewDetail(@PathVariable Long reviewId) {
+        return ResponseEntity.ok(gymReviewService.getReviewDetail(reviewId));
+    }
+
+
+
     @Operation(summary = "İdman zalını silin", description = "İdman zalını sistemdən silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")

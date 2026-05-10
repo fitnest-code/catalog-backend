@@ -7,10 +7,12 @@ import java.time.LocalDate;
 
 @Builder
 public record GymReviewResponse(
+    Long id,
     String review_id,
     Integer rating,
     String comment,
     GymReviewAuthorResponse author,
-    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "dd/MM/yyyy")
+    String status,
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     LocalDate created_at
 ) {}

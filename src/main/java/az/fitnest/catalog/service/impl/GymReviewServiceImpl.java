@@ -51,6 +51,42 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResponse<GymReviewResponse> getGymReviewsAdmin(Long gymId, az.fitnest.catalog.model.enums.ReviewStatus status, int page, int pageSize, String sort) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        
+        Page<Review> reviewPage;
+        Pageable pageable = pageable(page, pageSize, sortForReviews(sort));
+        
+        if (status == null) {
+            reviewPage = reviewRepository.findAllByGymId(gymId, pageable);
+        } else {
+            reviewPage = reviewRepository.findByGymIdAndStatus(gymId, status, pageable);
+        }
+
+        List<GymReviewResponse> items = reviewPage.getContent().stream()
+                .map(this::mapReviewToDto)
+                .collect(Collectors.toList());
+                
+        return PaginatedResponse.<GymReviewResponse>builder()
+                .items(items)
+                .total(reviewPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GymReviewResponse getReviewDetail(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        return mapReviewToDto(review);
+    }
+
     @Transactional
     @CacheEvict(cacheNames = "gyms", key = "#gymId")
     public void addReview(Long userId, Long gymId, ReviewRequest request) {
@@ -132,16 +168,18 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     private GymReviewResponse toGymReviewDto(Review r) {
-        return GymReviewResponse.builder()
-                .review_id(r.getId() != null ? r.getId().toString() : null)
-                .rating(r.getRating())
-                .comment(r.getComment())
-                .created_at(r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null)
-                .author(GymReviewAuthorResponse.builder()
+        return new GymReviewResponse(
+                r.getId(),
+                r.getId() != null ? r.getId().toString() : null,
+                r.getRating(),
+                r.getComment(),
+                GymReviewAuthorResponse.builder()
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
-                        .build())
-                .build();
+                        .build(),
+                r.getStatus() != null ? r.getStatus().name() : null,
+                r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null
+        );
     }
 
     private Pageable pageable(int page, int size, Sort sort) {
@@ -153,11 +191,17 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     private Sort sortForReviews(String sort) {
         if ("newest".equalsIgnoreCase(sort)) {
             return Sort.by(Sort.Direction.DESC, "createdDate");
+        } else if ("oldest".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.ASC, "createdDate");
         } else if ("highest".equalsIgnoreCase(sort)) {
             return Sort.by(Sort.Direction.DESC, "rating");
         } else if ("lowest".equalsIgnoreCase(sort)) {
             return Sort.by(Sort.Direction.ASC, "rating");
+        } else if ("gym_asc".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.ASC, "gym.name");
+        } else if ("gym_desc".equalsIgnoreCase(sort)) {
+            return Sort.by(Sort.Direction.DESC, "gym.name");
         }
-        return Sort.unsorted();
+        return Sort.by(Sort.Direction.DESC, "createdDate");
     }
 }
