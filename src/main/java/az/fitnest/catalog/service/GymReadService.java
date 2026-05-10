@@ -32,6 +32,7 @@ public interface GymReadService {
     List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId);
     az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String status, String sort, int page, int pageSize);
     az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymInfoAdmin(Long gymId);
+    az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponse getGymSubscriptions(Long gymId);
     GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal);
     GymTypeCountResponse getGymCountByGender(String gender);
 }

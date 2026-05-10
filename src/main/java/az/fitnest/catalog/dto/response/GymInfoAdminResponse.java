@@ -1,8 +1,10 @@
 package az.fitnest.catalog.dto.response;
 
+import az.fitnest.catalog.dto.request.RestDayRequest;
 import lombok.Builder;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import java.util.Set;
 
 @Builder
 public record GymInfoAdminResponse(
@@ -32,6 +34,14 @@ public record GymInfoAdminResponse(
     Double latitude,
     @Schema(description = "Uzunluq")
     Double longitude,
+    @Schema(description = "Work hours")
+    Set<GymWorkHourResponse> generalWorkHours,
+    @Schema(description = "Work hours (Woman)")
+    Set<GymWorkHourResponse> workHoursWoman,
+    @Schema(description = "Work hours (Man)")
+    Set<GymWorkHourResponse> workHoursMan,
+    @Schema(description = "Rest days")
+    Set<RestDayRequest> restDays,
     @Schema(description = "Yaradılma tarixi")
     String createdAt
 ) {}
