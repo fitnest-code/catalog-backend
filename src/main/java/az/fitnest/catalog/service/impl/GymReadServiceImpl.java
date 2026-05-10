@@ -1351,7 +1351,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
                 String imgUrl = null;
                 if (room.getImages() != null && !room.getImages().isEmpty()) {
-                    imgUrl = room.getImages().get(0).getImageUrl();
+                    imgUrl = room.getImages().iterator().next().getPictureUrl();
                 }
                 roomDtos.add(az.fitnest.catalog.dto.response.RoomImageDto.builder()
                         .id(room.getId())
