@@ -1454,6 +1454,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .gymId(gymId)
                 .subscriptions(subscriptions)
                 .build();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<GymAdminResponse> getGymAdmins(Long gymId) {
