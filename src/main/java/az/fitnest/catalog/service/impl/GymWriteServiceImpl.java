@@ -657,10 +657,29 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         
         for (GymAdminCreateRequest adminReq : request.admins()) {
-            identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq));
+            Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
+            gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
         }
         finalizeGymStep7Internal(gymId);
+    }
+
+    @Transactional
+    public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
+        gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, "Admin"));
+    }
+
+    @Transactional
+    public void deleteGymAdmin(Long gymId, Long adminId) {
+        az.fitnest.catalog.model.entity.GymAdmin admin = gymAdminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+        
+        if (!admin.getGym().getId().equals(gymId)) {
+            throw new BadRequestException("ADMIN_GYM_MISMATCH", "error.admin_gym_mismatch");
+        }
+        
+        gymAdminRepository.delete(admin);
     }
 
     @Transactional

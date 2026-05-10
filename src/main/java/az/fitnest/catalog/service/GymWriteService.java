@@ -37,4 +37,6 @@ public interface GymWriteService {
     void createGymStep7(Long gymId, GymCreateStep7Request request);
     GeocodingResponse reverseGeocode(Double lat, Double lng);
     void toggleGymStatus(Long gymId, boolean enabled);
+    void addGymAdmin(Long gymId, GymAdminCreateRequest request);
+    void deleteGymAdmin(Long gymId, Long adminId);
 }

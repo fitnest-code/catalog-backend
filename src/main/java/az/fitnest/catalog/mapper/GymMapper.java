@@ -71,13 +71,15 @@ public final class GymMapper {
         });
     }
 
-    public static GymAdmin toAdminEntity(Gym gym, GymAdminCreateRequest adminReq) {
+    public static GymAdmin toAdminEntity(Gym gym, GymAdminCreateRequest adminReq, Long userId, String role) {
         GymAdmin admin = new GymAdmin();
         admin.setGym(gym);
+        admin.setUserId(userId);
         admin.setName(adminReq.name());
         admin.setSurname(adminReq.surname());
         admin.setPhoneNumber(az.fitnest.catalog.util.PhoneUtil.normalize(adminReq.phoneNumber()));
         admin.setEmail(adminReq.email());
+        admin.setRole(role);
         return admin;
     }
 

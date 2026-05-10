@@ -1454,5 +1454,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .gymId(gymId)
                 .subscriptions(subscriptions)
                 .build();
+    @Override
+    @Transactional(readOnly = true)
+    public List<GymAdminResponse> getGymAdmins(Long gymId) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        
+        return gymAdminRepository.findByGymId(gymId).stream()
+                .map(a -> GymAdminResponse.builder()
+                        .id(a.getId())
+                        .userId(a.getUserId())
+                        .name(a.getName())
+                        .surname(a.getSurname())
+                        .phone(a.getPhoneNumber())
+                        .email(a.getEmail())
+                        .role(a.getRole())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

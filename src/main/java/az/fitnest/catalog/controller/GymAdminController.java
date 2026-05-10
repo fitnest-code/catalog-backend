@@ -432,4 +432,27 @@ public class GymAdminController {
         gymWriteService.toggleGymStatus(id, enabled);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "İdman zalı adminlərini alın", description = "İdman zalını idarə edən adminlərin siyahısını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/admins")
+    public ResponseEntity<List<az.fitnest.catalog.dto.response.GymAdminResponse>> getGymAdmins(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymAdmins(gymId));
+    }
+
+    @Operation(summary = "İdman zalına yeni admin əlavə edin", description = "İdman zalına yeni admin əlavə edir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/admins")
+    public ResponseEntity<Void> addGymAdmin(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymAdminCreateRequest request) {
+        gymWriteService.addGymAdmin(gymId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "İdman zalı adminini silin", description = "İdman zalına aid admini silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/admins/{adminId}")
+    public ResponseEntity<Void> deleteGymAdmin(@PathVariable("id") Long gymId, @PathVariable("adminId") Long adminId) {
+        gymWriteService.deleteGymAdmin(gymId, adminId);
+        return ResponseEntity.noContent().build();
+    }
 }

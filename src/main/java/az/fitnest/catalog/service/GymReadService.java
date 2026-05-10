@@ -35,4 +35,5 @@ public interface GymReadService {
     az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponse getGymSubscriptions(Long gymId);
     GymEntranceEligibilityResponse checkGymEntranceEligibility(Object principal);
     GymTypeCountResponse getGymCountByGender(String gender);
+    List<az.fitnest.catalog.dto.response.GymAdminResponse> getGymAdmins(Long gymId);
 }
