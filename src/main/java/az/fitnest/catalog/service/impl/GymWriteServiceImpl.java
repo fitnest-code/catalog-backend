@@ -618,7 +618,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
+    @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void updateGymSubscriptions(Long gymId, GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         updateGymSubscriptionsInternal(gym, request);
