@@ -1387,7 +1387,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 ? new java.util.HashSet<>(GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan(), "az"))
                 : null;
         java.util.Set<az.fitnest.catalog.dto.request.RestDayRequest> restDays = gym.getRestDays() != null
-                ? gym.getRestDays().stream().map(d -> new az.fitnest.catalog.dto.request.RestDayRequest(d.getPeriod().name())).collect(java.util.stream.Collectors.toSet())
+                ? gym.getRestDays().stream().map(d -> new az.fitnest.catalog.dto.request.RestDayRequest(d.name())).collect(java.util.stream.Collectors.toSet())
                 : null;
         
         return az.fitnest.catalog.dto.response.GymInfoAdminResponse.builder()
@@ -1437,13 +1437,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .map(sub -> {
                     az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                     String localizedName = translationService.getTranslatedValue("PACKAGE", sub.getPackageId().toString(), "name", "az");
-                    if (localizedName == null || localizedName.isEmpty()) localizedName = info.getPackageName();
+                    if (localizedName == null || localizedName.isEmpty()) localizedName = info.getName();
 
-                    List<GymPlanBenefitResponse> benefits = sub.getBenefits().stream()
+                    List<GymPlanBenefitResponse> benefits = sub.getSupportedServices().stream()
                         .map(b -> {
                             String localizedBenefit = translationService.getTranslatedValue("BENEFIT", b.getId().toString(), "description", "az");
                             return GymPlanBenefitResponse.builder()
-                                .description(localizedBenefit != null ? localizedBenefit : b.getDescription())
+                                .description(localizedBenefit != null ? localizedBenefit : b.getName())
                                 .build();
                         }).collect(java.util.stream.Collectors.toList());
 
