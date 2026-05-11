@@ -17,7 +17,6 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
 public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCodeService {
 
     private final GymRepository gymRepository;
@@ -26,11 +25,9 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
     @Async("qrcodeExecutor")
     @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void generateAndSaveQrCode(Long gymId) {
-        log.info("Starting QR code generation for gymId: {}", gymId);
 
         gymRepository.findById(gymId).ifPresent(gym -> {
             if (gym.getQrCodeToken() != null && gym.getQrCodeUrl() != null) {
-                log.info("QR code already exists for gymId: {}, skipping generation", gymId);
                 return;
             }
 
@@ -65,10 +62,8 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
                     gymRepository.save(currentGym);
                 }
 
-                log.info("Successfully generated and saved QR code for gymId: {}", gymId);
 
             } catch (Exception e) {
-                log.error("Failed to generate QR code for gymId: {}. Error: {}", gymId, e.getMessage(), e);
 
                 gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");
                 if (gym.getQrCodeToken() == null) {

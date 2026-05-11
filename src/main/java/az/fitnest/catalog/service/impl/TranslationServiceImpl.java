@@ -19,6 +19,7 @@ public class TranslationServiceImpl implements TranslationService {
     private final TranslationRepository translationRepository;
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "translations", key = "#entityType + '_' + #entityId + '_' + #fieldName + '_' + #languageCode")
     public String getTranslatedValue(String entityType, String entityId, String fieldName, String languageCode) {
         if (languageCode == null || languageCode.equalsIgnoreCase("AZ")) {
             return null;
@@ -35,6 +36,7 @@ public class TranslationServiceImpl implements TranslationService {
     }
 
     @Override
+    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public Translation createTranslation(CreateTranslationRequest request) {
         String normalizedEntityType = request.entityType().toUpperCase();
         Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
@@ -56,6 +58,7 @@ public class TranslationServiceImpl implements TranslationService {
     }
 
     @Override
+    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public void deleteTranslation(Long id) {
         if (!translationRepository.existsById(id)) {
             throw new ResourceNotFoundException("TRANSLATION_NOT_FOUND", "error.resource_not_found");

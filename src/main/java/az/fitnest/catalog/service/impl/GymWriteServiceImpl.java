@@ -15,7 +15,6 @@ import az.fitnest.catalog.service.*;
 import az.fitnest.catalog.util.PhoneUtil;
 import az.fitnest.catalog.util.UserContext;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -37,8 +36,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class GymWriteServiceImpl implements GymWriteService {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GymWriteServiceImpl.class);
-
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;
     private final CategoryRepository categoryRepository;
@@ -451,7 +448,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         try {
             filesToDelete.addAll(gymRepository.findAllGymRelatedFileUrls());
         } catch (Exception e) {
-            log.error("Failed to gather URLs for mass deletion: {}", e.getMessage());
+            // URL gathering failed
         }
 
         gymAdminRepository.deleteAllInBatch();

@@ -8,5 +8,6 @@ import java.util.List;
 public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     Optional<GymAdmin> findFirstByGymId(Long gymId);
     List<GymAdmin> findByGymId(Long gymId);
+    List<GymAdmin> findAllByGymIdIn(List<Long> gymIds);
     void deleteAllByGymId(Long gymId);
 }
