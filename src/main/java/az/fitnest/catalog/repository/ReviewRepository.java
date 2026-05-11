@@ -31,7 +31,11 @@ public interface ReviewRepository
 
     @Modifying
     @Query("UPDATE Gym g SET g.reviewsCount = COALESCE(g.reviewsCount, 0) + 1, " +
-           "g.rating = ((COALESCE(g.rating, 0.0) * COALESCE(g.reviewsCount, 0)) + :newRating) / CAST((COALESCE(g.reviewsCount, 0) + 1) AS double) " +
+           "g.rating = ((COALESCE(g.rating, 0.0) * COALESCE(g.reviewsCount, 0)) + :newRating) / (COALESCE(g.reviewsCount, 0) + 1.0) " +
            "WHERE g.id = :gymId")
     public void incrementReviewCountAndRating(@Param("gymId") Long gymId, @Param("newRating") Double newRating);
+
+    @Modifying
+    @Query("UPDATE Review r SET r.status = :status WHERE r.id = :reviewId")
+    public void updateStatus(@Param("reviewId") Long reviewId, @Param("status") az.fitnest.catalog.model.enums.ReviewStatus status);
 }
