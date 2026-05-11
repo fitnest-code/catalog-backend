@@ -8,6 +8,7 @@ import az.fitnest.catalog.dto.response.StoreDetailResponse;
 import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,8 +44,11 @@ public class StoreAdminController {
     @Operation(summary = "Yeni mağaza - Addım 1", description = "Mağazanın adını və üz qabığı şəklini qəbul edir, DRAFT statusu ilə yaradır.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/step1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Long>> createStoreStep1(
-            @RequestParam("name")  String name,
+    public ResponseEntity<Map<String, Long>> createMarketStep1(
+            @Parameter(description = "Mağazanın adı", required = true, example = "FitLife Market")
+            @RequestParam("name") String name,
+
+            @Parameter(description = "Mağazanın üz qabığı şəkli (JPEG, PNG)", required = true)
             @RequestParam("photo") MultipartFile photo) {
 
         Long storeId = storeAdminService.createMarketStep1(name, photo);
@@ -146,8 +150,8 @@ public class StoreAdminController {
                     + "name_desc - Ad : Z-A, "
                     + "address_asc - Şəhər + Ünvan (A-Z), "
                     + "newest - Yeni əlavə edilmiş (son 1 həftə)", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
-                            "name_asc", "name_desc", "address_asc", "newest"
-                    })) @RequestParam(required = false) String sort,
+                    "name_asc", "name_desc", "address_asc", "newest"
+            })) @RequestParam(required = false) String sort,
             @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1") @RequestParam(defaultValue = "1") int page,
             @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10") @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(storeAdminService.getAllStoresAdmin(query, sort, page, pageSize));
