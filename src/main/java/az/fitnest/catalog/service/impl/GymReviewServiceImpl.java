@@ -82,7 +82,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#gymId")
+    @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void addReview(Long userId, Long gymId, ReviewRequest request) {
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
@@ -99,7 +99,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "gyms", key = "#result")
+    @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public Long approveReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
@@ -112,6 +112,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void rejectReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
@@ -140,16 +141,13 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
         try {
             if (r.getUserId() != null) {
                 user = userServiceGrpcClient.getUserById(r.getUserId());
-                System.out.println("[DEBUG] gRPC user response for userId=" + r.getUserId() + ": " + user);
                 if (user != null) {
                     fullName = user.getFirstName() + " " + user.getLastName();
                     avatarUrl = user.getProfileImageUrl();
-                    System.out.println("[DEBUG] fullName: " + fullName + ", avatarUrl: " + avatarUrl);
                 }
             }
         } catch (Exception e) {
             fullName = "User " + r.getUserId();
-            System.out.println("[DEBUG] Exception fetching user for userId=" + r.getUserId() + ": " + e.getMessage());
         }
         return GymMapper.toReviewDto(r, fullName, avatarUrl);
     }

@@ -46,6 +46,9 @@ public class Review
     }
 
     public Long getGymId() {
+        if (this.gym != null) {
+            return this.gym.getId();
+        }
         return this.gymId;
     }
 

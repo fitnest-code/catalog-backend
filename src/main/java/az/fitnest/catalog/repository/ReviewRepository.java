@@ -30,6 +30,8 @@ public interface ReviewRepository
     public Page<Review> findAllByGymId(@Param("gymId") Long gymId, Pageable pageable);
 
     @Modifying
-    @Query("UPDATE Gym g SET g.reviewsCount = g.reviewsCount + 1, g.rating = ((g.rating * g.reviewsCount) + :newRating) / CAST((g.reviewsCount + 1) AS double) WHERE g.id = :gymId")
+    @Query("UPDATE Gym g SET g.reviewsCount = COALESCE(g.reviewsCount, 0) + 1, " +
+           "g.rating = ((COALESCE(g.rating, 0.0) * COALESCE(g.reviewsCount, 0)) + :newRating) / CAST((COALESCE(g.reviewsCount, 0) + 1) AS double) " +
+           "WHERE g.id = :gymId")
     public void incrementReviewCountAndRating(@Param("gymId") Long gymId, @Param("newRating") Double newRating);
 }
