@@ -10,8 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository
         extends JpaRepository<Review, Long> {
-    @Query(value = "SELECT r FROM Gym g JOIN g.reviews r WHERE g.id = :gymId AND r.status = 'ACCEPTED'")
-    public Page<Review> findByGymId(@Param(value = "gymId") Long var1, Pageable var2);
+    @Query("SELECT r FROM Review r WHERE r.gym.id = :gymId AND r.status = 'ACCEPTED'")
+    public Page<Review> findByGymId(@Param("gymId") Long gymId, Pageable pageable);
 
     @Query("SELECT new map(AVG(r.rating) as avgRating, COUNT(r) as totalCount) FROM Gym g JOIN g.reviews r WHERE g.id = :gymId AND r.status = 'ACCEPTED'")
     public java.util.Map<String, Object> getRatingAndCountByGymId(@Param("gymId") Long gymId);
