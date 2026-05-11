@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
@@ -101,6 +102,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public Long approveReview(Long reviewId) {
+        log.info("Approving review: {}", reviewId);
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
         
@@ -109,19 +111,23 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
             
             // Only update gym rating if the review has a rating
             if (review.getRating() != null) {
+                log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
                 reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
             }
         }
+        log.info("Successfully approved review: {}", reviewId);
         return review.getGymId();
     }
 
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void rejectReview(Long reviewId) {
+        log.info("Rejecting review: {}", reviewId);
         if (!reviewRepository.existsById(reviewId)) {
             throw new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found");
         }
         reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+        log.info("Successfully rejected review: {}", reviewId);
     }
 
     @Transactional(readOnly = true)

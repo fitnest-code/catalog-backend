@@ -58,10 +58,10 @@ public interface GymRepository
             countQuery = "SELECT count(*) FROM gyms g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%'))) AND EXISTS (SELECT 1 FROM gym_categories gc WHERE gc.gym_id = g.id AND gc.category_id = :categoryId)", nativeQuery = true)
     public org.springframework.data.domain.Page<Gym> searchClosestWithCategory(@org.springframework.data.repository.query.Param("q") String q, @org.springframework.data.repository.query.Param("categoryId") Long categoryId, @org.springframework.data.repository.query.Param("userLat") Double userLat, @org.springframework.data.repository.query.Param("userLng") Double userLng, org.springframework.data.domain.Pageable pageable);
 
-    @Query("SELECT DISTINCT g FROM Gym g LEFT JOIN g.categories c WHERE " +
+    @Query("SELECT g FROM Gym g WHERE " +
            "LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%'))")
+           "EXISTS (SELECT 1 FROM g.categories c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%')))")
     org.springframework.data.domain.Page<Gym> searchByNameAddressCategory(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
 
     @Modifying
