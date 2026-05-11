@@ -1,11 +1,10 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.request.AddDiscountRequest;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.dto.response.StoreDetailResponse;
 import az.fitnest.catalog.dto.request.StoreRequest;
+import az.fitnest.catalog.dto.request.StoreStep2Request;
+import az.fitnest.catalog.dto.request.StoreStep3Request;
+import az.fitnest.catalog.dto.response.StoreDetailResponse;
 import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,8 +16,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/stores")
@@ -30,11 +40,37 @@ public class StoreAdminController {
     private final StoreService storeService;
     private final StoreAdminService storeAdminService;
 
-    @Operation(summary = "Yeni mağaza yaradın", description = "Sistemə yeni mağaza əlavə edir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "Yeni mağaza - Addım 1", description = "Mağazanın adını və üz qabığı şəklini qəbul edir, DRAFT statusu ilə yaradır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
-    public ResponseEntity<StoreDetailResponse> createStore(@Valid @RequestBody StoreRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(storeService.createStore(request));
+    @PostMapping(value = "/step1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Long>> createStoreStep1(
+            @RequestParam("name")  String name,
+            @RequestParam("photo") MultipartFile photo) {
+
+        Long storeId = storeAdminService.createMarketStep1(name, photo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", storeId));
+    }
+
+    @Operation(summary = "Yeni mağaza - Addım 2", description = "Mağazanın məkan, əlaqə və iş saatı məlumatlarını yeniləyir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/step2", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> createStoreStep2(
+            @PathVariable Long id,
+            @Valid @RequestBody StoreStep2Request request) {
+
+        storeAdminService.createMarketStep2(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Yeni mağaza - Addım 3", description = "Mağazanın paket endirim faizlərini təyin edir və statusunu ACTIVE edir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/{id}/step3", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> createStoreStep3(
+            @PathVariable Long id,
+            @Valid @RequestBody StoreStep3Request request) {
+
+        storeAdminService.createMarketStep3(id, request);
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Mağazanı yeniləyin", description = "Mövcud mağazanın məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")

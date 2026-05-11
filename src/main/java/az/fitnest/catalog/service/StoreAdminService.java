@@ -13,4 +13,8 @@ public interface StoreAdminService {
     void createMarketStep2(Long id, StoreStep2Request request);
 
     void createMarketStep3(Long id, StoreStep3Request request);
+
+    void updateStoreStatus(Long storeId, String status);
+
+    az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.response.AdminStoreResponse> getAllStoresAdmin(String query, String sort, int page, int pageSize);
 }

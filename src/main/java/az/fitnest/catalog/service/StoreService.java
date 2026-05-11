@@ -1,20 +1,12 @@
 package az.fitnest.catalog.service;
 
-import az.fitnest.catalog.dto.request.AddDiscountRequest;
-import az.fitnest.catalog.dto.response.FilterResponse;
-import az.fitnest.catalog.dto.response.StoreDetailResponse;
-import az.fitnest.catalog.dto.response.StoreListResponse;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.dto.response.StoreMainPageResponse;
-import az.fitnest.catalog.dto.request.StoreRequest;
 import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.request.AddDiscountRequest;
+import az.fitnest.catalog.dto.request.StoreRequest;
+import az.fitnest.catalog.dto.response.FilterResponse;
 import az.fitnest.catalog.dto.response.LocationResponse;
-import az.fitnest.catalog.dto.response.StoreSearchResponse;
-
-import java.util.List;
-
+import az.fitnest.catalog.dto.response.StoreDetailResponse;
+import az.fitnest.catalog.dto.response.StoreMainPageResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StoreService {

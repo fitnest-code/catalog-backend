@@ -1,10 +1,12 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.model.entity.Store;
+import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.response.ErrorResponse;
+import az.fitnest.catalog.dto.response.LocationResponse;
+import az.fitnest.catalog.dto.response.StoreDetailResponse;
+import az.fitnest.catalog.dto.response.StoreMainPageResponse;
 import az.fitnest.catalog.service.StoreService;
+import az.fitnest.catalog.util.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,9 +18,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import az.fitnest.catalog.util.UserContext;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
