@@ -406,7 +406,7 @@ public class StoreServiceImpl implements StoreService {
             throw new ResourceNotFoundException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
 
-        StoreDiscount discount = new StoreDiscount(request.percent(), request.packageId().toString());
+        StoreDiscount discount = new StoreDiscount(request.packageId(), request.percent());
         store.getDiscounts().add(discount);
         storeRepository.save(store);
     }
