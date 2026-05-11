@@ -174,11 +174,12 @@ public class GymController {
     }
 
     @PostMapping("/entrance/scan")
-    @Operation(summary = "Scan gym QR code for entrance (proximity only)", description = "Checks if user is close to the gym location. Returns gym name, address, enterDate, enterHour, notAllowed.")
+    @Operation(summary = "Scan gym QR code for entrance", description = "Checks proximity, working hours, and subscription eligibility. Performs automatic check-in if allowed.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Proximity check result", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.GymEntranceScanResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not close enough", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class)))
+        @ApiResponse(responseCode = "200", description = "Entrance scan result (includes isAllowed, status, and reason)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.GymEntranceScanResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     public ResponseEntity<GymEntranceScanResponse> scanGymQrEntrance(
             @AuthenticationPrincipal Object principal,
@@ -200,8 +201,9 @@ public class GymController {
     @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit and subscription status.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Eligibility check passed", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
-        @ApiResponse(responseCode = "403", description = "Not eligible (NO_ACTIVE_SUBSCRIPTION or VISIT_LIMIT_EXCEEDED)", content = @Content(schema = @Schema(implementation = az.fitnest.catalog.dto.response.ApiError.class)))
+        @ApiResponse(responseCode = "200", description = "Eligibility check result (includes allowed status and reason)", content = @Content(schema = @Schema(implementation = GymEntranceEligibilityResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     public ResponseEntity<GymEntranceEligibilityResponse> checkGymEntranceEligibility(
             @AuthenticationPrincipal Object principal) {

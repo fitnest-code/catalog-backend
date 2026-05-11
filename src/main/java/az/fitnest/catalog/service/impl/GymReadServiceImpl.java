@@ -1302,19 +1302,34 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+            String status = subResp.getSubscriptionStatus();
+            if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")
+                    || !status.equalsIgnoreCase("active")) {
+                return GymEntranceEligibilityResponse.builder()
+                        .allowed(false)
+                        .status("INELIGIBLE")
+                        .reason("NO_ACTIVE_SUBSCRIPTION")
+                        .build();
+            }
+            int visitLimitRemaining = subResp.getRemainingLimit();
+            if (visitLimitRemaining <= 0) {
+                return GymEntranceEligibilityResponse.builder()
+                        .allowed(false)
+                        .status("INELIGIBLE")
+                        .reason("VISIT_LIMIT_EXCEEDED")
+                        .build();
+            }
+            return GymEntranceEligibilityResponse.builder()
+                    .allowed(true)
+                    .status("ELIGIBLE")
+                    .build();
         } catch (Exception e) {
-            throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
+            return GymEntranceEligibilityResponse.builder()
+                    .allowed(false)
+                    .status("INELIGIBLE")
+                    .reason("NO_ACTIVE_SUBSCRIPTION")
+                    .build();
         }
-        String status = subResp.getSubscriptionStatus();
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")
-                || !status.equalsIgnoreCase("active")) {
-            throw new ForbiddenException("error.no_active_subscription", "NO_ACTIVE_SUBSCRIPTION");
-        }
-        int visitLimitRemaining = subResp.getRemainingLimit();
-        if (visitLimitRemaining <= 0) {
-            throw new ForbiddenException("error.visit_limit_exceeded", "VISIT_LIMIT_EXCEEDED");
-        }
-        return new GymEntranceEligibilityResponse(true);
     }
 
     private boolean isWithinWorkingHours(Gym gym, String gender) {
