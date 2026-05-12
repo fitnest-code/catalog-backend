@@ -2,7 +2,9 @@ package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.request.LessonTypeRequest;
 import az.fitnest.catalog.dto.response.LessonTypeResponse;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.LessonType;
+import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.LessonTypeRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class LessonTypeAdminController {
 
     private final LessonTypeRepository lessonTypeRepository;
+    private final CategoryRepository categoryRepository;
 
     @Operation(summary = "Yeni növ yaradın", description = "Sistem üçün qlobal yeni bir növ (lesson type) yaradır.")
     @PostMapping
@@ -46,5 +49,23 @@ public class LessonTypeAdminController {
                 .map(lt -> new LessonTypeResponse(lt.getId(), lt.getName()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "Növü sil", description = "Verilmiş ID-yə əsasən növü sistemdən silir.")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteLessonType(@PathVariable Long id) {
+        lessonTypeRepository.findById(id).ifPresent(lessonType -> {
+            if (lessonType.getCategories() != null && !lessonType.getCategories().isEmpty()) {
+                lessonType.getCategories().forEach(category -> {
+                    if (category.getLessonTypes() != null) {
+                        category.getLessonTypes().remove(lessonType);
+                    }
+                });
+                categoryRepository.saveAll(lessonType.getCategories());
+            }
+            lessonTypeRepository.delete(lessonType);
+        });
+        return ResponseEntity.noContent().build();
     }
 }
