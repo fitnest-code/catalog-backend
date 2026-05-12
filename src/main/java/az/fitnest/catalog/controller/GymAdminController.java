@@ -243,8 +243,9 @@ public class GymAdminController {
             @RequestParam("professionId") Long professionId,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "email", required = false) String email,
-            @RequestParam(value = "photo", required = false) MultipartFile photo) {
-        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email);
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "lessonTypeIds", required = false) List<Long> lessonTypeIds) {
+        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email, lessonTypeIds);
         gymTrainerService.addTrainer(gymId, request, photo);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -260,8 +261,9 @@ public class GymAdminController {
             @RequestParam("professionId") Long professionId,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "email", required = false) String email,
-            @RequestParam(value = "photo", required = false) MultipartFile photo) {
-        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email);
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "lessonTypeIds", required = false) List<Long> lessonTypeIds) {
+        TrainerRequest request = new TrainerRequest(name, surname, professionId, phone, email, lessonTypeIds);
         gymTrainerService.updateTrainer(gymId, trainerId, request, photo);
         return ResponseEntity.ok().build();
     }
