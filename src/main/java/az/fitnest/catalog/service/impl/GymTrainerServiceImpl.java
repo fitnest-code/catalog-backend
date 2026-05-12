@@ -46,6 +46,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;
+    private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerResponse> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
@@ -74,7 +75,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         Trainer trainer = new Trainer();
-        updateTrainerFromRequest(trainer, request);
+        updateTrainerFromRequest(gymId, trainer, request);
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
@@ -95,7 +96,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        updateTrainerFromRequest(trainer, request);
+        updateTrainerFromRequest(gymId, trainer, request);
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
@@ -121,7 +122,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         trainerRepository.delete(trainerToDelete);
     }
 
-    private void updateTrainerFromRequest(Trainer trainer, TrainerRequest request) {
+    private void updateTrainerFromRequest(Long gymId, Trainer trainer, TrainerRequest request) {
         trainer.setName(request.name());
         trainer.setSurname(request.surname());
 
@@ -131,6 +132,16 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         trainer.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         trainer.setEmail(request.email());
+
+        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+            List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAllById(request.lessonTypeIds());
+            List<String> globalNames = globalLessons.stream().map(az.fitnest.catalog.model.entity.LessonType::getName).toList();
+            List<GymLessonType> gymLessons = gymLessonTypeRepository.findByGymId(gymId);
+            trainer.getEnabledLessonTypes().clear();
+            gymLessons.stream()
+                .filter(gl -> request.lessonTypeIds().contains(gl.getId()) || globalNames.stream().anyMatch(name -> name.equalsIgnoreCase(gl.getName())))
+                .forEach(trainer.getEnabledLessonTypes()::add);
+        }
     }
 
     public void updateTrainerPhoto(Long gymId, Long trainerId, MultipartFile file) {
@@ -169,6 +180,20 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                     .build();
         }
 
+        java.util.List<Long> lessonTypeIds = new java.util.ArrayList<>();
+        if (t.getEnabledLessonTypes() != null) {
+            java.util.List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAll();
+            for (az.fitnest.catalog.model.entity.GymLessonType gl : t.getEnabledLessonTypes()) {
+                globalLessons.stream()
+                    .filter(glt -> glt.getName().equalsIgnoreCase(gl.getName()))
+                    .findFirst()
+                    .ifPresentOrElse(
+                        glt -> lessonTypeIds.add(glt.getId()),
+                        () -> lessonTypeIds.add(gl.getId())
+                    );
+            }
+        }
+
         return GymTrainerResponse.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
                 .name(t.getName())
@@ -177,6 +202,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .picture(t.getPicture())
                 .phone(t.getPhone())
                 .email(t.getEmail())
+                .lessonTypeIds(lessonTypeIds)
                 .build();
     }
 

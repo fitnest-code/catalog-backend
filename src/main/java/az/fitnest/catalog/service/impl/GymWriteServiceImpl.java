@@ -541,11 +541,11 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    public void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos) {
+    public void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos, List<String> lessonTypesPerTrainer) {
         Gym gym = gymRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         validateStep(gym, 1);
 
-        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, photos);
+        gymTrainerService.addTrainers(id, names, surnames, professionIds, emails, phones, photos, lessonTypesPerTrainer);
 
         updateStep(gym, 1);
     }

@@ -28,7 +28,7 @@ public interface GymWriteService {
     void deleteSupportedService(Long id);
 
     GymCreateStep1Response createGymStep1(GymCreateStep1Request request);
-    void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos);
+    void createGymStep2(Long id, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos, List<String> lessonTypesPerTrainer);
     void createGymStep3(Long id, GymCreateStep2Request request);
     void createGymStep4(Long id, GymCreateStep3Request request);
     void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos);

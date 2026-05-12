@@ -13,5 +13,6 @@ public record GymTrainerResponse(
     ProfessionResponse profession,
     String picture,
     String phone,
-    String email
+    String email,
+    java.util.List<Long> lessonTypeIds
 ) {}

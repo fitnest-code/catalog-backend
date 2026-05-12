@@ -362,8 +362,9 @@ public class GymAdminController {
             @RequestParam(value = "professionIds", required = false) List<Long> professionIds,
             @RequestParam(value = "emails", required = false) List<String> emails,
             @RequestParam(value = "phones", required = false) List<String> phones,
-            @RequestParam(value = "photos", required = false) List<MultipartFile> photos) {
-        gymWriteService.createGymStep2(id, names, surnames, professionIds, emails, phones, photos);
+            @RequestParam(value = "photos", required = false) List<MultipartFile> photos,
+            @RequestParam(value = "lessonTypesPerTrainer", required = false) List<String> lessonTypesPerTrainer) {
+        gymWriteService.createGymStep2(id, names, surnames, professionIds, emails, phones, photos, lessonTypesPerTrainer);
         return ResponseEntity.ok().build();
     }
 
