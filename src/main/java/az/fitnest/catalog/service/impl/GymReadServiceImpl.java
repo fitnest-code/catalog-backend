@@ -80,17 +80,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public List<az.fitnest.catalog.dto.response.SupportedServiceResponse> getAllSupportedServices(Long gymId) {
-        java.util.List<az.fitnest.catalog.model.entity.SupportedService> services;
         if (gymId != null) {
-            services = supportedServiceRepository.findAllByGymId(gymId);
-        } else {
-            services = supportedServiceRepository.findAll().stream()
-                    .filter(s -> s.getGymId() == null)
+            return supportedServiceRepository.findAllByGymId(gymId).stream()
+                    .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId()))
                     .toList();
         }
-        return services.stream()
-                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(),
-                        s.getGymId()))
+        return supportedServiceRepository.findAllByGymIdIsNull().stream()
+                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId()))
                 .toList();
     }
 
