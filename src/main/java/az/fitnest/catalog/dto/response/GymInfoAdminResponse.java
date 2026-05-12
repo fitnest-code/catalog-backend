@@ -38,5 +38,7 @@ public record GymInfoAdminResponse(
     @Schema(description = "Status")
     GymStatus status,
     @Schema(description = "Yaradılma tarixi")
-    String createdAt
+    String createdAt,
+    @Schema(description = "Zalın dərs növləri")
+    List<LessonTypeResponse> lessonTypes
 ) {}

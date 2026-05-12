@@ -71,6 +71,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
+    private final az.fitnest.catalog.repository.GymLessonTypeRepository gymLessonTypeRepository;
     private final java.util.concurrent.Executor taskExecutor;
 
     private String resolveUserLanguage() {
@@ -1485,6 +1486,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         }
 
+        List<LessonTypeResponse> lessonTypes = gymLessonTypeRepository.findByGymId(gymId).stream()
+                .map(lt -> new LessonTypeResponse(lt.getId(), lt.getName()))
+                .toList();
+
         return az.fitnest.catalog.dto.response.GymInfoAdminResponse.builder()
                 .id(gym.getId())
                 .categoryId(categoryId)
@@ -1501,6 +1506,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .longitude(lng)
                 .status(gym.getStatus())
                 .createdAt(created)
+                .lessonTypes(lessonTypes)
                 .build();
     }
 

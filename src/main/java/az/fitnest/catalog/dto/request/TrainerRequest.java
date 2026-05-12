@@ -18,7 +18,6 @@ public record TrainerRequest(
     @Schema(description = "Trainer's last name", example = "Doe")
     String surname,
 
-    @NotNull(message = "Peşə ID-si tələb olunur")
     @Schema(description = "ID of the assigned Profession entity", example = "1")
     Long professionId,
 
