@@ -29,7 +29,7 @@ public class LessonTypeAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LessonTypeResponse> createLessonType(@Valid @RequestBody LessonTypeRequest request) {
         LessonTypeResponse response = lessonTypeAdminService.createLessonType(request);
-        return ResponseEntity.created(URI.create("/api/v1/admin/lesson-types/" + response.getId()))
+        return ResponseEntity.created(URI.create("/api/v1/admin/lesson-types/" + response.id()))
                 .body(response);
     }
 
