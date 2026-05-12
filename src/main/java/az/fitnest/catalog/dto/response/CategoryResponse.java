@@ -9,5 +9,6 @@ public record CategoryResponse(
     Long id,
     String name,
     String photoUrl,
-    String iconUrl
+    String iconUrl,
+    java.util.List<LessonTypeResponse> lessonTypes
 ) {}

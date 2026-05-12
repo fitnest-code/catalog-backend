@@ -36,6 +36,8 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
 
+    private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
+
     @Transactional(readOnly = true)
     public PaginatedResponse<CategoryResponse> getCategories(String q, int page, int size) {
         if (page < 1) {
@@ -130,11 +132,18 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         if (localizedName == null || localizedName.isEmpty()) {
             localizedName = category.getName();
         }
+        List<LessonTypeResponse> lessonTypeResponses = null;
+        if (category.getLessonTypes() != null) {
+            lessonTypeResponses = category.getLessonTypes().stream()
+                    .map(lt -> new LessonTypeResponse(lt.getId(), lt.getName()))
+                    .collect(Collectors.toList());
+        }
         return CategoryResponse.builder()
                 .id(category.getId())
                 .name(localizedName)
                 .photoUrl(category.getPhotoUrl())
                 .iconUrl(category.getIconUrl())
+                .lessonTypes(lessonTypeResponses)
                 .build();
     }
 
@@ -157,8 +166,11 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
-    public CategoryResponse createCategory(String name, MultipartFile photo) {
+    public CategoryResponse createCategory(String name, MultipartFile photo, List<Long> lessonTypeIds) {
         Category category = Category.builder().name(name).build();
+        if (lessonTypeIds != null && !lessonTypeIds.isEmpty()) {
+            category.setLessonTypes(new java.util.HashSet<>(lessonTypeRepository.findAllById(lessonTypeIds)));
+        }
         category = categoryRepository.save(category);
 
         if (photo != null && !photo.isEmpty()) {
@@ -168,19 +180,18 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
             category = categoryRepository.save(category);
         }
 
-        return CategoryResponse.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .photoUrl(category.getPhotoUrl())
-                .iconUrl(category.getIconUrl())
-                .build();
+        return mapToDto(category, resolveUserLanguage());
     }
 
     @Transactional
-    public CategoryResponse updateCategory(Long id, String name, MultipartFile photo) {
+    public CategoryResponse updateCategory(Long id, String name, MultipartFile photo, List<Long> lessonTypeIds) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         category.setName(name);
+
+        if (lessonTypeIds != null) {
+            category.setLessonTypes(new java.util.HashSet<>(lessonTypeRepository.findAllById(lessonTypeIds)));
+        }
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
@@ -190,11 +201,6 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
         category = categoryRepository.save(category);
 
-        return CategoryResponse.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .photoUrl(category.getPhotoUrl())
-                .iconUrl(category.getIconUrl())
-                .build();
+        return mapToDto(category, resolveUserLanguage());
     }
 }

@@ -5,6 +5,7 @@ import az.fitnest.catalog.model.entity.Gym;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.Table;
 import lombok.*;
 
@@ -32,6 +33,17 @@ public class Category
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Set<Gym> gyms = new HashSet<Gym>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "category_lesson_types",
+        joinColumns = @jakarta.persistence.JoinColumn(name = "category_id"),
+        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "lesson_type_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<LessonType> lessonTypes = new HashSet<>();
 
     public Long getCategoryId() {
         return getId();
