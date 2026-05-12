@@ -52,9 +52,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     @Transactional
     public Long createMarketStep1(String name, MultipartFile photo) {
 
-        var fileData = storageGrpcClient.uploadFile(photo, STORE_COVER_DIR);
-
-        String coverUrl = storageGrpcClient.getDownloadUrl(String.valueOf(fileData.fsId()));
+        String coverUrl = uploadAndGetUrl(photo);
 
         Store store = Store.builder()
                 .name(name)
@@ -62,8 +60,8 @@ public class StoreAdminServiceImpl implements StoreAdminService {
                 .coverImageUrl(coverUrl)
                 .build();
 
-        storeRepository.save(store);
-        return store.getId();
+        Store saved = storeRepository.saveAndFlush(store);
+        return saved.getId();
     }
 
 

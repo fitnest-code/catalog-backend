@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -46,11 +47,12 @@ public class StoreAdminController {
             @Parameter(description = "Mağazanın adı", required = true, example = "FitLife Market")
             @RequestParam("name") String name,
 
-            @Parameter(description = "Mağazanın üz qabığı şəkli (JPEG, PNG)", required = true)
+            @Parameter(description = "Mağazanın üz qabığı şəkli", required = true)
             @RequestParam("photo") MultipartFile photo) {
 
         Long storeId = storeAdminService.createMarketStep1(name, photo);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", storeId));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Collections.singletonMap("id", storeId));
     }
 
     @Operation(summary = "Yeni mağaza - Addım 2", description = "Mağazanın məkan, əlaqə və iş saatı məlumatlarını yeniləyir.")
