@@ -47,6 +47,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final IdentityServiceGrpcClient identityServiceGrpcClient;
     private final TrainerRepository trainerRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;
+    private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
     private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymAdminRepository gymAdminRepository;
     private final ReservationRepository reservationRepository;
@@ -520,6 +521,22 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
+
+        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+            int order = 1;
+            for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
+                az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
+                        .gym(gym)
+                        .name(glt.getName())
+                        .category(category)
+                        .status("ACTIVE")
+                        .sortOrder(order++)
+                        .build();
+                gymLessonTypeRepository.save(gymLessonType);
+            }
+        }
+
         return new GymCreateStep1Response(gym.getId());
     }
 

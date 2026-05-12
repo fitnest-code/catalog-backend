@@ -259,7 +259,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     public void addTrainers(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
-                           List<String> emails, List<String> phones, List<MultipartFile> photos) {
+                           List<String> emails, List<String> phones, List<MultipartFile> photos, List<String> lessonTypesPerTrainer) {
         if (names == null) return;
 
         java.util.List<String> photoUrls = new java.util.ArrayList<>();
@@ -275,15 +275,17 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             }
         }
 
-        addTrainersInternal(gymId, names, surnames, professionIds, emails, phones, photoUrls);
+        addTrainersInternal(gymId, names, surnames, professionIds, emails, phones, photoUrls, lessonTypesPerTrainer);
     }
 
     @Transactional
     @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
     protected void addTrainersInternal(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
-                                      List<String> emails, List<String> phones, List<String> photoUrls) {
+                                      List<String> emails, List<String> phones, List<String> photoUrls, List<String> lessonTypesPerTrainer) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<GymLessonType> gymLessons = gymLessonTypeRepository.findByGymId(gymId);
 
         for (int i = 0; i < names.size(); i++) {
             Trainer trainer = new Trainer();
@@ -307,6 +309,20 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
             if (photoUrls != null && i < photoUrls.size()) {
                 trainer.setPicture(photoUrls.get(i));
+            }
+
+            if (lessonTypesPerTrainer != null && i < lessonTypesPerTrainer.size()) {
+                String str = lessonTypesPerTrainer.get(i);
+                if (str != null && !str.isBlank()) {
+                    for (String item : str.split(",")) {
+                        String trimmed = item.trim();
+                        if (trimmed.isEmpty()) continue;
+                        gymLessons.stream()
+                            .filter(gl -> trimmed.equalsIgnoreCase(gl.getName()) || trimmed.equals(String.valueOf(gl.getId())))
+                            .findFirst()
+                            .ifPresent(trainer.getEnabledLessonTypes()::add);
+                    }
+                }
             }
 
             gym.getTrainers().add(trainer);

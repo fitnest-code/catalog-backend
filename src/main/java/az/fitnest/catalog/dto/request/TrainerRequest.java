@@ -26,5 +26,8 @@ public record TrainerRequest(
     String phone,
 
     @Schema(description = "Contact email address", example = "john.doe@example.com")
-    String email
+    String email,
+
+    @Schema(description = "Assigned lesson type IDs associated with this trainer")
+    java.util.List<Long> lessonTypeIds
 ) {}
