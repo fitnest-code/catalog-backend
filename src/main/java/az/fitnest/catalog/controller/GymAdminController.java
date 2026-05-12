@@ -413,6 +413,73 @@ public class GymAdminController {
         gymWriteService.createGymStep7(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+
+    @Operation(summary = "Validate Step 1", description = "Zal məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/validate/step1")
+    public ResponseEntity<Void> validateStep1(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
+        gymWriteService.validateStep1(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 2", description = "Məşqçi məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/validate/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep2(
+            @RequestParam("names") List<String> names,
+            @RequestParam("surnames") List<String> surnames,
+            @RequestParam("professionIds") List<Long> professionIds,
+            @RequestParam("emails") List<String> emails,
+            @RequestParam("phones") List<String> phones,
+            @RequestParam(value = "photos", required = false) List<MultipartFile> photos,
+            @RequestParam("lessonTypesPerTrainer") List<String> lessonTypesPerTrainer) {
+        gymWriteService.validateStep2(emails, phones);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 3", description = "İş saatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/validate/step3")
+    public ResponseEntity<Void> validateStep3(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
+        gymWriteService.validateStep3(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 4", description = "Ünvan məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/validate/step4")
+    public ResponseEntity<Void> validateStep4(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
+        gymWriteService.validateStep4(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 5", description = "Şəkil məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/validate/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep5(
+            @RequestParam(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestParam(value = "roomNames", required = false) List<String> roomNames,
+            @RequestParam(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
+        gymWriteService.validateStep5(coverPhoto, roomNames, roomPhotos);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 6", description = "Abunəlik və xidmətləri yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/validate/step6")
+    public ResponseEntity<Void> validateStep6(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
+        gymWriteService.validateStep6(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 7", description = "Admin məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/validate/step7")
+    public ResponseEntity<Void> validateStep7(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
+        gymWriteService.validateStep7(request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı abunəliklərini yeniləyin", description = "İdman zalına aid abunəlik paketlərini və onlara daxil olan xidmətləri yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/subscriptions")

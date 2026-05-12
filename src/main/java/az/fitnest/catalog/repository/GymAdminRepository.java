@@ -10,4 +10,6 @@ public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     List<GymAdmin> findByGymId(Long gymId);
     List<GymAdmin> findAllByGymIdIn(List<Long> gymIds);
     void deleteAllByGymId(Long gymId);
+    boolean existsByEmail(String email);
+    boolean existsByPhoneNumber(String phoneNumber);
 }

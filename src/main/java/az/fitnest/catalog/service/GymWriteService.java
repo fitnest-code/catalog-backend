@@ -42,4 +42,11 @@ public interface GymWriteService {
     void updateReservationStatusAdmin(Long reservationId, az.fitnest.catalog.model.enums.ReservationStatus status, String reason);
     void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request);
     void deleteLessonHourAdmin(Long lessonHourId);
+    void validateStep1(az.fitnest.catalog.dto.request.GymCreateStep1Request request);
+    void validateStep2(List<String> emails, List<String> phones);
+    void validateStep3(az.fitnest.catalog.dto.request.GymCreateStep2Request request);
+    void validateStep4(az.fitnest.catalog.dto.request.GymCreateStep3Request request);
+    void validateStep5(MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos);
+    void validateStep6(az.fitnest.catalog.dto.request.GymCreateStep6Request request);
+    void validateStep7(az.fitnest.catalog.dto.request.GymCreateStep7Request request);
 }

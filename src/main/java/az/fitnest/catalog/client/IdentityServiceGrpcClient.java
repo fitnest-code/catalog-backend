@@ -26,4 +26,15 @@ public class IdentityServiceGrpcClient {
                 .withDeadlineAfter(10, java.util.concurrent.TimeUnit.SECONDS)
                 .createGymAdmin(request).getUserId();
     }
+
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "identityService")
+    public az.fitnest.identity.grpc.CheckUserExistsResponse checkUserExists(String email, String phone) {
+        az.fitnest.identity.grpc.CheckUserExistsRequest request = az.fitnest.identity.grpc.CheckUserExistsRequest.newBuilder()
+                .setEmail(email != null ? email : "")
+                .setPhoneNumber(phone != null ? phone : "")
+                .build();
+        return identityServiceBlockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkUserExists(request);
+    }
 }

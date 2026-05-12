@@ -125,7 +125,7 @@ eureka:
     enabled: false
 
 jwt:
-  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
+  secret: ${JWT_SECRET}
   issuer: ${JWT_ISSUER:fitnest}
 
 # ✅ Updated service URLs
@@ -153,7 +153,7 @@ management:
         enabled: true
 
 springdoc:
-  server-url: ${SPRINGDOC_SERVER_URL:}
+  server-url: ${SPRINGDOC_SERVER_URL:https://dev-api.fitnest.az}
   api-docs:
     path: /v3/api-docs
     cache:

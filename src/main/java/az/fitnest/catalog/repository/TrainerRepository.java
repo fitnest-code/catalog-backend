@@ -18,4 +18,7 @@ public interface TrainerRepository
     @Transactional
     @Query("UPDATE Trainer t SET t.profession = NULL")
     void clearAllProfessions();
+
+    boolean existsByEmail(String email);
+    boolean existsByPhone(String phone);
 }

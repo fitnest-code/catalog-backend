@@ -846,4 +846,110 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteLessonHourAdmin(Long lessonHourId) {
         trainerReservationDateRepository.deleteById(lessonHourId);
     }
+    @Override
+    public void validateStep1(GymCreateStep1Request request) {
+        if (request.categoryId() == null) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        
+        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+            if (globalLessonTypes.size() != request.lessonTypeIds().size()) {
+                throw new BadRequestException("INVALID_LESSON_TYPES", "error.invalid_lesson_types");
+            }
+        }
+    }
+
+    @Override
+    public void validateStep2(List<String> emails, List<String> phones) {
+        if (emails != null) {
+            for (String email : emails) {
+                if (trainerRepository.existsByEmail(email)) {
+                    throw new BadRequestException("TRAINER_EMAIL_EXISTS", "error.trainer_email_exists");
+                }
+            }
+        }
+        if (phones != null) {
+            for (String phone : phones) {
+                String normalized = PhoneUtil.normalize(phone);
+                if (trainerRepository.existsByPhone(normalized)) {
+                    throw new BadRequestException("TRAINER_PHONE_EXISTS", "error.trainer_phone_exists");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void validateStep3(GymCreateStep2Request request) {
+        Set<GymWorkHourPeriod> restDays = new HashSet<>();
+        if (request.restDays() != null) {
+            restDays = request.restDays().stream()
+                    .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+        validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+        validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+    }
+
+    @Override
+    public void validateStep4(GymCreateStep3Request request) {
+        if (request.latitude() == null || request.longitude() == null) {
+            throw new BadRequestException("COORDINATES_REQUIRED", "error.coordinates_required");
+        }
+    }
+
+    @Override
+    public void validateStep5(MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
+        if (coverPhoto != null && !coverPhoto.isEmpty()) {
+            fileStorageService.validateAndWrapImage(coverPhoto);
+        }
+        if (roomPhotos != null) {
+            for (MultipartFile file : roomPhotos) {
+                if (file != null && !file.isEmpty()) {
+                    fileStorageService.validateAndWrapImage(file);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void validateStep6(GymCreateStep6Request request) {
+        if (request.subscriptions() == null || request.subscriptions().isEmpty()) {
+            throw new BadRequestException("SUBSCRIPTION_REQUIRED", "error.subscription_required");
+        }
+        for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
+            if (!orderServiceGrpcClient.checkPackageExists(subReq.packageId())) {
+                throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
+            }
+        }
+    }
+
+    @Override
+    public void validateStep7(GymCreateStep7Request request) {
+        if (request.admins() == null || request.admins().isEmpty()) {
+            throw new BadRequestException("ADMIN_REQUIRED", "error.admin_required");
+        }
+        for (GymAdminCreateRequest adminReq : request.admins()) {
+            String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
+            
+            // 1. Local catalog check
+            if (gymAdminRepository.existsByEmail(adminReq.email())) {
+                throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
+            }
+            if (gymAdminRepository.existsByPhoneNumber(normalizedPhone)) {
+                throw new BadRequestException("ADMIN_PHONE_EXISTS", "error.admin_phone_exists");
+            }
+            
+            // 2. Identity system check
+            az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck = 
+                identityServiceGrpcClient.checkUserExists(adminReq.email(), normalizedPhone);
+            if (identityCheck.getExists()) {
+                throw new BadRequestException(identityCheck.getMessage(), "error." + identityCheck.getMessage().toLowerCase());
+            }
+        }
+    }
 }
