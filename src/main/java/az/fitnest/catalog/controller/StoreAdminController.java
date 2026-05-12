@@ -1,10 +1,8 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.request.AddDiscountRequest;
-import az.fitnest.catalog.dto.request.StoreRequest;
 import az.fitnest.catalog.dto.request.StoreStep2Request;
 import az.fitnest.catalog.dto.request.StoreStep3Request;
-import az.fitnest.catalog.dto.response.StoreDetailResponse;
+import az.fitnest.catalog.dto.request.StoreUpdateRequest;
 import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,10 +20,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -77,11 +75,21 @@ public class StoreAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Mağazanı yeniləyin", description = "Mövcud mağazanın məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
+    @Operation(summary = "Mağazanı yenilə", description = "Yalnız göndərilən sahələr yenilənir. " + "Göndərilməyən sahələr dəyişmir. ")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<StoreDetailResponse> updateStore(@PathVariable Long id, @Valid @RequestBody StoreRequest request) {
-        return ResponseEntity.ok(storeService.updateStore(id, request));
+    @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> updateMarket(
+            @Parameter(description = "Mağazanın ID-si", required = true)
+            @PathVariable Long id,
+
+            @Parameter(description = "Yenilənəcək sahələr (JSON). Yalnız dəyişdirilmək istənən sahələri göndər.")
+            @RequestPart("data") @Valid StoreUpdateRequest request,
+
+            @Parameter(description = "Yeni üz qabığı şəkli (məcburi deyil)")
+            @RequestPart(value = "photo", required = false) MultipartFile photo) {
+
+        storeAdminService.updateStore(id, request, photo);
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Mağazanı silin", description = "Mağazanı sistemdən silir. ADMIN rolu tələb olunur.")

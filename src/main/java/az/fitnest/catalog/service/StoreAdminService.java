@@ -2,6 +2,7 @@ package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.request.StoreStep2Request;
 import az.fitnest.catalog.dto.request.StoreStep3Request;
+import az.fitnest.catalog.dto.request.StoreUpdateRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,4 +18,6 @@ public interface StoreAdminService {
     void updateStoreStatus(Long storeId, String status);
 
     az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.response.AdminStoreResponse> getAllStoresAdmin(String query, String sort, int page, int pageSize);
+
+    void updateStore(Long id, StoreUpdateRequest request, MultipartFile photo);
 }

@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.request.DiscountItemRequest;
 import az.fitnest.catalog.dto.request.StoreStep2Request;
 import az.fitnest.catalog.dto.request.StoreStep3Request;
+import az.fitnest.catalog.dto.request.StoreUpdateRequest;
 import az.fitnest.catalog.dto.response.AdminStoreResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
@@ -16,6 +17,7 @@ import az.fitnest.catalog.model.enums.StoreStatus;
 import az.fitnest.catalog.repository.StoreRepository;
 import az.fitnest.catalog.service.StoreAdminService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoreAdminServiceImpl implements StoreAdminService {
 
     private static final String STORE_COVER_DIR = "stores/covers";
@@ -196,9 +199,93 @@ public class StoreAdminServiceImpl implements StoreAdminService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void updateStore(Long id, StoreUpdateRequest request, MultipartFile photo) {
+
+        Store store = findById(id);
+
+        request.getName()
+                .filter(n -> !n.isBlank())
+                .ifPresent(store::setName);
+
+        if (photo != null && !photo.isEmpty()) {
+            deleteOldCoverIfExists(store);
+            store.setCoverImageUrl(uploadAndGetUrl(photo));
+        }
+
+        if (request.getLatitude().isPresent() || request.getLongitude().isPresent()) {
+            Address address = store.getAddress() != null
+                    ? store.getAddress()
+                    : new Address();
+            request.getLatitude() .ifPresent(address::setLatitude);
+            request.getLongitude().ifPresent(address::setLongitude);
+            store.setAddress(address);
+        }
+
+        request.getPhone().ifPresent(store::setPhone);
+        request.getEmail().ifPresent(store::setEmail);
+
+        if (request.isSocialUrlProvided()) {
+            request.getSocialUrl().ifPresentOrElse(
+                    url -> {
+                        StoreSocialLink social = store.getSocialLink() != null
+                                ? store.getSocialLink()
+                                : new StoreSocialLink();
+                        social.setUrl(url);
+                        store.setSocialLink(social);
+                    },
+                    () -> store.setSocialLink(null)
+            );
+        }
+
+        if (request.isWorkHoursProvided()) {
+            request.getWorkHours().ifPresentOrElse(
+                    wh -> {
+                        StoreWorkHours hours = store.getWorkHours() != null
+                                ? store.getWorkHours()
+                                : new StoreWorkHours();
+                        hours.setFromTime(LocalTime.parse(wh.getFrom(), TIME_FMT));
+                        hours.setToTime(LocalTime.parse(wh.getTo(),     TIME_FMT));
+                        store.setWorkHours(hours);
+                    },
+                    () -> store.setWorkHours(null)
+            );
+        }
+
+        request.getDiscounts().ifPresent(discountList -> {
+            store.getDiscounts().clear();
+            discountList.forEach(item ->
+                    store.getDiscounts().add(
+                            new StoreDiscount(item.getPackageId(), item.getDiscountPercent())
+                    )
+            );
+        });
+
+        storeRepository.save(store);
+    }
+
 
     private Store findById(Long id) {
         return storeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
+    }
+
+
+    private String uploadAndGetUrl(MultipartFile photo) {
+        var fileData = storageGrpcClient.uploadFile(photo, STORE_COVER_DIR);
+        return storageGrpcClient.getDownloadUrl(String.valueOf(fileData.fsId()));
+    }
+
+
+    private void deleteOldCoverIfExists(Store store) {
+        if (store.getCoverImageUrl() != null) {
+            try {
+                storageGrpcClient.deleteFiles(List.of(store.getCoverImageUrl()));
+            } catch (Exception ex) {
+                log.warn("Köhnə cover şəkli silinə bilmədi. storeId={}, url={}",
+                        store.getId(), store.getCoverImageUrl(), ex);
+            }
+        }
     }
 }
