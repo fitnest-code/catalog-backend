@@ -239,20 +239,10 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         // Check for active dependencies that block deletion
-        List<String> blockers = new ArrayList<>();
-        if (savedGymRepository.existsByGymId(gymId)) {
-            blockers.add("İstifadəçilər tərəfindən seçilmişlərə əlavə edilib");
-        }
-        if (gymEntranceHistoryRepository.existsByGymId(gymId)) {
-            blockers.add("Giriş skan tarixçəsi mövcuddur");
-        }
-        if (reservationRepository.existsByGymId(gymId)) {
-            blockers.add("Rezervasiyalar mövcuddur");
-        }
-
-        if (!blockers.isEmpty()) {
-            String message = "Bu zal silinə bilməz: " + String.join(", ", blockers);
-            throw new BadRequestException("GYM_HAS_DEPENDENCIES", message);
+        if (savedGymRepository.existsByGymId(gymId)
+                || gymEntranceHistoryRepository.existsByGymId(gymId)
+                || reservationRepository.existsByGymId(gymId)) {
+            throw new BadRequestException("GYM_HAS_DEPENDENCIES", "error.gym_has_dependencies");
         }
 
         // Clean up internal records that are safe to delete
