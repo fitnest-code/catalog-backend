@@ -59,14 +59,14 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
-        
+
         Pageable pageable = pageable(page, pageSize, sortForReviews(sort));
         Page<Review> reviewPage = reviewRepository.findByGymIdAndStatusAndSearch(gymId, status, search, pageable);
 
         List<GymReviewResponse> items = reviewPage.getContent().stream()
                 .map(this::mapReviewToDto)
                 .collect(Collectors.toList());
-                
+
         return PaginatedResponse.<GymReviewResponse>builder()
                 .items(items)
                 .total(reviewPage.getTotalElements())
@@ -106,11 +106,10 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
         log.info("Approving review: {}", reviewId);
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
-        
+
         if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
             reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
-            
-            // Only update gym rating if the review has a rating
+
             if (review.getRating() != null) {
                 log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
                 reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());

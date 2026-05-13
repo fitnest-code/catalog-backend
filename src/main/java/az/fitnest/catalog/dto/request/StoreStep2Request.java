@@ -8,10 +8,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/**
- * @author: nijataghayev
- */
-
 @Data
 @Schema(description = "Mağaza yaradılması - Addım 2: Məkan, əlaqə və iş saatları")
 public class StoreStep2Request {

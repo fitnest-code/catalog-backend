@@ -62,7 +62,6 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
                     gymRepository.save(currentGym);
                 }
 
-
             } catch (Exception e) {
 
                 gym.setQrCodeUrl("/api/v1/gyms/" + gym.getId() + "/qr");

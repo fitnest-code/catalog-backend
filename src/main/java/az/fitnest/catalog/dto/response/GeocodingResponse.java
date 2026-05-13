@@ -7,5 +7,7 @@ import lombok.Builder;
 @Builder
 public record GeocodingResponse(
     String addressText,
-    String city
+    String city,
+    Double latitude,
+    Double longitude
 ) {}

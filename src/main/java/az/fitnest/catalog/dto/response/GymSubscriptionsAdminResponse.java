@@ -8,7 +8,7 @@ import java.util.List;
 public record GymSubscriptionsAdminResponse(
     @Schema(description = "Zal ID")
     Long gymId,
-    
+
     @Schema(description = "Aktiv abunəlik planları və onların xidmətləri")
     List<GymPlanItemAdminResponse> subscriptions
 ) {}

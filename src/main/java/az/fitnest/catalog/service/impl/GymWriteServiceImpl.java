@@ -238,7 +238,6 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        // Check for active dependencies that block deletion
         List<String> dependencies = new ArrayList<>();
         if (savedGymRepository.existsByGymId(gymId)) {
             dependencies.add("error.gym_dependency_saved");
@@ -254,7 +253,6 @@ public class GymWriteServiceImpl implements GymWriteService {
             throw new az.fitnest.catalog.exception.GymDependencyException(dependencies);
         }
 
-        // Clean up internal records that are safe to delete
         gymLessonTypeRepository.deleteByGymId(gymId);
         supportedServiceRepository.deleteAllByGymId(gymId);
         gymAdminRepository.deleteAllByGymId(gymId);
@@ -469,7 +467,6 @@ public class GymWriteServiceImpl implements GymWriteService {
         try {
             filesToDelete.addAll(gymRepository.findAllGymRelatedFileUrls());
         } catch (Exception e) {
-            // URL gathering failed
         }
 
         gymAdminRepository.deleteAllInBatch();
@@ -693,7 +690,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Transactional
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        
+
         for (GymAdminCreateRequest adminReq : request.admins()) {
             Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
             gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
@@ -712,11 +709,11 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteGymAdmin(Long gymId, Long adminId) {
         az.fitnest.catalog.model.entity.GymAdmin admin = gymAdminRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
-        
+
         if (!admin.getGym().getId().equals(gymId)) {
             throw new BadRequestException("ADMIN_GYM_MISMATCH", "error.admin_gym_mismatch");
         }
-        
+
         gymAdminRepository.delete(admin);
     }
 
@@ -776,6 +773,11 @@ public class GymWriteServiceImpl implements GymWriteService {
         return reverseGeocodingService.reverseGeocode(lat, lng);
     }
 
+    @Override
+    public java.util.List<GeocodingResponse> forwardGeocode(String query) {
+        return reverseGeocodingService.forwardGeocode(query);
+    }
+
     @Transactional
     @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
@@ -797,28 +799,28 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void updateGymInfo(Long gymId, az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-                
+
         if (request.categoryId() != null) {
             Category category = categoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
             gym.getCategories().clear();
             gym.getCategories().add(category);
         }
-        
+
         if (request.name() != null) gym.setName(request.name());
         if (request.description() != null) gym.setDescription(request.description());
         if (request.phone() != null) gym.setPhone(request.phone());
         if (request.email() != null) gym.setEmail(request.email());
-        
+
         if (gym.getAddress() == null) {
             gym.setAddress(new Address());
         }
-        
+
         if (request.city() != null) gym.getAddress().setCity(request.city());
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
-        
+
         gymRepository.save(gym);
     }
 
@@ -827,7 +829,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void updateReservationStatusAdmin(Long reservationId, az.fitnest.catalog.model.enums.ReservationStatus status, String reason) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
-        
+
         reservation.setStatus(status);
         if (status == az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED || status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
             reservation.setCancelReasonText(reason);
@@ -835,7 +837,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         } else if (status == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED) {
             reservation.setApprovedAt(LocalDateTime.now());
         }
-        
+
         reservationRepository.save(reservation);
     }
 
@@ -844,7 +846,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request) {
         Trainer trainer = trainerRepository.findById(request.trainerId())
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
-        
+
         GymLessonType lessonType = gymLessonTypeRepository.findById(request.lessonTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
 
@@ -874,7 +876,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
         categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        
+
         if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
             List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
             if (globalLessonTypes.size() != request.lessonTypeIds().size()) {
@@ -956,17 +958,15 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
         for (GymAdminCreateRequest adminReq : request.admins()) {
             String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
-            
-            // 1. Local catalog check
+
             if (gymAdminRepository.existsByEmail(adminReq.email())) {
                 throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
             }
             if (gymAdminRepository.existsByPhoneNumber(normalizedPhone)) {
                 throw new BadRequestException("ADMIN_PHONE_EXISTS", "error.admin_phone_exists");
             }
-            
-            // 2. Identity system check
-            az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck = 
+
+            az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck =
                 identityServiceGrpcClient.checkUserExists(adminReq.email(), normalizedPhone);
             if (identityCheck.getExists()) {
                 throw new BadRequestException(identityCheck.getMessage(), "error." + identityCheck.getMessage().toLowerCase());

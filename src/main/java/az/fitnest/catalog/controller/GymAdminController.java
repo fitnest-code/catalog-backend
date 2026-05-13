@@ -115,8 +115,6 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReviewService.getReviewDetail(reviewId));
     }
 
-
-
     @Operation(summary = "İdman zalını silin", description = "İdman zalını sistemdən silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
@@ -514,6 +512,13 @@ public class GymAdminController {
     @GetMapping("/geocoding/reverse")
     public ResponseEntity<GeocodingResponse> reverseGeocode(@RequestParam Double lat, @RequestParam Double lng) {
         return ResponseEntity.ok(gymWriteService.reverseGeocode(lat, lng));
+    }
+
+    @Operation(summary = "Mətnə görə ünvan və koordinat axtarışı", description = "Verilmiş sorğu mətninə uyğun ünvan siyahısını və koordinatları qaytarır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/geocoding/forward")
+    public ResponseEntity<java.util.List<GeocodingResponse>> forwardGeocode(@RequestParam String query) {
+        return ResponseEntity.ok(gymWriteService.forwardGeocode(query));
     }
 
     @Operation(summary = "İdman zalını aktivləşdirin və ya deaktiv edin", description = "İdman zalının statusunu ACTIVE və ya INACTIVE olaraq dəyişir.")

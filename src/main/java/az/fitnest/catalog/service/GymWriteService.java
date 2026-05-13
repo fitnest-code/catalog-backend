@@ -36,6 +36,7 @@ public interface GymWriteService {
     void updateGymSubscriptions(Long gymId, GymCreateStep6Request request);
     void createGymStep7(Long gymId, GymCreateStep7Request request);
     GeocodingResponse reverseGeocode(Double lat, Double lng);
+    java.util.List<GeocodingResponse> forwardGeocode(String query);
     void toggleGymStatus(Long gymId, boolean enabled);
     void addGymAdmin(Long gymId, GymAdminCreateRequest request);
     void deleteGymAdmin(Long gymId, Long adminId);

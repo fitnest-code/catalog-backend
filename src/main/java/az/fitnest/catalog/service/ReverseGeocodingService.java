@@ -7,4 +7,5 @@ import az.fitnest.catalog.dto.response.*;
 
 public interface ReverseGeocodingService {
     GeocodingResponse reverseGeocode(Double latitude, Double longitude);
+    java.util.List<GeocodingResponse> forwardGeocode(String query);
 }

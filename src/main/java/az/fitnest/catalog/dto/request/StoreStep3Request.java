@@ -7,10 +7,6 @@ import lombok.Data;
 
 import java.util.List;
 
-/**
- * @author: nijataghayev
- */
-
 @Data
 @Schema(description = "Mağaza yaradılması - Addım 3: Paket endirimləri və aktivləşdirmə")
 public class StoreStep3Request {

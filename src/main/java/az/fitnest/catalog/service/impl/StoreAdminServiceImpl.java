@@ -47,7 +47,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     private final StoreRepository storeRepository;
     private final StorageGrpcClient storageGrpcClient;
 
-
     @Override
     @Transactional
     public Long createMarketStep1(String name, MultipartFile photo) {
@@ -63,7 +62,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         Store saved = storeRepository.saveAndFlush(store);
         return saved.getId();
     }
-
 
     @Override
     @Transactional
@@ -97,7 +95,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         storeRepository.save(store);
     }
 
-
     @Override
     @Transactional
     public void createMarketStep3(Long id, StoreStep3Request request) {
@@ -119,7 +116,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         storeRepository.save(store);
     }
 
-
     @Override
     @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStoreStatus(Long storeId, String status) {
@@ -128,7 +124,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         store.setStatus(status);
         storeRepository.save(store);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -263,18 +258,15 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         storeRepository.save(store);
     }
 
-
     private Store findById(Long id) {
         return storeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
     }
 
-
     private String uploadAndGetUrl(MultipartFile photo) {
         var fileData = storageGrpcClient.uploadFile(photo, STORE_COVER_DIR);
         return storageGrpcClient.getDownloadUrl(String.valueOf(fileData.fsId()));
     }
-
 
     private void deleteOldCoverIfExists(Store store) {
         if (store.getCoverImageUrl() != null) {

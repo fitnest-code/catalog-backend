@@ -21,7 +21,6 @@ public class FileDeletionServiceImpl implements az.fitnest.catalog.service.FileD
         try {
             fileStorageService.deleteFiles(urls);
         } catch (Exception e) {
-            // Deletion failed
         }
     }
 
@@ -31,7 +30,6 @@ public class FileDeletionServiceImpl implements az.fitnest.catalog.service.FileD
         try {
             fileStorageService.deleteFile(url);
         } catch (Exception e) {
-            // Deletion failed
         }
     }
 

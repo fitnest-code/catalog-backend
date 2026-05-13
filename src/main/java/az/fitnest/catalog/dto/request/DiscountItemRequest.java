@@ -6,10 +6,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/**
- * @author: nijataghayev
- */
-
 @Data
 @Schema(description = "Paket endirimi elementi")
 public class DiscountItemRequest {

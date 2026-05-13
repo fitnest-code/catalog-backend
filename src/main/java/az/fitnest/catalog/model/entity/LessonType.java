@@ -17,7 +17,7 @@ import java.util.Set;
 @Builder
 @EqualsAndHashCode(callSuper = true)
 public class LessonType extends BaseAuditableEntity {
-    
+
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 

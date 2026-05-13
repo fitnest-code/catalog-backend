@@ -57,12 +57,70 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 return GeocodingResponse.builder()
                         .addressText(displayName)
                         .city(city)
+                        .latitude(latitude)
+                        .longitude(longitude)
                         .build();
             }
         } catch (Exception exception) {
         }
         return GeocodingResponse.builder()
                 .addressText(String.format("%.5f, %.5f", latitude, longitude))
+                .latitude(latitude)
+                .longitude(longitude)
                 .build();
+    }
+
+    @Override
+    public java.util.List<GeocodingResponse> forwardGeocode(String query) {
+        if (query == null || query.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        URI uri = UriComponentsBuilder.fromUriString(BASE_URL)
+                .path("/search")
+                .queryParam("format", "json")
+                .queryParam("q", query)
+                .queryParam("limit", 10)
+                .queryParam("addressdetails", 1)
+                .queryParam("countrycodes", "az")
+                .build(true).toUri();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", USER_AGENT);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<java.util.List> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, java.util.List.class);
+            java.util.List<Map<String, Object>> list = response.getBody();
+            if (list != null) {
+                java.util.List<GeocodingResponse> results = new java.util.ArrayList<>();
+                for (Map<String, Object> item : list) {
+                    String displayName = (String) item.get("display_name");
+                    Double lat = null;
+                    Double lon = null;
+                    try {
+                        if (item.get("lat") != null) lat = Double.parseDouble(item.get("lat").toString());
+                        if (item.get("lon") != null) lon = Double.parseDouble(item.get("lon").toString());
+                    } catch (Exception e) {}
+
+                    String city = null;
+                    Object addressObj = item.get("address");
+                    if (addressObj instanceof Map) {
+                        Map<String, String> address = (Map<String, String>) addressObj;
+                        city = address.get("city");
+                        if (city == null) city = address.get("town");
+                        if (city == null) city = address.get("village");
+                        if (city == null) city = address.get("hamlet");
+                        if (city == null) city = address.get("suburb");
+                    }
+                    results.add(GeocodingResponse.builder()
+                            .addressText(displayName)
+                            .city(city)
+                            .latitude(lat)
+                            .longitude(lon)
+                            .build());
+                }
+                return results;
+            }
+        } catch (Exception exception) {
+        }
+        return java.util.Collections.emptyList();
     }
 }

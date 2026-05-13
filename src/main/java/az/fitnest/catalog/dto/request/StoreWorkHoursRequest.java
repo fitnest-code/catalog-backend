@@ -5,10 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
-/**
- * @author: nijataghayev
- */
-
 @Data
 @Schema(description = "Mağazanın iş saatları")
 public class StoreWorkHoursRequest {

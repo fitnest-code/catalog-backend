@@ -11,10 +11,6 @@ import lombok.Getter;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * @author: nijataghayev
- */
-
 @Getter
 @Schema(description = "Mağaza məlumatlarının yenilənməsi. Yalnız göndərilən sahələr yenilənir.")
 public class StoreUpdateRequest {
