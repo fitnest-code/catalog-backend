@@ -46,7 +46,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBaseException(BaseException exception, WebRequest request) {
 
         Map<String, Object> details = null;
-        if (exception instanceof ValidationException validationException) {
+        if (exception instanceof GymDependencyException dependencyException) {
+            details = new HashMap<>();
+            List<Map<String, String>> dependencies = dependencyException.getDependencyKeys().stream()
+                    .map(key -> Map.of(
+                            "code", key.replace("error.gym_dependency_", "").toUpperCase(),
+                            "reason", getMessage(key)
+                    ))
+                    .toList();
+            details.put("dependencies", dependencies);
+        } else if (exception instanceof ValidationException validationException) {
             BindingResult result = validationException.getBindingResult();
             if (result != null) {
                 details = new HashMap<>();

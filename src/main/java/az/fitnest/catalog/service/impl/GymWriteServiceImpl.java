@@ -239,10 +239,19 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         // Check for active dependencies that block deletion
-        if (savedGymRepository.existsByGymId(gymId)
-                || gymEntranceHistoryRepository.existsByGymId(gymId)
-                || reservationRepository.existsByGymId(gymId)) {
-            throw new BadRequestException("GYM_HAS_DEPENDENCIES", "error.gym_has_dependencies");
+        List<String> dependencies = new ArrayList<>();
+        if (savedGymRepository.existsByGymId(gymId)) {
+            dependencies.add("error.gym_dependency_saved");
+        }
+        if (gymEntranceHistoryRepository.existsByGymId(gymId)) {
+            dependencies.add("error.gym_dependency_entrance_history");
+        }
+        if (reservationRepository.existsByGymId(gymId)) {
+            dependencies.add("error.gym_dependency_reservations");
+        }
+
+        if (!dependencies.isEmpty()) {
+            throw new az.fitnest.catalog.exception.GymDependencyException(dependencies);
         }
 
         // Clean up internal records that are safe to delete
