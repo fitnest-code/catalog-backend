@@ -13,14 +13,10 @@ import lombok.Data;
 public class StoreStep2Request {
 
     @NotNull
-    @DecimalMin(value = "-90.0", message = "Latitude -90 ilə 90 arasında olmalıdır")
-    @DecimalMax(value = "90.0", message = "Latitude -90 ilə 90 arasında olmalıdır")
     @Schema(description = "Mağazanın coğrafi enliyi", example = "40.4093")
     private Double latitude;
 
     @NotNull
-    @DecimalMin(value = "-180.0", message = "Longitude -180 ilə 180 arasında olmalıdır")
-    @DecimalMax(value = "180.0", message = "Longitude -180 ilə 180 arasında olmalıdır")
     @Schema(description = "Mağazanın coğrafi uzunluğu", example = "49.8671")
     private Double longitude;
 
