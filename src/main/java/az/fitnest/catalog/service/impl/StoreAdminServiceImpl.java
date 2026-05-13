@@ -6,6 +6,7 @@ import az.fitnest.catalog.dto.request.DiscountItemRequest;
 import az.fitnest.catalog.dto.request.StoreStep2Request;
 import az.fitnest.catalog.dto.request.StoreStep3Request;
 import az.fitnest.catalog.dto.request.StoreUpdateRequest;
+import az.fitnest.catalog.dto.response.AdminStoreDetailResponse;
 import az.fitnest.catalog.dto.response.AdminStoreResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
@@ -259,7 +260,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         storeRepository.save(store);
     }
 
-
     @Override
     @Transactional
     public void deleteStore(Long id) {
@@ -304,6 +304,91 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         log.info("Mağaza uğurla silindi. storeId={}", id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public AdminStoreDetailResponse getStoreById(Long id) {
+
+        Store store = storeRepository.findByIdWithAssociations(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "STORE_NOT_FOUND",
+                        "Mağaza tapılmadı: " + id
+                ));
+
+        return toAdminDetailResponse(store);
+    }
+
+    private AdminStoreDetailResponse toAdminDetailResponse(Store store) {
+
+        return AdminStoreDetailResponse.builder()
+                .id(store.getId())
+                .name(store.getName())
+                .status(store.getStatus())
+                .category(store.getCategory())
+                .coverImageUrl(store.getCoverImageUrl())
+                .logoUrl(store.getLogoUrl())
+                .address(mapAddress(store.getAddress()))
+                .phone(store.getPhone())
+                .email(store.getEmail())
+                .socialLink(mapSocialLink(store.getSocialLink()))
+                .workHours(mapWorkHours(store.getWorkHours()))
+                .discounts(mapDiscounts(store.getDiscounts()))
+                .images(mapImages(store.getImages()))
+                .popularScore(store.getPopularScore())
+                .createdDate(store.getCreatedDate())
+                .lastModifiedDate(store.getLastModifiedDate())
+                .createdBy(store.getCreatedBy())
+                .lastModifiedBy(store.getLastModifiedBy())
+                .build();
+    }
+
+    private AdminStoreDetailResponse.AddressDto mapAddress(Address address) {
+        if (address == null) return null;
+        return AdminStoreDetailResponse.AddressDto.builder()
+                .addressText(address.getAddressText())
+                .city(address.getCity())
+                .latitude(address.getLatitude())
+                .longitude(address.getLongitude())
+                .build();
+    }
+
+    private AdminStoreDetailResponse.SocialLinkDto mapSocialLink(StoreSocialLink social) {
+        if (social == null) return null;
+        return AdminStoreDetailResponse.SocialLinkDto.builder()
+                .name(social.getName())
+                .url(social.getUrl())
+                .build();
+    }
+
+    private AdminStoreDetailResponse.WorkHoursResponseDto mapWorkHours(StoreWorkHours wh) {
+        if (wh == null) return null;
+        return AdminStoreDetailResponse.WorkHoursResponseDto.builder()
+                .from(wh.getFromTime() != null ? wh.getFromTime().format(TIME_FMT) : null)
+                .to(wh.getToTime()   != null ? wh.getToTime()  .format(TIME_FMT) : null)
+                .build();
+    }
+
+    private List<AdminStoreDetailResponse.DiscountResponseDto> mapDiscounts(
+            java.util.Set<StoreDiscount> discounts) {
+        if (discounts == null || discounts.isEmpty()) return List.of();
+        return discounts.stream()
+                .map(d -> AdminStoreDetailResponse.DiscountResponseDto.builder()
+                        .packageId(d.getPackageId())
+                        .discountPercent(d.getPercent())
+                        .build())
+                .toList();
+    }
+
+    private List<AdminStoreDetailResponse.StoreImageDto> mapImages(
+            java.util.Set<StoreImage> images) {
+        if (images == null || images.isEmpty()) return List.of();
+        return images.stream()
+                .map(img -> AdminStoreDetailResponse.StoreImageDto.builder()
+                        .type(img.getType())
+                        .title(img.getTitle())
+                        .url(img.getUrl())
+                        .build())
+                .toList();
+    }
 
     private Store findById(Long id) {
         return storeRepository.findById(id)

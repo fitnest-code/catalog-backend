@@ -3,6 +3,7 @@ package az.fitnest.catalog.controller;
 import az.fitnest.catalog.dto.request.StoreStep2Request;
 import az.fitnest.catalog.dto.request.StoreStep3Request;
 import az.fitnest.catalog.dto.request.StoreUpdateRequest;
+import az.fitnest.catalog.dto.response.AdminStoreDetailResponse;
 import az.fitnest.catalog.service.StoreAdminService;
 import az.fitnest.catalog.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -131,5 +132,18 @@ public class StoreAdminController {
             @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1") @RequestParam(defaultValue = "1") int page,
             @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10") @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(storeAdminService.getAllStoresAdmin(query, sort, page, pageSize));
+    }
+
+    @Operation(
+            summary     = "Mağazanı ID ilə gətir",
+            description = "ID-yə uyğun mağazanın bütün detallarını qaytarır."
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<AdminStoreDetailResponse> getStoreById(
+            @Parameter(description = "Mağazanın ID-si", required = true)
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(storeAdminService.getStoreById(id));
     }
 }
