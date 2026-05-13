@@ -11,6 +11,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Store;
 import az.fitnest.catalog.model.entity.StoreDiscount;
+import az.fitnest.catalog.model.entity.StoreImage;
 import az.fitnest.catalog.model.entity.StoreSocialLink;
 import az.fitnest.catalog.model.entity.StoreWorkHours;
 import az.fitnest.catalog.model.enums.StoreStatus;
@@ -257,6 +258,52 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
         storeRepository.save(store);
     }
+
+
+    @Override
+    @Transactional
+    public void deleteStore(Long id) {
+
+        Store store = findById(id);
+
+        if (store.getCoverImageUrl() != null) {
+            try {
+                storageGrpcClient.deleteFiles(List.of(store.getCoverImageUrl()));
+            } catch (Exception ex) {
+                log.warn("Cover şəkli storage-dan silinə bilmədi. storeId={}, url={}",
+                        id, store.getCoverImageUrl(), ex);
+            }
+        }
+
+        if (store.getLogoUrl() != null) {
+            try {
+                storageGrpcClient.deleteFiles(List.of(store.getLogoUrl()));
+            } catch (Exception ex) {
+                log.warn("Logo storage-dan silinə bilmədi. storeId={}, url={}",
+                        id, store.getLogoUrl(), ex);
+            }
+        }
+
+        if (store.getImages() != null && !store.getImages().isEmpty()) {
+            List<String> imagePaths = store.getImages().stream()
+                    .map(StoreImage::getUrl)
+                    .filter(url -> url != null && !url.isBlank())
+                    .toList();
+
+            if (!imagePaths.isEmpty()) {
+                try {
+                    storageGrpcClient.deleteFiles(imagePaths);
+                } catch (Exception ex) {
+                    log.warn("Mağaza şəkilləri storage-dan silinə bilmədi. storeId={}", id, ex);
+                }
+            }
+        }
+
+        storeRepository.delete(store);
+
+        log.info("Mağaza uğurla silindi. storeId={}", id);
+    }
+
 
     private Store findById(Long id) {
         return storeRepository.findById(id)

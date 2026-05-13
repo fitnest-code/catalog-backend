@@ -20,4 +20,6 @@ public interface StoreAdminService {
     az.fitnest.catalog.dto.PaginatedResponse<az.fitnest.catalog.dto.response.AdminStoreResponse> getAllStoresAdmin(String query, String sort, int page, int pageSize);
 
     void updateStore(Long id, StoreUpdateRequest request, MultipartFile photo);
+
+    void deleteStore(Long id);
 }

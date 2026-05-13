@@ -94,11 +94,17 @@ public class StoreAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Mağazanı silin", description = "Mağazanı sistemdən silir. ADMIN rolu tələb olunur.")
+    @Operation(
+            summary     = "Mağazanı sil",
+            description = "Mağazanı və bütün bağlı şəkilləri storage ilə birlikdə silir. Bu əməliyyat geri alına bilməz."
+    )
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStore(@PathVariable Long id) {
-        storeService.deleteStore(id);
+    public ResponseEntity<Void> deleteStore(
+            @Parameter(description = "Silinəcək mağazanın ID-si", required = true)
+            @PathVariable Long id) {
+
+        storeAdminService.deleteStore(id);
         return ResponseEntity.noContent().build();
     }
 
