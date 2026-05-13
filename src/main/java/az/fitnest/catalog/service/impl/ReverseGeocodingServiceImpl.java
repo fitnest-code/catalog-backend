@@ -38,7 +38,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 .queryParam("lon", longitude)
                 .queryParam("zoom", 18)
                 .queryParam("addressdetails", 1)
-                .build(true).toUri();
+                .build().encode().toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         HttpEntity<Void> entity = new HttpEntity<>(headers);
@@ -135,7 +135,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 .queryParam("limit", 8)
                 .queryParam("addressdetails", 1)
                 .queryParam("countrycodes", "az")
-                .build(true).toUri();
+                .build().encode().toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         HttpEntity<Void> entity = new HttpEntity<>(headers);
@@ -176,7 +176,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 // Bias towards Azerbaijan (Baku center)
                 .queryParam("lat", 40.4093)
                 .queryParam("lon", 49.8671)
-                .build(true).toUri();
+                .build().encode().toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
         HttpEntity<Void> entity = new HttpEntity<>(headers);
