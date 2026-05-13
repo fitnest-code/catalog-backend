@@ -755,14 +755,15 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    public void createSupportedService(SupportedServiceRequest request) {
+    public SupportedServiceResponse createSupportedService(SupportedServiceRequest request) {
         if (supportedServiceRepository.findByNameIgnoreCaseAndGymId(request.name(), request.gymId()).isPresent()) {
             throw new BadRequestException("SERVICE_ALREADY_EXISTS", "error.service_already_exists");
         }
         SupportedService service = new SupportedService();
         service.setName(request.name());
         service.setGymId(request.gymId());
-        supportedServiceRepository.save(service);
+        service = supportedServiceRepository.save(service);
+        return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId());
     }
 
     @Transactional

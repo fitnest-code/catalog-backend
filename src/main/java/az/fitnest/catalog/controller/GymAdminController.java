@@ -491,9 +491,8 @@ public class GymAdminController {
     @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/services")
-    public ResponseEntity<Void> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
-        gymWriteService.createSupportedService(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<az.fitnest.catalog.dto.response.SupportedServiceResponse> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createSupportedService(request));
     }
     @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki dəstəklənən xidmətləri qaytarır. gymId göndərilərsə həmin idman zalına aid xidmətləri qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")

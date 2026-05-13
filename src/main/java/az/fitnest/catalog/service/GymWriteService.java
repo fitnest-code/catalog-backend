@@ -24,7 +24,7 @@ public interface GymWriteService {
     void deleteAllGymSubscriptions(Long gymId);
     void deleteGymSubscriptionById(Long gymId, Long subscriptionId);
     void toggleGymReservation(Long gymId, boolean enabled);
-    void createSupportedService(SupportedServiceRequest request);
+    SupportedServiceResponse createSupportedService(SupportedServiceRequest request);
     void deleteSupportedService(Long id);
 
     GymCreateStep1Response createGymStep1(GymCreateStep1Request request);
