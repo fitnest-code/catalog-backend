@@ -8,6 +8,7 @@ server:
     mime-types: application/json,text/plain,text/css,application/javascript,application/openapi+json,application/vnd.api+json,application/vnd.oai.openapi+json
     min-response-size: 2048
   tomcat:
+    max-part-count: 500
     threads:
       max: 200
       min-spare: 20
