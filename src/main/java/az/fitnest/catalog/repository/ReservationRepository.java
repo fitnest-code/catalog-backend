@@ -55,4 +55,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     long countByGymIdAndStatus(Long gymId, az.fitnest.catalog.model.enums.ReservationStatus status);
 
     java.util.Optional<Reservation> findFirstByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    boolean existsByGymId(Long gymId);
 }

@@ -53,6 +53,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final ReservationRepository reservationRepository;
     private final GymTrainerService gymTrainerService;
     private final GymQrCodeService gymQrCodeService;
+    private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final Executor imageUploadExecutor;
 
     @Autowired
@@ -237,6 +238,28 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
+        // Check for active dependencies that block deletion
+        List<String> blockers = new ArrayList<>();
+        if (savedGymRepository.existsByGymId(gymId)) {
+            blockers.add("İstifadəçilər tərəfindən seçilmişlərə əlavə edilib");
+        }
+        if (gymEntranceHistoryRepository.existsByGymId(gymId)) {
+            blockers.add("Giriş skan tarixçəsi mövcuddur");
+        }
+        if (reservationRepository.existsByGymId(gymId)) {
+            blockers.add("Rezervasiyalar mövcuddur");
+        }
+
+        if (!blockers.isEmpty()) {
+            String message = "Bu zal silinə bilməz: " + String.join(", ", blockers);
+            throw new BadRequestException("GYM_HAS_DEPENDENCIES", message);
+        }
+
+        // Clean up internal records that are safe to delete
+        gymLessonTypeRepository.deleteByGymId(gymId);
+        supportedServiceRepository.deleteAllByGymId(gymId);
+        gymAdminRepository.deleteAllByGymId(gymId);
+
         List<String> filesToDelete = new ArrayList<>();
         if (gym.getCoverImageUrl() != null) filesToDelete.add(gym.getCoverImageUrl());
         if (gym.getQrCodeUrl() != null) filesToDelete.add(gym.getQrCodeUrl());
@@ -248,8 +271,6 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (gym.getTrainers() != null) {
             filesToDelete.addAll(gym.getTrainers().stream().map(Trainer::getPicture).filter(Objects::nonNull).toList());
         }
-
-        gymAdminRepository.deleteAllByGymId(gymId);
 
         if (gym.getRooms() != null) {
             filesToDelete.addAll(gym.getRooms().stream()

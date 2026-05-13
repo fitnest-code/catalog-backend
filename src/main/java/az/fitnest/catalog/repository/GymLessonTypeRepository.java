@@ -12,6 +12,8 @@ public interface GymLessonTypeRepository extends JpaRepository<GymLessonType, Lo
 
     List<GymLessonType> findByGymId(Long gymId);
 
+    void deleteByGymId(Long gymId);
+
     List<GymLessonType> findByGymIdAndCategoryIdAndStatus(Long gymId, Long categoryId, String status);
 
     Optional<GymLessonType> findByGymIdAndName(Long gymId, String name);

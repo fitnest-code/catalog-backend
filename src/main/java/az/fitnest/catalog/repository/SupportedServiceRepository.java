@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 public interface SupportedServiceRepository extends JpaRepository<SupportedService, Long> {
     java.util.List<SupportedService> findAllByGymId(Long gymId);
     java.util.List<SupportedService> findAllByGymIdIsNull();
+    void deleteAllByGymId(Long gymId);
     @org.springframework.data.jpa.repository.Query("SELECT s FROM SupportedService s WHERE LOWER(s.name) = LOWER(:name) AND (:gymId IS NULL AND s.gymId IS NULL OR s.gymId = :gymId)")
     java.util.Optional<SupportedService> findByNameIgnoreCaseAndGymId(@org.springframework.data.repository.query.Param("name") String name, @org.springframework.data.repository.query.Param("gymId") Long gymId);
 }
