@@ -22,8 +22,8 @@ public record StoreMainPageResponse(
     @Schema(description = "Address text of the store")
     String addressText,
 
-    @Schema(description = "List of discount applies to descriptions")
-    List<String> discountAppliesTo,
+    @Schema(description = "List of discount applies to descriptions and percents")
+    List<DiscountDto> discountAppliesTo,
 
     @Schema(description = "Social media URL of the store")
     String social,
@@ -33,4 +33,14 @@ public record StoreMainPageResponse(
 
     @Schema(description = "Indicates if the store is new")
     Boolean isNew
-) {}
+) {
+    @Builder
+    @Schema(description = "Discount details containing package ID and percent")
+    public record DiscountDto(
+        @Schema(description = "ID of the subscription package", example = "1")
+        Long packageId,
+
+        @Schema(description = "Discount percentage", example = "15")
+        Integer discountPercent
+    ) {}
+}

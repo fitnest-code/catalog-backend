@@ -158,7 +158,7 @@ public class StoreServiceImpl implements StoreService {
                 .coverImageUrl(store.getCoverImageUrl())
                 .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
                 .addressText(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
-                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> d.getAppliesTo() != null ? d.getAppliesTo() : d.getPercent() + "%").toList() : Collections.emptyList())
+                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreMainPageResponse.DiscountDto.builder().packageId(d.getPackageId()).discountPercent(d.getPercent()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null)
                 .isSaved(isSaved)
                 .isNew(isNew(store))
