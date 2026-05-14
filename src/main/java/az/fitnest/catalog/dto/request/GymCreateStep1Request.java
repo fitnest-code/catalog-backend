@@ -27,6 +27,7 @@ public record GymCreateStep1Request(
     @jakarta.validation.constraints.Size(max = 2000)
     String description,
 
+    @Email(message = "Yanlış email formatı")
     String email,
 
     java.util.List<Long> lessonTypeIds
