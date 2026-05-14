@@ -146,4 +146,30 @@ public class StoreAdminController {
 
         return ResponseEntity.ok(storeAdminService.getStoreById(id));
     }
+
+    @Operation(summary = "Validate Step 1", description = "Mağaza adını və şəklin varlığını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/validate/step1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep1(
+            @RequestParam("name") String name,
+            @RequestParam("photo") MultipartFile photo) {
+        storeAdminService.validateStep1(name, photo);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 2", description = "Məkan, əlaqə və iş saatları məlumatlarını yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/validate/step2", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> validateStep2(@Valid @RequestBody StoreStep2Request request) {
+        storeAdminService.validateStep2(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 3", description = "Paket endirimlərini yoxlayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/validate/step3", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> validateStep3(@Valid @RequestBody StoreStep3Request request) {
+        storeAdminService.validateStep3(request);
+        return ResponseEntity.ok().build();
+    }
 }

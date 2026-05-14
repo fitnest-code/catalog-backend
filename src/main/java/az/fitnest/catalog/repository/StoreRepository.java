@@ -53,4 +53,12 @@ public interface StoreRepository
     @Modifying
     @Query(value = "DELETE FROM store_social_links WHERE store_id = :storeId", nativeQuery = true)
     void deleteStoreSocialLinksByStoreId(@Param("storeId") Long storeId);
+
+    @Modifying
+    @Query(value = "DELETE FROM store_discounts WHERE store_id = :storeId", nativeQuery = true)
+    void deleteStoreDiscountsByStoreId(@Param("storeId") Long storeId);
+
+    @Modifying
+    @Query(value = "DELETE FROM store_images WHERE store_id = :storeId", nativeQuery = true)
+    void deleteStoreImagesByStoreId(@Param("storeId") Long storeId);
 }

@@ -8,6 +8,7 @@ import az.fitnest.catalog.dto.request.StoreStep3Request;
 import az.fitnest.catalog.dto.request.StoreUpdateRequest;
 import az.fitnest.catalog.dto.response.AdminStoreDetailResponse;
 import az.fitnest.catalog.dto.response.AdminStoreResponse;
+import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Store;
@@ -16,7 +17,9 @@ import az.fitnest.catalog.model.entity.StoreImage;
 import az.fitnest.catalog.model.entity.StoreSocialLink;
 import az.fitnest.catalog.model.entity.StoreWorkHours;
 import az.fitnest.catalog.model.enums.StoreStatus;
+import az.fitnest.catalog.repository.SavedStoreRepository;
 import az.fitnest.catalog.repository.StoreRepository;
+import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.StoreAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,9 +51,12 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     private final StoreRepository storeRepository;
     private final StorageGrpcClient storageGrpcClient;
+    private final SavedStoreRepository savedStoreRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public Long createMarketStep1(String name, MultipartFile photo) {
 
         String coverUrl = uploadAndGetUrl(photo);
@@ -67,6 +73,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void createMarketStep2(Long id, StoreStep2Request request) {
 
         Store store = findById(id);
@@ -99,6 +106,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void createMarketStep3(Long id, StoreStep3Request request) {
 
         Store store = findById(id);
@@ -196,6 +204,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStore(Long id, StoreUpdateRequest request, MultipartFile photo) {
 
         Store store = findById(id);
@@ -262,44 +271,33 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void deleteStore(Long id) {
 
-        Store store = findById(id);
+        Store store = storeRepository.findByIdWithAssociations(id)
+                .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Mağaza tapılmadı: " + id));
 
-        if (store.getCoverImageUrl() != null) {
-            try {
-                storageGrpcClient.deleteFiles(List.of(store.getCoverImageUrl()));
-            } catch (Exception ex) {
-                log.warn("Cover şəkli storage-dan silinə bilmədi. storeId={}, url={}",
-                        id, store.getCoverImageUrl(), ex);
-            }
-        }
+        savedStoreRepository.deleteByStoreId(id);
+        storeRepository.deleteStoreDiscountsByStoreId(id);
+        storeRepository.deleteStoreImagesByStoreId(id);
 
-        if (store.getLogoUrl() != null) {
-            try {
-                storageGrpcClient.deleteFiles(List.of(store.getLogoUrl()));
-            } catch (Exception ex) {
-                log.warn("Logo storage-dan silinə bilmədi. storeId={}, url={}",
-                        id, store.getLogoUrl(), ex);
-            }
-        }
+        List<String> filesToDelete = new ArrayList<>();
+        if (store.getCoverImageUrl() != null) filesToDelete.add(store.getCoverImageUrl());
+        if (store.getLogoUrl() != null) filesToDelete.add(store.getLogoUrl());
 
         if (store.getImages() != null && !store.getImages().isEmpty()) {
-            List<String> imagePaths = store.getImages().stream()
+            store.getImages().stream()
                     .map(StoreImage::getUrl)
                     .filter(url -> url != null && !url.isBlank())
-                    .toList();
-
-            if (!imagePaths.isEmpty()) {
-                try {
-                    storageGrpcClient.deleteFiles(imagePaths);
-                } catch (Exception ex) {
-                    log.warn("Mağaza şəkilləri storage-dan silinə bilmədi. storeId={}", id, ex);
-                }
-            }
+                    .forEach(filesToDelete::add);
         }
 
+        if (store.getDiscounts() != null) store.getDiscounts().clear();
+        if (store.getImages() != null) store.getImages().clear();
+
         storeRepository.delete(store);
+
+        fileStorageService.deleteFilesAfterCommit(filesToDelete);
 
         log.info("Mağaza uğurla silindi. storeId={}", id);
     }
@@ -402,12 +400,34 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     private void deleteOldCoverIfExists(Store store) {
         if (store.getCoverImageUrl() != null) {
-            try {
-                storageGrpcClient.deleteFiles(List.of(store.getCoverImageUrl()));
-            } catch (Exception ex) {
-                log.warn("Köhnə cover şəkli silinə bilmədi. storeId={}, url={}",
-                        store.getId(), store.getCoverImageUrl(), ex);
-            }
+            fileStorageService.deleteFilesAfterCommit(List.of(store.getCoverImageUrl()));
+        }
+    }
+
+    @Override
+    public void validateStep1(String name, MultipartFile photo) {
+        if (name == null || name.isBlank()) {
+            throw new BadRequestException("NAME_REQUIRED", "Mağaza adı boş ola bilməz");
+        }
+        if (photo == null || photo.isEmpty()) {
+            throw new BadRequestException("PHOTO_REQUIRED", "Mağaza şəkli tələb olunur");
+        }
+    }
+
+    @Override
+    public void validateStep2(StoreStep2Request request) {
+        if (request == null) {
+            throw new BadRequestException("INVALID_REQUEST", "Sorğu məlumatları boşdur");
+        }
+        if (request.getLatitude() == null || request.getLongitude() == null) {
+            throw new BadRequestException("COORDINATES_REQUIRED", "Koordinatlar tələb olunur");
+        }
+    }
+
+    @Override
+    public void validateStep3(StoreStep3Request request) {
+        if (request == null || request.getDiscounts() == null || request.getDiscounts().isEmpty()) {
+            throw new BadRequestException("DISCOUNTS_REQUIRED", "Ən azı bir endirim əlavə edilməlidir");
         }
     }
 }

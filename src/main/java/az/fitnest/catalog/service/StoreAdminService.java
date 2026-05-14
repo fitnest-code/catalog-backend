@@ -25,4 +25,10 @@ public interface StoreAdminService {
     void deleteStore(Long id);
 
     AdminStoreDetailResponse getStoreById(Long id);
+
+    void validateStep1(String name, MultipartFile photo);
+
+    void validateStep2(StoreStep2Request request);
+
+    void validateStep3(StoreStep3Request request);
 }
