@@ -94,11 +94,18 @@ public class StoreServiceImpl implements StoreService {
                     (s.getAddress() != null && s.getAddress().getAddressText() != null && s.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
         }
 
-        List<StoreMainPageResponse> all = stream.map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
-
+        List<Store> filtered = stream.collect(Collectors.toList());
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(StoreMainPageResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            filtered.sort((s1, s2) -> {
+                Double d1 = (s1.getAddress() != null && s1.getAddress().getLatitude() != null && s1.getAddress().getLongitude() != null)
+                        ? calculateDistance(lat, lng, s1.getAddress().getLatitude(), s1.getAddress().getLongitude()) : Double.MAX_VALUE;
+                Double d2 = (s2.getAddress() != null && s2.getAddress().getLatitude() != null && s2.getAddress().getLongitude() != null)
+                        ? calculateDistance(lat, lng, s2.getAddress().getLatitude(), s2.getAddress().getLongitude()) : Double.MAX_VALUE;
+                return d1.compareTo(d2);
+            });
         }
+
+        List<StoreMainPageResponse> all = filtered.stream().map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
 
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(all.size(), from + pageSize);
@@ -148,14 +155,12 @@ public class StoreServiceImpl implements StoreService {
         return StoreMainPageResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
-                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
-                .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
-                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
+                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
+                .addressText(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
+                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> d.getAppliesTo() != null ? d.getAppliesTo() : d.getPercent() + "%").toList() : Collections.emptyList())
+                .social(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null)
                 .isSaved(isSaved)
-                .distanceKm(distance)
-                .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .isNew(isNew(store))
                 .build();
     }
@@ -255,9 +260,7 @@ public class StoreServiceImpl implements StoreService {
 
         savedStoreRepository.deleteByStoreId(storeId);
 
-        if (store.getLogoUrl() != null) {
-            fileStorageService.deleteFile(store.getLogoUrl());
-        }
+
 
         if (store.getCoverImageUrl() != null) {
             fileStorageService.deleteFile(store.getCoverImageUrl());
@@ -366,14 +369,7 @@ public class StoreServiceImpl implements StoreService {
         return "/api/v1/media/stream/" + fileStorageService.saveFile(file, "/stores/" + storeId);
     }
 
-    @Override
-    @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
-    public void updateStoreLogoUrl(Long storeId, String logoUrl) {
-        Store store = getStoreEntityById(storeId);
-        store.setLogoUrl(logoUrl);
-        storeRepository.save(store);
-    }
+
 
     @Override
     @Transactional

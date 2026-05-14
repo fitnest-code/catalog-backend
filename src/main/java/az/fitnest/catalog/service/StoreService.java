@@ -34,8 +34,6 @@ public interface StoreService {
 
     public String uploadFileDirectly(Long storeId, MultipartFile file);
 
-    public void updateStoreLogoUrl(Long storeId, String logoUrl);
-
     public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl);
 
     public void deleteAllStores();

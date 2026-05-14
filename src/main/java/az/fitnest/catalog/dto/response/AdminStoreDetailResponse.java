@@ -29,8 +29,7 @@ public record AdminStoreDetailResponse(
         @Schema(description = "Üz qabığı şəklinin URL-i")
         String coverImageUrl,
 
-        @Schema(description = "Loqonun URL-i")
-        String logoUrl,
+
 
         @Schema(description = "Məkan məlumatları")
         AddressDto address,

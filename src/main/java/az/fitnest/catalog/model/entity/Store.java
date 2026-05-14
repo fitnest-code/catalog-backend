@@ -47,8 +47,6 @@ public class Store
     @Column(name = "email")
     private String email;
 
-    @Column(name = "logo_url")
-    private String logoUrl;
     @Column(name = "cover_image_url")
     private String coverImageUrl;
     @Column(name = "popular_score")

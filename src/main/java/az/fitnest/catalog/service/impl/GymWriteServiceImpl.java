@@ -254,6 +254,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gymLessonTypeRepository.deleteByGymId(gymId);
+        supportedServiceRepository.deleteSubscriptionAssociationsByGymId(gymId);
         supportedServiceRepository.deleteAllByGymId(gymId);
         gymAdminRepository.deleteAllByGymId(gymId);
 
@@ -764,7 +765,9 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms"}, allEntries = true)
     public void deleteSupportedService(Long id) {
+        supportedServiceRepository.deleteSubscriptionAssociations(id);
         supportedServiceRepository.deleteById(id);
     }
 

@@ -302,7 +302,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
         List<String> filesToDelete = new ArrayList<>();
         if (store.getCoverImageUrl() != null) filesToDelete.add(store.getCoverImageUrl());
-        if (store.getLogoUrl() != null) filesToDelete.add(store.getLogoUrl());
 
         if (store.getImages() != null && !store.getImages().isEmpty()) {
             store.getImages().stream()
@@ -342,7 +341,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
                 .status(store.getStatus())
                 .category(store.getCategory())
                 .coverImageUrl(store.getCoverImageUrl())
-                .logoUrl(store.getLogoUrl())
                 .address(mapAddress(store.getAddress()))
                 .phone(store.getPhone())
                 .email(store.getEmail())

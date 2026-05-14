@@ -1,10 +1,8 @@
 package az.fitnest.catalog.dto.response;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.*;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
+import java.util.List;
 
 @Builder
 @Schema(description = "Store details for the main page")
@@ -15,30 +13,20 @@ public record StoreMainPageResponse(
     @Schema(description = "Name of the store")
     String name,
 
-    @Schema(description = "Phone number of the store")
-    String phone,
-
-    @Schema(description = "Address of the store")
-    String address,
+    @Schema(description = "URL of the store's cover image")
+    String coverImageUrl,
 
     @Schema(description = "City where the store is located")
     String city,
 
-    @Schema(description = "URL of the store's logo")
-    String logoUrl,
+    @Schema(description = "Address text of the store")
+    String addressText,
 
-    @Schema(description = "URL of the store's cover image")
-    String coverImageUrl,
+    @Schema(description = "List of discount applies to descriptions")
+    List<String> discountAppliesTo,
 
-    @Schema(description = "List of discounts available at the store")
-    java.util.List<StoreDiscountResponse> discounts,
-
-    @Schema(description = "Distance to the store in kilometers")
-    @JsonInclude(JsonInclude.Include.ALWAYS)
-    Double distanceKm,
-
-    @Schema(description = "Social media links of the store")
-    StoreSocialDto social,
+    @Schema(description = "Social media URL of the store")
+    String social,
 
     @Schema(description = "Indicates if the store is saved by the user")
     Boolean isSaved,
