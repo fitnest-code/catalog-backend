@@ -53,6 +53,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     private final StorageGrpcClient storageGrpcClient;
     private final SavedStoreRepository savedStoreRepository;
     private final FileStorageService fileStorageService;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     @Transactional
@@ -115,9 +116,13 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     @CacheEvict(value = "admin-stores", allEntries = true)
     public void createMarketStep3(Long id, StoreStep3Request request) {
 
-        Store store = findById(id);
+        // 1. Atomically delete all existing store discount rows via bulk native query to avoid row-by-row cascading overhead and version locking conflicts
+        storeRepository.deleteStoreDiscountsByStoreId(id);
 
-        store.getDiscounts().clear();
+        // 2. Clear first-level persistence cache to decouple cached references and load fresh collections directly from database
+        entityManager.clear();
+
+        Store store = findById(id);
 
         for (DiscountItemRequest item : request.getDiscounts()) {
             StoreDiscount discount = new StoreDiscount(
@@ -263,16 +268,24 @@ public class StoreAdminServiceImpl implements StoreAdminService {
             );
         }
 
-        request.getDiscounts().ifPresent(discountList -> {
-            store.getDiscounts().clear();
+        request.getDiscounts().ifPresentOrElse(discountList -> {
+            // 1. Flush core store entity mutations to database first
+            storeRepository.saveAndFlush(store);
+            // 2. Atomically drop old discount mapping records to avoid entity version mismatches
+            storeRepository.deleteStoreDiscountsByStoreId(id);
+            // 3. Clear persistence session cache to uncouple stale collections
+            entityManager.clear();
+            // 4. Load fresh instance and attach replacement discounts
+            Store reloaded = findById(id);
             discountList.forEach(item ->
-                    store.getDiscounts().add(
+                    reloaded.getDiscounts().add(
                             new StoreDiscount(item.getPackageId(), item.getDiscountPercent())
                     )
             );
+            storeRepository.save(reloaded);
+        }, () -> {
+            storeRepository.save(store);
         });
-
-        storeRepository.save(store);
     }
 
     @Override
