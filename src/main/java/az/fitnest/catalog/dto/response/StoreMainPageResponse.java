@@ -35,10 +35,10 @@ public record StoreMainPageResponse(
     Boolean isNew
 ) {
     @Builder
-    @Schema(description = "Discount details containing package ID and percent")
+    @Schema(description = "Discount details containing package name and percent")
     public record DiscountDto(
-        @Schema(description = "ID of the subscription package", example = "1")
-        Long packageId,
+        @Schema(description = "Name of the subscription package", example = "Gold")
+        String packageName,
 
         @Schema(description = "Discount percentage", example = "15")
         Integer discountPercent

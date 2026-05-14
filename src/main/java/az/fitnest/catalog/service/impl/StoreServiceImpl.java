@@ -158,11 +158,32 @@ public class StoreServiceImpl implements StoreService {
                 .coverImageUrl(store.getCoverImageUrl())
                 .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
                 .addressText(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
-                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreMainPageResponse.DiscountDto.builder().packageId(d.getPackageId()).discountPercent(d.getPercent()).build()).toList() : Collections.emptyList())
+                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreMainPageResponse.DiscountDto.builder().packageName(resolvePackageName(d.getPackageId(), d.getAppliesTo())).discountPercent(d.getPercent()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null)
                 .isSaved(isSaved)
                 .isNew(isNew(store))
                 .build();
+    }
+
+    private String resolvePackageName(Long packageId, String defaultAppliesTo) {
+        if (defaultAppliesTo != null && !defaultAppliesTo.isBlank()) {
+            return defaultAppliesTo;
+        }
+        if (packageId == null) return "Paket";
+        try {
+            java.util.List<az.fitnest.order.grpc.PackageNameInfo> infos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(packageId));
+            if (infos != null && !infos.isEmpty()) {
+                return infos.get(0).getName();
+            }
+        } catch (Exception ignored) {}
+
+        switch (packageId.intValue()) {
+            case 1: return "Bronze";
+            case 2: return "Silver";
+            case 3: return "Gold";
+            case 4: return "Platinum";
+            default: return "Paket " + packageId;
+        }
     }
 
     private boolean isNew(Store store) {
