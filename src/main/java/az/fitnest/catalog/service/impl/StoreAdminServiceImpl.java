@@ -83,6 +83,12 @@ public class StoreAdminServiceImpl implements StoreAdminService {
                 : new Address();
         address.setLatitude(request.getLatitude());
         address.setLongitude(request.getLongitude());
+        if (request.getAddress() != null && !request.getAddress().isBlank()) {
+            address.setAddressText(request.getAddress());
+        }
+        if (address.getCity() == null || address.getCity().isBlank()) {
+            address.setCity("Bakı");
+        }
         store.setAddress(address);
 
         store.setPhone(request.getPhone());
