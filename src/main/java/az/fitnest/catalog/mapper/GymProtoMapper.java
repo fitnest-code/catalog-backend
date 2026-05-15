@@ -76,8 +76,8 @@ public class GymProtoMapper {
                 .latitude(lat == 0.0 ? null : lat)
                 .longitude(lng == 0.0 ? null : lng)
                 .build();
-        Set<Long> categoryIds = request.getCategoryIdsList().stream().map(Long::valueOf).collect(Collectors.toSet());
-        return mapToGymRequest(request.getName(), request.getDescription(), addressDto, request.getPhone(), request.getEmail(), categoryIds);
+        Long categoryId = request.getCategoryIdsCount() > 0 ? Long.valueOf(request.getCategoryIds(0)) : null;
+        return mapToGymRequest(request.getName(), request.getDescription(), addressDto, request.getPhone(), request.getEmail(), categoryId);
     }
 
     public static GymRequest mapToGymRequest(UpdateGymRequest request) {
@@ -104,8 +104,8 @@ public class GymProtoMapper {
                 .latitude(lat == 0.0 ? null : lat)
                 .longitude(lng == 0.0 ? null : lng)
                 .build();
-        Set<Long> categoryIds = request.getCategoryIdsList().stream().map(Long::valueOf).collect(Collectors.toSet());
-        return mapToGymRequest(request.getName(), request.getDescription(), addressDto, request.getPhone(), request.getEmail(), categoryIds);
+        Long categoryId = request.getCategoryIdsCount() > 0 ? Long.valueOf(request.getCategoryIds(0)) : null;
+        return mapToGymRequest(request.getName(), request.getDescription(), addressDto, request.getPhone(), request.getEmail(), categoryId);
     }
 
     public static GymRequest mapToGymRequest(
@@ -114,7 +114,7 @@ public class GymProtoMapper {
         AddressResponse address,
         String phone,
         String email,
-        Set<Long> categoryIds
+        Long categoryId
     ) {
         return GymRequest.builder()
             .name(name)
@@ -122,7 +122,7 @@ public class GymProtoMapper {
             .address(address)
             .phone(phone)
             .email(email)
-            .categoryIds(categoryIds)
+            .categoryId(categoryId)
             .build();
     }
 

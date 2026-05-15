@@ -93,7 +93,6 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
     @Transactional
     public void deleteAllCategories() {
-        gymRepository.truncateGymCategories();
         categoryRepository.deleteAll();
     }
 
