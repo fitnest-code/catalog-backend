@@ -39,9 +39,9 @@ public record GymRequest(
     @Schema(description = "Əlaqə emaili", example = "info@fitlife.az")
     String email,
 
-    @NotEmpty(message = "Kateqoriyalar boş ola bilməz")
-    @Schema(description = "Kateqoriya ID-ləri", example = "[1, 2]")
-    Set<Long> categoryIds,
+    @NotNull(message = "Kateqoriya seçilməlidir")
+    @Schema(description = "Kateqoriya ID-si", example = "1")
+    Long categoryId,
 
     @NotNull(message = "Status boş ola bilməz")
     @Schema(description = "İdman zalının statusu", example = "ACTIVE")

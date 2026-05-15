@@ -67,7 +67,7 @@ public class FileStorageServiceImpl
 
             String extractedOldPath = this.extractIdFromUrl(oldPath);
             StorageFileData data = this.storageGrpcClient.uploadFile(randomizedFile, directory, extractedOldPath);
-            return String.valueOf(data.fsId());
+            return this.storageGrpcClient.getDownloadUrl(String.valueOf(data.fsId()));
         } catch (Exception e) {
             throw new BadRequestException("error.file_upload_failed");
         }

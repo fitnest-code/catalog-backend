@@ -79,8 +79,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
-            String fsId = fileStorageService.saveFile(validated, "/trainers");
-            trainer.setPicture("/api/v1/media/stream/" + fsId);
+            trainer.setPicture(fileStorageService.saveFile(validated, "/trainers"));
         }
 
         gym.getTrainers().add(trainer);
@@ -100,8 +99,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
-            String fsId = fileStorageService.saveFile(validated, "/trainers", trainer.getPicture());
-            trainer.setPicture("/api/v1/media/stream/" + fsId);
+            trainer.setPicture(fileStorageService.saveFile(validated, "/trainers", trainer.getPicture()));
         }
 
         trainerRepository.save(trainer);
@@ -157,9 +155,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        String fsId = fileStorageService.saveFile(validatedFile, "/trainers", trainer.getPicture());
-        String newUrl = "/api/v1/media/stream/" + fsId;
-
+        String newUrl = fileStorageService.saveFile(validatedFile, "/trainers", trainer.getPicture());
         updateTrainerPhotoInternal(trainerId, newUrl);
     }
 
@@ -297,8 +293,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             for (MultipartFile photo : photos) {
                 if (photo != null && !photo.isEmpty()) {
                     MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
-                    String fsId = fileStorageService.saveFile(validated, "/trainers");
-                    photoUrls.add("/api/v1/media/stream/" + fsId);
+                    photoUrls.add(fileStorageService.saveFile(validated, "/trainers"));
                 } else {
                     photoUrls.add(null);
                 }

@@ -121,18 +121,8 @@ public class StorageGrpcClient {
     }
 
     public String getDownloadUrl(String fileId) {
-        GetDownloadUrlRequest request = GetDownloadUrlRequest.newBuilder().setFileId(fileId).build();
-        try {
-            GetDownloadUrlResponse response = this.blockingStub
-                    .withDeadlineAfter(unaryDeadlineSeconds, TimeUnit.SECONDS)
-                    .getDownloadUrl(request);
-            if (response.getSuccess()) {
-                return response.getDownloadUrl();
-            }
-            throw new RuntimeException("error.rpc_failed: " + response.getMessage());
-        } catch (Exception e) {
-            throw new RuntimeException("error.rpc_failed", e);
-        }
+        if (fileId == null || fileId.trim().isEmpty()) return null;
+        return "/api/v1/media/stream/" + fileId;
     }
 
     public void deleteFiles(List<String> paths) {

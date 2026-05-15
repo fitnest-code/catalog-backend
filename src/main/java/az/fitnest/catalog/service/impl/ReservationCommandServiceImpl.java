@@ -66,7 +66,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-        if (!gym.getCategories().contains(category)) {
+        if (gym.getCategory() == null || !gym.getCategory().equals(category)) {
             throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
         }
 

@@ -110,8 +110,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        String fsId = fileStorageService.saveFile(validatedFile, "/categories/" + categoryId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
+        String fullUrl = fileStorageService.saveFile(validatedFile, "/categories/" + categoryId);
         category.setPhotoUrl(fullUrl);
         categoryRepository.save(category);
     }
@@ -121,8 +120,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        String fsId = fileStorageService.saveFile(validatedFile, "/categories/icons/" + categoryId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
+        String fullUrl = fileStorageService.saveFile(validatedFile, "/categories/icons/" + categoryId);
         category.setIconUrl(fullUrl);
         categoryRepository.save(category);
     }
@@ -175,8 +173,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
-            String fsId = fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId());
-            category.setPhotoUrl("/api/v1/media/stream/" + fsId);
+            category.setPhotoUrl(fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId()));
             category = categoryRepository.save(category);
         }
 
@@ -195,8 +192,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
-            String fsId = fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId());
-            category.setPhotoUrl("/api/v1/media/stream/" + fsId);
+            category.setPhotoUrl(fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId()));
         }
 
         category = categoryRepository.save(category);

@@ -75,13 +75,8 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Transactional
     protected void saveGymInternal(GymRequest request, GeocodingResponse geocoding) {
-        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
-            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
-        }
-        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-        if (categories.size() != request.categoryIds().size()) {
-            throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
-        }
+        Category category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new BadRequestException("INVALID_CATEGORY", "error.invalid_category"));
         Gym gym = new Gym();
         gym.setName(request.name());
         gym.setDescription(request.description());
@@ -97,11 +92,11 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
-        gym.setCategories(new HashSet<>(categories));
+        gym.setCategory(category);
 
-        gym.setGeneralWorkHours(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.generalWorkHours()));
-        gym.setWorkHoursWoman(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.workHoursWoman()));
-        gym.setWorkHoursMan(az.fitnest.catalog.mapper.GymMapper.toWorkHours(request.workHoursMan()));
+        updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
+        updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
+        updateWorkHours(gym.getWorkHoursMan(), request.workHoursMan());
 
         if (request.restDays() != null) {
             Set<GymWorkHourPeriod> restDays = request.restDays().stream()
@@ -141,13 +136,9 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Transactional
     protected void updateGymInternal(Long gymId, GymRequest request, GeocodingResponse geocoding) {
-        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
-            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
-        }
-        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-        if (categories.size() != request.categoryIds().size()) {
-            throw new BadRequestException("INVALID_CATEGORIES", "error.invalid_categories");
-        }
+        Category category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new BadRequestException("INVALID_CATEGORY", "error.invalid_category"));
+
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -168,7 +159,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
-        gym.setCategories(new HashSet<>(categories));
+        gym.setCategory(category);
 
         updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
         updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
@@ -332,8 +323,8 @@ public class GymWriteServiceImpl implements GymWriteService {
             MultipartFile validatedFile = fileStorageService.validateAndWrapImage(originalFile);
 
             futures.add(CompletableFuture.supplyAsync(() -> {
-                String fsId = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
-                return new RoomImageUploadResult(roomName, "/api/v1/media/stream/" + fsId);
+                String url = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
+                return new RoomImageUploadResult(roomName, url);
             }, imageUploadExecutor));
         }
 
@@ -449,8 +440,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void updateCoverImage(Long gymId, MultipartFile coverPhoto) {
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(coverPhoto);
-        String fsId = fileStorageService.saveFile(validatedFile, "/gyms/covers");
-        String url = "/api/v1/media/stream/" + fsId;
+        String url = fileStorageService.saveFile(validatedFile, "/gyms/covers");
         updateCoverImageInternal(gymId, url);
     }
 
@@ -479,7 +469,6 @@ public class GymWriteServiceImpl implements GymWriteService {
         entityManager.createNativeQuery("DELETE FROM reviews").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM trainers").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM gym_images").executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM gym_categories").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM gym_social_links").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM gym_general_work_hours").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM gym_work_hours_woman").executeUpdate();
@@ -535,7 +524,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setDescription(request.description());
         gym.setPhone(PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email());
-        gym.setCategories(new HashSet<>(List.of(category)));
+        gym.setCategory(category);
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
@@ -806,8 +795,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.categoryId() != null) {
             Category category = categoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-            gym.getCategories().clear();
-            gym.getCategories().add(category);
+            gym.setCategory(category);
         }
 
         if (request.name() != null) gym.setName(request.name());

@@ -351,8 +351,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional
     public String uploadStoreImage(Long storeId, MultipartFile file) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
-        String fsId = fileStorageService.saveFile(file, "/stores/" + storeId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
+        String fullUrl = fileStorageService.saveFile(file, "/stores/" + storeId);
         StoreImage image = new StoreImage();
         image.setUrl(fullUrl);
         image.setType("gallery");
@@ -387,7 +386,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public String uploadFileDirectly(Long storeId, MultipartFile file) {
-        return "/api/v1/media/stream/" + fileStorageService.saveFile(file, "/stores/" + storeId);
+        return fileStorageService.saveFile(file, "/stores/" + storeId);
     }
 
 

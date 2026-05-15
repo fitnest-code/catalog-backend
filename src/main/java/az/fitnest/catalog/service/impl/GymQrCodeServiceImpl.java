@@ -51,8 +51,7 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
                         "image/png"
                 );
 
-                String fsId = fileStorageService.saveFile(multipartFile, "/gyms/qrs");
-                String url = "/api/v1/media/stream/" + fsId;
+                String url = fileStorageService.saveFile(multipartFile, "/gyms/qrs");
 
                 synchronized (this) {
                     Gym currentGym = gymRepository.findById(gymId).orElse(gym);

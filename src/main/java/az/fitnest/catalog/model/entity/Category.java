@@ -28,7 +28,7 @@ public class Category
 
     @Column(name = "icon_url")
     private String iconUrl;
-    @ManyToMany(mappedBy = "categories")
+    @jakarta.persistence.OneToMany(mappedBy = "category")
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude

@@ -189,15 +189,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymWorkHourResponse> generalWorkHours = generalWorkHoursFuture.join();
         List<GymRoomResponse> rooms = roomsFuture.join();
 
-        List<CategoryResponse> categoryDtos = gym.getCategories() != null
-                ? gym.getCategories().stream().map(c -> {
-                    String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-                    return CategoryResponse.builder()
-                            .id(c.getId())
-                            .name(localizedCatName != null ? localizedCatName : c.getName())
-                            .photoUrl(c.getPhotoUrl())
-                            .build();
-                }).collect(java.util.stream.Collectors.toList()) : null;
+        CategoryResponse categoryDto = null;
+        if (gym.getCategory() != null) {
+            Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDto = CategoryResponse.builder()
+                    .id(c.getId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .build();
+        }
 
         List<GymTrainerResponse> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerResponse>map(t -> {
             if (t.profession() != null && t.profession().id() != null) {
@@ -253,9 +254,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                             String planId = sub.getPackageId().toString();
                             String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
                                     planId, "name", userLanguage);
-                            String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty())
+                            String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
                                     ? localizedPackageName
-                                    : info.getName();
+                                    : info.getName());
                             List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                     .map(b -> {
                                         String localizedBenefit = translationService.getTranslatedValue(
@@ -310,7 +311,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 rooms,
                 trainerDtos,
                 recentReviews,
-                categoryDtos,
+                categoryDto,
                 gym.getCoverImageUrl(),
                 gym.getRating() != null ? gym.getRating() : 0.0,
                 gym.getReviewsCount() != null ? gym.getReviewsCount() : 0,
@@ -444,7 +445,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 } else {
                     gymPage = gymRepository.searchClosest(q, userLat, userLng, distancePageable);
                 }
-            } else if ("CLOSEST".equalsIgnoreCase(type)) {
+            } else if ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type)) {
                 if (categoryId != null) {
                     gymPage = gymRepository.findByCategoryClosest(categoryId, userLat, userLng, distancePageable);
                 } else {
@@ -692,8 +693,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                             && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
         }
         if (categoryId != null) {
-            stream = stream.filter(g -> g.getCategories() != null
-                    && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)));
+            stream = stream.filter(g -> g.getCategory() != null && g.getCategory().getId().equals(categoryId));
         }
 
         List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true, java.util.Collections.emptyMap()))
@@ -732,18 +732,17 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         String userLanguage = getUserLanguage(userId);
-        List<CategoryResponse> categories = gym.getCategories() != null ? gym.getCategories().stream()
-                .map(c -> {
-                    String localizedCatName = translationService.getTranslatedValue("CATEGORY",
-                            c.getCategoryId().toString(), "name", userLanguage);
-                    return CategoryResponse.builder()
-                            .id(c.getCategoryId())
-                            .name(localizedCatName != null ? localizedCatName : c.getName())
-                            .photoUrl(c.getPhotoUrl())
-                            .build();
-                })
-                .collect(Collectors.toList())
-                : java.util.Collections.emptyList();
+        CategoryResponse category = null;
+        if (gym.getCategory() != null) {
+            Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY",
+                    c.getCategoryId().toString(), "name", userLanguage);
+            category = CategoryResponse.builder()
+                    .id(c.getCategoryId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .build();
+        }
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
@@ -754,9 +753,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         String planId = sub.getPackageId().toString();
                         String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
                                 planId, "name", userLanguage);
-                        String packageName = (localizedPackageName != null && !localizedPackageName.isEmpty())
+                        String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
                                 ? localizedPackageName
-                                : (info != null ? info.getName() : "Bronze Plan");
+                                : (info != null ? info.getName() : "Bronze"));
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
                                     String localizedBenefit = translationService.getTranslatedValue(
@@ -790,7 +789,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
-                .categories(categories)
+                .category(category)
                 .supportedSubscriptions(supportedSubscriptions)
                 .build();
     }
@@ -870,8 +869,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<Gym> gyms = gymRepository.findAll();
         if (categoryId != null) {
             gyms = gyms.stream()
-                    .filter(g -> g.getCategories() != null
-                            && g.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)))
+                    .filter(g -> g.getCategory() != null && g.getCategory().getId().equals(categoryId))
                     .toList();
         }
         if (subscriptionId != null) {
@@ -916,8 +914,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<Gym> gyms = gymRepository.findAll();
         java.util.Map<Long, Long> categoryCounts = gyms.stream()
-                .flatMap(gym -> gym.getCategories() != null ? gym.getCategories().stream()
-                        : java.util.stream.Stream.empty())
+                .map(gym -> gym.getCategory())
+                .filter(java.util.Objects::nonNull)
                 .collect(java.util.stream.Collectors.groupingBy(
                         category -> category.getCategoryId(),
                         java.util.stream.Collectors.counting()));
@@ -1439,12 +1437,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         Long categoryId = null;
         String categoryName = null;
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            Category cat = gym.getCategories().stream().findFirst().orElse(null);
-            if (cat != null) {
-                categoryId = cat.getId();
-                categoryName = cat.getName();
-            }
+        if (gym.getCategory() != null) {
+            Category cat = gym.getCategory();
+            categoryId = cat.getId();
+            categoryName = cat.getName();
         }
 
         List<az.fitnest.catalog.dto.response.RoomImageDto> roomDtos = new java.util.ArrayList<>();
@@ -1699,5 +1695,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
                 .collect(Collectors.toList());
+    }
+    private String cleanPackageName(String name) {
+        if (name == null) return null;
+        return name.replace(" Plan", "").replace(" plan", "").trim();
     }
 }

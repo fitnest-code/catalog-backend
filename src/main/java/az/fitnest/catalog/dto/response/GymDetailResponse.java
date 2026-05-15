@@ -24,7 +24,7 @@ public record GymDetailResponse(
     List<GymRoomResponse> rooms,
     List<GymTrainerResponse> trainers,
     List<GymReviewResponse> recent_reviews,
-    List<CategoryResponse> categories,
+    CategoryResponse category,
     String coverImageUrl,
     Double rating,
     Integer reviewsCount,

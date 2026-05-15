@@ -20,6 +20,6 @@ public record GymMainPageResponse(
     @JsonInclude(JsonInclude.Include.ALWAYS)
     Double distanceKm,
     boolean isSaved,
-    List<CategoryResponse> categories,
+    CategoryResponse category,
     List<GymPlanItemResponse> supportedSubscriptions
 ) {}

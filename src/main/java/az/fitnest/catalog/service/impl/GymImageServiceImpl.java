@@ -75,8 +75,7 @@ public class GymImageServiceImpl implements az.fitnest.catalog.service.GymImageS
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        String fsId = fileStorageService.saveFile(file, "/gyms/" + gymId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
+        String fullUrl = fileStorageService.saveFile(file, "/gyms/" + gymId);
 
         GymImage gi = new GymImage();
         gi.setGym(gym);
