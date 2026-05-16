@@ -274,6 +274,12 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_AZ'"),
+            @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_EN'"),
+            @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_RU'"),
+            @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+    })
     public boolean toggleSave(Object principal, Long gymId) {
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) throw new ForbiddenException("error.unauthorized", "UNAUTHORIZED");
