@@ -256,6 +256,13 @@ public class StoreServiceImpl implements StoreService {
         Store store = new Store();
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
+        
+        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        if (saved.getAddress() != null) {
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+        }
+        
         return getStoreDetail(null, saved.getId());
     }
 
@@ -266,6 +273,13 @@ public class StoreServiceImpl implements StoreService {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
+        
+        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        if (saved.getAddress() != null) {
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+        }
+        
         return getStoreDetail(null, saved.getId());
     }
 

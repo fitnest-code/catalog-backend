@@ -54,6 +54,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final GymTrainerService gymTrainerService;
     private final GymQrCodeService gymQrCodeService;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
+    private final az.fitnest.catalog.service.TranslationService translationService;
     private final Executor imageUploadExecutor;
 
     @Autowired
@@ -181,6 +182,13 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setStatus(request.status() != null ? request.status() : GymStatus.ACTIVE);
 
         gymRepository.save(gym);
+
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        if (gym.getAddress() != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+        }
     }
 
     @Transactional
@@ -535,6 +543,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
 
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+
         if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
             List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
             int order = 1;
@@ -619,6 +630,11 @@ public class GymWriteServiceImpl implements GymWriteService {
             address.setCity(geocoding.city());
         }
         gym.setAddress(address);
+
+        if (address != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", address.getAddressText());
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", address.getCity());
+        }
 
         updateStep(gym, 3);
     }
@@ -819,6 +835,21 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
 
         gymRepository.save(gym);
+
+        if (request.name() != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+        }
+        if (request.description() != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        }
+        if (gym.getAddress() != null) {
+            if (request.address() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+            }
+            if (request.city() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            }
+        }
     }
 
     @Override

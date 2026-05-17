@@ -170,6 +170,8 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         }
         category = categoryRepository.save(category);
 
+        translationService.autoTranslateAndSave("CATEGORY", String.valueOf(category.getId()), "name", name);
+
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
             category.setPhotoUrl(fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId()));
@@ -195,6 +197,8 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         }
 
         category = categoryRepository.save(category);
+
+        translationService.autoTranslateAndSave("CATEGORY", String.valueOf(category.getId()), "name", name);
 
         return mapToDto(category, resolveUserLanguage());
     }
