@@ -1,7 +1,10 @@
 package az.fitnest.catalog.exception;
 
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.ApiResponse;
-import az.fitnest.catalog.dto.ApiError;
+import az.fitnest.catalog.dto.response.ApiError;
 import az.fitnest.catalog.exception.BaseException;
 import az.fitnest.catalog.exception.ValidationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -29,10 +32,8 @@ import org.springframework.web.context.request.WebRequest;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
 
     private final MessageSource messageSource;
@@ -45,7 +46,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBaseException(BaseException exception, WebRequest request) {
 
         Map<String, Object> details = null;
-        if (exception instanceof ValidationException validationException) {
+        if (exception instanceof GymDependencyException dependencyException) {
+            details = new HashMap<>();
+            List<Map<String, String>> dependencies = dependencyException.getDependencyKeys().stream()
+                    .map(key -> Map.of(
+                            "code", key.replace("error.gym_dependency_", "").toUpperCase(),
+                            "reason", getMessage(key)
+                    ))
+                    .toList();
+            details.put("dependencies", dependencies);
+        } else if (exception instanceof ValidationException validationException) {
             BindingResult result = validationException.getBindingResult();
             if (result != null) {
                 details = new HashMap<>();
@@ -199,7 +209,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = {Exception.class})
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex, WebRequest request) {
-        log.error("Unhandled Exception caught in GlobalExceptionHandler: ", ex);
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("INTERNAL_SERVER_ERROR")

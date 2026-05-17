@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceHistory, Long> {
     List<GymEntranceHistory> findByGymIdOrderByScanDateDesc(Long gymId);
+    List<GymEntranceHistory> findAllByUserIdOrderByScanDateDesc(Long userId);
+    List<GymEntranceHistory> findByGymIdAndScanDateBetweenOrderByScanDateDesc(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
+    void deleteByGymId(Long gymId);
+    boolean existsByGymId(Long gymId);
 }

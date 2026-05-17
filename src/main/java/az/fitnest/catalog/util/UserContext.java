@@ -12,4 +12,11 @@ public class UserContext {
         }
         return null;
     }
+
+    public static Long extractUserId(Object principal) {
+        if (principal instanceof Long) {
+            return (Long) principal;
+        }
+        return null;
+    }
 }

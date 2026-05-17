@@ -1,8 +1,11 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.ProfessionDto;
-import az.fitnest.catalog.dto.ProfessionRequest;
-import az.fitnest.catalog.service.impl.ProfessionService;
+import az.fitnest.catalog.dto.response.ProfessionResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.ProfessionRequest;
+import az.fitnest.catalog.service.ProfessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -33,8 +36,8 @@ public class ProfessionAdminController {
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProfessionDto> createProfession(@Valid @RequestBody ProfessionRequest request) {
-        ProfessionDto created = professionService.createProfession(request);
+    public ResponseEntity<ProfessionResponse> createProfession(@Valid @RequestBody ProfessionRequest request) {
+        ProfessionResponse created = professionService.createProfession(request);
         return ResponseEntity.created(URI.create("/api/v1/admin/professions/" + created.id())).body(created);
     }
 
@@ -45,7 +48,7 @@ public class ProfessionAdminController {
     })
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProfessionDto> updateProfession(@PathVariable Long id, @Valid @RequestBody ProfessionRequest request) {
+    public ResponseEntity<ProfessionResponse> updateProfession(@PathVariable Long id, @Valid @RequestBody ProfessionRequest request) {
         return ResponseEntity.ok(professionService.updateProfession(id, request));
     }
 
@@ -61,12 +64,12 @@ public class ProfessionAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Bütün ixtisasları silin (Kritik)", description = "Sistemdəki BÜTÜN ixtisasları silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
+    @Operation(summary = "Bütün ixtisasları silin (Kritik)", description = "Sistemdəki BÜTÜN ixtisasları silir. Bu əməliyyat üçün ADMIN rolu tələb olunur.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Bütün ixtisaslar uğurla silindi")
     })
     @DeleteMapping("/all")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteAllProfessions() {
         professionService.deleteAllProfessions();
         return ResponseEntity.noContent().build();

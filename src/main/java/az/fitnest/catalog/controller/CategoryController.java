@@ -1,8 +1,11 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.CategoryDto;
+import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.service.impl.CategoryService;
+import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,7 +29,7 @@ public class CategoryController {
     @Operation(summary = "Bütün kateqoriyaları əldə edin", description = "Bütün kataloq kateqoriyalarının səhifələnmiş siyahısını qaytarır. Ada görə axtarış üçün 'q' parametrindən istifadə edin.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriyalar uğurla əldə edildi")})
     @GetMapping
-    public ResponseEntity<PaginatedResponse<CategoryDto>> getAllCategories(
+    public ResponseEntity<PaginatedResponse<CategoryResponse>> getAllCategories(
             @Parameter(description = "Axtarış üçün ad") @RequestParam(value = "q", required = false) String q,
             @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int size) {

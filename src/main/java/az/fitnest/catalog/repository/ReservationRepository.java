@@ -13,7 +13,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Page<Reservation> findByUserId(Long userId, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND (r.reservationDate.date > CURRENT_DATE OR (r.reservationDate.date = CURRENT_DATE AND r.reservationDate.startTime >= CURRENT_TIME))")
+    Page<Reservation> findUpcomingByUserId(@org.springframework.data.repository.query.Param("userId") Long userId, Pageable pageable);
+
     Page<Reservation> findByUserIdAndStatus(Long userId, az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND r.status = :status AND (r.reservationDate.date > CURRENT_DATE OR (r.reservationDate.date = CURRENT_DATE AND r.reservationDate.startTime >= CURRENT_TIME))")
+    Page<Reservation> findUpcomingByUserIdAndStatus(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("status") az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
 
     List<Reservation> findByTrainerIdAndReservationDateId(Long trainerId, Long reservationDateId);
 
@@ -40,5 +46,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @org.springframework.data.jpa.repository.Query("SELECT count(r) FROM Reservation r WHERE r.reservationDate.id = :sessionId AND r.status IN (:statuses)")
     int countActiveReservations(@org.springframework.data.repository.query.Param("sessionId") Long sessionId, @org.springframework.data.repository.query.Param("statuses") java.util.List<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
-    java.util.Optional<Reservation> findByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+    Page<Reservation> findByGymIdAndStatus(Long gymId, az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
+
+    Page<Reservation> findByGymId(Long gymId, Pageable pageable);
+
+    long countByGymId(Long gymId);
+
+    long countByGymIdAndStatus(Long gymId, az.fitnest.catalog.model.enums.ReservationStatus status);
+
+    java.util.Optional<Reservation> findFirstByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    boolean existsByGymId(Long gymId);
 }

@@ -1,19 +1,22 @@
 package az.fitnest.catalog.model.entity;
 
-import az.fitnest.catalog.model.entity.BaseAuditableEntity;
-import az.fitnest.catalog.model.entity.StoreAddress;
-import az.fitnest.catalog.model.entity.StoreDiscount;
-import az.fitnest.catalog.model.entity.StoreImage;
-import az.fitnest.catalog.model.entity.StoreSocialLink;
-
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -32,13 +35,18 @@ public class Store
     @Column(name = "status")
     private String status;
     @Embedded
-    @AttributeOverrides(value = {@AttributeOverride(name = "addressText", column = @Column(name = "address_text")), @AttributeOverride(name = "latitude", column = @Column(name = "address_lat")), @AttributeOverride(name = "longitude", column = @Column(name = "address_lng"))})
-    private StoreAddress address;
+    @AttributeOverrides(value = {
+        @AttributeOverride(name = "addressText", column = @Column(name = "address_text")),
+        @AttributeOverride(name = "city", column = @Column(name = "city")),
+        @AttributeOverride(name = "latitude", column = @Column(name = "address_lat")),
+        @AttributeOverride(name = "longitude", column = @Column(name = "address_lng"))
+    })
+    private Address address;
     @Column(name = "phone")
     private String phone;
+    @Column(name = "email")
+    private String email;
 
-    @Column(name = "logo_url")
-    private String logoUrl;
     @Column(name = "cover_image_url")
     private String coverImageUrl;
     @Column(name = "popular_score")
@@ -58,6 +66,14 @@ public class Store
         @AttributeOverride(name = "url", column = @Column(name = "social_url"))
     })
     private StoreSocialLink socialLink;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "day",      column = @Column(name = "work_hours_day")),
+            @AttributeOverride(name = "fromTime", column = @Column(name = "work_hours_from")),
+            @AttributeOverride(name = "toTime",   column = @Column(name = "work_hours_to"))
+    })
+    private StoreWorkHours workHours;
 
     public Long getStoreId() {
         return getId();

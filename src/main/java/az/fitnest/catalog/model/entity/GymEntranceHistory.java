@@ -30,4 +30,10 @@ public class GymEntranceHistory extends BaseAuditableEntity {
 
     @Column(name = "reason")
     private String reason;
+
+    @Column(name = "platform")
+    private String platform;
+
+    @Column(name = "amount")
+    private Double amount;
 }

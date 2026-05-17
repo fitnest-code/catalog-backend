@@ -1,11 +1,13 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.model.enums.ReservationStatus;
-import az.fitnest.catalog.service.impl.CancellationReasonService;
-import az.fitnest.catalog.service.impl.ReservationCommandService;
-import az.fitnest.catalog.service.impl.ReservationQueryService;
+import az.fitnest.catalog.service.CancellationReasonService;
+import az.fitnest.catalog.service.ReservationCommandService;
+import az.fitnest.catalog.service.ReservationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;

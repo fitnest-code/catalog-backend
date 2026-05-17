@@ -1,6 +1,8 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.repository.SavedStoreRepository;
@@ -13,9 +15,9 @@ import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +30,6 @@ import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
     private final SavedStoreRepository savedStoreRepository;
@@ -40,7 +41,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaginatedResponse<StoreMainPageDto> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
+    public PaginatedResponse<StoreMainPageResponse> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(direction, "createdDate"));
         Page<Store> storePage;
@@ -73,11 +74,11 @@ public class StoreServiceImpl implements StoreService {
             }
         }
 
-        List<StoreMainPageDto> items = storePage.getContent().stream()
+        List<StoreMainPageResponse> items = storePage.getContent().stream()
                 .map(s -> mapToSummary(s, userId, lat, lng))
                 .collect(Collectors.toList());
 
-        return PaginatedResponse.<StoreMainPageDto>builder()
+        return PaginatedResponse.<StoreMainPageResponse>builder()
                 .items(items)
                 .total(storePage.getTotalElements())
                 .page(page)
@@ -85,7 +86,7 @@ public class StoreServiceImpl implements StoreService {
                 .build();
     }
 
-    private PaginatedResponse<StoreMainPageDto> manualPaginate(List<Store> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
+    private PaginatedResponse<StoreMainPageResponse> manualPaginate(List<Store> candidates, Long userId, Double lat, Double lng, int page, int pageSize, String q) {
         Stream<Store> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
@@ -93,17 +94,24 @@ public class StoreServiceImpl implements StoreService {
                     (s.getAddress() != null && s.getAddress().getAddressText() != null && s.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
         }
 
-        List<StoreMainPageDto> all = stream.map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
-
+        List<Store> filtered = stream.collect(Collectors.toList());
         if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(StoreMainPageDto::distanceKm, Comparator.nullsLast(Comparator.naturalOrder())));
+            filtered.sort((s1, s2) -> {
+                Double d1 = (s1.getAddress() != null && s1.getAddress().getLatitude() != null && s1.getAddress().getLongitude() != null)
+                        ? calculateDistance(lat, lng, s1.getAddress().getLatitude(), s1.getAddress().getLongitude()) : Double.MAX_VALUE;
+                Double d2 = (s2.getAddress() != null && s2.getAddress().getLatitude() != null && s2.getAddress().getLongitude() != null)
+                        ? calculateDistance(lat, lng, s2.getAddress().getLatitude(), s2.getAddress().getLongitude()) : Double.MAX_VALUE;
+                return d1.compareTo(d2);
+            });
         }
+
+        List<StoreMainPageResponse> all = filtered.stream().map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
 
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(all.size(), from + pageSize);
-        List<StoreMainPageDto> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
+        List<StoreMainPageResponse> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
 
-        return PaginatedResponse.<StoreMainPageDto>builder()
+        return PaginatedResponse.<StoreMainPageResponse>builder()
                 .items(pageItems)
                 .total(all.size())
                 .page(page)
@@ -111,8 +119,8 @@ public class StoreServiceImpl implements StoreService {
                 .build();
     }
 
-    private PaginatedResponse<StoreMainPageDto> emptyResponse(int page, int pageSize) {
-        return PaginatedResponse.<StoreMainPageDto>builder().items(Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
+    private PaginatedResponse<StoreMainPageResponse> emptyResponse(int page, int pageSize) {
+        return PaginatedResponse.<StoreMainPageResponse>builder().items(Collections.emptyList()).total(0).page(page).pageSize(pageSize).build();
     }
 
     private String getUserLanguage(Long userId) {
@@ -129,7 +137,7 @@ public class StoreServiceImpl implements StoreService {
         return language;
     }
 
-    private StoreMainPageDto mapToSummary(Store store, Long userId, Double lat, Double lng) {
+    private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng) {
         Double distance = null;
         if (lat != null && lng != null && store.getAddress() != null && store.getAddress().getLatitude() != null && store.getAddress().getLongitude() != null) {
             distance = calculateDistance(lat, lng, store.getAddress().getLatitude(), store.getAddress().getLongitude());
@@ -144,19 +152,38 @@ public class StoreServiceImpl implements StoreService {
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
 
-        return StoreMainPageDto.builder()
+        return StoreMainPageResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
-                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
-                .logoUrl(store.getLogoUrl())
                 .coverImageUrl(store.getCoverImageUrl())
-                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
+                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
+                .addressText(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
+                .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreMainPageResponse.DiscountDto.builder().packageName(resolvePackageName(d.getPackageId(), d.getAppliesTo())).discountPercent(d.getPercent()).build()).toList() : Collections.emptyList())
+                .social(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null)
                 .isSaved(isSaved)
-                .distanceKm(distance)
-                .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .isNew(isNew(store))
                 .build();
+    }
+
+    private String resolvePackageName(Long packageId, String defaultAppliesTo) {
+        if (defaultAppliesTo != null && !defaultAppliesTo.isBlank()) {
+            return defaultAppliesTo;
+        }
+        if (packageId == null) return "Paket";
+        try {
+            java.util.List<az.fitnest.order.grpc.PackageNameInfo> infos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(packageId));
+            if (infos != null && !infos.isEmpty()) {
+                return infos.get(0).getName();
+            }
+        } catch (Exception ignored) {}
+
+        switch (packageId.intValue()) {
+            case 1: return "Bronze";
+            case 2: return "Silver";
+            case 3: return "Gold";
+            case 4: return "Platinum";
+            default: return "Paket " + packageId;
+        }
     }
 
     private boolean isNew(Store store) {
@@ -165,7 +192,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public StoreDetailResponseDto getStoreDetail(Long userId, Long storeId) {
+    public StoreDetailResponse getStoreDetail(Long userId, Long storeId) {
         Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         boolean isSaved = false;
         if (userId != null) {
@@ -174,10 +201,10 @@ public class StoreServiceImpl implements StoreService {
         String userLanguage = getUserLanguage(userId);
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
-        return StoreDetailResponseDto.builder()
+        return StoreDetailResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
-                .address(store.getAddress() != null ? AddressDto.builder()
+                .address(store.getAddress() != null ? AddressResponse.builder()
                         .addressText(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage))
                         .city(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage))
                         .latitude(store.getAddress().getLatitude())
@@ -187,7 +214,7 @@ public class StoreServiceImpl implements StoreService {
                 .category(store.getCategory())
                 .status(store.getStatus())
 
-                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountDto.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
+                .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).toList() : Collections.emptyList())
                 .isSaved(isSaved)
@@ -213,10 +240,10 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public FilterResponseDto getFilters() {
-        return FilterResponseDto.builder()
-                .tabs(List.of(new FilterResponseDto.TabDto("all", "All"), new FilterResponseDto.TabDto("popular", "Popular"),
-                        new FilterResponseDto.TabDto("nearby", "Near you"), new FilterResponseDto.TabDto("new", "New")))
+    public FilterResponse getFilters() {
+        return FilterResponse.builder()
+                .tabs(List.of(new FilterResponse.TabDto("all", "All"), new FilterResponse.TabDto("popular", "Popular"),
+                        new FilterResponse.TabDto("nearby", "Near you"), new FilterResponse.TabDto("new", "New")))
                 .sortOptions(List.of("popular", "newest", "distance", "discount_desc", "name_asc"))
                 .defaultRadiusKm(20)
                 .build();
@@ -224,61 +251,67 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    public StoreDetailResponseDto createStore(StoreRequest request) {
+    @CacheEvict(value = "admin-stores", allEntries = true)
+    public StoreDetailResponse createStore(StoreRequest request) {
         Store store = new Store();
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
+        
+        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        if (saved.getAddress() != null) {
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+        }
+        
         return getStoreDetail(null, saved.getId());
     }
 
     @Override
     @Transactional
-    public StoreDetailResponseDto updateStore(Long storeId, StoreRequest request) {
+    @CacheEvict(value = "admin-stores", allEntries = true)
+    public StoreDetailResponse updateStore(Long storeId, StoreRequest request) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
+        
+        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        if (saved.getAddress() != null) {
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+        }
+        
         return getStoreDetail(null, saved.getId());
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void deleteStore(Long storeId) {
-        log.info("Mağazanı silmə prosesi başladı. ID: {}", storeId);
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> {
-                    log.error("Mağaza tapılmadı, silmə ləğv edildi. ID: {}", storeId);
                     return new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found");
                 });
 
         savedStoreRepository.deleteByStoreId(storeId);
-        log.debug("Mağazaya aid 'SavedStore' qeydləri silindi. Store ID: {}", storeId);
 
-        if (store.getLogoUrl() != null) {
-            fileStorageService.deleteFile(store.getLogoUrl());
-            log.debug("Logo silindi: {}", store.getLogoUrl());
-        }
+
 
         if (store.getCoverImageUrl() != null) {
             fileStorageService.deleteFile(store.getCoverImageUrl());
-            log.debug("Cover image silindi: {}", store.getCoverImageUrl());
         }
 
         if (store.getImages() != null && !store.getImages().isEmpty()) {
             List<String> imageUrls = store.getImages().stream().map(StoreImage::getUrl).toList();
             fileStorageService.deleteFiles(imageUrls);
-            log.debug("{} ədəd əlavə şəkil silindi.", imageUrls.size());
         }
 
         try {
             storeRepository.deleteStoreSocialLinksByStoreId(storeId);
-            log.info("Mağazaya aid social linklər silindi.");
         } catch (Exception e) {
-            log.warn("Social linklər silinərkən xəta baş verdi (ignore edildi): {}", e.getMessage());
         }
 
         storeRepository.delete(store);
-        log.info("Mağaza uğurla silindi. ID: {}", storeId);
     }
 
     private void updateStoreFromRequest(Store store, StoreRequest request) {
@@ -292,7 +325,7 @@ public class StoreServiceImpl implements StoreService {
                 ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
                 : resolveGeocoding(reqLat, reqLng);
 
-        store.setAddress(request.address() != null ? new StoreAddress(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
+        store.setAddress(request.address() != null ? new Address(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
 
         store.setPhone(request.phone());
         store.setCategory(request.category());
@@ -332,8 +365,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional
     public String uploadStoreImage(Long storeId, MultipartFile file) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
-        String fsId = fileStorageService.saveFile(file, "/stores/" + storeId);
-        String fullUrl = "/api/v1/media/stream/" + fsId;
+        String fullUrl = fileStorageService.saveFile(file, "/stores/" + storeId);
         StoreImage image = new StoreImage();
         image.setUrl(fullUrl);
         image.setType("gallery");
@@ -345,11 +377,11 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
-    public LocationDto getStoreLocation(Long storeId) {
+    public LocationResponse getStoreLocation(Long storeId) {
         Store store = getStoreEntityById(storeId);
-        StoreAddress addr = store.getAddress();
-        if (addr == null) return LocationDto.builder().build();
-        return LocationDto.builder().addressText(addr.getAddressText()).latitude(addr.getLatitude()).longitude(addr.getLongitude()).build();
+        Address addr = store.getAddress();
+        if (addr == null) return LocationResponse.builder().build();
+        return LocationResponse.builder().addressText(addr.getAddressText()).latitude(addr.getLatitude()).longitude(addr.getLongitude()).build();
     }
 
     @Override
@@ -368,19 +400,14 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public String uploadFileDirectly(Long storeId, MultipartFile file) {
-        return "/api/v1/media/stream/" + fileStorageService.saveFile(file, "/stores/" + storeId);
+        return fileStorageService.saveFile(file, "/stores/" + storeId);
     }
+
+
 
     @Override
     @Transactional
-    public void updateStoreLogoUrl(Long storeId, String logoUrl) {
-        Store store = getStoreEntityById(storeId);
-        store.setLogoUrl(logoUrl);
-        storeRepository.save(store);
-    }
-
-    @Override
-    @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl) {
         Store store = getStoreEntityById(storeId);
         store.setCoverImageUrl(coverImageUrl);
@@ -389,6 +416,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void deleteAllStores() {
         List<Store> stores = storeRepository.findAll();
         for (Store store : stores) {
@@ -398,6 +426,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin-stores", allEntries = true)
     public void addDiscount(Long storeId, AddDiscountRequest request) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
@@ -407,12 +436,12 @@ public class StoreServiceImpl implements StoreService {
             throw new ResourceNotFoundException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
 
-        StoreDiscount discount = new StoreDiscount(request.percent(), request.packageId().toString());
+        StoreDiscount discount = new StoreDiscount(request.packageId(), request.percent());
         store.getDiscounts().add(discount);
         storeRepository.save(store);
     }
 
-    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.StoreAddress address, String fieldName, String userLanguage) {
+    private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null) return null;
         String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
         if (localized == null || localized.isEmpty()) {

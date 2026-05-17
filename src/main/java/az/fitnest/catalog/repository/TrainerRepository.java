@@ -11,11 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface TrainerRepository
         extends JpaRepository<Trainer, Long> {
-    @Query(value = "SELECT t FROM Gym g JOIN g.trainers t LEFT JOIN FETCH t.profession WHERE g.id = :gymId")
-    public Page<Trainer> findByGymId(@Param(value = "gymId") Long var1, Pageable var2);
+    @Query(value = "SELECT t FROM Trainer t WHERE t.gymId = :gymId")
+    public Page<Trainer> findByGymId(@Param(value = "gymId") Long gymId, Pageable pageable);
 
     @Modifying
     @Transactional
     @Query("UPDATE Trainer t SET t.profession = NULL")
     void clearAllProfessions();
+
+    boolean existsByEmail(String email);
+    boolean existsByPhone(String phone);
 }

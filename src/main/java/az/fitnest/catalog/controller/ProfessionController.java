@@ -1,8 +1,11 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.ProfessionDto;
-import az.fitnest.catalog.dto.ProfessionRequest;
-import az.fitnest.catalog.service.impl.ProfessionService;
+import az.fitnest.catalog.dto.response.ProfessionResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.ProfessionRequest;
+import az.fitnest.catalog.service.ProfessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,13 +28,13 @@ public class ProfessionController {
 
     @Operation(summary = "Bütün ixtisasları əldə edin", description = "Müəyyən edilmiş bütün ixtisasların siyahısını əldə edir. Hər kəs üçün əlçatandır.")
     @GetMapping
-    public ResponseEntity<List<ProfessionDto>> getAllProfessions() {
+    public ResponseEntity<List<ProfessionResponse>> getAllProfessions() {
         return ResponseEntity.ok(professionService.getAllProfessions());
     }
 
     @Operation(summary = "İxtisası ID vasitəsilə əldə edin")
     @GetMapping("/{id}")
-    public ResponseEntity<ProfessionDto> getProfessionById(@PathVariable Long id) {
+    public ResponseEntity<ProfessionResponse> getProfessionById(@PathVariable Long id) {
         return ResponseEntity.ok(professionService.getProfessionById(id));
     }
 }

@@ -1,11 +1,11 @@
 package az.fitnest.catalog.controller;
 
-import az.fitnest.catalog.dto.CategoryDto;
-import az.fitnest.catalog.dto.CategoryRequest;
-import az.fitnest.catalog.exception.ValidationException;
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.service.impl.CategoryService;
+import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.CategoryRequest;
+import az.fitnest.catalog.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,10 +28,9 @@ import java.net.URI;
 @SecurityRequirement(name = "bearerAuth")
 public class CategoryAdminController {
     private final CategoryService categoryService;
-    private final CategoryRepository categoryRepository;
 
-    @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün SUPER_ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Bütün kateqoriyaları silin (Kritik)", description = "Sistemdəki BÜTÜN kateqoriyaları və onlarla bağlı idman zalı əlaqələrini silir. Bu əməliyyat üçün ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/all")
     public ResponseEntity<Void> deleteAllCategories() {
         categoryService.deleteAllCategories();
@@ -70,24 +69,26 @@ public class CategoryAdminController {
 
     @Operation(summary = "Kateqoriya yaradın", description = "Yeni bir kateqoriya yaradır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Kateqoriya uğurla yaradıldı")})
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
-        Category category = Category.builder().name(request.name()).build();
-        category = categoryRepository.save(category);
-        CategoryDto categoryDto = CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+    public ResponseEntity<CategoryResponse> createCategory(
+            @RequestParam("name") String name,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "lessonTypeIds", required = false) java.util.List<Long> lessonTypeIds) {
+        CategoryResponse categoryDto = categoryService.createCategory(name, photo, lessonTypeIds);
         return ResponseEntity.created(URI.create("/api/v1/admin/categories/" + categoryDto.id())).body(categoryDto);
     }
 
     @Operation(summary = "Kateqoriyanı yeniləyin", description = "Mövcud bir kateqoriyanı yeniləyir.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Kateqoriya uğurla yeniləndi")})
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
-        Category category = categoryRepository.findById(id).orElseThrow(() -> new ValidationException("Kateqoriya tapılmadı", null));
-        category.setName(request.name());
-        category = categoryRepository.save(category);
-        CategoryDto categoryDto = CategoryDto.builder().id(category.getId()).name(category.getName()).photoUrl(category.getPhotoUrl()).build();
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long id,
+            @RequestParam("name") String name,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "lessonTypeIds", required = false) java.util.List<Long> lessonTypeIds) {
+        CategoryResponse categoryDto = categoryService.updateCategory(id, name, photo, lessonTypeIds);
         return ResponseEntity.ok(categoryDto);
     }
 

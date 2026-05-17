@@ -71,6 +71,15 @@ public class Gym
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Set<GymWorkHour> workHoursMan = new java.util.HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(name = "gym_rest_days", joinColumns = {@JoinColumn(name = "gym_id")})
+    @Column(name = "period")
+    @Enumerated(EnumType.ORDINAL)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
     @Builder.Default
@@ -101,12 +110,9 @@ public class Gym
     @EqualsAndHashCode.Exclude
     private Set<az.fitnest.catalog.model.entity.Room> rooms = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(name = "gym_categories", joinColumns = {@JoinColumn(name = "gym_id")}, inverseJoinColumns = {@JoinColumn(name = "category_id")})
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<Category> categories = new HashSet<Category>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;
@@ -124,6 +130,10 @@ public class Gym
     @Column(name = "is_reservation_enabled")
     @Builder.Default
     private Boolean isReservationEnabled = false;
+
+    @Column(name = "creation_step")
+    @Builder.Default
+    private Integer creationStep = 1;
 
     public Long getGymId() {
         return getId();

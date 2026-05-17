@@ -11,6 +11,7 @@ public class UserServiceGrpcClient {
     @GrpcClient("user-backend")
     private UserServiceGrpc.UserServiceBlockingStub userServiceStub;
 
+    @org.springframework.cache.annotation.Cacheable(value = "users", key = "#userId")
     public UserResponse getUserById(Long userId) {
         GetUserByIdRequest request = GetUserByIdRequest.newBuilder().setUserId(userId).build();
         return userServiceStub.getUserById(request);

@@ -1,11 +1,13 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.service.impl.CancellationReasonService;
-import az.fitnest.catalog.service.impl.GymLessonTypeService;
-import az.fitnest.catalog.service.impl.GymTrainerService;
-import az.fitnest.catalog.service.impl.GymWriteService;
-import az.fitnest.catalog.service.impl.ReservationCommandService;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.service.CancellationReasonService;
+import az.fitnest.catalog.service.GymLessonTypeService;
+import az.fitnest.catalog.service.GymTrainerService;
+import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.service.ReservationCommandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -70,6 +72,25 @@ public class ReservationAdminController {
             @PathVariable Long reservationId,
             @Valid @RequestBody ReservationStatusUpdateRequest request) {
         reservationCommandService.updateReservationStatus(reservationId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rezervasiyanı təsdiqləyin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{reservationId}/approve")
+    public ResponseEntity<Void> approveReservation(@PathVariable Long reservationId) {
+        reservationCommandService.approveReservation(reservationId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rezervasiyanı rədd edin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{reservationId}/reject")
+    public ResponseEntity<Void> rejectReservation(
+            @PathVariable Long reservationId,
+            @RequestBody(required = false) ReservationRejectRequest request) {
+        String reason = (request != null) ? request.getReason() : null;
+        reservationCommandService.rejectReservation(reservationId, reason);
         return ResponseEntity.ok().build();
     }
 

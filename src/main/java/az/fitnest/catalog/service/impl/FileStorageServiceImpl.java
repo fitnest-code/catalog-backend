@@ -1,7 +1,10 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.StorageGrpcClient;
-import az.fitnest.catalog.dto.StorageFileData;
+import az.fitnest.catalog.dto.*;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.response.StorageFileData;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.service.FileStorageService;
 
@@ -11,14 +14,21 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.apache.tika.Tika;
 import java.io.OutputStream;
 
 @Service
 public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
-    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("image/jpeg", "image/jpg", "image/png", "image/webp");
+    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
+            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp"
+    );
     private final StorageGrpcClient storageGrpcClient;
+    private final Tika tika = new Tika();
 
     public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
         this.storageGrpcClient = storageGrpcClient;
@@ -41,9 +51,23 @@ public class FileStorageServiceImpl
         }
         this.validateFile(file);
         try {
+            String extension = "";
+            String originalName = file.getOriginalFilename();
+            if (originalName != null && originalName.contains(".")) {
+                extension = originalName.substring(originalName.lastIndexOf("."));
+            }
+            String randomFilename = java.util.UUID.randomUUID() + extension;
+
+            MultipartFile randomizedFile = new az.fitnest.catalog.util.ByteArrayMultipartFile(
+                    file.getBytes(),
+                    file.getName(),
+                    randomFilename,
+                    file.getContentType()
+            );
+
             String extractedOldPath = this.extractIdFromUrl(oldPath);
-            StorageFileData data = this.storageGrpcClient.uploadFile(file, directory, extractedOldPath);
-            return String.valueOf(data.getFsId());
+            StorageFileData data = this.storageGrpcClient.uploadFile(randomizedFile, directory, extractedOldPath);
+            return this.storageGrpcClient.getDownloadUrl(String.valueOf(data.fsId()));
         } catch (Exception e) {
             throw new BadRequestException("error.file_upload_failed");
         }
@@ -81,6 +105,36 @@ public class FileStorageServiceImpl
         }
     }
 
+    @Override
+    @Async("fileDeletionExecutor")
+    public void deleteFilesAsync(List<String> urls) {
+        if (urls == null || urls.isEmpty()) return;
+        this.deleteFiles(urls);
+    }
+
+    @Override
+    @Async("fileDeletionExecutor")
+    public void deleteFileAsync(String url) {
+        if (url == null || url.isBlank()) return;
+        this.deleteFile(url);
+    }
+
+    @Override
+    public void deleteFilesAfterCommit(List<String> urls) {
+        if (urls == null || urls.isEmpty()) return;
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteFilesAsync(urls);
+                }
+            });
+        } else {
+            deleteFilesAsync(urls);
+        }
+    }
+
     private String extractIdFromUrl(String url) {
         if (url == null || url.trim().isEmpty()) {
             return null;
@@ -103,8 +157,32 @@ public class FileStorageServiceImpl
                 }
             }
         });
+    }
+
+    @Override
+    public MultipartFile validateAndWrapImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("error.file_empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BadRequestException("error.file_too_large");
+        }
         try {
-            outputStream.flush();
-        } catch (Exception ignored) {}
+            byte[] bytes = file.getBytes();
+            try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
+                String mimeType = tika.detect(is);
+                if (mimeType == null || !ALLOWED_CONTENT_TYPES.contains(mimeType.toLowerCase())) {
+                    throw new BadRequestException("error.invalid_file_type");
+                }
+            }
+            return new az.fitnest.catalog.util.ByteArrayMultipartFile(
+                    bytes,
+                    file.getName(),
+                    file.getOriginalFilename(),
+                    file.getContentType()
+            );
+        } catch (java.io.IOException e) {
+            throw new BadRequestException("error.file_validation_failed");
+        }
     }
 }

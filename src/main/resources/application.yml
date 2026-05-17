@@ -8,12 +8,14 @@ server:
     mime-types: application/json,text/plain,text/css,application/javascript,application/openapi+json,application/vnd.api+json,application/vnd.oai.openapi+json
     min-response-size: 2048
   tomcat:
+    max-part-count: 500
     threads:
       max: 200
       min-spare: 20
     connection-timeout: 20000
     max-connections: 10000
     accept-count: 200
+    max-swallow-size: -1
 
 spring:
   threads:
@@ -24,34 +26,39 @@ spring:
   main:
     lazy-initialization: ${SPRING_MAIN_LAZY_INITIALIZATION:false}
     allow-bean-definition-overriding: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1000MB
+      enabled: true
   messages:
     encoding: UTF-8
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgresql-catalog:5432/fitnest_catalog}
-    username: ${SPRING_DATASOURCE_USERNAME:fitnest_catalog}
-    password: ${SPRING_DATASOURCE_PASSWORD:catalog_password_123}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      keep-alive-time: 300000
-      minimum-idle: ${HIKARI_MIN_IDLE:2}
-      maximum-pool-size: ${HIKARI_MAX_POOL:15}
       pool-name: HikariCP-Catalog
-      auto-commit: true
+      maximum-pool-size: ${HIKARI_MAX_POOL:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      connection-timeout: 20000
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      keep-alive-time: 60000
+      leak-detection-threshold: 2000
+      auto-commit: false
       connection-test-query: SELECT 1
       data-source-properties:
-        cachePrepStmts: true
-        prepStmtCacheSize: 250
-        prepStmtCacheSqlLimit: 2048
-        useServerPrepStmts: true
-        useLocalSessionState: true
-        rewriteBatchedStatements: true
-        cacheResultSetMetadata: true
-        cacheServerConfiguration: true
-        elideSetAutoCommits: true
-        maintainTimeStats: false
+        reWriteBatchedInserts: true
+        prepareThreshold: 5
+        preparedStatementCacheQueries: 250
+        preparedStatementCacheSizeMiB: 10
+        tcpKeepAlive: true
+        binaryTransfer: true
+        socketTimeout: 30
+        connectTimeout: 10
+        loginTimeout: 5
   jpa:
     hibernate:
       ddl-auto: update
@@ -63,22 +70,25 @@ spring:
         format_sql: false
         jdbc:
           batch_size: 50
+          batch_versioned_data: true
         order_inserts: true
         order_updates: true
         generate_statistics: false
+        connection:
+          provider_disables_autocommit: true
   jackson:
     default-property-inclusion: NON_NULL
     time-zone: UTC
 
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:redis.fitnest-production.svc.cluster.local}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
       timeout: 2000ms
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service.fitnest-production.svc.cluster.local:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
       group-id: catalog-backend
       auto-offset-reset: earliest
@@ -116,7 +126,7 @@ eureka:
     enabled: false
 
 jwt:
-  secret: ${JWT_SECRET:your-jwt-secret-change-in-production}
+  secret: ${JWT_SECRET}
   issuer: ${JWT_ISSUER:fitnest}
 
 # ✅ Updated service URLs
@@ -144,7 +154,7 @@ management:
         enabled: true
 
 springdoc:
-  server-url: ${SPRINGDOC_SERVER_URL:}
+  server-url: ${SPRINGDOC_SERVER_URL:https://dev-api.fitnest.az}
   api-docs:
     path: /v3/api-docs
     cache:
@@ -169,13 +179,16 @@ grpc:
   client:
     # ✅ Updated gRPC client addresses
     user-backend:
-      address: 'dns:///user-backend.fitnest-production.svc.cluster.local:9090'
+      address: ${USER_BACKEND_GRPC_ADDRESS}
+      negotiation-type: plaintext
+    identity-service:
+      address: ${IDENTITY_BACKEND_GRPC_ADDRESS}
       negotiation-type: plaintext
     storage-backend:
-      address: 'dns:///storage-backend.fitnest-production.svc.cluster.local:9090'
+      address: ${STORAGE_BACKEND_GRPC_ADDRESS}
       negotiation-type: plaintext
     order-backend:
-      address: 'dns:///order-backend.fitnest-production.svc.cluster.local:9090'
+      address: ${ORDER_BACKEND_GRPC_ADDRESS}
       negotiation-type: plaintext
       deadline-after: 10s
       enable-keep-alive: true

@@ -1,8 +1,8 @@
 package az.fitnest.catalog.service;
 
 import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.service.impl.GymReadService;
-import az.fitnest.catalog.service.impl.GymWriteService;
+import az.fitnest.catalog.dto.request.*;
+import az.fitnest.catalog.dto.response.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

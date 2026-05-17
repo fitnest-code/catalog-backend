@@ -3,14 +3,11 @@ package az.fitnest.catalog.client;
 import az.fitnest.order.grpc.*;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @Service
 public class OrderServiceGrpcClient {
-    private static final Logger logger = LoggerFactory.getLogger(OrderServiceGrpcClient.class);
 
     @GrpcClient("order-backend")
     private SubscriptionPackageServiceGrpc.SubscriptionPackageServiceBlockingStub blockingStub;
@@ -18,11 +15,14 @@ public class OrderServiceGrpcClient {
     @GrpcClient("order-backend")
     private UserSubscriptionServiceGrpc.UserSubscriptionServiceBlockingStub userSubscriptionStub;
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public boolean checkPlanExists(Long packageId) {
         az.fitnest.order.grpc.CheckPlanExistsRequest request = az.fitnest.order.grpc.CheckPlanExistsRequest.newBuilder()
                 .setPackageId(packageId)
                 .build();
-        az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub.checkPlanExists(request);
+        az.fitnest.order.grpc.CheckPlanExistsResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkPlanExists(request);
         return response.getExists() && response.getIsActive();
     }
 
@@ -30,21 +30,27 @@ public class OrderServiceGrpcClient {
         return checkPlanExists(packageId);
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public List<az.fitnest.order.grpc.SubscriptionPackageInfo> getPlansByIds(List<Long> packageIds) {
         az.fitnest.order.grpc.GetPlansByIdsRequest request = az.fitnest.order.grpc.GetPlansByIdsRequest.newBuilder()
                 .addAllPackageIds(packageIds)
                 .build();
-        az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub.getPlansByIds(request);
+        az.fitnest.order.grpc.GetPlansByIdsResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .getPlansByIds(request);
         return response.getPackagesList();
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public void checkIn(Long userId, Long gymId) {
         az.fitnest.order.grpc.CheckInRequest request = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
                 .build();
 
-        az.fitnest.order.grpc.CheckInResponse response = blockingStub.checkIn(request);
+        az.fitnest.order.grpc.CheckInResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkIn(request);
 
         if (!response.getSuccess()) {
             throw new RuntimeException("error.rpc_failed");
@@ -60,13 +66,24 @@ public class OrderServiceGrpcClient {
     }
 
     public az.fitnest.order.grpc.ActiveSubscriptionResponse getActiveSubscription(Long userId) {
-        logger.info("[getActiveSubscription] Fetching active subscription for userId={}", userId);
         az.fitnest.order.grpc.GetActiveSubscriptionRequest request = az.fitnest.order.grpc.GetActiveSubscriptionRequest.newBuilder()
                 .setUserId(userId)
                 .build();
-        logger.debug("[getActiveSubscription] gRPC request: {}", request);
         az.fitnest.order.grpc.ActiveSubscriptionResponse response = userSubscriptionStub.getActiveSubscription(request);
-        logger.info("[getActiveSubscription] gRPC response: {}", response);
         return response;
+    }
+
+    public void freezeSession(Long userId) {
+        az.fitnest.order.grpc.FreezeSessionRequest request = az.fitnest.order.grpc.FreezeSessionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        userSubscriptionStub.freezeSession(request);
+    }
+
+    public void restoreSession(Long userId) {
+        az.fitnest.order.grpc.RestoreSessionRequest request = az.fitnest.order.grpc.RestoreSessionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        userSubscriptionStub.restoreSession(request);
     }
 }

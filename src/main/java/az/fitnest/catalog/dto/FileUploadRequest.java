@@ -1,8 +1,0 @@
-package az.fitnest.catalog.dto;
-
-import lombok.Data;
-
-@Data
-public class FileUploadRequest {
-    private String file;
-}

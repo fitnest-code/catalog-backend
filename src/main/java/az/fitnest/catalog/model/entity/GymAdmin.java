@@ -24,6 +24,12 @@ public class GymAdmin extends BaseAuditableEntity {
     @Column(name = "email")
     private String email;
 
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "role")
+    private String role;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gym_id", referencedColumnName = "id", nullable = false)
     private Gym gym;

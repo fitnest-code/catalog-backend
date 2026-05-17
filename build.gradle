@@ -8,6 +8,10 @@ plugins {
 group = 'az.fitnest'
 version = '1.0.0'
 
+springBoot {
+    mainClass = 'az.fitnest.catalog.CatalogServiceApplication'
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
@@ -80,6 +84,8 @@ dependencies {
 
     implementation "com.google.zxing:core:3.5.3"
     implementation "com.google.zxing:javase:3.5.3"
+
+    implementation 'org.apache.tika:tika-core:3.3.0'
 
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 

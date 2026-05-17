@@ -30,7 +30,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Component
 @GrpcGlobalServerInterceptor
 @GrpcGlobalClientInterceptor
-public class PatternAGrpcInterceptor
+public class    PatternAGrpcInterceptor
         implements ServerInterceptor,
         ClientInterceptor {
     private static final Metadata.Key<String> X_USER_ID = Metadata.Key.of("x-user-id", Metadata.ASCII_STRING_MARSHALLER);

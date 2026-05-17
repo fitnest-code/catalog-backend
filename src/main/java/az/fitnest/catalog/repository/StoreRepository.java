@@ -28,23 +28,15 @@ public interface StoreRepository
 
     public List<Store> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4);
 
-    @EntityGraph(attributePaths = {"discounts", "images"})
-
     public Page<Store> findByAddressLatitudeBetweenAndAddressLongitudeBetween(Double var1, Double var2, Double var3, Double var4, Pageable var5);
-
-    @EntityGraph(attributePaths = {"discounts"})
 
     @Query(value = "SELECT s FROM Store s")
     public Page<Store> findAllWithAssociations(Pageable var1);
 
-    @EntityGraph(attributePaths = {"discounts"})
-
-    @Query(value = "SELECT DISTINCT s FROM Store s JOIN s.discounts d")
+    @Query(value = "SELECT s FROM Store s WHERE EXISTS (SELECT 1 FROM s.discounts d)")
     public Page<Store> findDiscountedStores(Pageable var1);
 
-    @EntityGraph(attributePaths = {"discounts"})
-
-    @Query(value = "SELECT DISTINCT s FROM Store s JOIN s.discounts d WHERE LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern")
+    @Query(value = "SELECT s FROM Store s WHERE (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern) AND EXISTS (SELECT 1 FROM s.discounts d)")
     public Page<Store> findDiscountedStoresByQuery(@Param(value = "pattern") String var1, Pageable var2);
 
     @EntityGraph(attributePaths = {"discounts", "images"})
@@ -52,12 +44,8 @@ public interface StoreRepository
     @Query(value = "SELECT s FROM Store s WHERE s.id = :id")
     public Optional<Store> findByIdWithAssociations(@Param(value = "id") Long var1);
 
-    @EntityGraph(attributePaths = {"discounts"})
-
     @Query(value = "SELECT s FROM Store s WHERE s.createdDate >= :cutoff")
     public Page<Store> findNewStores(@Param(value = "cutoff") LocalDateTime var1, Pageable var2);
-
-    @EntityGraph(attributePaths = {"discounts"})
 
     @Query(value = "SELECT s FROM Store s WHERE s.createdDate >= :cutoff AND (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern)")
     public Page<Store> findNewStoresByQuery(@Param(value = "cutoff") LocalDateTime var1, @Param(value = "pattern") String var2, Pageable var3);
@@ -65,4 +53,12 @@ public interface StoreRepository
     @Modifying
     @Query(value = "DELETE FROM store_social_links WHERE store_id = :storeId", nativeQuery = true)
     void deleteStoreSocialLinksByStoreId(@Param("storeId") Long storeId);
+
+    @Modifying
+    @Query(value = "DELETE FROM store_discounts WHERE store_id = :storeId", nativeQuery = true)
+    void deleteStoreDiscountsByStoreId(@Param("storeId") Long storeId);
+
+    @Modifying
+    @Query(value = "DELETE FROM store_images WHERE store_id = :storeId", nativeQuery = true)
+    void deleteStoreImagesByStoreId(@Param("storeId") Long storeId);
 }
