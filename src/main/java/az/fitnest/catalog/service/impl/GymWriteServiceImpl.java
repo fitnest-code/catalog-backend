@@ -92,7 +92,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setAddress(address);
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
 
         updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
@@ -159,7 +159,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
 
         updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
@@ -537,7 +537,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setName(request.name());
         gym.setDescription(request.description());
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
@@ -823,7 +823,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.name() != null) gym.setName(request.name());
         if (request.description() != null) gym.setDescription(request.description());
         if (request.phone() != null) gym.setPhone(request.phone());
-        if (request.email() != null) gym.setEmail(request.email());
+        if (request.email() != null) gym.setEmail(request.email().isBlank() ? null : request.email());
 
         if (gym.getAddress() == null) {
             gym.setAddress(new Address());
@@ -987,15 +987,18 @@ public class GymWriteServiceImpl implements GymWriteService {
         for (GymAdminCreateRequest adminReq : request.admins()) {
             String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
 
-            if (gymAdminRepository.existsByEmail(adminReq.email())) {
-                throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
+            if (adminReq.email() != null && !adminReq.email().isBlank()) {
+                if (gymAdminRepository.existsByEmail(adminReq.email())) {
+                    throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
+                }
             }
             if (gymAdminRepository.existsByPhoneNumber(normalizedPhone)) {
                 throw new BadRequestException("ADMIN_PHONE_EXISTS", "error.admin_phone_exists");
             }
 
+            String emailToCheck = adminReq.email() != null ? adminReq.email() : "";
             az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck =
-                identityServiceGrpcClient.checkUserExists(adminReq.email(), normalizedPhone);
+                identityServiceGrpcClient.checkUserExists(emailToCheck, normalizedPhone);
             if (identityCheck.getExists()) {
                 throw new BadRequestException(identityCheck.getMessage(), "error." + identityCheck.getMessage().toLowerCase());
             }
