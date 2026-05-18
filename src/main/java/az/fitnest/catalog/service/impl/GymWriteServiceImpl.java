@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class GymWriteServiceImpl implements GymWriteService {
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;
@@ -981,6 +982,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep7(GymCreateStep7Request request) {
+        log.info("validateStep7 Service - Validating admins count: {}", request.admins() != null ? request.admins().size() : 0);
         if (request.admins() == null || request.admins().isEmpty()) {
             throw new BadRequestException("ADMIN_REQUIRED", "error.admin_required");
         }
