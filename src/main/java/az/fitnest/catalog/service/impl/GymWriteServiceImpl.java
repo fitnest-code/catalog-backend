@@ -988,6 +988,9 @@ public class GymWriteServiceImpl implements GymWriteService {
             String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
 
             if (adminReq.email() != null && !adminReq.email().isBlank()) {
+                if (!adminReq.email().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+                    throw new BadRequestException("INVALID_EMAIL_FORMAT", "error.invalid_email_format");
+                }
                 if (gymAdminRepository.existsByEmail(adminReq.email())) {
                     throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
                 }
