@@ -93,7 +93,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         store.setAddress(address);
 
         store.setPhone(request.getPhone());
-        store.setEmail(request.getEmail());
+        store.setEmail(request.getEmail() != null && request.getEmail().isBlank() ? null : request.getEmail());
 
         if (request.getSocialUrl() != null) {
             StoreSocialLink social = new StoreSocialLink();
@@ -239,7 +239,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         }
 
         request.getPhone().ifPresent(store::setPhone);
-        request.getEmail().ifPresent(store::setEmail);
+        request.getEmail().ifPresent(email -> store.setEmail(email.isBlank() ? null : email));
 
         if (request.isSocialUrlProvided()) {
             request.getSocialUrl().ifPresentOrElse(
