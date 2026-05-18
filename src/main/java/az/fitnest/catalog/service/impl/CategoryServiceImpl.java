@@ -132,7 +132,10 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         List<LessonTypeResponse> lessonTypeResponses = null;
         if (category.getLessonTypes() != null) {
             lessonTypeResponses = category.getLessonTypes().stream()
-                    .map(lt -> new LessonTypeResponse(lt.getId(), lt.getName()))
+                    .map(lt -> {
+                        String localizedLt = translationService.getTranslatedValue("LessonType", String.valueOf(lt.getId()), "name", language);
+                        return new LessonTypeResponse(lt.getId(), localizedLt != null ? localizedLt : lt.getName());
+                    })
                     .collect(Collectors.toList());
         }
         return CategoryResponse.builder()

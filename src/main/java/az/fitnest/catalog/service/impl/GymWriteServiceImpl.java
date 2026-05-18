@@ -706,7 +706,10 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         for (GymAdminCreateRequest adminReq : request.admins()) {
             Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
+            az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
+            
+            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
         }
         finalizeGymStep7Internal(gymId);
     }
@@ -715,7 +718,10 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
-        gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, "Admin"));
+        az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, "Admin"));
+        
+        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
     }
 
     @Transactional
@@ -773,6 +779,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         service.setName(request.name());
         service.setGymId(request.gymId());
         service = supportedServiceRepository.save(service);
+        
+        translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
+        
         return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId());
     }
 
