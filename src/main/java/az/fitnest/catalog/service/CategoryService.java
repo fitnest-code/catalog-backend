@@ -18,6 +18,6 @@ public interface CategoryService {
     void updateCategoryName(Long categoryId, String newName);
     void updateCategoryPhoto(Long categoryId, MultipartFile file);
     void updateCategoryIcon(Long categoryId, MultipartFile file);
-    CategoryResponse createCategory(String name, MultipartFile photo, List<Long> lessonTypeIds);
-    CategoryResponse updateCategory(Long id, String name, MultipartFile photo, List<Long> lessonTypeIds);
+    CategoryResponse createCategory(String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds);
+    CategoryResponse updateCategory(Long id, String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds);
 }

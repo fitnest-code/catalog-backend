@@ -74,8 +74,9 @@ public class CategoryAdminController {
     public ResponseEntity<CategoryResponse> createCategory(
             @RequestParam("name") String name,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "icon", required = false) MultipartFile icon,
             @RequestParam(value = "lessonTypeIds", required = false) java.util.List<Long> lessonTypeIds) {
-        CategoryResponse categoryDto = categoryService.createCategory(name, photo, lessonTypeIds);
+        CategoryResponse categoryDto = categoryService.createCategory(name, photo, icon, lessonTypeIds);
         return ResponseEntity.created(URI.create("/api/v1/admin/categories/" + categoryDto.id())).body(categoryDto);
     }
 
@@ -87,8 +88,9 @@ public class CategoryAdminController {
             @PathVariable Long id,
             @RequestParam("name") String name,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
+            @RequestParam(value = "icon", required = false) MultipartFile icon,
             @RequestParam(value = "lessonTypeIds", required = false) java.util.List<Long> lessonTypeIds) {
-        CategoryResponse categoryDto = categoryService.updateCategory(id, name, photo, lessonTypeIds);
+        CategoryResponse categoryDto = categoryService.updateCategory(id, name, photo, icon, lessonTypeIds);
         return ResponseEntity.ok(categoryDto);
     }
 

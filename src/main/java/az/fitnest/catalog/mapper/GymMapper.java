@@ -246,6 +246,8 @@ public final class GymMapper {
                 .id(category.getCategoryId())
                 .name(category.getName())
                 .photoUrl(category.getPhotoUrl())
+                .iconUrl(category.getIconUrl())
+                .coverImageUrl(category.getPhotoUrl())
                 .build();
     }
 }

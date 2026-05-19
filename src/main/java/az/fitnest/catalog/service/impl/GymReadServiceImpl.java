@@ -197,6 +197,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .id(c.getId())
                     .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
                     .build();
         }
 
@@ -752,6 +754,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .id(c.getCategoryId())
                     .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
                     .build();
         }
 

@@ -10,5 +10,6 @@ public record CategoryResponse(
     String name,
     String photoUrl,
     String iconUrl,
-    java.util.List<LessonTypeResponse> lessonTypes
+    java.util.List<LessonTypeResponse> lessonTypes,
+    String coverImageUrl
 ) {}
