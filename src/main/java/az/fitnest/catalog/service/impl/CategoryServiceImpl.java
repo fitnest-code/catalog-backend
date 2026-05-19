@@ -84,7 +84,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-        if (!category.getGyms().isEmpty()) {
+        if (gymRepository.existsByCategoryId(categoryId)) {
             throw new BadRequestException("CATEGORY_IN_USE", "error.category_in_use");
         }
 

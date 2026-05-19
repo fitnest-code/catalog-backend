@@ -79,6 +79,7 @@ public class TranslationServiceImpl implements TranslationService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TranslationServiceImpl.class);
 
     @Override
+    @org.springframework.scheduling.annotation.Async
     @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public void autoTranslateAndSave(String entityType, String entityId, String fieldName, String originalValueAz) {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
