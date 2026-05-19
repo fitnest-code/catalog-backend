@@ -546,6 +546,14 @@ public class GymAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @Operation(summary = "İdman zalı adminini yeniləyin", description = "İdman zalına aid admin məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/admins/{adminId}")
+    public ResponseEntity<Void> updateGymAdmin(@PathVariable("id") Long gymId, @PathVariable("adminId") Long adminId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymAdminUpdateRequest request) {
+        gymWriteService.updateGymAdmin(gymId, adminId, request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı adminini silin", description = "İdman zalına aid admini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/admins/{adminId}")

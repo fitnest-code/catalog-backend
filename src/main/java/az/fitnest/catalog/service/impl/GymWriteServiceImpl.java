@@ -706,7 +706,8 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         for (GymAdminCreateRequest adminReq : request.admins()) {
             Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
+            String role = (adminReq.role() != null && !adminReq.role().trim().isEmpty()) ? adminReq.role() : "Super admin";
+            az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, role));
             
             translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
             translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
@@ -718,10 +719,34 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
-        az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, "Admin"));
+        String role = (request.role() != null && !request.role().trim().isEmpty()) ? request.role() : "Admin";
+        az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, role));
         
         translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
         translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+    }
+
+    @Transactional
+    public void updateGymAdmin(Long gymId, Long adminId, GymAdminUpdateRequest request) {
+        az.fitnest.catalog.model.entity.GymAdmin admin = gymAdminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+
+        if (!admin.getGym().getId().equals(gymId)) {
+            throw new BadRequestException("ADMIN_GYM_MISMATCH", "error.admin_gym_mismatch");
+        }
+
+        admin.setName(request.name());
+        admin.setSurname(request.surname());
+        admin.setPhoneNumber(PhoneUtil.normalize(request.phoneNumber()));
+        admin.setEmail(request.email());
+        if (request.role() != null && !request.role().trim().isEmpty()) {
+            admin.setRole(request.role());
+        }
+
+        gymAdminRepository.save(admin);
+        
+        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "name", admin.getName());
+        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
     }
 
     @Transactional
