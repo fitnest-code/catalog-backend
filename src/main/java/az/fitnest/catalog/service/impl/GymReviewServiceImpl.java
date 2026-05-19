@@ -104,30 +104,40 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public Long approveReview(Long reviewId) {
         log.info("Approving review: {}", reviewId);
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        try {
+            Review review = reviewRepository.findById(reviewId)
+                    .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
 
-        if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
-            reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
+            if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
+                reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
 
-            if (review.getRating() != null) {
-                log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
-                reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
+                if (review.getRating() != null) {
+                    log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
+                    reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
+                }
             }
+            log.info("Successfully approved review: {}", reviewId);
+            return review.getGymId();
+        } catch (Exception e) {
+            log.error("Error approving review {}", reviewId, e);
+            throw e;
         }
-        log.info("Successfully approved review: {}", reviewId);
-        return review.getGymId();
     }
 
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void rejectReview(Long reviewId) {
         log.info("Rejecting review: {}", reviewId);
-        if (!reviewRepository.existsById(reviewId)) {
-            throw new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found");
+        try {
+            if (!reviewRepository.existsById(reviewId)) {
+                throw new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found");
+            }
+            reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+            log.info("Successfully rejected review: {}", reviewId);
+        } catch (Exception e) {
+            log.error("Error rejecting review {}", reviewId, e);
+            throw e;
         }
-        reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
-        log.info("Successfully rejected review: {}", reviewId);
     }
 
     @Transactional(readOnly = true)
