@@ -17,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TranslationServiceImpl implements TranslationService {
     private final TranslationRepository translationRepository;
+    private final org.springframework.cache.CacheManager cacheManager;
 
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "translations", key = "#entityType + '_' + #entityId + '_' + #fieldName + '_' + #languageCode")
@@ -186,6 +187,23 @@ public class TranslationServiceImpl implements TranslationService {
                     .fieldValue(fieldValue)
                     .build();
             translationRepository.save(translation);
+        }
+
+        evictCache(normalizedEntityType, entityId, fieldName, normalizedLanguageCode);
+    }
+
+    private void evictCache(String entityType, String entityId, String fieldName, String languageCode) {
+        if (cacheManager != null) {
+            try {
+                org.springframework.cache.Cache cache = cacheManager.getCache("translations");
+                if (cache != null) {
+                    String key = entityType + "_" + entityId + "_" + fieldName + "_" + languageCode;
+                    cache.evict(key);
+                    log.info("Evicted translation cache for key: {}", key);
+                }
+            } catch (Exception e) {
+                log.error("Failed to evict cache: {}", e.getMessage());
+            }
         }
     }
 }
