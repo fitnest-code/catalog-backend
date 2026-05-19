@@ -590,12 +590,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<Long> gymIds = gymPage.getContent().stream().map(Gym::getId).toList();
         Map<Long, String> ownerNames = gymAdminRepository.findAllByGymIdIn(gymIds).stream()
+                .filter(admin -> "Super admin".equalsIgnoreCase(admin.getRole()))
                 .collect(Collectors.groupingBy(admin -> admin.getGym().getId(),
                         Collectors.mapping(admin -> admin.getName() + " " + admin.getSurname(),
                                 Collectors.joining(", "))));
 
         List<AdminGymResponse> items = gymPage.getContent().stream().map(gym -> {
-            String ownerName = ownerNames.getOrDefault(gym.getId(), "N/A");
+        String ownerName = ownerNames.get(gym.getId());
 
             String fullAddress = (gym.getAddress() != null)
                     ? (gym.getAddress().getCity() + ", " + gym.getAddress().getAddressText())
