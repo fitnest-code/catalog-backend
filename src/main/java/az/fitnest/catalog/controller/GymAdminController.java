@@ -56,7 +56,7 @@ public class GymAdminController {
     }
 
     @Operation(summary = "Zal məlumatlarını alın", description = "İdman zalı üçün info-tab məlumatlarını gətirir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/details")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymInfoAdminResponse> getGymDetails(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymDetailsAdmin(gymId));
@@ -295,7 +295,7 @@ public class GymAdminController {
     }
 
     @Operation(summary = "İdman zalı analitikasını alın", description = "İdman zalı üçün ümumi gəlir, uğurlu/uğursuz girişlər və tarixçə siyahısını gətirir.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/analytics")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymAnalyticsResponse> getGymAnalytics(
             @PathVariable("id") Long gymId,
@@ -309,7 +309,7 @@ public class GymAdminController {
     }
 
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/list")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.AdminGymResponse>> getAllGyms(
             @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
