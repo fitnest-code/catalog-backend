@@ -45,6 +45,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 .queryParam("lon", longitude)
                 .queryParam("zoom", 18)
                 .queryParam("addressdetails", 1)
+                .queryParam("accept-language", "az,ru,en")
                 .build().encode().toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", USER_AGENT);
@@ -80,45 +81,121 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 .build();
     }
 
-    private List<GeocodingResponse> getGeocodingResults(String query) {
+    private String transliterateToAzerbaijani(String query) {
         if (query == null || query.isBlank()) {
-            return Collections.emptyList();
+            return null;
         }
+        
+        String original = query.toLowerCase().trim();
+        StringBuilder sb = new StringBuilder();
+        
+        for (int i = 0; i < original.length(); i++) {
+            char c = original.charAt(i);
+            
+            if (c == 's' && i + 1 < original.length() && original.charAt(i + 1) == 'h') {
+                sb.append('ş');
+                i++;
+            } else if (c == 'c' && i + 1 < original.length() && original.charAt(i + 1) == 'h') {
+                sb.append('ç');
+                i++;
+            } else if (c == 'g' && i + 1 < original.length() && original.charAt(i + 1) == 'h') {
+                sb.append('ğ');
+                i++;
+            } else if (c == 'k' && i + 1 < original.length() && original.charAt(i + 1) == 'h') {
+                sb.append('x');
+                i++;
+            } else {
+                switch (c) {
+                    case 's':
+                        sb.append('ş');
+                        break;
+                    case 'c':
+                        sb.append('ç');
+                        break;
+                    case 'g':
+                        sb.append('ğ');
+                        break;
+                    case 'u':
+                        sb.append('ü');
+                        break;
+                    case 'o':
+                        sb.append('ö');
+                        break;
+                    case 'i':
+                        sb.append('ı');
+                        break;
+                    case 'e':
+                        sb.append('ə');
+                        break;
+                    case 'a':
+                        // convert 'a' to 'ə' if it looks like the start of a syllable/word, otherwise keep 'a'
+                        if (i == 0 || original.charAt(i - 1) == ' ' || original.charAt(i - 1) == '-') {
+                            sb.append('ə');
+                        } else {
+                            sb.append('a');
+                        }
+                        break;
+                    default:
+                        sb.append(c);
+                        break;
+                }
+            }
+        }
+        return sb.toString();
+    }
 
-        // Query both Nominatim and Photon concurrently for better coverage
+    private List<GeocodingResponse> queryGeocodingApis(String query) {
         CompletableFuture<List<GeocodingResponse>> nominatimFuture =
                 CompletableFuture.supplyAsync(() -> forwardGeocodeNominatim(query));
         CompletableFuture<List<GeocodingResponse>> photonFuture =
                 CompletableFuture.supplyAsync(() -> forwardGeocodePhoton(query));
 
         try {
-            List<GeocodingResponse> nominatimResults = nominatimFuture.get(5, java.util.concurrent.TimeUnit.SECONDS);
-            List<GeocodingResponse> photonResults = photonFuture.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            List<GeocodingResponse> nominatimResults = nominatimFuture.get(3, java.util.concurrent.TimeUnit.SECONDS);
+            List<GeocodingResponse> photonResults = photonFuture.get(3, java.util.concurrent.TimeUnit.SECONDS);
 
-            // Merge and deduplicate results (Photon first as it has better autocomplete)
             List<GeocodingResponse> merged = new ArrayList<>();
             Set<String> seen = new HashSet<>();
 
-            // Add Photon results first (typically better for autocomplete)
             for (GeocodingResponse r : photonResults) {
-                String key = deduplicationKey(r);
-                if (seen.add(key)) {
+                if (seen.add(deduplicationKey(r))) {
                     merged.add(r);
                 }
             }
-            // Then add Nominatim results that aren't duplicates
             for (GeocodingResponse r : nominatimResults) {
-                String key = deduplicationKey(r);
-                if (seen.add(key)) {
+                if (seen.add(deduplicationKey(r))) {
                     merged.add(r);
                 }
             }
-
             return merged;
         } catch (Exception e) {
-            // If concurrent fetch fails, fall back to Nominatim only
             return forwardGeocodeNominatim(query);
         }
+    }
+
+    private List<GeocodingResponse> getGeocodingResults(String query) {
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<GeocodingResponse> originalResults = queryGeocodingApis(query);
+        
+        String transliterated = transliterateToAzerbaijani(query);
+        if (transliterated != null && !transliterated.equalsIgnoreCase(query)) {
+            List<GeocodingResponse> transResults = queryGeocodingApis(transliterated);
+            if (!transResults.isEmpty()) {
+                List<GeocodingResponse> merged = new ArrayList<>(originalResults);
+                Set<String> seen = originalResults.stream().map(this::deduplicationKey).collect(Collectors.toSet());
+                for (GeocodingResponse r : transResults) {
+                    if (seen.add(deduplicationKey(r))) {
+                        merged.add(r);
+                    }
+                }
+                return merged;
+            }
+        }
+        
+        return originalResults;
     }
 
     @Override
@@ -128,9 +205,6 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
         }
 
         List<GeocodingResponse> originalResults = getGeocodingResults(query);
-        if (originalResults.size() >= 3) {
-            return originalResults.stream().limit(12).collect(Collectors.toList());
-        }
 
         // Try to detect and strip house/street number if present
         java.util.regex.Pattern numberPattern = java.util.regex.Pattern.compile(
@@ -171,9 +245,15 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                     }
                 }
 
-                List<GeocodingResponse> merged = new ArrayList<>(originalResults);
-                Set<String> seen = originalResults.stream().map(this::deduplicationKey).collect(Collectors.toSet());
+                List<GeocodingResponse> merged = new ArrayList<>();
+                Set<String> seen = new HashSet<>();
+
                 for (GeocodingResponse r : augmentedResults) {
+                    if (seen.add(deduplicationKey(r))) {
+                        merged.add(r);
+                    }
+                }
+                for (GeocodingResponse r : originalResults) {
                     if (seen.add(deduplicationKey(r))) {
                         merged.add(r);
                     }
@@ -186,16 +266,12 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
     }
 
     private String deduplicationKey(GeocodingResponse r) {
-        // Deduplicate by rounding coordinates to ~11m precision
         if (r.latitude() == null || r.longitude() == null) {
             return r.addressText() != null ? r.addressText().toLowerCase().trim() : "";
         }
         return String.format("%.4f,%.4f", r.latitude(), r.longitude());
     }
 
-    /**
-     * Nominatim (OpenStreetMap) forward geocoding - free, no API key
-     */
     private List<GeocodingResponse> forwardGeocodeNominatim(String query) {
         URI uri = UriComponentsBuilder.fromUriString(NOMINATIM_URL)
                 .path("/search")
@@ -232,17 +308,12 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
         return Collections.emptyList();
     }
 
-    /**
-     * Photon (Komoot) forward geocoding - free, no API key, powered by OSM data
-     * Better autocomplete results and faster response times
-     */
     private List<GeocodingResponse> forwardGeocodePhoton(String query) {
         URI uri = UriComponentsBuilder.fromUriString(PHOTON_URL)
                 .path("/api")
                 .queryParam("q", query)
                 .queryParam("limit", 8)
-                .queryParam("lang", "en")
-                // Bias towards Azerbaijan (Baku center)
+                .queryParam("countrycode", "az")
                 .queryParam("lat", 40.4093)
                 .queryParam("lon", 49.8671)
                 .build().encode().toUri();
@@ -266,7 +337,6 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
 
                 if (properties == null || geometry == null) continue;
 
-                // Build address text from Photon properties
                 String name = (String) properties.get("name");
                 String street = (String) properties.get("street");
                 String houseNumber = (String) properties.get("housenumber");
@@ -297,18 +367,16 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 String addressText = addressBuilder.toString();
                 if (addressText.isBlank()) continue;
 
-                // Extract coordinates from GeoJSON geometry
                 Double lat = null, lon = null;
                 Object coordsObj = geometry.get("coordinates");
                 if (coordsObj instanceof List) {
                     List<Number> coords = (List<Number>) coordsObj;
                     if (coords.size() >= 2) {
-                        lon = coords.get(0).doubleValue(); // GeoJSON: [lon, lat]
+                        lon = coords.get(0).doubleValue();
                         lat = coords.get(1).doubleValue();
                     }
                 }
 
-                // Filter to Azerbaijan results only
                 if ("Azerbaijan".equalsIgnoreCase(country) || "Azərbaycan".equalsIgnoreCase(country)
                         || country == null) {
                     results.add(GeocodingResponse.builder()
