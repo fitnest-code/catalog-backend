@@ -65,6 +65,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private PlatformTransactionManager transactionManager;
 
     private record RoomImageUploadResult(String roomName, String url) {}
+    private record GymAdminCreateResult(GymAdminCreateRequest req, Long userId) {}
 
     @Caching(evict = {
         @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
@@ -640,14 +641,58 @@ public class GymWriteServiceImpl implements GymWriteService {
         updateStep(gym, 3);
     }
 
+    @Caching(evict = {
+        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
+        CompletableFuture<String> coverFuture = null;
         if (coverPhoto != null && !coverPhoto.isEmpty()) {
-            updateCoverImage(gymId, coverPhoto);
+            MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
+            coverFuture = CompletableFuture.supplyAsync(() -> 
+                fileStorageService.saveFile(validatedCover, "/gyms/covers"), 
+                imageUploadExecutor
+            );
         }
+
+        List<CompletableFuture<RoomImageUploadResult>> roomFutures = new ArrayList<>();
         if (roomNames != null && roomPhotos != null && roomNames.size() == roomPhotos.size() && !roomNames.isEmpty()) {
-            addRoomImages(gymId, roomNames, roomPhotos);
+            for (int i = 0; i < roomPhotos.size(); i++) {
+                MultipartFile originalFile = roomPhotos.get(i);
+                if (originalFile == null || originalFile.isEmpty()) continue;
+
+                String roomName = roomNames.get(i);
+                MultipartFile validatedFile = fileStorageService.validateAndWrapImage(originalFile);
+
+                roomFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
+                    return new RoomImageUploadResult(roomName, url);
+                }, imageUploadExecutor));
+            }
         }
-        completeStep5Internal(gymId);
+
+        // Wait for all uploads to complete
+        String coverUrl = null;
+        if (coverFuture != null) {
+            coverUrl = coverFuture.join();
+        }
+
+        List<RoomImageUploadResult> roomResults = roomFutures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        // Save to DB in a single transaction template/call
+        final String finalCoverUrl = coverUrl;
+        new TransactionTemplate(transactionManager).execute(status -> {
+            if (finalCoverUrl != null) {
+                updateCoverImageInternal(gymId, finalCoverUrl);
+            }
+            if (!roomResults.isEmpty()) {
+                applyRoomImagesUpdateInternal(gymId, roomResults);
+            }
+            completeStep5Internal(gymId);
+            return null;
+        });
     }
 
     @Transactional
@@ -700,19 +745,40 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Caching(evict = {
         @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
-    @Transactional
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        for (GymAdminCreateRequest adminReq : request.admins()) {
-            Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            String role = (adminReq.role() != null && !adminReq.role().trim().isEmpty()) ? adminReq.role() : "Super admin";
-            az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, role));
-            
-            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
-            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
-        }
-        finalizeGymStep7Internal(gymId);
+        List<CompletableFuture<GymAdminCreateResult>> futures = request.admins().stream()
+                .map(adminReq -> CompletableFuture.supplyAsync(() -> {
+                    Long userId = identityServiceGrpcClient.createGymAdmin(
+                        adminReq.name(), 
+                        adminReq.surname(), 
+                        PhoneUtil.normalize(adminReq.phoneNumber()), 
+                        adminReq.email(), 
+                        adminReq.password()
+                    );
+                    return new GymAdminCreateResult(adminReq, userId);
+                }, imageUploadExecutor))
+                .toList();
+
+        List<GymAdminCreateResult> results = futures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        new TransactionTemplate(transactionManager).execute(status -> {
+            Gym freshGym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+            for (GymAdminCreateResult res : results) {
+                String role = (res.req().role() != null && !res.req().role().trim().isEmpty()) ? res.req().role() : "Super admin";
+                az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
+                    az.fitnest.catalog.mapper.GymMapper.toAdminEntity(freshGym, res.req(), res.userId(), role)
+                );
+                
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+            }
+            finalizeGymStep7Internal(gymId);
+            return null;
+        });
     }
 
     @Transactional
@@ -1010,10 +1076,16 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.subscriptions() == null || request.subscriptions().isEmpty()) {
             throw new BadRequestException("SUBSCRIPTION_REQUIRED", "error.subscription_required");
         }
-        for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
-            if (!orderServiceGrpcClient.checkPackageExists(subReq.packageId())) {
-                throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
-            }
+        List<CompletableFuture<Boolean>> futures = request.subscriptions().stream()
+                .map(subReq -> CompletableFuture.supplyAsync(
+                        () -> orderServiceGrpcClient.checkPackageExists(subReq.packageId()),
+                        imageUploadExecutor
+                ))
+                .toList();
+
+        List<Boolean> results = futures.stream().map(CompletableFuture::join).toList();
+        if (results.contains(false)) {
+            throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
         }
     }
 

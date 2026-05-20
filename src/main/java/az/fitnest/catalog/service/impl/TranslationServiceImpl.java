@@ -14,10 +14,19 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class TranslationServiceImpl implements TranslationService {
     private final TranslationRepository translationRepository;
     private final org.springframework.cache.CacheManager cacheManager;
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
+    public TranslationServiceImpl(TranslationRepository translationRepository, org.springframework.cache.CacheManager cacheManager) {
+        this.translationRepository = translationRepository;
+        this.cacheManager = cacheManager;
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(1000);
+        factory.setReadTimeout(1500);
+        this.restTemplate = new org.springframework.web.client.RestTemplate(factory);
+    }
 
     @Override
     @org.springframework.cache.annotation.Cacheable(value = "translations", key = "#entityType + '_' + #entityId + '_' + #fieldName + '_' + #languageCode")
@@ -130,7 +139,6 @@ public class TranslationServiceImpl implements TranslationService {
 
     private String translateWithGoogle(String text, String targetLanguage) {
         try {
-            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
             java.net.URI uri = org.springframework.web.util.UriComponentsBuilder
                 .fromUriString("https://translate.googleapis.com/translate_a/single")
                 .queryParam("client", "gtx")
