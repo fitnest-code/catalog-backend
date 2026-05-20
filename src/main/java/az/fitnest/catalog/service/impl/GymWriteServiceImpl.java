@@ -717,6 +717,9 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Transactional
     public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
+        if (gymAdminRepository.existsByGymIdAndPhoneNumber(gymId, PhoneUtil.normalize(request.phoneNumber()))) {
+            throw new BadRequestException("ADMIN_ALREADY_IN_GYM", "error.admin_already_in_gym");
+        }
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
         String role = (request.role() != null && !request.role().trim().isEmpty()) ? request.role() : "Admin";
@@ -1020,6 +1023,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.admins() == null || request.admins().isEmpty()) {
             throw new BadRequestException("ADMIN_REQUIRED", "error.admin_required");
         }
+        java.util.Set<String> phoneNumbers = new java.util.HashSet<>();
         for (GymAdminCreateRequest adminReq : request.admins()) {
             String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
 
@@ -1027,19 +1031,10 @@ public class GymWriteServiceImpl implements GymWriteService {
                 if (!adminReq.email().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
                     throw new BadRequestException("INVALID_EMAIL_FORMAT", "error.invalid_email_format");
                 }
-                if (gymAdminRepository.existsByEmail(adminReq.email())) {
-                    throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
-                }
-            }
-            if (gymAdminRepository.existsByPhoneNumber(normalizedPhone)) {
-                throw new BadRequestException("ADMIN_PHONE_EXISTS", "error.admin_phone_exists");
             }
 
-            String emailToCheck = adminReq.email() != null ? adminReq.email() : "";
-            az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck =
-                identityServiceGrpcClient.checkUserExists(emailToCheck, normalizedPhone);
-            if (identityCheck.getExists()) {
-                throw new BadRequestException(identityCheck.getMessage(), "error." + identityCheck.getMessage().toLowerCase());
+            if (!phoneNumbers.add(normalizedPhone)) {
+                throw new BadRequestException("DUPLICATE_ADMIN_PHONE", "error.duplicate_admin_phone");
             }
         }
     }
