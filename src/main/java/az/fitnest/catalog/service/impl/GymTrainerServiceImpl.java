@@ -47,6 +47,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
+    private final java.util.concurrent.Executor imageUploadExecutor;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymTrainerResponse> getTrainers(Long gymId, int page, int pageSize, String sortDir) {
@@ -320,17 +321,24 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                            List<String> emails, List<String> phones, List<MultipartFile> photos, List<String> lessonTypesPerTrainer) {
         if (names == null) return;
 
-        java.util.List<String> photoUrls = new java.util.ArrayList<>();
+        List<java.util.concurrent.CompletableFuture<String>> futures = new java.util.ArrayList<>();
         if (photos != null) {
             for (MultipartFile photo : photos) {
                 if (photo != null && !photo.isEmpty()) {
                     MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
-                    photoUrls.add(fileStorageService.saveFile(validated, "/trainers"));
+                    futures.add(java.util.concurrent.CompletableFuture.supplyAsync(() -> 
+                        fileStorageService.saveFile(validated, "/trainers"), 
+                        imageUploadExecutor
+                    ));
                 } else {
-                    photoUrls.add(null);
+                    futures.add(java.util.concurrent.CompletableFuture.completedFuture(null));
                 }
             }
         }
+
+        List<String> photoUrls = futures.stream()
+                .map(java.util.concurrent.CompletableFuture::join)
+                .toList();
 
         addTrainersInternal(gymId, names, surnames, professionIds, emails, phones, photoUrls, lessonTypesPerTrainer);
     }

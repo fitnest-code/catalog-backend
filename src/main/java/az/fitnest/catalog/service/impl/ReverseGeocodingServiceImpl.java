@@ -23,7 +23,14 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
     private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org";
     private static final String PHOTON_URL = "https://photon.komoot.io";
     private static final String USER_AGENT = "fitnest-catalog-backend";
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public ReverseGeocodingServiceImpl() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(1000);
+        factory.setReadTimeout(1500);
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     @Override
     @org.springframework.cache.annotation.Cacheable(cacheNames = "geocoding", key = "{#latitude, #longitude}")
