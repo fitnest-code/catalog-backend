@@ -84,6 +84,13 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         gym.getTrainers().add(trainer);
         gymRepository.save(gym);
+
+        if (trainer.getId() != null) {
+            translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+            if (trainer.getSurname() != null) {
+                translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+            }
+        }
     }
 
     @Transactional
@@ -103,6 +110,11 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         }
 
         trainerRepository.save(trainer);
+
+        translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+        if (trainer.getSurname() != null) {
+            translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+        }
     }
 
     @Transactional
@@ -194,10 +206,19 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             }
         }
 
+        String localizedName = translationService.getTranslatedValue("Trainer", String.valueOf(t.getId()), "name", language);
+        if (localizedName == null || localizedName.isEmpty()) {
+            localizedName = t.getName();
+        }
+        String localizedSurname = translationService.getTranslatedValue("Trainer", String.valueOf(t.getId()), "surname", language);
+        if (localizedSurname == null || localizedSurname.isEmpty()) {
+            localizedSurname = t.getSurname();
+        }
+
         return GymTrainerResponse.builder()
                 .trainer_id(t.getId() != null ? t.getId().toString() : null)
-                .name(t.getName())
-                .surname(t.getSurname())
+                .name(localizedName)
+                .surname(localizedSurname)
                 .profession(professionDto)
                 .picture(t.getPicture())
                 .phone(t.getPhone())
@@ -218,11 +239,22 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     private String resolveUserLanguage(Long userId) {
+        // 1. Check current request Accept-Language header first via LocaleContextHolder
+        try {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
+            if (localeLang.equals("EN") || localeLang.equals("RU")) {
+                return localeLang;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 2. Fallback to GRPC User Profile language
         if (userId != null) {
             try {
                 UserResponse user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage();
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }
@@ -353,5 +385,14 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             gym.getTrainers().add(trainer);
         }
         gymRepository.save(gym);
+
+        for (Trainer trainer : gym.getTrainers()) {
+            if (trainer.getId() != null) {
+                translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+                if (trainer.getSurname() != null) {
+                    translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+                }
+            }
+        }
     }
 }

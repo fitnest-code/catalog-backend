@@ -84,7 +84,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-        if (!category.getGyms().isEmpty()) {
+        if (gymRepository.existsByCategoryId(categoryId)) {
             throw new BadRequestException("CATEGORY_IN_USE", "error.category_in_use");
         }
 
@@ -132,7 +132,10 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         List<LessonTypeResponse> lessonTypeResponses = null;
         if (category.getLessonTypes() != null) {
             lessonTypeResponses = category.getLessonTypes().stream()
-                    .map(lt -> new LessonTypeResponse(lt.getId(), lt.getName()))
+                    .map(lt -> {
+                        String localizedLt = translationService.getTranslatedValue("LessonType", String.valueOf(lt.getId()), "name", language);
+                        return new LessonTypeResponse(lt.getId(), localizedLt != null ? localizedLt : lt.getName());
+                    })
                     .collect(Collectors.toList());
         }
         return CategoryResponse.builder()
@@ -140,6 +143,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
                 .name(localizedName)
                 .photoUrl(category.getPhotoUrl())
                 .iconUrl(category.getIconUrl())
+                .coverImageUrl(category.getPhotoUrl())
                 .lessonTypes(lessonTypeResponses)
                 .build();
     }
@@ -150,11 +154,22 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     private String resolveUserLanguage(Long userId) {
+        // 1. Check current request Accept-Language header first via LocaleContextHolder
+        try {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
+            if (localeLang.equals("EN") || localeLang.equals("RU")) {
+                return localeLang;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 2. Fallback to GRPC User Profile language
         if (userId != null) {
             try {
                 UserResponse user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage();
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }
@@ -163,7 +178,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
-    public CategoryResponse createCategory(String name, MultipartFile photo, List<Long> lessonTypeIds) {
+    public CategoryResponse createCategory(String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds) {
         Category category = Category.builder().name(name).build();
         if (lessonTypeIds != null && !lessonTypeIds.isEmpty()) {
             category.setLessonTypes(new java.util.HashSet<>(lessonTypeRepository.findAllById(lessonTypeIds)));
@@ -172,9 +187,20 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
         translationService.autoTranslateAndSave("CATEGORY", String.valueOf(category.getId()), "name", name);
 
+        boolean needsSave = false;
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
             category.setPhotoUrl(fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId()));
+            needsSave = true;
+        }
+
+        if (icon != null && !icon.isEmpty()) {
+            MultipartFile validatedIcon = fileStorageService.validateAndWrapImage(icon);
+            category.setIconUrl(fileStorageService.saveFile(validatedIcon, "/categories/" + category.getId() + "/icon"));
+            needsSave = true;
+        }
+
+        if (needsSave) {
             category = categoryRepository.save(category);
         }
 
@@ -182,7 +208,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
-    public CategoryResponse updateCategory(Long id, String name, MultipartFile photo, List<Long> lessonTypeIds) {
+    public CategoryResponse updateCategory(Long id, String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         category.setName(name);
@@ -194,6 +220,11 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
         if (photo != null && !photo.isEmpty()) {
             MultipartFile validatedPhoto = fileStorageService.validateAndWrapImage(photo);
             category.setPhotoUrl(fileStorageService.saveFile(validatedPhoto, "/categories/" + category.getId()));
+        }
+
+        if (icon != null && !icon.isEmpty()) {
+            MultipartFile validatedIcon = fileStorageService.validateAndWrapImage(icon);
+            category.setIconUrl(fileStorageService.saveFile(validatedIcon, "/categories/" + category.getId() + "/icon"));
         }
 
         category = categoryRepository.save(category);

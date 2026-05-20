@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class GymWriteServiceImpl implements GymWriteService {
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;
@@ -92,7 +93,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setAddress(address);
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
 
         updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
@@ -159,7 +160,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
 
         updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
@@ -537,7 +538,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setName(request.name());
         gym.setDescription(request.description());
         gym.setPhone(PhoneUtil.normalize(request.phone()));
-        gym.setEmail(request.email());
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setCategory(category);
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
@@ -705,7 +706,11 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         for (GymAdminCreateRequest adminReq : request.admins()) {
             Long userId = identityServiceGrpcClient.createGymAdmin(adminReq.name(), adminReq.surname(), PhoneUtil.normalize(adminReq.phoneNumber()), adminReq.email(), adminReq.password());
-            gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, "Super admin"));
+            String role = (adminReq.role() != null && !adminReq.role().trim().isEmpty()) ? adminReq.role() : "Super admin";
+            az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, adminReq, userId, role));
+            
+            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+            translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
         }
         finalizeGymStep7Internal(gymId);
     }
@@ -714,7 +719,34 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
-        gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, "Admin"));
+        String role = (request.role() != null && !request.role().trim().isEmpty()) ? request.role() : "Admin";
+        az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, role));
+        
+        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+    }
+
+    @Transactional
+    public void updateGymAdmin(Long gymId, Long adminId, GymAdminUpdateRequest request) {
+        az.fitnest.catalog.model.entity.GymAdmin admin = gymAdminRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("ADMIN_NOT_FOUND", "error.admin_not_found"));
+
+        if (!admin.getGym().getId().equals(gymId)) {
+            throw new BadRequestException("ADMIN_GYM_MISMATCH", "error.admin_gym_mismatch");
+        }
+
+        admin.setName(request.name());
+        admin.setSurname(request.surname());
+        admin.setPhoneNumber(PhoneUtil.normalize(request.phoneNumber()));
+        admin.setEmail(request.email());
+        if (request.role() != null && !request.role().trim().isEmpty()) {
+            admin.setRole(request.role());
+        }
+
+        gymAdminRepository.save(admin);
+        
+        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "name", admin.getName());
+        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
     }
 
     @Transactional
@@ -772,6 +804,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         service.setName(request.name());
         service.setGymId(request.gymId());
         service = supportedServiceRepository.save(service);
+        
+        translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
+        
         return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId());
     }
 
@@ -823,7 +858,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.name() != null) gym.setName(request.name());
         if (request.description() != null) gym.setDescription(request.description());
         if (request.phone() != null) gym.setPhone(request.phone());
-        if (request.email() != null) gym.setEmail(request.email());
+        if (request.email() != null) gym.setEmail(request.email().isBlank() ? null : request.email());
 
         if (gym.getAddress() == null) {
             gym.setAddress(new Address());
@@ -981,21 +1016,28 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep7(GymCreateStep7Request request) {
+        log.info("validateStep7 Service - Validating admins count: {}", request.admins() != null ? request.admins().size() : 0);
         if (request.admins() == null || request.admins().isEmpty()) {
             throw new BadRequestException("ADMIN_REQUIRED", "error.admin_required");
         }
         for (GymAdminCreateRequest adminReq : request.admins()) {
             String normalizedPhone = PhoneUtil.normalize(adminReq.phoneNumber());
 
-            if (gymAdminRepository.existsByEmail(adminReq.email())) {
-                throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
+            if (adminReq.email() != null && !adminReq.email().isBlank()) {
+                if (!adminReq.email().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+                    throw new BadRequestException("INVALID_EMAIL_FORMAT", "error.invalid_email_format");
+                }
+                if (gymAdminRepository.existsByEmail(adminReq.email())) {
+                    throw new BadRequestException("ADMIN_EMAIL_EXISTS", "error.admin_email_exists");
+                }
             }
             if (gymAdminRepository.existsByPhoneNumber(normalizedPhone)) {
                 throw new BadRequestException("ADMIN_PHONE_EXISTS", "error.admin_phone_exists");
             }
 
+            String emailToCheck = adminReq.email() != null ? adminReq.email() : "";
             az.fitnest.identity.grpc.CheckUserExistsResponse identityCheck =
-                identityServiceGrpcClient.checkUserExists(adminReq.email(), normalizedPhone);
+                identityServiceGrpcClient.checkUserExists(emailToCheck, normalizedPhone);
             if (identityCheck.getExists()) {
                 throw new BadRequestException(identityCheck.getMessage(), "error." + identityCheck.getMessage().toLowerCase());
             }

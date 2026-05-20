@@ -73,8 +73,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 .build();
     }
 
-    @Override
-    public List<GeocodingResponse> forwardGeocode(String query) {
+    private List<GeocodingResponse> getGeocodingResults(String query) {
         if (query == null || query.isBlank()) {
             return Collections.emptyList();
         }
@@ -108,12 +107,75 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                 }
             }
 
-            // Limit total results
-            return merged.stream().limit(12).collect(Collectors.toList());
+            return merged;
         } catch (Exception e) {
             // If concurrent fetch fails, fall back to Nominatim only
             return forwardGeocodeNominatim(query);
         }
+    }
+
+    @Override
+    public List<GeocodingResponse> forwardGeocode(String query) {
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<GeocodingResponse> originalResults = getGeocodingResults(query);
+        if (originalResults.size() >= 3) {
+            return originalResults.stream().limit(12).collect(Collectors.toList());
+        }
+
+        // Try to detect and strip house/street number if present
+        java.util.regex.Pattern numberPattern = java.util.regex.Pattern.compile(
+                "(?i)\\b(?:ev|bina|mənzil|menzil|no|no\\.|№|nömrə|nömre|apt|apartment)?\\s*(\\d+(?:/[a-zA-Z0-9]+|-[a-zA-Z0-9]+|[a-zA-Z])?)\\b"
+        );
+        java.util.regex.Matcher matcher = numberPattern.matcher(query);
+        String houseNumber = null;
+        String strippedQuery = query;
+        if (matcher.find()) {
+            houseNumber = matcher.group(1);
+            strippedQuery = query.substring(0, matcher.start()) + query.substring(matcher.end());
+            strippedQuery = strippedQuery.replaceAll("\\s+", " ").replaceAll(",\\s*,", ",").trim();
+            if (strippedQuery.endsWith(",")) {
+                strippedQuery = strippedQuery.substring(0, strippedQuery.length() - 1).trim();
+            }
+        }
+
+        if (houseNumber != null && !strippedQuery.isBlank() && !strippedQuery.equals(query)) {
+            List<GeocodingResponse> strippedResults = getGeocodingResults(strippedQuery);
+            if (!strippedResults.isEmpty()) {
+                final String finalHouseNumber = houseNumber;
+                List<GeocodingResponse> augmentedResults = new ArrayList<>();
+                for (GeocodingResponse r : strippedResults) {
+                    String addressText = r.addressText();
+                    if (addressText != null && !addressText.contains(finalHouseNumber)) {
+                        String[] parts = addressText.split(",", 2);
+                        String firstPart = parts[0].trim();
+                        String updatedFirstPart = firstPart + " " + finalHouseNumber;
+                        String newAddressText = parts.length > 1 ? updatedFirstPart + ", " + parts[1].trim() : updatedFirstPart;
+                        augmentedResults.add(GeocodingResponse.builder()
+                                .addressText(newAddressText)
+                                .city(r.city())
+                                .latitude(r.latitude())
+                                .longitude(r.longitude())
+                                .build());
+                    } else {
+                        augmentedResults.add(r);
+                    }
+                }
+
+                List<GeocodingResponse> merged = new ArrayList<>(originalResults);
+                Set<String> seen = originalResults.stream().map(this::deduplicationKey).collect(Collectors.toSet());
+                for (GeocodingResponse r : augmentedResults) {
+                    if (seen.add(deduplicationKey(r))) {
+                        merged.add(r);
+                    }
+                }
+                return merged.stream().limit(12).collect(Collectors.toList());
+            }
+        }
+
+        return originalResults.stream().limit(12).collect(Collectors.toList());
     }
 
     private String deduplicationKey(GeocodingResponse r) {

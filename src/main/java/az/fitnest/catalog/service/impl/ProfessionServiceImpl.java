@@ -99,11 +99,22 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
     }
 
     private String resolveUserLanguage(Long userId) {
+        // 1. Check current request Accept-Language header first via LocaleContextHolder
+        try {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
+            if (localeLang.equals("EN") || localeLang.equals("RU")) {
+                return localeLang;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 2. Fallback to GRPC User Profile language
         if (userId != null) {
             try {
                 UserResponse user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage();
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }

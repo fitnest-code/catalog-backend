@@ -19,7 +19,7 @@ public class IdentityServiceGrpcClient {
                 .setName(name)
                 .setSurname(surname)
                 .setPhoneNumber(phone)
-                .setEmail(email)
+                .setEmail(email != null ? email : "")
                 .setPassword(password)
                 .build();
         return identityServiceBlockingStub
