@@ -27,9 +27,75 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
 
     public ReverseGeocodingServiceImpl() {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(1000);
-        factory.setReadTimeout(1500);
+        factory.setConnectTimeout(2000);
+        factory.setReadTimeout(3000);
         this.restTemplate = new RestTemplate(factory);
+    }
+
+    private GeocodingResponse reverseGeocodePhoton(Double latitude, Double longitude) {
+        URI uri = UriComponentsBuilder.fromUriString(PHOTON_URL)
+                .path("/reverse")
+                .queryParam("lat", latitude)
+                .queryParam("lon", longitude)
+                .build().encode().toUri();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", USER_AGENT);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        try {
+            ResponseEntity<Map> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+            Map<String, Object> body = response.getBody();
+            if (body != null) {
+                Object featuresObj = body.get("features");
+                if (featuresObj instanceof List) {
+                    List<Map<String, Object>> features = (List<Map<String, Object>>) featuresObj;
+                    if (!features.isEmpty()) {
+                        Map<String, Object> feature = features.get(0);
+                        Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
+                        if (properties != null) {
+                            String name = (String) properties.get("name");
+                            String street = (String) properties.get("street");
+                            String houseNumber = (String) properties.get("housenumber");
+                            String city = (String) properties.get("city");
+                            String state = (String) properties.get("state");
+                            String country = (String) properties.get("country");
+
+                            StringBuilder addressBuilder = new StringBuilder();
+                            if (name != null) addressBuilder.append(name);
+                            if (street != null) {
+                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                                if (houseNumber != null) addressBuilder.append(houseNumber).append(" ");
+                                addressBuilder.append(street);
+                            }
+                            if (city != null) {
+                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                                addressBuilder.append(city);
+                            }
+                            if (state != null) {
+                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                                addressBuilder.append(state);
+                            }
+                            if (country != null) {
+                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                                addressBuilder.append(country);
+                            }
+
+                            String addressText = addressBuilder.toString();
+                            if (!addressText.isBlank()) {
+                                return GeocodingResponse.builder()
+                                        .addressText(addressText)
+                                        .city(city)
+                                        .latitude(latitude)
+                                        .longitude(longitude)
+                                        .build();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Ignore and fall back
+        }
+        return null;
     }
 
     @Override
@@ -73,7 +139,15 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                         .build();
             }
         } catch (Exception exception) {
+            // Fall through to Photon
         }
+
+        // Try Photon as fallback
+        GeocodingResponse photonFallback = reverseGeocodePhoton(latitude, longitude);
+        if (photonFallback != null) {
+            return photonFallback;
+        }
+
         return GeocodingResponse.builder()
                 .addressText(String.format("%.5f, %.5f", latitude, longitude))
                 .latitude(latitude)
