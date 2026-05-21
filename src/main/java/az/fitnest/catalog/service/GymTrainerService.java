@@ -19,4 +19,5 @@ public interface GymTrainerService {
     void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled, Long lessonId);
     void addTrainerAvailability(Long gymId, Long trainerId, Long lessonId, TrainerAvailabilityRequest request);
     void addTrainers(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<MultipartFile> photos, List<String> lessonTypesPerTrainer);
+    void addTrainersWithUrls(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds, List<String> emails, List<String> phones, List<String> photoUrls, List<String> lessonTypesPerTrainer);
 }

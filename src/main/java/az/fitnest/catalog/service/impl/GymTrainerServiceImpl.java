@@ -403,4 +403,10 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             }
         }
     }
+
+    @Override
+    public void addTrainersWithUrls(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
+                                    List<String> emails, List<String> phones, List<String> photoUrls, List<String> lessonTypesPerTrainer) {
+        addTrainersInternal(gymId, names, surnames, professionIds, emails, phones, photoUrls, lessonTypesPerTrainer);
+    }
 }
