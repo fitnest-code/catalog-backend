@@ -73,6 +73,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
     private final az.fitnest.catalog.repository.GymLessonTypeRepository gymLessonTypeRepository;
+    private final az.fitnest.catalog.service.GymQrCodeService gymQrCodeService;
+    private final az.fitnest.catalog.client.StorageGrpcClient storageGrpcClient;
     private final java.util.concurrent.Executor taskExecutor;
 
     private String resolveUserLanguage() {
@@ -1022,11 +1024,31 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return 6371.0 * 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String getGymQrUrl(Long gymId) {
-        String qrCodeUrl = gymRepository.findQrCodeUrlById(gymId);
-        if (qrCodeUrl == null) {
+        if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        String qrCodeUrl = gymRepository.findQrCodeUrlById(gymId);
+        boolean needsRegenerate = false;
+        if (qrCodeUrl == null || qrCodeUrl.trim().isEmpty() || qrCodeUrl.contains("PENDING") || qrCodeUrl.contains("/qr")) {
+            needsRegenerate = true;
+        } else {
+            try {
+                String fileId = qrCodeUrl;
+                if (qrCodeUrl.contains("/stream/")) {
+                    fileId = qrCodeUrl.substring(qrCodeUrl.lastIndexOf("/stream/") + 8);
+                } else if (qrCodeUrl.contains("/")) {
+                    fileId = qrCodeUrl.substring(qrCodeUrl.lastIndexOf("/") + 1);
+                }
+                storageGrpcClient.downloadFile(fileId, response -> {});
+            } catch (Exception e) {
+                needsRegenerate = true;
+            }
+        }
+
+        if (needsRegenerate) {
+            qrCodeUrl = gymQrCodeService.generateAndSaveQrCodeSync(gymId);
         }
         return qrCodeUrl;
     }
