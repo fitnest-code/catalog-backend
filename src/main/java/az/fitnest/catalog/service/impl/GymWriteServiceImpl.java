@@ -1247,13 +1247,32 @@ public class GymWriteServiceImpl implements GymWriteService {
                 .build();
 
         trainerReservationDateRepository.save(trd);
+
+        gymRepository.findById(gymId).ifPresent(gym -> {
+            if (!Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
+                gym.setIsReservationEnabled(true);
+                gymRepository.save(gym);
+            }
+        });
     }
 
     @Override
     @Transactional
     public void deleteLessonHourAdmin(Long lessonHourId) {
-        trainerReservationDateRepository.deleteById(lessonHourId);
+        trainerReservationDateRepository.findById(lessonHourId).ifPresent(session -> {
+            Long gymId = session.getGymId();
+            trainerReservationDateRepository.deleteById(lessonHourId);
+            if (gymId != null && trainerReservationDateRepository.findByGymId(gymId).isEmpty()) {
+                gymRepository.findById(gymId).ifPresent(gym -> {
+                    if (Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
+                        gym.setIsReservationEnabled(false);
+                        gymRepository.save(gym);
+                    }
+                });
+            }
+        });
     }
+
     @Override
     public void validateStep1(GymCreateStep1Request request) {
         if (request.categoryId() == null) {
