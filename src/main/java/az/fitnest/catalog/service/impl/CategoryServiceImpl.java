@@ -39,6 +39,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "categories-paged", key = "{#q, #page, #size, T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()}")
     public PaginatedResponse<CategoryResponse> getCategories(String q, int page, int size) {
         if (page < 1) {
             throw new BadRequestException("PAGE_INVALID", "error.page_index_invalid");
@@ -67,6 +68,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "categories-all", key = "#userId != null ? #userId : 0")
     public List<Category> getAllCategoriesLocalized(Long userId) {
         String language = resolveUserLanguage(userId);
         List<Category> categories = categoryRepository.findAll();
