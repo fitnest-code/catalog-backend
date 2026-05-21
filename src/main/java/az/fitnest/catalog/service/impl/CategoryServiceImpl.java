@@ -82,6 +82,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public void deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
@@ -94,11 +95,13 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public void deleteAllCategories() {
         categoryRepository.deleteAll();
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public void updateCategoryName(Long categoryId, String newName) {
         categoryRepository.findById(categoryId).ifPresent(category -> {
             category.setName(newName);
@@ -107,6 +110,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public void updateCategoryPhoto(Long categoryId, MultipartFile file) {
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
@@ -117,6 +121,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public void updateCategoryIcon(Long categoryId, MultipartFile file) {
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
         var category = categoryRepository.findById(categoryId)
@@ -180,6 +185,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public CategoryResponse createCategory(String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds) {
         Category category = Category.builder().name(name).build();
         if (lessonTypeIds != null && !lessonTypeIds.isEmpty()) {
@@ -210,6 +216,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public CategoryResponse updateCategory(Long id, String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
