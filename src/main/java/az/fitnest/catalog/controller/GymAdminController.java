@@ -62,6 +62,13 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymDetailsAdmin(gymId));
     }
 
+    @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
+    @GetMapping("/{id}/qr")
+    public ResponseEntity<GymQrResponse> getGymQrUrl(@PathVariable Long id) {
+        return ResponseEntity.ok(new GymQrResponse(this.gymReadService.getGymQrUrl(id)));
+    }
+
     @Operation(summary = "Zal abunəliklərini alın", description = "İdman zalı üçün aktiv abunəlik və xidmət məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/subscriptions")
@@ -346,6 +353,18 @@ public class GymAdminController {
                     })) @RequestParam(required = false) String sort) {
         return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId, query, sort));
     }
+    @Operation(summary = "Tam idman zalı yaradın (Birdəfəlik)", description = "Bütün 7 addımı birləşdirərək idman zalını bir dəfəyə yaradır. Daha sürətli və atomik əməliyyat.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GymCreateStep1Response> createGymComplete(
+            @RequestPart("data") @Valid GymCreateCompleteRequest request,
+            @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
+            @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
+        Long gymId = gymWriteService.createGymComplete(request, coverPhoto, trainerPhotos, roomPhotos);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
+    }
+
     @Operation(summary = "Step 1: Yeni idman zalı yaradın (DRAFT)", description = "Sistemə yeni idman zalı layihəsini əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/step1")

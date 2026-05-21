@@ -781,6 +781,259 @@ public class GymWriteServiceImpl implements GymWriteService {
         });
     }
 
+    @Override
+    @Caching(evict = {
+        @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+    })
+    public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
+                                   List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos) {
+        // ═══════════════════════════════════════════════════════════════
+        // Phase 1: Validate all data upfront
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Validate step 1
+        GymCreateStep1Request step1 = GymCreateStep1Request.builder()
+                .categoryId(request.categoryId())
+                .name(request.name())
+                .phone(request.phone())
+                .description(request.description())
+                .email(request.email())
+                .lessonTypeIds(request.lessonTypeIds())
+                .build();
+        validateStep1(step1);
+
+        // Validate step 2 (trainer emails/phones)
+        if (request.trainers() != null && !request.trainers().isEmpty()) {
+            List<String> emails = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::email).filter(e -> e != null && !e.isBlank()).toList();
+            List<String> phones = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::phone).filter(p -> p != null && !p.isBlank()).toList();
+            validateStep2(emails, phones);
+        }
+
+        // Validate step 3 (working hours)
+        GymCreateStep2Request step3 = GymCreateStep2Request.builder()
+                .generalWorkHours(request.generalWorkHours())
+                .workHoursWoman(request.workHoursWoman())
+                .workHoursMan(request.workHoursMan())
+                .restDays(request.restDays())
+                .build();
+        validateStep3(step3);
+
+        // Validate step 4 (coordinates)
+        GymCreateStep3Request step4 = GymCreateStep3Request.builder()
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .build();
+        validateStep4(step4);
+
+        // Validate step 5 (images)
+        validateStep5(coverPhoto, request.roomNames(), roomPhotos);
+
+        // Validate step 6 (subscriptions)
+        GymCreateStep6Request step6 = GymCreateStep6Request.builder()
+                .subscriptions(request.subscriptions())
+                .build();
+        validateStep6(step6);
+
+        // Validate step 7 (admins)
+        GymCreateStep7Request step7 = GymCreateStep7Request.builder()
+                .admins(request.admins())
+                .build();
+        validateStep7(step7);
+
+        // ═══════════════════════════════════════════════════════════════
+        // Phase 2: Upload all files in parallel (outside transaction)
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Geocoding (external call)
+        GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.latitude(), request.longitude());
+
+        // Cover photo upload
+        CompletableFuture<String> coverFuture = null;
+        if (coverPhoto != null && !coverPhoto.isEmpty()) {
+            MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
+            coverFuture = CompletableFuture.supplyAsync(() ->
+                fileStorageService.saveFile(validatedCover, "/gyms/covers"), imageUploadExecutor);
+        }
+
+        // Trainer photo uploads
+        List<CompletableFuture<String>> trainerPhotoFutures = new ArrayList<>();
+        if (trainerPhotos != null) {
+            for (MultipartFile photo : trainerPhotos) {
+                if (photo != null && !photo.isEmpty()) {
+                    MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
+                    trainerPhotoFutures.add(CompletableFuture.supplyAsync(() ->
+                        fileStorageService.saveFile(validated, "/gyms/trainers"), imageUploadExecutor));
+                } else {
+                    trainerPhotoFutures.add(CompletableFuture.completedFuture(null));
+                }
+            }
+        }
+
+        // Room photo uploads
+        List<CompletableFuture<RoomImageUploadResult>> roomFutures = new ArrayList<>();
+        if (request.roomNames() != null && roomPhotos != null && request.roomNames().size() == roomPhotos.size()) {
+            for (int i = 0; i < roomPhotos.size(); i++) {
+                MultipartFile file = roomPhotos.get(i);
+                if (file == null || file.isEmpty()) continue;
+                String roomName = request.roomNames().get(i);
+                MultipartFile validated = fileStorageService.validateAndWrapImage(file);
+                roomFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validated, "/gyms/rooms");
+                    return new RoomImageUploadResult(roomName, url);
+                }, imageUploadExecutor));
+            }
+        }
+
+        // Create gym admin users in identity service (external gRPC call)
+        List<CompletableFuture<GymAdminCreateResult>> adminFutures = request.admins().stream()
+                .map(adminReq -> CompletableFuture.supplyAsync(() -> {
+                    Long userId = identityServiceGrpcClient.createGymAdmin(
+                        adminReq.name(), adminReq.surname(),
+                        PhoneUtil.normalize(adminReq.phoneNumber()),
+                        adminReq.email(), adminReq.password()
+                    );
+                    return new GymAdminCreateResult(adminReq, userId);
+                }, imageUploadExecutor))
+                .toList();
+
+        // Wait for all parallel operations to complete
+        String finalCoverUrl = coverFuture != null ? coverFuture.join() : null;
+        List<String> trainerPhotoUrls = trainerPhotoFutures.stream().map(CompletableFuture::join).toList();
+        List<RoomImageUploadResult> roomResults = roomFutures.stream().map(CompletableFuture::join).toList();
+        List<GymAdminCreateResult> adminResults = adminFutures.stream().map(CompletableFuture::join).toList();
+
+        // ═══════════════════════════════════════════════════════════════
+        // Phase 3: Save everything in a single transaction
+        // ═══════════════════════════════════════════════════════════════
+        
+        Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
+            // Step 1: Create Gym entity
+            Category category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+            Gym gym = new Gym();
+            gym.setName(request.name());
+            gym.setDescription(request.description());
+            gym.setPhone(PhoneUtil.normalize(request.phone()));
+            gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
+            gym.setCategory(category);
+
+            // Step 3: Working Hours
+            updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
+            updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
+            updateWorkHours(gym.getWorkHoursMan(), request.workHoursMan());
+
+            if (request.restDays() != null) {
+                Set<GymWorkHourPeriod> restDays = request.restDays().stream()
+                        .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
+                        .collect(Collectors.toSet());
+                gym.getRestDays().addAll(restDays);
+            }
+
+            // Step 4: Address
+            Address address = new Address();
+            address.setLatitude(request.latitude());
+            address.setLongitude(request.longitude());
+            if (geocoding != null) {
+                address.setAddressText(geocoding.addressText());
+                address.setCity(geocoding.city());
+            }
+            gym.setAddress(address);
+
+            // Step 5: Cover image
+            if (finalCoverUrl != null) {
+                gym.setCoverImageUrl(finalCoverUrl);
+            }
+
+            // Set status to ACTIVE directly (skipping DRAFT)
+            gym.setStatus(GymStatus.ACTIVE);
+            gym.setCreationStep(7);
+
+            Gym savedGym = gymRepository.save(gym);
+            Long savedGymId = savedGym.getId();
+
+            // Translations for gym
+            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "name", request.name());
+            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "description", request.description());
+            if (savedGym.getAddress() != null) {
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+            }
+
+            // Step 1: Lesson types
+            if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+                List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+                int order = 1;
+                for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
+                    az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
+                            .gym(savedGym)
+                            .name(glt.getName())
+                            .category(category)
+                            .status("ACTIVE")
+                            .sortOrder(order++)
+                            .build();
+                    gymLessonTypeRepository.save(gymLessonType);
+                }
+            }
+
+            // Step 2: Trainers
+            if (request.trainers() != null && !request.trainers().isEmpty()) {
+                List<String> names = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::name).toList();
+                List<String> surnames = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::surname).toList();
+                List<Long> professionIds = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::professionId).toList();
+                List<String> emails = request.trainers().stream().map(t -> t.email() != null ? t.email() : "").toList();
+                List<String> phones = request.trainers().stream().map(t -> t.phone() != null ? t.phone() : "").toList();
+                List<String> lessonTypesPerTrainer = request.trainers().stream().map(t -> t.lessonTypeIds() != null ? t.lessonTypeIds() : "").toList();
+
+                // Convert trainer photo URLs to a list that matches trainer order
+                // trainerPhotoUrls may have fewer entries if some trainers have no photo
+                gymTrainerService.addTrainersWithUrls(savedGymId, names, surnames, professionIds, emails, phones, trainerPhotoUrls, lessonTypesPerTrainer);
+            }
+
+            // Step 5: Room images
+            if (!roomResults.isEmpty()) {
+                for (RoomImageUploadResult res : roomResults) {
+                    Room room = savedGym.getRooms().stream()
+                            .filter(r -> r.getName().equals(res.roomName()))
+                            .findFirst()
+                            .orElseGet(() -> {
+                                Room newRoom = Room.builder()
+                                        .name(res.roomName())
+                                        .gym(savedGym)
+                                        .build();
+                                savedGym.getRooms().add(newRoom);
+                                return newRoom;
+                            });
+                    RoomImage roomImage = RoomImage.builder()
+                            .room(room)
+                            .pictureUrl(res.url())
+                            .build();
+                    room.getImages().add(roomImage);
+                }
+                gymRepository.save(savedGym);
+            }
+
+            // Step 6: Subscriptions
+            updateGymSubscriptionsInternal(savedGym, step6);
+
+            // Step 7: Admins
+            for (GymAdminCreateResult res : adminResults) {
+                String role = (res.req().role() != null && !res.req().role().trim().isEmpty()) ? res.req().role() : "Super admin";
+                az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
+                    az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
+                );
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+            }
+
+            return savedGymId;
+        });
+
+        // Phase 4: Post-commit actions
+        gymQrCodeService.generateAndSaveQrCode(gymId);
+
+        return gymId;
+    }
+
     @Transactional
     public void addGymAdmin(Long gymId, GymAdminCreateRequest request) {
         if (gymAdminRepository.existsByGymIdAndPhoneNumber(gymId, PhoneUtil.normalize(request.phoneNumber()))) {
