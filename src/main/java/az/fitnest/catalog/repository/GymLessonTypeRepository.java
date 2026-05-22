@@ -19,4 +19,6 @@ public interface GymLessonTypeRepository extends JpaRepository<GymLessonType, Lo
     Optional<GymLessonType> findByGymIdAndName(Long gymId, String name);
 
     boolean existsByGymIdAndName(Long gymId, String name);
+
+    boolean existsByGymId(Long gymId);
 }
