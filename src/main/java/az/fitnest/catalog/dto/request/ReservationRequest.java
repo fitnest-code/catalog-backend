@@ -19,10 +19,8 @@ public class ReservationRequest {
     @NotNull(message = "Category ID is required")
     private Long categoryId;
 
-    @NotNull(message = "Lesson ID is required")
     private Long lessonId;
 
-    @NotNull(message = "Trainer ID is required")
     private Long trainerId;
 
     @NotNull(message = "Session ID is required")

@@ -1261,11 +1261,17 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Override
     @Transactional
     public void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request) {
-        Trainer trainer = trainerRepository.findById(request.trainerId())
-                .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        Trainer trainer = null;
+        if (request.trainerId() != null) {
+            trainer = trainerRepository.findById(request.trainerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
+        }
 
-        GymLessonType lessonType = gymLessonTypeRepository.findById(request.lessonTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+        GymLessonType lessonType = null;
+        if (request.lessonTypeId() != null) {
+            lessonType = gymLessonTypeRepository.findById(request.lessonTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+        }
 
         TrainerReservationDate trd = TrainerReservationDate.builder()
                 .gymId(gymId)

@@ -50,41 +50,53 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
 
         policyService.validateReservationAllowed(userId, gym, session);
 
-        if (session.getClassType() != null && !session.getClassType().getId().equals(lessonId)) {
+        if (lessonId != null && session.getClassType() != null && !session.getClassType().getId().equals(lessonId)) {
             throw new BadRequestException("LESSON_SESSION_MISMATCH", "error.lesson_session_mismatch");
         }
 
-        if (reservationRepository.existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(userId, lessonId, session.getDate(),
+        if (lessonId != null && reservationRepository.existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(userId, lessonId, session.getDate(),
                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))) {
             throw new BadRequestException("DUPLICATE_DAILY_RESERVATION", "error.duplicate_daily_reservation");
         }
 
-        if (!session.getGymId().equals(gymId) || !session.getTrainer().getTrainerId().equals(trainerId)) {
+        if (!session.getGymId().equals(gymId)) {
+            throw new BadRequestException("INVALID_SESSION_REFERENCE", "error.invalid_session_reference");
+        }
+
+        if (session.getTrainer() != null && !session.getTrainer().getId().equals(trainerId)) {
             throw new BadRequestException("INVALID_SESSION_REFERENCE", "error.invalid_session_reference");
         }
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-        if (gym.getCategory() == null || !gym.getCategory().equals(category)) {
+        if (gym.getCategory() == null || !gym.getCategory().getId().equals(category.getId())) {
             throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
         }
 
-        GymLessonType classType = gymLessonTypeRepository.findById(lessonId)
-                .orElseThrow(() -> new ResourceNotFoundException("CLASS_TYPE_NOT_FOUND", "error.class_type_not_found"));
+        GymLessonType classType = null;
+        if (lessonId != null) {
+            classType = gymLessonTypeRepository.findById(lessonId)
+                    .orElseThrow(() -> new ResourceNotFoundException("CLASS_TYPE_NOT_FOUND", "error.class_type_not_found"));
+        } else if (session.getClassType() != null) {
+            classType = session.getClassType();
+        }
 
-        if (!availabilityService.isSessionOpen(session)) {
-            throw new BadRequestException("SESSION_FULL_OR_CLOSED", "error.session_full_or_closed");
+        Trainer trainer = null;
+        if (trainerId != null) {
+            trainer = trainerRepository.findById(trainerId).orElse(null);
+        } else if (session.getTrainer() != null) {
+            trainer = session.getTrainer();
         }
 
         Reservation reservation = Reservation.builder()
                 .userId(userId)
                 .gym(gym)
-                .trainer(session.getTrainer())
-                .reservationDate(session)
+                .trainer(trainer)
                 .category(category)
                 .classType(classType)
-                .lessonType(classType.getName())
+                .lessonType(classType != null ? classType.getName() : null)
+                .reservationDate(session)
                 .status(ReservationStatus.PENDING)
                 .build();
 

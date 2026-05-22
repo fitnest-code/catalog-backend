@@ -32,7 +32,7 @@ public class Reservation extends BaseAuditableEntity {
     private Gym gym;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trainer_id", nullable = false)
+    @JoinColumn(name = "trainer_id")
     private Trainer trainer;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -47,7 +47,7 @@ public class Reservation extends BaseAuditableEntity {
     @JoinColumn(name = "class_type_id")
     private GymLessonType classType;
 
-    @Column(name = "lesson_type", nullable = false)
+    @Column(name = "lesson_type")
     private String lessonType;
 
     @Enumerated(EnumType.STRING)
