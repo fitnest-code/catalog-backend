@@ -722,6 +722,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.getSubscriptions().clear();
 
         Set<Long> processedPackages = new HashSet<>();
+        Map<String, SupportedService> nameToService = new HashMap<>();
 
         for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
             if (!processedPackages.add(subReq.packageId())) {
@@ -731,12 +732,43 @@ public class GymWriteServiceImpl implements GymWriteService {
             subscription.setGym(gym);
             subscription.setPackageId(subReq.packageId());
             subscription.setDailyPrice(subReq.dailyPrice());
+            
+            Set<SupportedService> services = new HashSet<>();
+            
+            // Add existing supported services
             if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
-                List<SupportedService> services = supportedServiceRepository.findAllById(subReq.supportedServicesId()).stream()
+                List<SupportedService> existingServices = supportedServiceRepository.findAllById(subReq.supportedServicesId()).stream()
                         .filter(s -> s.getGymId() == null || s.getGymId().equals(gymId))
                         .toList();
-                subscription.setSupportedServices(new HashSet<>(services));
+                services.addAll(existingServices);
             }
+            
+            // Add custom services
+            if (subReq.customServices() != null && !subReq.customServices().isEmpty()) {
+                for (String customServiceName : subReq.customServices()) {
+                    if (customServiceName == null || customServiceName.trim().isEmpty()) {
+                        continue;
+                    }
+                    String trimmedName = customServiceName.trim();
+                    SupportedService service = nameToService.get(trimmedName.toLowerCase());
+                    if (service == null) {
+                        Optional<SupportedService> existingOpt = supportedServiceRepository.findByNameIgnoreCaseAndGymId(trimmedName, gymId);
+                        if (existingOpt.isPresent()) {
+                            service = existingOpt.get();
+                        } else {
+                            service = new SupportedService();
+                            service.setName(trimmedName);
+                            service.setGymId(gymId);
+                            service = supportedServiceRepository.save(service);
+                            translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
+                        }
+                        nameToService.put(trimmedName.toLowerCase(), service);
+                    }
+                    services.add(service);
+                }
+            }
+            
+            subscription.setSupportedServices(services);
             gym.getSubscriptions().add(subscription);
         }
         gymRepository.save(gym);
@@ -1347,6 +1379,15 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void validateStep6(GymCreateStep6Request request) {
         if (request.subscriptions() == null || request.subscriptions().isEmpty()) {
             throw new BadRequestException("SUBSCRIPTION_REQUIRED", "error.subscription_required");
+        }
+        for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
+            if (subReq.customServices() != null) {
+                for (String serviceName : subReq.customServices()) {
+                    if (serviceName == null || serviceName.trim().isEmpty()) {
+                        throw new BadRequestException("INVALID_SERVICE_NAME", "error.invalid_service_name");
+                    }
+                }
+            }
         }
         List<CompletableFuture<Boolean>> futures = request.subscriptions().stream()
                 .map(subReq -> CompletableFuture.supplyAsync(
