@@ -35,13 +35,16 @@ public class GymQrCodeServiceImpl implements az.fitnest.catalog.service.GymQrCod
 
     private String generateAndSaveQrCodeInternal(Long gymId, boolean forceRegenerate) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new RuntimeException("Gym not found: " + gymId));
-        if (!forceRegenerate && gym.getQrCodeToken() != null && gym.getQrCodeUrl() != null 
+        String expectedToken = gymId.toString();
+
+        if (!forceRegenerate && gym.getQrCodeValue() != null && gym.getQrCodeValue().equals(expectedToken)
+                && gym.getQrCodeUrl() != null
                 && !gym.getQrCodeUrl().contains("/qr") && !gym.getQrCodeUrl().contains("PENDING")) {
             return gym.getQrCodeUrl();
         }
 
         try {
-            String secureToken = UUID.randomUUID().toString();
+            String secureToken = expectedToken;
 
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
             BitMatrix bitMatrix = qrCodeWriter.encode(secureToken, BarcodeFormat.QR_CODE, 500, 500);
