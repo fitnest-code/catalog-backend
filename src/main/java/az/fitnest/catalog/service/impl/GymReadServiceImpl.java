@@ -1024,12 +1024,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional
     public String getGymQrUrl(Long gymId) {
-        if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
-        }
-        String qrCodeUrl = gymRepository.findQrCodeUrlById(gymId);
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() ->
+            new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        String qrCodeUrl = gym.getQrCodeUrl();
         boolean needsRegenerate = false;
-        if (qrCodeUrl == null || qrCodeUrl.trim().isEmpty() || qrCodeUrl.contains("PENDING") || qrCodeUrl.contains("/qr")) {
+
+        if (qrCodeUrl == null || qrCodeUrl.trim().isEmpty() || qrCodeUrl.contains("PENDING") || qrCodeUrl.contains("/qr") ||
+            gym.getQrCodeValue() == null || !gym.getQrCodeValue().equals(gymId.toString())) {
             needsRegenerate = true;
         } else {
             try {
