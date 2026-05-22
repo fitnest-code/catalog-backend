@@ -26,7 +26,7 @@ import java.time.LocalTime;
 public class TrainerReservationDate extends BaseAuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trainer_id", nullable = false)
+    @JoinColumn(name = "trainer_id")
     private Trainer trainer;
 
     @Column(name = "gym_id")

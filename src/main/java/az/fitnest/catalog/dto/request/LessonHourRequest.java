@@ -5,8 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record LessonHourRequest(
-    @NotNull Long trainerId,
-    @NotNull Long lessonTypeId,
+    Long trainerId,
+    Long lessonTypeId,
     @NotNull LocalDate date,
     @NotNull LocalTime startTime,
     @NotNull LocalTime endTime,
