@@ -25,7 +25,7 @@ public class FileStorageServiceImpl
         implements FileStorageService {
     private static final long MAX_FILE_SIZE = 0x500000L;
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp"
+            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp", "image/svg+xml", "image/svg"
     );
     private final StorageGrpcClient storageGrpcClient;
     private final Tika tika = new Tika();
