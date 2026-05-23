@@ -438,6 +438,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
             throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
         }
+
         Page<Gym> gymPage;
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
@@ -450,43 +451,15 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId);
         }
 
-        if (userLat != null && userLng != null) {
+        String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
             Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
-            if (q != null && !q.isBlank()) {
-                if (categoryId != null) {
-                    gymPage = gymRepository.searchClosestWithCategory(q, categoryId, userLat, userLng,
-                            distancePageable);
-                } else {
-                    gymPage = gymRepository.searchClosest(q, userLat, userLng, distancePageable);
-                }
-            } else if ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type)) {
-                if (categoryId != null) {
-                    gymPage = gymRepository.findByCategoryClosest(categoryId, userLat, userLng, distancePageable);
-                } else {
-                    gymPage = gymRepository.findAllClosest(userLat, userLng, distancePageable);
-                }
-            } else {
-                if (categoryId != null) {
-                    gymPage = gymRepository.findByCategory(categoryId, pageable);
-                } else {
-                    gymPage = gymRepository.findAll(pageable);
-                }
-            }
-        } else {
-            if (q != null && !q.isBlank()) {
-                if (categoryId != null) {
-                    gymPage = gymRepository.findByNameOrDescriptionContainingIgnoreCaseAndCategory(q, categoryId,
-                            pageable);
-                } else {
-                    gymPage = gymRepository.searchByNameAddressCategory(q, pageable);
-                }
-            } else {
-                if (categoryId != null) {
-                    gymPage = gymRepository.findByCategory(categoryId, pageable);
-                } else {
-                    gymPage = gymRepository.findAll(pageable);
-                }
-            }
+            gymPage = gymRepository.findAllClosestWithFiltersNative(searchKey, categoryId, subscriptionId, userLat, userLng, distancePageable);
+        }
+
+        else {
+            gymPage = gymRepository.findAllGymsWithFilters(searchKey, categoryId, subscriptionId, pageable);
         }
 
         Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> globalWorkHoursMap = gymPage.getContent().stream()
@@ -534,17 +507,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         userLng,
                         finalSavedIds.contains(gym.getId()),
                         finalPackageMap,
-                        finalWorkHoursMap // mapToGymMainPageDto metoduna yeni ötürülən parametr
+                        finalWorkHoursMap
                 ))
-                .filter(gymDto -> {
-                    if (subscriptionId == null)
-                        return true;
-                    Gym gym = gymPage.getContent().stream().filter(g -> g.getId().toString().equals(gymDto.gymId()))
-                            .findFirst().orElse(null);
-                    if (gym == null || gym.getSubscriptions() == null)
-                        return false;
-                    return gym.getSubscriptions().stream().anyMatch(sub -> subscriptionId.equals(sub.getPackageId()));
-                })
                 .collect(Collectors.toList());
 
         String message = null;
@@ -552,6 +516,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             message = messageSource.getMessage("error.gym_not_found", null,
                     org.springframework.context.i18n.LocaleContextHolder.getLocale());
         }
+
         return PaginatedResponse.<GymMainPageResponse>builder()
                 .items(items)
                 .total(gymPage.getTotalElements())

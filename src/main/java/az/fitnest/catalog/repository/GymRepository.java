@@ -81,4 +81,50 @@ public interface GymRepository
 
     @org.springframework.data.jpa.repository.Query("SELECT w FROM Gym g JOIN g.generalWorkHours w WHERE g.id IN :gymIds")
     public List<az.fitnest.catalog.model.entity.GymWorkHour> findAllGeneralWorkHoursByGymIds(@org.springframework.data.repository.query.Param("gymIds") List<Long> gymIds);
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT g FROM Gym g " +
+                    "WHERE (:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId))",
+            countQuery = "SELECT count(g) FROM Gym g WHERE (:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId))"
+    )
+    org.springframework.data.domain.Page<Gym> findAllWithSpecificationFallback(
+            @org.springframework.data.repository.query.Param("subscriptionId") Long subscriptionId,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT g FROM Gym g " +
+                    "WHERE (:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId)) " +
+                    "AND (:categoryId IS NULL OR g.category.id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', :q, '%')))"
+    )
+    org.springframework.data.domain.Page<Gym> findAllGymsWithFilters(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+            @org.springframework.data.repository.query.Param("subscriptionId") Long subscriptionId,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT DISTINCT g.* FROM gyms g " +
+                    "LEFT JOIN gym_subscriptions gs ON g.id = gs.gym_id " +
+                    "WHERE (:subscriptionId IS NULL OR gs.package_id = :subscriptionId) " +
+                    "AND (:categoryId IS NULL OR g.category_id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                    "ORDER BY (6371 * acos(least(1, cos(radians(:userLat)) * cos(radians(g.latitude)) * cos(radians(g.longitude) - radians(:userLng)) + sin(radians(:userLat)) * sin(radians(g.latitude))))) ASC",
+            countQuery = "SELECT count(DISTINCT g.id) FROM gyms g " +
+                    "LEFT JOIN gym_subscriptions gs ON g.id = gs.gym_id " +
+                    "WHERE (:subscriptionId IS NULL OR gs.package_id = :subscriptionId) " +
+                    "AND (:categoryId IS NULL OR g.category_id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%')))",
+            nativeQuery = true
+    )
+    org.springframework.data.domain.Page<Gym> findAllClosestWithFiltersNative(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+            @org.springframework.data.repository.query.Param("subscriptionId") Long subscriptionId,
+            @org.springframework.data.repository.query.Param("userLat") Double userLat,
+            @org.springframework.data.repository.query.Param("userLng") Double userLng,
+            org.springframework.data.domain.Pageable pageable
+    );
 }
