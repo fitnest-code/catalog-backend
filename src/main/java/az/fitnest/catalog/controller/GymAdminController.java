@@ -1,19 +1,21 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
+import az.fitnest.catalog.dto.request.GymCreateStep6Request;
 import az.fitnest.catalog.dto.request.GymRequest;
 import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.dto.response.GymReviewResponse;
-import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.request.TrainerRequest;
-import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.dto.response.GeocodingResponse;
+import az.fitnest.catalog.dto.response.GymCreateStep1Response;
+import az.fitnest.catalog.dto.response.GymEntranceHistoryAdminResponse;
+import az.fitnest.catalog.dto.response.GymQrResponse;
+import az.fitnest.catalog.dto.response.GymReviewResponse;
+import az.fitnest.catalog.dto.response.GymTrainerResponse;
+import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.GymReviewService;
 import az.fitnest.catalog.service.GymTrainerService;
-import az.fitnest.catalog.service.GymReadService;
-import az.fitnest.catalog.dto.response.GymEntranceHistoryAdminResponse;
-import java.util.List;
+import az.fitnest.catalog.service.GymWriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,8 +25,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/gyms")
@@ -98,7 +112,7 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/subscriptions/{planId}/benefits")
     public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId,
-            @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
+                                                              @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
         gymWriteService.updateGymSubscriptionBenefits(id, planId, request);
         return ResponseEntity.ok().build();
     }
@@ -222,7 +236,7 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/subscriptions/{subscriptionId}")
     public ResponseEntity<Void> deleteGymSubscriptionById(@PathVariable("id") Long gymId,
-            @PathVariable("subscriptionId") Long subscriptionId) {
+                                                          @PathVariable("subscriptionId") Long subscriptionId) {
         gymWriteService.deleteGymSubscriptionById(gymId, subscriptionId);
         return ResponseEntity.noContent().build();
     }
@@ -278,7 +292,7 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}/trainers/{trainerId}")
     public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId,
-            @PathVariable("trainerId") Long trainerId) {
+                                              @PathVariable("trainerId") Long trainerId) {
         gymTrainerService.deleteTrainer(gymId, trainerId);
         return ResponseEntity.noContent().build();
     }
@@ -326,8 +340,8 @@ public class GymAdminController {
                     + "address_asc - Şəhər + Ünvan (A-Z), "
                     + "newest - Yeni əlavə edilmiş (son 1 həftə), "
                     + "deactivated - Deaktiv zallar", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
-                            "name_asc", "name_desc", "address_asc", "newest", "deactivated"
-                    })) @RequestParam(required = false) String sort,
+                    "name_asc", "name_desc", "address_asc", "newest", "deactivated"
+            })) @RequestParam(required = false) String sort,
             @io.swagger.v3.oas.annotations.Parameter(description = "Səhifə nömrəsi (1-dən başlayır)", example = "1") @RequestParam(defaultValue = "1") int page,
             @io.swagger.v3.oas.annotations.Parameter(description = "Hər səhifədəki elementlərin sayı", example = "10") @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(gymReadService.getAllGymsAdmin(query, sort, page, pageSize));
@@ -348,11 +362,12 @@ public class GymAdminController {
                     + "status_desc - Status : Z-A, "
                     + "platform_asc - Platforma : A-Z, "
                     + "platform_desc - Platforma : Z-A", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {
-                            "gymName_asc", "gymName_desc", "date_asc", "date_desc",
-                            "status_asc", "status_desc", "platform_asc", "platform_desc"
-                    })) @RequestParam(required = false) String sort) {
+                    "gymName_asc", "gymName_desc", "date_asc", "date_desc",
+                    "status_asc", "status_desc", "platform_asc", "platform_desc"
+            })) @RequestParam(required = false) String sort) {
         return ResponseEntity.ok(gymReadService.getUserQrScanHistoryAdmin(userId, query, sort));
     }
+
     @Operation(summary = "Tam idman zalı yaradın (Birdəfəlik)", description = "Bütün 7 addımı birləşdirərək idman zalını bir dəfəyə yaradır. Daha sürətli və atomik əməliyyat.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -416,11 +431,28 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin", description = "İdman zalı üçün abunəlikləri və dəstəklənən xidmətləri əlavə edir.")
+    @Operation(
+            summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin",
+            description = "İdman zalı üçün abunəlikləri və dəstəklənən xidmətləri əlavə edir. " +
+                    "Xidmət ikonları varsa multipart şəklində göndərilir."
+    )
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step6")
-    public ResponseEntity<Void> createGymStep6(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
-        gymWriteService.createGymStep6(id, request);
+    @PostMapping(value = "/{id}/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep6(
+            @PathVariable Long id,
+
+            @io.swagger.v3.oas.annotations.Parameter(
+                    description = "Abunəlik və xidmət məlumatları (JSON)",
+                    required = true
+            )
+            @RequestPart("data") @Valid GymCreateStep6Request request,
+
+            @io.swagger.v3.oas.annotations.Parameter(
+                    description = "Xidmət ikonları (məcburi deyil, sıra customServices sırası ilə uyğun olmalıdır)"
+            )
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+
+        gymWriteService.createGymStep6(id, request, serviceIcons);
         return ResponseEntity.ok().build();
     }
 
@@ -482,11 +514,25 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Validate Step 6", description = "Abunəlik və xidmətləri yoxlayır.")
+    @Operation(
+            summary = "Validate Step 6",
+            description = "Abunəlik və xidmət məlumatlarını, həmçinin xidmət ikonlarını yoxlayır."
+    )
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/validate/step6")
-    public ResponseEntity<Void> validateStep6(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
-        gymWriteService.validateStep6(request);
+    @PostMapping(value = "/validate/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep6(
+            @io.swagger.v3.oas.annotations.Parameter(
+                    description = "Abunəlik və xidmət məlumatları (JSON)",
+                    required = true
+            )
+            @RequestPart("data") @Valid GymCreateStep6Request request,
+
+            @io.swagger.v3.oas.annotations.Parameter(
+                    description = "Xidmət ikonları (məcburi deyil)"
+            )
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+
+        gymWriteService.validateStep6(request, serviceIcons);
         return ResponseEntity.ok().build();
     }
 
@@ -513,6 +559,7 @@ public class GymAdminController {
     public ResponseEntity<az.fitnest.catalog.dto.response.SupportedServiceResponse> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createSupportedService(request));
     }
+
     @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki dəstəklənən xidmətləri qaytarır. gymId göndərilərsə həmin idman zalına aid xidmətləri qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/services")
@@ -580,6 +627,7 @@ public class GymAdminController {
         gymWriteService.deleteGymAdmin(gymId, adminId);
         return ResponseEntity.noContent().build();
     }
+
     @Operation(summary = "İdman zalı rezervasiyalarını alın", description = "İdman zalına aid rezervasiyaların siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/reservations")

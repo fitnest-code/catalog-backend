@@ -24,4 +24,6 @@ public class SupportedService extends BaseAuditableEntity {
     @Column(name = "gym_id")
     private Long gymId;
 
+    @Column(name = "icon_url")
+    private String iconUrl;
 }
