@@ -804,6 +804,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         Long gymId = gym.getId();
         gym.getSubscriptions().clear();
+        gymRepository.saveAndFlush(gym);
 
         Set<Long> processedPackages = new HashSet<>();
         Map<String, SupportedService> nameToService = new HashMap<>();
