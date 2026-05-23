@@ -92,6 +92,7 @@ public interface GymRepository
             org.springframework.data.domain.Pageable pageable
     );
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions"})
     @org.springframework.data.jpa.repository.Query(
             value = "SELECT g FROM Gym g " +
                     "WHERE (:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId)) " +
@@ -127,4 +128,31 @@ public interface GymRepository
             @org.springframework.data.repository.query.Param("userLng") Double userLng,
             org.springframework.data.domain.Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT g.id FROM gyms g " +
+                    "LEFT JOIN gym_subscriptions gs ON g.id = gs.gym_id " +
+                    "WHERE (:subscriptionId IS NULL OR gs.package_id = :subscriptionId) " +
+                    "AND (:categoryId IS NULL OR g.category_id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+                    "GROUP BY g.id, g.latitude, g.longitude " +
+                    "ORDER BY (6371 * acos(least(1, cos(radians(:userLat)) * cos(radians(g.latitude)) * cos(radians(g.longitude) - radians(:userLng)) + sin(radians(:userLat)) * sin(radians(g.latitude))))) ASC",
+            countQuery = "SELECT count(DISTINCT g.id) FROM gyms g " +
+                    "LEFT JOIN gym_subscriptions gs ON g.id = gs.gym_id " +
+                    "WHERE (:subscriptionId IS NULL OR gs.package_id = :subscriptionId) " +
+                    "AND (:categoryId IS NULL OR g.category_id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', :q, '%')))",
+            nativeQuery = true
+    )
+    org.springframework.data.domain.Page<Long> findAllClosestWithFiltersNativeIds(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+            @org.springframework.data.repository.query.Param("subscriptionId") Long subscriptionId,
+            @org.springframework.data.repository.query.Param("userLat") Double userLat,
+            @org.springframework.data.repository.query.Param("userLng") Double userLng,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions"})
+    public List<Gym> findWithListDetailsByIdIn(List<Long> ids);
 }

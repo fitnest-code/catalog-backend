@@ -397,12 +397,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<Gym> candidates = gymRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1],
                 bbox[2], bbox[3]);
         LocalDateTime newThreshold = LocalDateTime.now().minusDays(30L);
+        Long currentUserId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
+        String userLanguage = getUserLanguage(currentUserId);
 
         return candidates.stream()
                 .filter(gym -> gym.getAddress() != null && gym.getAddress().getLatitude() != null
                         && gym.getAddress().getLongitude() != null)
                 .map(gym -> {
-                    String userLanguage = getUserLanguage(az.fitnest.catalog.util.UserContext.getCurrentUserId());
                     String localizedName = getLocalizedGymName(gym, userLanguage);
                     double rawDistance = calculateDistanceRaw(lat, lng, gym.getAddress().getLatitude(),
                             gym.getAddress().getLongitude());
@@ -439,27 +440,42 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
         }
 
-        Page<Gym> gymPage;
+        Page<Gym> gymPage = null;
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = pageable(page, pageSize, Sort.by(direction, "createdDate"));
+        String userLanguage = getUserLanguage(userId);
 
         if ("SAVED".equalsIgnoreCase(type)) {
             if (userId == null)
                 return emptyPaginatedResponse(page, pageSize);
             List<SavedGym> saved = savedGymRepository.findByUserId(userId);
             List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
-            return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId);
+            return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId, userLanguage);
         }
 
         String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
 
         if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
             Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
-            gymPage = gymRepository.findAllClosestWithFiltersNative(searchKey, categoryId, subscriptionId, userLat, userLng, distancePageable);
+            Page<Long> idPage = gymRepository.findAllClosestWithFiltersNativeIds(searchKey, categoryId, subscriptionId, userLat, userLng, distancePageable);
+            
+            if (idPage.isEmpty()) {
+                gymPage = Page.empty(distancePageable);
+            } else {
+                List<Long> ids = idPage.getContent();
+                List<Gym> gyms = gymRepository.findWithListDetailsByIdIn(ids);
+                Map<Long, Gym> gymMap = gyms.stream().collect(Collectors.toMap(Gym::getId, g -> g));
+                List<Gym> sortedGyms = ids.stream().map(gymMap::get).filter(java.util.Objects::nonNull).toList();
+                gymPage = new org.springframework.data.domain.PageImpl<>(sortedGyms, distancePageable, idPage.getTotalElements());
+            }
         }
 
         else {
             gymPage = gymRepository.findAllGymsWithFilters(searchKey, categoryId, subscriptionId, pageable);
+        }
+
+        if (gymPage == null) {
+            gymPage = Page.empty(pageable);
         }
 
         Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> globalWorkHoursMap = gymPage.getContent().stream()
@@ -507,7 +523,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         userLng,
                         finalSavedIds.contains(gym.getId()),
                         finalPackageMap,
-                        finalWorkHoursMap
+                        finalWorkHoursMap,
+                        userLanguage
                 ))
                 .collect(Collectors.toList());
 
@@ -693,7 +710,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     private PaginatedResponse<GymMainPageResponse> manualPaginate(List<Gym> candidates, Long userId, Double lat,
-                                                                  Double lng, int page, int pageSize, String q, Long categoryId) {
+                                                                  Double lng, int page, int pageSize, String q, Long categoryId, String userLanguage) {
         java.util.stream.Stream<Gym> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
@@ -719,7 +736,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         lng,
                         true,
                         java.util.Collections.emptyMap(),
-                        manualWorkHoursMap
+                        manualWorkHoursMap,
+                        userLanguage
                 ))
                 .collect(Collectors.toList());
 
@@ -748,7 +766,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Double userLng,
             boolean isSaved,
             Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap,
-            Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap) {
+            Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap,
+            String userLanguage) {
 
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
         boolean isNew = gym.getCreatedDate() != null
@@ -770,8 +789,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     ) * 10.0
             ) / 10.0;
         }
-
-        String userLanguage = getUserLanguage(userId);
 
         CategoryResponse category = null;
         if (gym.getCategory() != null) {
