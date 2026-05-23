@@ -1224,12 +1224,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String firstName = "";
             String lastName = "";
             String phone = "";
+            String profilePhotoUrl = "";
             try {
                 az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
                 if (user != null) {
                     firstName = user.getFirstName();
                     lastName = user.getLastName();
                     phone = user.getMobile();
+                    profilePhotoUrl = user.getProfileImageUrl();
                 }
             } catch (Exception e) {
                 firstName = "User";
@@ -1251,6 +1253,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .status(displayStatus)
                     .reason(h.getReason())
                     .amount(h.getAmount() != null ? h.getAmount() : 0.0)
+                    .profilePhotoUrl(profilePhotoUrl)
                     .build();
         }).collect(Collectors.toList());
     }
@@ -1332,12 +1335,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String firstName = "";
             String lastName = "";
             String phone = "";
+            String profilePhotoUrl = "";
             try {
                 az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
                 if (user != null) {
                     firstName = user.getFirstName();
                     lastName = user.getLastName();
                     phone = user.getMobile();
+                    profilePhotoUrl = user.getProfileImageUrl();
                 }
             } catch (Exception e) {
                 firstName = "User";
@@ -1359,6 +1364,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .status(displayStatus)
                     .reason(h.getReason())
                     .amount(h.getAmount() != null ? h.getAmount() : 0.0)
+                    .profilePhotoUrl(profilePhotoUrl)
                     .build();
         }).collect(Collectors.toList());
 
@@ -1608,6 +1614,49 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .status(gym.getStatus())
                 .createdAt(created)
                 .lessonTypes(lessonTypes)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse getGymWorkHours(Long gymId) {
+        verifyGymOwnership(gymId);
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        
+        java.util.Set<GymWorkHourResponse> general = gym.getGeneralWorkHours().stream()
+                .map(wh -> GymWorkHourResponse.builder()
+                        .period(wh.getPeriod().name())
+                        .from(wh.getFromTime())
+                        .to(wh.getToTime())
+                        .build())
+                .collect(Collectors.toSet());
+
+        java.util.Set<GymWorkHourResponse> woman = gym.getWorkHoursWoman().stream()
+                .map(wh -> GymWorkHourResponse.builder()
+                        .period(wh.getPeriod().name())
+                        .from(wh.getFromTime())
+                        .to(wh.getToTime())
+                        .build())
+                .collect(Collectors.toSet());
+
+        java.util.Set<GymWorkHourResponse> man = gym.getWorkHoursMan().stream()
+                .map(wh -> GymWorkHourResponse.builder()
+                        .period(wh.getPeriod().name())
+                        .from(wh.getFromTime())
+                        .to(wh.getToTime())
+                        .build())
+                .collect(Collectors.toSet());
+
+        java.util.Set<az.fitnest.catalog.dto.request.RestDayRequest> rests = gym.getRestDays().stream()
+                .map(rd -> new az.fitnest.catalog.dto.request.RestDayRequest(rd.name()))
+                .collect(Collectors.toSet());
+
+        return az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse.builder()
+                .generalWorkHours(general)
+                .workHoursWoman(woman)
+                .workHoursMan(man)
+                .restDays(rests)
                 .build();
     }
 
