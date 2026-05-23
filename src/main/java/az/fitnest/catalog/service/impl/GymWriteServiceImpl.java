@@ -2,16 +2,58 @@ package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.IdentityServiceGrpcClient;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.dto.request.GymAdminCreateRequest;
+import az.fitnest.catalog.dto.request.GymAdminUpdateRequest;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
+import az.fitnest.catalog.dto.request.GymCreateStep1Request;
+import az.fitnest.catalog.dto.request.GymCreateStep2Request;
+import az.fitnest.catalog.dto.request.GymCreateStep3Request;
+import az.fitnest.catalog.dto.request.GymCreateStep6Request;
+import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequest;
+import az.fitnest.catalog.dto.request.GymCreateStep7Request;
+import az.fitnest.catalog.dto.request.GymRequest;
+import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
+import az.fitnest.catalog.dto.request.SupportedServiceRequest;
+import az.fitnest.catalog.dto.response.CheckInResponse;
+import az.fitnest.catalog.dto.response.GeocodingResponse;
+import az.fitnest.catalog.dto.response.GymCreateStep1Response;
+import az.fitnest.catalog.dto.response.GymWorkHourResponse;
+import az.fitnest.catalog.dto.response.SupportedServiceResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
-import az.fitnest.catalog.model.entity.*;
+import az.fitnest.catalog.model.entity.Address;
+import az.fitnest.catalog.model.entity.Category;
+import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymImage;
+import az.fitnest.catalog.model.entity.GymLessonType;
+import az.fitnest.catalog.model.entity.GymSubscription;
+import az.fitnest.catalog.model.entity.GymWorkHour;
+import az.fitnest.catalog.model.entity.Reservation;
+import az.fitnest.catalog.model.entity.Room;
+import az.fitnest.catalog.model.entity.RoomImage;
+import az.fitnest.catalog.model.entity.SavedGym;
+import az.fitnest.catalog.model.entity.SupportedService;
+import az.fitnest.catalog.model.entity.Trainer;
+import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
-import az.fitnest.catalog.repository.*;
-import az.fitnest.catalog.service.*;
+import az.fitnest.catalog.repository.CategoryRepository;
+import az.fitnest.catalog.repository.GymAdminRepository;
+import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
+import az.fitnest.catalog.repository.GymImageRepository;
+import az.fitnest.catalog.repository.GymLessonTypeRepository;
+import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.repository.ReservationRepository;
+import az.fitnest.catalog.repository.SavedGymRepository;
+import az.fitnest.catalog.repository.SupportedServiceRepository;
+import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.TrainerReservationDateRepository;
+import az.fitnest.catalog.service.FileStorageService;
+import az.fitnest.catalog.service.GymQrCodeService;
+import az.fitnest.catalog.service.GymTrainerService;
+import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.util.PhoneUtil;
 import az.fitnest.catalog.util.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -19,17 +61,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -64,12 +112,15 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
-    private record RoomImageUploadResult(String roomName, String url) {}
-    private record GymAdminCreateResult(GymAdminCreateRequest req, Long userId) {}
+    private record RoomImageUploadResult(String roomName, String url) {
+    }
+
+    private record GymAdminCreateResult(GymAdminCreateRequest req, Long userId) {
+    }
 
     @Caching(evict = {
-        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
-        @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
+            @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     })
     public void createGym(GymRequest request) {
         GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.address().latitude(), request.address().longitude());
@@ -118,19 +169,19 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym saved = gymRepository.save(gym);
 
         TransactionSynchronizationManager.registerSynchronization(
-            new org.springframework.transaction.support.TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    gymQrCodeService.generateAndSaveQrCode(saved.getId());
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        gymQrCodeService.generateAndSaveQrCode(saved.getId());
+                    }
                 }
-            }
         );
     }
 
     @Caching(evict = {
-        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
-        @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
-        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+            @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+            @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     })
     public void updateGym(Long gymId, GymRequest request) {
         GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.address().latitude(), request.address().longitude());
@@ -232,9 +283,9 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Transactional
     @Caching(evict = {
-        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
-        @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
-        @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
+            @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+            @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     })
     public void deleteGym(Long gymId) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -642,16 +693,16 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Caching(evict = {
-        @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
-        @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+            @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
     public void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos) {
         CompletableFuture<String> coverFuture = null;
         if (coverPhoto != null && !coverPhoto.isEmpty()) {
             MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
-            coverFuture = CompletableFuture.supplyAsync(() -> 
-                fileStorageService.saveFile(validatedCover, "/gyms/covers"), 
-                imageUploadExecutor
+            coverFuture = CompletableFuture.supplyAsync(() ->
+                            fileStorageService.saveFile(validatedCover, "/gyms/covers"),
+                    imageUploadExecutor
             );
         }
 
@@ -702,11 +753,19 @@ public class GymWriteServiceImpl implements GymWriteService {
         updateStep(gym, 4);
     }
 
+    @Override
     @Transactional
-    public void createGymStep6(Long gymId, GymCreateStep6Request request) {
-        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+    public void createGymStep6(Long gymId, GymCreateStep6Request request, List<MultipartFile> serviceIcons) {
+
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
         validateStep(gym, 5);
-        updateGymSubscriptionsInternal(gym, request);
+
+        // İkonları yüklə və URL-ləri map et
+        Map<Integer, String> iconUrlByIndex = uploadServiceIcons(serviceIcons);
+
+        updateGymSubscriptionsInternal(gym, request, iconUrlByIndex);
         updateStep(gym, 5);
     }
 
@@ -717,65 +776,121 @@ public class GymWriteServiceImpl implements GymWriteService {
         updateGymSubscriptionsInternal(gym, request);
     }
 
-    private void updateGymSubscriptionsInternal(Gym gym, GymCreateStep6Request request) {
+    private Map<Integer, String> uploadServiceIcons(List<MultipartFile> serviceIcons) {
+        if (serviceIcons == null || serviceIcons.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Integer, String> iconUrlByIndex = new HashMap<>();
+        for (int i = 0; i < serviceIcons.size(); i++) {
+            MultipartFile icon = serviceIcons.get(i);
+            if (icon == null || icon.isEmpty()) continue;
+            try {
+                MultipartFile validated = fileStorageService.validateAndWrapImage(icon);
+                String url = fileStorageService.saveFile(validated, "/gyms/service-icons");
+                iconUrlByIndex.put(i, url);
+            } catch (Exception ex) {
+                log.warn("Xidmət ikonu yüklənə bilmədi. index={}, fileName={}",
+                        i, icon.getOriginalFilename(), ex);
+            }
+        }
+        return iconUrlByIndex;
+    }
+
+    private void updateGymSubscriptionsInternal(
+            Gym gym,
+            GymCreateStep6Request request,
+            Map<Integer, String> iconUrlByIndex) {
+
         Long gymId = gym.getId();
         gym.getSubscriptions().clear();
 
         Set<Long> processedPackages = new HashSet<>();
         Map<String, SupportedService> nameToService = new HashMap<>();
+        int globalIconIndex = 0;
 
         for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
-            if (!processedPackages.add(subReq.packageId())) {
-                continue;
-            }
+            if (!processedPackages.add(subReq.packageId())) continue;
+
             GymSubscription subscription = new GymSubscription();
             subscription.setGym(gym);
             subscription.setPackageId(subReq.packageId());
             subscription.setDailyPrice(subReq.dailyPrice());
-            
+
             Set<SupportedService> services = new HashSet<>();
-            
-            // Add existing supported services
+
+            // Mövcud xidmətlər — icon dəyişmir
             if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
-                List<SupportedService> existingServices = supportedServiceRepository.findAllById(subReq.supportedServicesId()).stream()
+                List<SupportedService> existingServices = supportedServiceRepository
+                        .findAllById(subReq.supportedServicesId())
+                        .stream()
                         .filter(s -> s.getGymId() == null || s.getGymId().equals(gymId))
                         .toList();
                 services.addAll(existingServices);
             }
-            
-            // Add custom services
+
+            // Custom xidmətlər — icon varsa set et
             if (subReq.customServices() != null && !subReq.customServices().isEmpty()) {
                 for (String customServiceName : subReq.customServices()) {
                     if (customServiceName == null || customServiceName.trim().isEmpty()) {
+                        globalIconIndex++;
                         continue;
                     }
+
                     String trimmedName = customServiceName.trim();
+                    String iconUrl = iconUrlByIndex.get(globalIconIndex);
+                    globalIconIndex++;
+
                     SupportedService service = nameToService.get(trimmedName.toLowerCase());
                     if (service == null) {
-                        Optional<SupportedService> existingOpt = supportedServiceRepository.findByNameIgnoreCaseAndGymId(trimmedName, gymId);
+                        Optional<SupportedService> existingOpt = supportedServiceRepository
+                                .findByNameIgnoreCaseAndGymId(trimmedName, gymId);
+
                         if (existingOpt.isPresent()) {
                             service = existingOpt.get();
+                            if (iconUrl != null) {
+                                if (service.getIconUrl() != null) {
+                                    fileStorageService.deleteFilesAfterCommit(
+                                            List.of(service.getIconUrl())
+                                    );
+                                }
+                                service.setIconUrl(iconUrl);
+                                service = supportedServiceRepository.save(service);
+                            }
                         } else {
                             service = new SupportedService();
                             service.setName(trimmedName);
                             service.setGymId(gymId);
+                            if (iconUrl != null) {
+                                service.setIconUrl(iconUrl);
+                            }
                             service = supportedServiceRepository.save(service);
-                            translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
+                            translationService.autoTranslateAndSave(
+                                    "SupportedService",
+                                    service.getId().toString(),
+                                    "name",
+                                    service.getName()
+                            );
                         }
                         nameToService.put(trimmedName.toLowerCase(), service);
                     }
                     services.add(service);
                 }
             }
-            
+
             subscription.setSupportedServices(services);
             gym.getSubscriptions().add(subscription);
         }
+
         gymRepository.save(gym);
     }
 
+    private void updateGymSubscriptionsInternal(Gym gym, GymCreateStep6Request request) {
+        updateGymSubscriptionsInternal(gym, request, Collections.emptyMap());
+    }
+
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -783,11 +898,11 @@ public class GymWriteServiceImpl implements GymWriteService {
         List<CompletableFuture<GymAdminCreateResult>> futures = request.admins().stream()
                 .map(adminReq -> CompletableFuture.supplyAsync(() -> {
                     Long userId = identityServiceGrpcClient.createGymAdmin(
-                        adminReq.name(), 
-                        adminReq.surname(), 
-                        PhoneUtil.normalize(adminReq.phoneNumber()), 
-                        adminReq.email(), 
-                        adminReq.password()
+                            adminReq.name(),
+                            adminReq.surname(),
+                            PhoneUtil.normalize(adminReq.phoneNumber()),
+                            adminReq.email(),
+                            adminReq.password()
                     );
                     return new GymAdminCreateResult(adminReq, userId);
                 }, imageUploadExecutor))
@@ -802,9 +917,9 @@ public class GymWriteServiceImpl implements GymWriteService {
             for (GymAdminCreateResult res : results) {
                 String role = (res.req().role() != null && !res.req().role().trim().isEmpty()) ? res.req().role() : "Super admin";
                 az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
-                    az.fitnest.catalog.mapper.GymMapper.toAdminEntity(freshGym, res.req(), res.userId(), role)
+                        az.fitnest.catalog.mapper.GymMapper.toAdminEntity(freshGym, res.req(), res.userId(), role)
                 );
-                
+
                 translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
                 translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
             }
@@ -815,14 +930,14 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
     public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
-                                   List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos) {
+                                  List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos) {
         // ═══════════════════════════════════════════════════════════════
         // Phase 1: Validate all data upfront
         // ═══════════════════════════════════════════════════════════════
-        
+
         // Validate step 1
         GymCreateStep1Request step1 = GymCreateStep1Request.builder()
                 .categoryId(request.categoryId())
@@ -864,7 +979,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         GymCreateStep6Request step6 = GymCreateStep6Request.builder()
                 .subscriptions(request.subscriptions())
                 .build();
-        validateStep6(step6);
+        validateStep6(step6, Collections.emptyList());
 
         // Validate step 7 (admins)
         GymCreateStep7Request step7 = GymCreateStep7Request.builder()
@@ -875,7 +990,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         // ═══════════════════════════════════════════════════════════════
         // Phase 2: Upload all files in parallel (outside transaction)
         // ═══════════════════════════════════════════════════════════════
-        
+
         // Geocoding (external call)
         GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.latitude(), request.longitude());
 
@@ -884,7 +999,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (coverPhoto != null && !coverPhoto.isEmpty()) {
             MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
             coverFuture = CompletableFuture.supplyAsync(() ->
-                fileStorageService.saveFile(validatedCover, "/gyms/covers"), imageUploadExecutor);
+                    fileStorageService.saveFile(validatedCover, "/gyms/covers"), imageUploadExecutor);
         }
 
         // Trainer photo uploads
@@ -894,7 +1009,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                 if (photo != null && !photo.isEmpty()) {
                     MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
                     trainerPhotoFutures.add(CompletableFuture.supplyAsync(() ->
-                        fileStorageService.saveFile(validated, "/gyms/trainers"), imageUploadExecutor));
+                            fileStorageService.saveFile(validated, "/gyms/trainers"), imageUploadExecutor));
                 } else {
                     trainerPhotoFutures.add(CompletableFuture.completedFuture(null));
                 }
@@ -920,9 +1035,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         List<CompletableFuture<GymAdminCreateResult>> adminFutures = request.admins().stream()
                 .map(adminReq -> CompletableFuture.supplyAsync(() -> {
                     Long userId = identityServiceGrpcClient.createGymAdmin(
-                        adminReq.name(), adminReq.surname(),
-                        PhoneUtil.normalize(adminReq.phoneNumber()),
-                        adminReq.email(), adminReq.password()
+                            adminReq.name(), adminReq.surname(),
+                            PhoneUtil.normalize(adminReq.phoneNumber()),
+                            adminReq.email(), adminReq.password()
                     );
                     return new GymAdminCreateResult(adminReq, userId);
                 }, imageUploadExecutor))
@@ -937,7 +1052,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         // ═══════════════════════════════════════════════════════════════
         // Phase 3: Save everything in a single transaction
         // ═══════════════════════════════════════════════════════════════
-        
+
         Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
             // Step 1: Create Gym entity
             Category category = categoryRepository.findById(request.categoryId())
@@ -1051,7 +1166,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             for (GymAdminCreateResult res : adminResults) {
                 String role = (res.req().role() != null && !res.req().role().trim().isEmpty()) ? res.req().role() : "Super admin";
                 az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
-                    az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
+                        az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
                 );
                 translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
                 translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
@@ -1075,7 +1190,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         Long userId = identityServiceGrpcClient.createGymAdmin(request.name(), request.surname(), PhoneUtil.normalize(request.phoneNumber()), request.email(), request.password());
         String role = (request.role() != null && !request.role().trim().isEmpty()) ? request.role() : "Admin";
         az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, role));
-        
+
         translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
         translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
     }
@@ -1098,7 +1213,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gymAdminRepository.save(admin);
-        
+
         translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "name", admin.getName());
         translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
     }
@@ -1127,7 +1242,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     private void validateStep(Gym gym, int requiredStep) {
         if (gym.getStatus() == GymStatus.ACTIVE ||
-            gym.getStatus() == GymStatus.INACTIVE) {
+                gym.getStatus() == GymStatus.INACTIVE) {
             throw new BadRequestException("GYM_NOT_EDITABLE", "error.gym_not_editable_via_steps");
         }
         Integer currentStep = gym.getCreationStep() != null ? gym.getCreationStep() : 1;
@@ -1158,9 +1273,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         service.setName(request.name());
         service.setGymId(request.gymId());
         service = supportedServiceRepository.save(service);
-        
+
         translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
-        
+
         return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId());
     }
 
@@ -1382,29 +1497,28 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Override
-    public void validateStep6(GymCreateStep6Request request) {
+    public void validateStep6(GymCreateStep6Request request, List<MultipartFile> serviceIcons) {
+
         if (request.subscriptions() == null || request.subscriptions().isEmpty()) {
             throw new BadRequestException("SUBSCRIPTION_REQUIRED", "error.subscription_required");
         }
+
         for (GymCreateStep6SubscriptionRequest subReq : request.subscriptions()) {
-            if (subReq.customServices() != null) {
-                for (String serviceName : subReq.customServices()) {
-                    if (serviceName == null || serviceName.trim().isEmpty()) {
-                        throw new BadRequestException("INVALID_SERVICE_NAME", "error.invalid_service_name");
-                    }
-                }
+            if (!orderServiceGrpcClient.checkPackageExists(subReq.packageId())) {
+                throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
             }
         }
-        List<CompletableFuture<Boolean>> futures = request.subscriptions().stream()
-                .map(subReq -> CompletableFuture.supplyAsync(
-                        () -> orderServiceGrpcClient.checkPackageExists(subReq.packageId()),
-                        imageUploadExecutor
-                ))
-                .toList();
 
-        List<Boolean> results = futures.stream().map(CompletableFuture::join).toList();
-        if (results.contains(false)) {
-            throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
+        if (serviceIcons != null && !serviceIcons.isEmpty()) {
+            for (MultipartFile icon : serviceIcons) {
+                String contentType = icon.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    throw new BadRequestException(
+                            "INVALID_ICON_TYPE",
+                            "Xidmət ikonu yalnız şəkil formatında olmalıdır: " + icon.getOriginalFilename()
+                    );
+                }
+            }
         }
     }
 
