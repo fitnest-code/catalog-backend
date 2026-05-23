@@ -250,4 +250,27 @@ public final class GymMapper {
                 .coverImageUrl(category.getPhotoUrl())
                 .build();
     }
+
+    public static String toWorkHoursText(java.util.Collection<GymWorkHour> workHours, String lang) {
+        if (workHours == null || workHours.isEmpty()) {
+            return null;
+        }
+
+        List<GymWorkHourResponse> grouped = toGroupedWorkHourDtos(workHours, lang);
+        if (grouped.isEmpty()) {
+            return null;
+        }
+
+        return grouped.stream()
+                .map(dto -> {
+                    String fromTime = dto.from() != null ? dto.from().toString() : "";
+                    String toTime = dto.to() != null ? dto.to().toString() : "";
+
+                    if (!fromTime.isBlank() && !toTime.isBlank()) {
+                        return dto.period() + ": " + fromTime + " - " + toTime;
+                    }
+                    return dto.period();
+                })
+                .collect(Collectors.joining(" | "));
+    }
 }

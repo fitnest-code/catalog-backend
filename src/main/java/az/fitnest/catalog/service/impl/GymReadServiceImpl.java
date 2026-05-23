@@ -434,7 +434,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymMainPageResponse> getGyms(Long userId, String q, String type, Long categoryId,
-            Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
+                                                          Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
             throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
         }
@@ -489,6 +489,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             }
         }
 
+        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> globalWorkHoursMap = gymPage.getContent().stream()
+                .collect(Collectors.toMap(
+                        Gym::getId,
+                        gym -> gym.getGeneralWorkHours() != null ? new java.util.ArrayList<>(gym.getGeneralWorkHours()) : java.util.Collections.emptyList(),
+                        (existing, replacement) -> existing
+                ));
+
         List<Long> savedGymIds = new java.util.ArrayList<>();
         if (userId != null) {
             List<Long> gymIds = gymPage.getContent().stream().map(Gym::getId).toList();
@@ -512,12 +519,23 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 globalPackageInfos = orderServiceGrpcClient.getPackageNamesByIds(allPackageIds).stream()
                         .collect(Collectors.toMap(az.fitnest.order.grpc.PackageNameInfo::getPackageId, p -> p, (a, b) -> a));
             } catch (Exception e) {
+                // Log exception in production
             }
         }
 
         final Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = globalPackageInfos;
+        final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
+
         List<GymMainPageResponse> items = gymPage.getContent().stream()
-                .map(gym -> mapToGymMainPageDto(gym, userId, userLat, userLng, finalSavedIds.contains(gym.getId()), finalPackageMap))
+                .map(gym -> mapToGymMainPageDto(
+                        gym,
+                        userId,
+                        userLat,
+                        userLng,
+                        finalSavedIds.contains(gym.getId()),
+                        finalPackageMap,
+                        finalWorkHoursMap // mapToGymMainPageDto metoduna yeni ötürülən parametr
+                ))
                 .filter(gymDto -> {
                     if (subscriptionId == null)
                         return true;
@@ -710,7 +728,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     private PaginatedResponse<GymMainPageResponse> manualPaginate(List<Gym> candidates, Long userId, Double lat,
-            Double lng, int page, int pageSize, String q, Long categoryId) {
+                                                                  Double lng, int page, int pageSize, String q, Long categoryId) {
         java.util.stream.Stream<Gym> stream = candidates.stream();
         if (q != null && !q.isBlank()) {
             String lowerQ = q.toLowerCase();
@@ -722,7 +740,22 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             stream = stream.filter(g -> g.getCategory() != null && g.getCategory().getId().equals(categoryId));
         }
 
-        List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(g, userId, lat, lng, true, java.util.Collections.emptyMap()))
+        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> manualWorkHoursMap = candidates.stream()
+                .collect(Collectors.toMap(
+                        Gym::getId,
+                        gym -> gym.getGeneralWorkHours() != null ? new java.util.ArrayList<>(gym.getGeneralWorkHours()) : java.util.Collections.emptyList(),
+                        (existing, replacement) -> existing
+                ));
+
+        List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(
+                        g,
+                        userId,
+                        lat,
+                        lng,
+                        true,
+                        java.util.Collections.emptyMap(),
+                        manualWorkHoursMap
+                ))
                 .collect(Collectors.toList());
 
         if (lat != null && lng != null) {
@@ -749,7 +782,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Double userLat,
             Double userLng,
             boolean isSaved,
-            Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap) {
+            Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap,
+            Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap) {
 
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
         boolean isNew = gym.getCreatedDate() != null
@@ -825,6 +859,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         String localizedName = getLocalizedGymName(gym, userLanguage);
 
+        List<az.fitnest.catalog.model.entity.GymWorkHour> gymWorkHours = workHoursMap.getOrDefault(gym.getId(), java.util.Collections.emptyList());
+        String workHoursText = az.fitnest.catalog.mapper.GymMapper.toWorkHoursText(gymWorkHours, userLanguage);
+
         return GymMainPageResponse.builder()
                 .gymId(gym.getId().toString())
                 .name(localizedName)
@@ -841,6 +878,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .isSaved(isSaved)
                 .category(category)
                 .supportedSubscriptions(supportedSubscriptions)
+                .workHoursText(workHoursText) // Sizin tələb etdiyiniz yeni sahə
                 .build();
     }
 

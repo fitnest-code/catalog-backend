@@ -2,7 +2,6 @@ package az.fitnest.catalog.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
-
 import java.util.List;
 
 @Builder
@@ -18,6 +17,7 @@ public record GymMainPageResponse(
         Double distanceKm,
         boolean isSaved,
         CategoryResponse category,
-        List<GymPlanItemResponse> supportedSubscriptions
+        List<GymPlanItemResponse> supportedSubscriptions,
+        String workHoursText
 ) {
 }
