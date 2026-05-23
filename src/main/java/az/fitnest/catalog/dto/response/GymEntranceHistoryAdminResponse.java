@@ -24,5 +24,7 @@ public record GymEntranceHistoryAdminResponse(
     @Schema(description = "Reason for failure if unsuccessful")
     String reason,
     @Schema(description = "Scan amount/price")
-    Double amount
+    Double amount,
+    @Schema(description = "User profile photo URL")
+    String profilePhotoUrl
 ) {}
