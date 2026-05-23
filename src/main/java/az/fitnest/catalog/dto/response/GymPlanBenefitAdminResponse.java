@@ -8,5 +8,7 @@ public record GymPlanBenefitAdminResponse(
     @Schema(description = "Xidmət ID")
     Long id,
     @Schema(description = "Xidmət adı / təsviri")
-    String name
+    String name,
+    @Schema(description = "Xidmət ikonu URL-i")
+    String iconImageUrl
 ) {}

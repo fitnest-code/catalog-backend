@@ -53,7 +53,7 @@ public interface GymWriteService {
 
     void toggleGymReservation(Long gymId, boolean enabled);
 
-    SupportedServiceResponse createSupportedService(SupportedServiceRequest request);
+    SupportedServiceResponse createSupportedService(SupportedServiceRequest request, MultipartFile icon);
 
     void deleteSupportedService(Long id);
 
@@ -74,7 +74,8 @@ public interface GymWriteService {
     void createGymStep7(Long gymId, GymCreateStep7Request request);
 
     Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
-                           List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos);
+                           List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                           List<MultipartFile> serviceIcons);
 
     GeocodingResponse reverseGeocode(Double lat, Double lng);
 

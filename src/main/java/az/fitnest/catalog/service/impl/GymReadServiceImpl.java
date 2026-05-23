@@ -87,7 +87,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             return java.util.Collections.emptyList();
         }
         return supportedServiceRepository.findAllByGymId(gymId).stream()
-                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId()))
+                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId(), s.getIconUrl()))
                 .toList();
     }
 
@@ -279,6 +279,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                                 .description(localizedBenefit != null && !localizedBenefit.isEmpty()
                                                         ? localizedBenefit
                                                         : b.getName())
+                                                .iconImageUrl(b.getIconUrl())
                                                 .build();
                                     })
                                     .toList();
@@ -826,6 +827,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                     return GymPlanBenefitResponse.builder()
                                             .description(localizedBenefit != null && !localizedBenefit.isEmpty()
                                                     ? localizedBenefit : b.getName())
+                                            .iconImageUrl(b.getIconUrl())
                                             .build();
                                 })
                                 .toList();
@@ -1652,6 +1654,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                                 .name(localizedBenefit != null && !localizedBenefit.isEmpty()
                                                         ? localizedBenefit
                                                         : b.getName())
+                                                .iconImageUrl(b.getIconUrl())
                                                 .build();
                                     }).collect(java.util.stream.Collectors.toList());
 

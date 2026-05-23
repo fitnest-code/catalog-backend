@@ -8,5 +8,6 @@ import lombok.Builder;
 public record SupportedServiceResponse(
     Long id,
     String name,
-    Long gymId
+    Long gymId,
+    String iconImageUrl
 ) {}

@@ -375,8 +375,9 @@ public class GymAdminController {
             @RequestPart("data") @Valid GymCreateCompleteRequest request,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
-            @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
-        Long gymId = gymWriteService.createGymComplete(request, coverPhoto, trainerPhotos, roomPhotos);
+            @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        Long gymId = gymWriteService.createGymComplete(request, coverPhoto, trainerPhotos, roomPhotos, serviceIcons);
         return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
     }
 
@@ -555,9 +556,11 @@ public class GymAdminController {
 
     @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/services")
-    public ResponseEntity<az.fitnest.catalog.dto.response.SupportedServiceResponse> createSupportedService(@Valid @RequestBody az.fitnest.catalog.dto.request.SupportedServiceRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createSupportedService(request));
+    @PostMapping(value = "/services", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<az.fitnest.catalog.dto.response.SupportedServiceResponse> createSupportedService(
+            @RequestPart("data") @Valid az.fitnest.catalog.dto.request.SupportedServiceRequest request,
+            @RequestPart(value = "icon", required = false) MultipartFile icon) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createSupportedService(request, icon));
     }
 
     @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki dəstəklənən xidmətləri qaytarır. gymId göndərilərsə həmin idman zalına aid xidmətləri qaytarır.")

@@ -933,7 +933,8 @@ public class GymWriteServiceImpl implements GymWriteService {
             @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
     })
     public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
-                                  List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos) {
+                                  List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                                  List<MultipartFile> serviceIcons) {
         // ═══════════════════════════════════════════════════════════════
         // Phase 1: Validate all data upfront
         // ═══════════════════════════════════════════════════════════════
@@ -979,7 +980,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         GymCreateStep6Request step6 = GymCreateStep6Request.builder()
                 .subscriptions(request.subscriptions())
                 .build();
-        validateStep6(step6, Collections.emptyList());
+        validateStep6(step6, serviceIcons);
 
         // Validate step 7 (admins)
         GymCreateStep7Request step7 = GymCreateStep7Request.builder()
@@ -1031,6 +1032,10 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
         }
 
+        // Service icon uploads
+        CompletableFuture<Map<Integer, String>> serviceIconsFuture = CompletableFuture.supplyAsync(() ->
+                uploadServiceIcons(serviceIcons), imageUploadExecutor);
+
         // Create gym admin users in identity service (external gRPC call)
         List<CompletableFuture<GymAdminCreateResult>> adminFutures = request.admins().stream()
                 .map(adminReq -> CompletableFuture.supplyAsync(() -> {
@@ -1048,6 +1053,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         List<String> trainerPhotoUrls = trainerPhotoFutures.stream().map(CompletableFuture::join).toList();
         List<RoomImageUploadResult> roomResults = roomFutures.stream().map(CompletableFuture::join).toList();
         List<GymAdminCreateResult> adminResults = adminFutures.stream().map(CompletableFuture::join).toList();
+        Map<Integer, String> iconUrlByIndex = serviceIconsFuture.join();
 
         // ═══════════════════════════════════════════════════════════════
         // Phase 3: Save everything in a single transaction
@@ -1160,7 +1166,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
 
             // Step 6: Subscriptions
-            updateGymSubscriptionsInternal(savedGym, step6);
+            updateGymSubscriptionsInternal(savedGym, step6, iconUrlByIndex);
 
             // Step 7: Admins
             for (GymAdminCreateResult res : adminResults) {
@@ -1265,18 +1271,25 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    public SupportedServiceResponse createSupportedService(SupportedServiceRequest request) {
+    public SupportedServiceResponse createSupportedService(SupportedServiceRequest request, MultipartFile icon) {
         if (supportedServiceRepository.findByNameIgnoreCaseAndGymId(request.name(), request.gymId()).isPresent()) {
             throw new BadRequestException("SERVICE_ALREADY_EXISTS", "error.service_already_exists");
         }
         SupportedService service = new SupportedService();
         service.setName(request.name());
         service.setGymId(request.gymId());
+
+        if (icon != null && !icon.isEmpty()) {
+            MultipartFile validated = fileStorageService.validateAndWrapImage(icon);
+            String iconUrl = fileStorageService.saveFile(validated, "/gyms/service-icons");
+            service.setIconUrl(iconUrl);
+        }
+
         service = supportedServiceRepository.save(service);
 
         translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
 
-        return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId());
+        return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId(), service.getIconUrl());
     }
 
     @Transactional
