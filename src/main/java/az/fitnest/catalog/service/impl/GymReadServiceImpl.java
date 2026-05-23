@@ -743,29 +743,46 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .build();
     }
 
-    private GymMainPageResponse mapToGymMainPageDto(Gym gym, Long userId, Double userLat, Double userLng,
-            boolean isSaved, Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap) {
+    private GymMainPageResponse mapToGymMainPageDto(
+            Gym gym,
+            Long userId,
+            Double userLat,
+            Double userLng,
+            boolean isSaved,
+            Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap) {
+
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
         boolean isNew = gym.getCreatedDate() != null
                 && gym.getCreatedDate().isAfter(LocalDateTime.now().minusMonths(1L));
+
         Address address = gym.getAddress();
+
         Double distanceKm = null;
-        if (userLat != null && userLng != null && address != null && address.getLatitude() != null
+        if (userLat != null
+                && userLng != null
+                && address != null
+                && address.getLatitude() != null
                 && address.getLongitude() != null) {
-            distanceKm = Math
-                    .round(calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude()) * 10.0)
-                    / 10.0;
+
+            distanceKm = Math.round(
+                    calculateDistanceRaw(
+                            userLat, userLng,
+                            address.getLatitude(), address.getLongitude()
+                    ) * 10.0
+            ) / 10.0;
         }
 
         String userLanguage = getUserLanguage(userId);
+
         CategoryResponse category = null;
         if (gym.getCategory() != null) {
             Category c = gym.getCategory();
-            String localizedCatName = translationService.getTranslatedValue("CATEGORY",
-                    c.getCategoryId().toString(), "name", userLanguage);
+            String localizedCatName = translationService.getTranslatedValue(
+                    "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
             category = CategoryResponse.builder()
                     .id(c.getCategoryId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty()
+                            ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
                     .iconUrl(c.getIconUrl())
                     .coverImageUrl(c.getPhotoUrl())
@@ -779,19 +796,20 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
-                                planId, "name", userLanguage);
-                        String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
-                                ? localizedPackageName
-                                : (info != null ? info.getName() : "Bronze"));
+                        String localizedPackageName = translationService.getTranslatedValue(
+                                "GYMSUBSCRIPTION", planId, "name", userLanguage);
+                        String packageName = cleanPackageName(
+                                (localizedPackageName != null && !localizedPackageName.isEmpty())
+                                        ? localizedPackageName
+                                        : (info != null ? info.getName() : "Bronze")
+                        );
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
                                     String localizedBenefit = translationService.getTranslatedValue(
                                             "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
                                     return GymPlanBenefitResponse.builder()
                                             .description(localizedBenefit != null && !localizedBenefit.isEmpty()
-                                                    ? localizedBenefit
-                                                    : b.getName())
+                                                    ? localizedBenefit : b.getName())
                                             .build();
                                 })
                                 .toList();
@@ -801,9 +819,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 .dailyPrice(sub.getDailyPrice())
                                 .benefits(benefitsList)
                                 .build();
-                    }).toList();
+                    })
+                    .toList();
         }
+
         String localizedName = getLocalizedGymName(gym, userLanguage);
+
         return GymMainPageResponse.builder()
                 .gymId(gym.getId().toString())
                 .name(localizedName)
@@ -813,7 +834,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .location(address != null
                         ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", userLanguage)
                         : null)
-                .city(address != null ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage)
+                .city(address != null
+                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage)
                         : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
