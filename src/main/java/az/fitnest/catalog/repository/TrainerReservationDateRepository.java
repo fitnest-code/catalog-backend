@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface TrainerReservationDateRepository extends JpaRepository<TrainerReservationDate, Long> {
     List<TrainerReservationDate> findByGymId(Long gymId);
 
+    boolean existsByGymId(Long gymId);
+
     List<TrainerReservationDate> findByTrainerId(Long trainerId);
 
     List<TrainerReservationDate> findByTrainerIdOrderByDateAscStartTimeAsc(Long trainerId);
