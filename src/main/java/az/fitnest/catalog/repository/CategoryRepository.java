@@ -11,7 +11,7 @@ public interface CategoryRepository
         extends JpaRepository<Category, Long> {
     public boolean existsByName(String var1);
 
-    @Query("SELECT c FROM Category c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%'))")
+    @Query("SELECT c FROM Category c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))")
     Page<Category> searchByName(@Param("q") String q, Pageable pageable);
 
     java.util.Optional<Category> findByNameIgnoreCase(String name);

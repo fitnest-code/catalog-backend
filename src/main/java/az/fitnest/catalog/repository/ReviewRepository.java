@@ -19,8 +19,8 @@ public interface ReviewRepository
     public Page<Review> findByStatus(az.fitnest.catalog.model.enums.ReviewStatus status, Pageable pageable);
 
     @Query("SELECT r FROM Review r WHERE r.gym.id = :gymId AND (:status IS NULL OR r.status = :status) " +
-           "AND (:search IS NULL OR :search = '' OR LOWER(r.comment) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR CAST(r.id AS string) LIKE CONCAT('%', :search, '%'))")
+           "AND (:search IS NULL OR CAST(:search AS string) = '' OR LOWER(r.comment) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+           "OR CAST(r.id AS string) LIKE CONCAT('%', CAST(:search AS string), '%'))")
     Page<Review> findByGymIdAndStatusAndSearch(@Param("gymId") Long gymId,
                                               @Param("status") az.fitnest.catalog.model.enums.ReviewStatus status,
                                               @Param("search") String search,
