@@ -63,6 +63,8 @@ public interface GymWriteService {
 
     void createGymStep3(Long id, GymCreateStep2Request request);
 
+    void updateGymWorkHours(Long id, GymCreateStep2Request request);
+
     void createGymStep4(Long id, GymCreateStep3Request request);
 
     void createGymStep5(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<MultipartFile> roomPhotos);

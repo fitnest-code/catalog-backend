@@ -83,6 +83,14 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymWorkHours(gymId));
     }
 
+    @Operation(summary = "İdman zalının iş saatlarını yeniləyin", description = "İdman zalının iş saatlarını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/work-hours")
+    public ResponseEntity<Void> updateGymWorkHours(@PathVariable("id") Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
+        gymWriteService.updateGymWorkHours(id, request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/qr")
