@@ -63,6 +63,10 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
     }
 
     public void validateCancellationAllowed(Reservation reservation) {
+        if (Boolean.TRUE.equals(reservation.getAttended())) {
+            throw new BadRequestException("CANCELLATION_NOT_ALLOWED", "error.cancellation_not_allowed");
+        }
+
         if (reservation.getStatus() != ReservationStatus.PENDING && reservation.getStatus() != ReservationStatus.APPROVED) {
             throw new BadRequestException("CANCELLATION_NOT_ALLOWED", "error.cancellation_not_allowed");
         }

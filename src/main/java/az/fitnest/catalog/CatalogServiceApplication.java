@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @EnableAsync
 @EnableJpaAuditing
 @EnableKafka
+@org.springframework.scheduling.annotation.EnableScheduling
 @EnableJpaRepositories(basePackages = "az.fitnest.catalog.repository")
 @EnableRedisRepositories(basePackages = {})
 public class CatalogServiceApplication {

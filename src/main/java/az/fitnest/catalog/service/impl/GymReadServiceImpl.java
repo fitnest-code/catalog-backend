@@ -1243,7 +1243,29 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         if (allowed) {
             try {
-                orderServiceGrpcClient.checkIn(userId, gymId);
+                // Check if there is an active reservation at this gym today
+                List<Reservation> activeReservations = reservationRepository.findActiveReservationsForCheckIn(
+                        userId, gymId, java.time.LocalDate.now(), java.time.LocalTime.now(),
+                        java.util.List.of(az.fitnest.catalog.model.enums.ReservationStatus.APPROVED, az.fitnest.catalog.model.enums.ReservationStatus.PENDING)
+                );
+
+                boolean consumeFrozen = false;
+                Reservation targetReservation = null;
+                if (!activeReservations.isEmpty()) {
+                    consumeFrozen = true;
+                    targetReservation = activeReservations.get(0);
+                }
+
+                orderServiceGrpcClient.checkIn(userId, gymId, consumeFrozen);
+
+                if (targetReservation != null) {
+                    targetReservation.setAttended(true);
+                    if (targetReservation.getStatus() == az.fitnest.catalog.model.enums.ReservationStatus.PENDING) {
+                        targetReservation.setStatus(az.fitnest.catalog.model.enums.ReservationStatus.APPROVED);
+                        targetReservation.setApprovedAt(LocalDateTime.now());
+                    }
+                    reservationRepository.save(targetReservation);
+                }
             } catch (Exception e) {
                 allowed = false;
                 status = "UNSUCCESSFUL";
