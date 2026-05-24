@@ -653,6 +653,39 @@ public class GymWriteServiceImpl implements GymWriteService {
         updateStep(gym, 2);
     }
 
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+            @CacheEvict(cacheNames = "gymDetails", allEntries = true),
+            @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "nearestGyms", allEntries = true)
+    })
+    public void updateGymWorkHours(Long gymId, GymCreateStep2Request request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        Set<GymWorkHourPeriod> restDays = new HashSet<>();
+        if (request.restDays() != null) {
+            restDays = request.restDays().stream()
+                    .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        validateNoWorkHoursOnRestDays(request.generalWorkHours(), restDays, "general");
+        validateNoWorkHoursOnRestDays(request.workHoursWoman(), restDays, "woman");
+        validateNoWorkHoursOnRestDays(request.workHoursMan(), restDays, "man");
+
+        updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
+        updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
+        updateWorkHours(gym.getWorkHoursMan(), request.workHoursMan());
+
+        gym.getRestDays().clear();
+        gym.getRestDays().addAll(restDays);
+
+        gymRepository.save(gym);
+    }
+
     private void validateNoWorkHoursOnRestDays(Set<GymWorkHourResponse> workHours, Set<GymWorkHourPeriod> restDays, String type) {
         if (workHours == null || restDays.isEmpty()) return;
         for (GymWorkHourResponse wh : workHours) {
