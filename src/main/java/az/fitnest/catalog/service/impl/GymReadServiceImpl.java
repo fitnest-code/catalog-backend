@@ -1503,33 +1503,69 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku"));
-        java.time.DayOfWeek day = now.getDayOfWeek();
-        az.fitnest.catalog.model.enums.GymWorkHourPeriod period = az.fitnest.catalog.model.enums.GymWorkHourPeriod
-                .valueOf(day.name());
-
+        java.time.DayOfWeek today = now.getDayOfWeek();
         java.time.LocalTime currentTime = now.toLocalTime();
 
-        boolean allowedInGeneral = gym.getGeneralWorkHours() != null && gym.getGeneralWorkHours().stream()
-                .filter(h -> h.getPeriod() == period)
-                .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                        (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
-
-        if (allowedInGeneral)
+        boolean allowedInGeneral = isTimeWithinSlots(gym.getGeneralWorkHours(), today, currentTime);
+        if (allowedInGeneral) {
             return true;
+        }
 
         if ("MALE".equalsIgnoreCase(gender)) {
-            return gym.getWorkHoursMan() != null && gym.getWorkHoursMan().stream()
-                    .filter(h -> h.getPeriod() == period)
-                    .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                            (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+            return isTimeWithinSlots(gym.getWorkHoursMan(), today, currentTime);
         } else if ("FEMALE".equalsIgnoreCase(gender)) {
-            return gym.getWorkHoursWoman() != null && gym.getWorkHoursWoman().stream()
-                    .filter(h -> h.getPeriod() == period)
-                    .anyMatch(h -> (h.getFromTime() == null || !currentTime.isBefore(h.getFromTime())) &&
-                            (h.getToTime() == null || !currentTime.isAfter(h.getToTime())));
+            return isTimeWithinSlots(gym.getWorkHoursWoman(), today, currentTime);
         }
 
         return false;
+    }
+
+    private boolean isTimeWithinSlots(java.util.Collection<az.fitnest.catalog.model.entity.GymWorkHour> slots, java.time.DayOfWeek today, java.time.LocalTime currentTime) {
+        if (slots == null || slots.isEmpty()) {
+            return false;
+        }
+
+        az.fitnest.catalog.model.enums.GymWorkHourPeriod periodToday = az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(today.name());
+        az.fitnest.catalog.model.enums.GymWorkHourPeriod periodYesterday = az.fitnest.catalog.model.enums.GymWorkHourPeriod.valueOf(today.minus(1).name());
+
+        // Check if there is a slot starting today that covers current time
+        boolean matchesToday = slots.stream()
+                .filter(h -> h.getPeriod() == periodToday)
+                .anyMatch(h -> {
+                    java.time.LocalTime from = h.getFromTime();
+                    java.time.LocalTime to = h.getToTime();
+                    if (from == null && to == null) return true;
+                    if (from == null) return !currentTime.isAfter(to);
+                    if (to == null) return !currentTime.isBefore(from);
+                    if (!from.isAfter(to)) {
+                        // Normal interval e.g. 09:00 - 18:00
+                        return !currentTime.isBefore(from) && !currentTime.isAfter(to);
+                    } else {
+                        // Overnight interval starting today e.g. 16:00 - 02:00
+                        // Since it started today and hasn't ended yet, current time today must be >= from.
+                        return !currentTime.isBefore(from);
+                    }
+                });
+
+        if (matchesToday) {
+            return true;
+        }
+
+        // Check if there is a slot starting yesterday that crossed midnight into today and covers current time
+        boolean matchesYesterday = slots.stream()
+                .filter(h -> h.getPeriod() == periodYesterday)
+                .anyMatch(h -> {
+                    java.time.LocalTime from = h.getFromTime();
+                    java.time.LocalTime to = h.getToTime();
+                    if (from != null && to != null && from.isAfter(to)) {
+                        // Overnight interval starting yesterday e.g. 16:00 - 02:00.
+                        // It crossed midnight and is still active today up until `to` (02:00).
+                        return !currentTime.isAfter(to);
+                    }
+                    return false;
+                });
+
+        return matchesYesterday;
     }
 
     private Long extractGymIdFromQr(String qrCodeValue) {
