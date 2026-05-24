@@ -65,6 +65,15 @@ public class OrderServiceGrpcClient {
         return response.getPackagesList();
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
+    public List<az.fitnest.order.grpc.SubscriptionPackageInfo> getGymPlans() {
+        az.fitnest.order.grpc.GetGymPlansRequest request = az.fitnest.order.grpc.GetGymPlansRequest.newBuilder().build();
+        az.fitnest.order.grpc.GetGymPlansResponse response = blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .getGymPlans(request);
+        return response.getPackagesList();
+    }
+
     public az.fitnest.order.grpc.ActiveSubscriptionResponse getActiveSubscription(Long userId) {
         az.fitnest.order.grpc.GetActiveSubscriptionRequest request = az.fitnest.order.grpc.GetActiveSubscriptionRequest.newBuilder()
                 .setUserId(userId)

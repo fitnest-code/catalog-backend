@@ -456,9 +456,15 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
 
+        boolean hasSubscriptionFilter = (subscriptionId != null);
+        List<Long> subscriptionIds = getEligibleSubscriptionIds(subscriptionId);
+        if (subscriptionIds.isEmpty()) {
+            subscriptionIds = java.util.Collections.singletonList(-1L);
+        }
+
         if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
             Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
-            Page<Long> idPage = gymRepository.findAllClosestWithFiltersNativeIds(searchKey, categoryId, subscriptionId, userLat, userLng, distancePageable);
+            Page<Long> idPage = gymRepository.findAllClosestWithFiltersNativeIds(searchKey, categoryId, hasSubscriptionFilter, subscriptionIds, userLat, userLng, distancePageable);
             
             if (idPage.isEmpty()) {
                 gymPage = Page.empty(distancePageable);
@@ -472,7 +478,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         else {
-            gymPage = gymRepository.findAllGymsWithFilters(searchKey, categoryId, subscriptionId, pageable);
+            gymPage = gymRepository.findAllGymsWithFilters(searchKey, categoryId, hasSubscriptionFilter, subscriptionIds, pageable);
         }
 
         if (gymPage == null) {
@@ -1130,15 +1136,79 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 reason = "VISIT_LIMIT_EXCEEDED";
             } else {
                 long userPackageId = subResp.getPackageId();
-                var matchedSub = gym.getSubscriptions() != null ? gym.getSubscriptions().stream()
-                        .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId))
-                        .findFirst() : java.util.Optional.<az.fitnest.catalog.model.entity.GymSubscription>empty();
+                boolean checkHierarchySuccess = false;
+                try {
+                    List<Long> allPackageIds = new java.util.ArrayList<>();
+                    allPackageIds.add(userPackageId);
+                    if (gym.getSubscriptions() != null) {
+                        for (var sub : gym.getSubscriptions()) {
+                            if (sub.getPackageId() != null) {
+                                allPackageIds.add(sub.getPackageId());
+                            }
+                        }
+                    }
 
-                if (matchedSub.isEmpty()) {
-                    allowed = false;
-                    reason = "GYM_NOT_SUPPORTED";
-                } else {
-                    amount = matchedSub.get().getDailyPrice();
+                    List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(allPackageIds);
+                    java.util.Map<Long, String> packageNamesMap = packageNames.stream()
+                            .collect(java.util.stream.Collectors.toMap(
+                                    az.fitnest.order.grpc.PackageNameInfo::getPackageId,
+                                    az.fitnest.order.grpc.PackageNameInfo::getName,
+                                    (a, b) -> a
+                            ));
+
+                    String userPackageName = packageNamesMap.get(userPackageId);
+                    int userRank = getPackageRank(userPackageName);
+
+                    List<az.fitnest.catalog.model.entity.GymSubscription> eligibleSubscriptions = new java.util.ArrayList<>();
+                    if (gym.getSubscriptions() != null) {
+                        for (var sub : gym.getSubscriptions()) {
+                            if (sub.getPackageId() != null) {
+                                String gymPackageName = packageNamesMap.get(sub.getPackageId());
+                                if (gymPackageName != null) {
+                                    int gymRank = getPackageRank(gymPackageName);
+                                    if (userRank >= gymRank) {
+                                        eligibleSubscriptions.add(sub);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (eligibleSubscriptions.isEmpty()) {
+                        allowed = false;
+                        reason = "GYM_NOT_SUPPORTED";
+                        checkHierarchySuccess = true;
+                    } else {
+                        az.fitnest.catalog.model.entity.GymSubscription bestSub = null;
+                        int bestRank = -1;
+                        for (var sub : eligibleSubscriptions) {
+                            String name = packageNamesMap.get(sub.getPackageId());
+                            int rank = getPackageRank(name);
+                            if (rank > bestRank) {
+                                bestRank = rank;
+                                bestSub = sub;
+                            }
+                        }
+                        if (bestSub != null) {
+                            amount = bestSub.getDailyPrice();
+                            checkHierarchySuccess = true;
+                        }
+                    }
+                } catch (Exception e) {
+                    // Fallback to exact matching
+                }
+
+                if (!checkHierarchySuccess) {
+                    var matchedSub = gym.getSubscriptions() != null ? gym.getSubscriptions().stream()
+                            .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId))
+                            .findFirst() : java.util.Optional.<az.fitnest.catalog.model.entity.GymSubscription>empty();
+
+                    if (matchedSub.isEmpty()) {
+                        allowed = false;
+                        reason = "GYM_NOT_SUPPORTED";
+                    } else {
+                        amount = matchedSub.get().getDailyPrice();
+                    }
                 }
             }
         } catch (Exception e) {
@@ -1890,6 +1960,63 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Long userId = UserContext.getCurrentUserId();
         if (userId == null || !gymAdminRepository.existsByGymIdAndUserId(gymId, userId)) {
             throw new ForbiddenException("You do not have access to this gym");
+        }
+    }
+
+    private int getPackageRank(String packageName) {
+        if (packageName == null) {
+            return 0;
+        }
+        String lower = packageName.toLowerCase();
+        if (lower.contains("platinum")) {
+            return 4;
+        }
+        if (lower.contains("gold")) {
+            return 3;
+        }
+        if (lower.contains("silver")) {
+            return 2;
+        }
+        if (lower.contains("bronze")) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private List<Long> getEligibleSubscriptionIds(Long subscriptionId) {
+        if (subscriptionId == null) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceGrpcClient.getGymPlans();
+            String userPackageName = null;
+            for (var plan : allPlans) {
+                if (plan.getPackageId() == subscriptionId) {
+                    userPackageName = plan.getName();
+                    break;
+                }
+            }
+            if (userPackageName == null) {
+                List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(subscriptionId));
+                if (!nameInfos.isEmpty()) {
+                    userPackageName = nameInfos.get(0).getName();
+                }
+            }
+            
+            int userRank = getPackageRank(userPackageName);
+            List<Long> eligibleIds = new java.util.ArrayList<>();
+            for (var plan : allPlans) {
+                int planRank = getPackageRank(plan.getName());
+                if (planRank <= userRank) {
+                    eligibleIds.add(plan.getPackageId());
+                }
+            }
+            if (!eligibleIds.contains(subscriptionId)) {
+                eligibleIds.add(subscriptionId);
+            }
+            return eligibleIds;
+        } catch (Exception e) {
+            return java.util.Collections.singletonList(subscriptionId);
         }
     }
 }
