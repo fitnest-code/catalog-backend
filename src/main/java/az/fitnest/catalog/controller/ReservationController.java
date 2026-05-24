@@ -55,9 +55,9 @@ public class ReservationController {
     public ResponseEntity<List<DayAvailabilityResponse>> getAvailableTimes(
             @AuthenticationPrincipal Long userId,
             @RequestParam Long gymId,
-            @RequestParam Long categoryId,
-            @RequestParam Long lessonTypeId,
-            @RequestParam Long trainerId) {
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long lessonTypeId,
+            @RequestParam(required = false) Long trainerId) {
         return ResponseEntity.ok(queryService.getAvailabilityForTeacher(userId, gymId, categoryId, lessonTypeId, trainerId));
     }
 

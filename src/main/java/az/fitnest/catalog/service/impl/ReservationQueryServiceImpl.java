@@ -76,7 +76,14 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long userId, Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
-        List<TrainerReservationDate> sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
+        List<TrainerReservationDate> sessions;
+        if (trainerId != null) {
+            sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
+        } else {
+            sessions = new java.util.ArrayList<>(sessionRepository.findByGymId(gymId));
+            sessions.sort(java.util.Comparator.comparing(TrainerReservationDate::getDate)
+                    .thenComparing(TrainerReservationDate::getStartTime));
+        }
 
         Gym gym = gymRepository.findById(gymId).orElse(null);
         boolean isGymEnabled = gym != null && Boolean.TRUE.equals(gym.getIsReservationEnabled());
@@ -96,7 +103,15 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         LocalDateTime now = LocalDateTime.now();
 
-        return sessions.stream()
+        java.util.stream.Stream<TrainerReservationDate> sessionStream = sessions.stream();
+        if (lessonTypeId != null) {
+            sessionStream = sessionStream.filter(session -> session.getClassType() != null && session.getClassType().getId().equals(lessonTypeId));
+        }
+        if (categoryId != null) {
+            sessionStream = sessionStream.filter(session -> session.getClassType() != null && session.getClassType().getCategory() != null && session.getClassType().getCategory().getId().equals(categoryId));
+        }
+
+        return sessionStream
                 .filter(session -> {
                     LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
                     return !sessionStart.isBefore(now);
