@@ -55,6 +55,10 @@ public class Reservation extends BaseAuditableEntity {
     @Builder.Default
     private ReservationStatus status = ReservationStatus.PENDING;
 
+    @Column(name = "attended")
+    @Builder.Default
+    private Boolean attended = false;
+
     @Column(name = "approved_at")
     private java.time.LocalDateTime approvedAt;
 

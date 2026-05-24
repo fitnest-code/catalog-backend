@@ -42,10 +42,11 @@ public class OrderServiceGrpcClient {
     }
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
-    public void checkIn(Long userId, Long gymId) {
+    public void checkIn(Long userId, Long gymId, boolean consumeFrozen) {
         az.fitnest.order.grpc.CheckInRequest request = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
+                .setConsumeFrozen(consumeFrozen)
                 .build();
 
         az.fitnest.order.grpc.CheckInResponse response = blockingStub
@@ -94,5 +95,12 @@ public class OrderServiceGrpcClient {
                 .setUserId(userId)
                 .build();
         userSubscriptionStub.restoreSession(request);
+    }
+
+    public void consumeFrozenSession(Long userId) {
+        az.fitnest.order.grpc.ConsumeFrozenSessionRequest request = az.fitnest.order.grpc.ConsumeFrozenSessionRequest.newBuilder()
+                .setUserId(userId)
+                .build();
+        userSubscriptionStub.consumeFrozenSession(request);
     }
 }

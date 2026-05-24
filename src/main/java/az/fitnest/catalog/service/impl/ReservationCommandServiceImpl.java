@@ -100,6 +100,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                 .status(ReservationStatus.PENDING)
                 .build();
 
+        orderServiceClient.freezeSession(userId);
+
         reservation = reservationRepository.save(reservation);
 
         auditService.log(reservation.getId(), userId, "CREATE", null, "PENDING", null);
@@ -134,7 +136,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
 
         reservationRepository.save(reservation);
 
-        if (oldStatus.equals(ReservationStatus.APPROVED.name())) {
+        if (!Boolean.TRUE.equals(reservation.getAttended()) &&
+            (oldStatus.equals(ReservationStatus.APPROVED.name()) || oldStatus.equals(ReservationStatus.PENDING.name()))) {
             orderServiceClient.restoreSession(userId);
         }
 
@@ -150,7 +153,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setStatus(request.getStatus());
         reservationRepository.save(reservation);
 
-        if (oldStatus.equals(ReservationStatus.APPROVED.name()) &&
+        if (!Boolean.TRUE.equals(reservation.getAttended()) &&
+            (oldStatus.equals(ReservationStatus.APPROVED.name()) || oldStatus.equals(ReservationStatus.PENDING.name())) &&
             (request.getStatus() == ReservationStatus.CANCELLED || request.getStatus() == ReservationStatus.REJECTED)) {
             orderServiceClient.restoreSession(reservation.getUserId());
         }
@@ -172,8 +176,6 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setApprovedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
 
-        orderServiceClient.freezeSession(reservation.getUserId());
-
         auditService.log(reservationId, null, "APPROVE", oldStatus, "APPROVED", "Admin approval");
     }
 
@@ -191,6 +193,10 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setCancelledAt(LocalDateTime.now());
         reservation.setCancelReasonText(reason);
         reservationRepository.save(reservation);
+
+        if (!Boolean.TRUE.equals(reservation.getAttended())) {
+            orderServiceClient.restoreSession(reservation.getUserId());
+        }
 
         auditService.log(reservationId, null, "REJECT", oldStatus, "REJECTED", reason);
     }

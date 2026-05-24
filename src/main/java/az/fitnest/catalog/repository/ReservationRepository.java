@@ -57,4 +57,23 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     java.util.Optional<Reservation> findFirstByUserIdAndReservationDateIdAndStatusIn(Long userId, Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
     boolean existsByGymId(Long gymId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.userId = :userId AND r.gym.id = :gymId " +
+            "AND r.status IN :statuses AND r.reservationDate.date = :date " +
+            "AND r.reservationDate.endTime >= :time AND (r.attended = false OR r.attended IS NULL) " +
+            "ORDER BY r.reservationDate.startTime ASC")
+    List<Reservation> findActiveReservationsForCheckIn(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("gymId") Long gymId,
+            @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,
+            @org.springframework.data.repository.query.Param("time") java.time.LocalTime time,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r WHERE r.status IN :statuses " +
+            "AND (r.reservationDate.date < :date OR (r.reservationDate.date = :date AND r.reservationDate.endTime < :time)) " +
+            "AND (r.attended = false OR r.attended IS NULL)")
+    List<Reservation> findExpiredUnattendedReservations(
+            @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,
+            @org.springframework.data.repository.query.Param("time") java.time.LocalTime time,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 }
