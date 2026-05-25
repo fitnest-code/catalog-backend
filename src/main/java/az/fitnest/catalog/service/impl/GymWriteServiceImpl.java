@@ -294,9 +294,6 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (savedGymRepository.existsByGymId(gymId)) {
             dependencies.add("error.gym_dependency_saved");
         }
-        if (gymEntranceHistoryRepository.existsByGymId(gymId)) {
-            dependencies.add("error.gym_dependency_entrance_history");
-        }
         if (reservationRepository.existsByGymId(gymId)) {
             dependencies.add("error.gym_dependency_reservations");
         }
@@ -306,6 +303,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gymLessonTypeRepository.deleteByGymId(gymId);
+        gymEntranceHistoryRepository.deleteByGymId(gymId);
         supportedServiceRepository.deleteSubscriptionAssociationsByGymId(gymId);
         supportedServiceRepository.deleteAllByGymId(gymId);
         gymAdminRepository.deleteAllByGymId(gymId);
@@ -554,6 +552,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         entityManager.createNativeQuery("DELETE FROM room_images").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM rooms").executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM gym_entrance_history").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM gym_subscriptions").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM reviews").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM trainers").executeUpdate();
