@@ -54,7 +54,8 @@ public class TranslationServiceImpl implements TranslationService {
         ).orElse(null);
 
         if (existing != null) {
-            throw new ConflictException("TRANSLATION_ALREADY_EXISTS", "error.translation_already_exists");
+            existing.setFieldValue(request.fieldValue());
+            return translationRepository.save(existing);
         }
 
         Translation translation = Translation.builder()
