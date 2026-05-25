@@ -210,23 +210,37 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     public void saveOrUpdateRules(Long gymId, Long categoryId, Long lessonId, ReservationRuleUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
-        GymLessonType lessonType = gymLessonTypeRepository.findById(lessonId)
-                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.class_type_not_found"));
+        
+        Category category = null;
+        if (categoryId != null) {
+            category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        }
+        
+        GymLessonType lessonType = null;
+        if (lessonId != null) {
+            lessonType = gymLessonTypeRepository.findById(lessonId)
+                    .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.class_type_not_found"));
+        }
 
-        List<ReservationRule> existingRules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
+        List<ReservationRule> existingRules;
+        if (categoryId != null && lessonId != null) {
+            existingRules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
+        } else {
+            existingRules = ruleRepository.findByGymIdAndCategoryIdIsNullAndLessonTypeIsNullAndStatus(gymId, "ACTIVE");
+        }
 
         ReservationRule rule;
         if (!existingRules.isEmpty()) {
             rule = existingRules.get(0);
             rule.setDescription(request.getHtmlContent());
         } else {
+            String title = (lessonType != null) ? "Rules for " + lessonType.getName() : "Rules for " + gym.getName();
             rule = ReservationRule.builder()
                     .gym(gym)
                     .category(category)
                     .lessonType(lessonType)
-                    .title("Rules for " + lessonType.getName())
+                    .title(title)
                     .description(request.getHtmlContent())
                     .status("ACTIVE")
                     .build();

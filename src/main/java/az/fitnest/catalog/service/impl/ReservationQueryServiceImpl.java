@@ -194,10 +194,15 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public ReservationRuleResponse getRules(Long gymId, Long categoryId, Long lessonId) {
-        List<ReservationRule> rules;
+        List<ReservationRule> rules = new ArrayList<>();
         if (categoryId != null && lessonId != null) {
             rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
-        } else {
+        }
+        if (rules.isEmpty()) {
+            // Fallback to gym-wide rules (both category and lesson null)
+            rules = ruleRepository.findByGymIdAndCategoryIdIsNullAndLessonTypeIsNullAndStatus(gymId, "ACTIVE");
+        }
+        if (rules.isEmpty()) {
             rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(gymId, "ACTIVE");
             if (lessonId != null) {
                 rules = rules.stream()
@@ -285,10 +290,14 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 ? session.getClassType().getCategory().getId() : null;
         Long classTypeId = session.getClassType() != null ? session.getClassType().getId() : null;
 
-        List<ReservationRule> rules;
+        List<ReservationRule> rules = new ArrayList<>();
         if (categoryId != null && classTypeId != null) {
             rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE");
-        } else {
+        }
+        if (rules.isEmpty()) {
+            rules = ruleRepository.findByGymIdAndCategoryIdIsNullAndLessonTypeIsNullAndStatus(session.getGymId(), "ACTIVE");
+        }
+        if (rules.isEmpty()) {
             rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(session.getGymId(), "ACTIVE");
             if (classTypeId != null) {
                 rules = rules.stream()

@@ -144,6 +144,16 @@ public class ReservationAdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Zal üçün birbaşa rezervasiya qaydalarını yadda saxlayın")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/gyms/{gymId}/rules")
+    public ResponseEntity<Void> saveGymRules(
+            @PathVariable Long gymId,
+            @RequestBody ReservationRuleUpdateRequest request) {
+        reservationCommandService.saveOrUpdateRules(gymId, null, null, request);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "Rezervasiya ləğv səbəblərini əldə edin")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/cancel-reasons")

@@ -10,4 +10,5 @@ import java.util.List;
 public interface ReservationRuleRepository extends JpaRepository<ReservationRule, Long> {
     List<ReservationRule> findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(Long gymId, Long categoryId, Long lessonTypeId, String status);
     List<ReservationRule> findByGymIdAndStatusOrderBySortOrderAsc(Long gymId, String status);
+    List<ReservationRule> findByGymIdAndCategoryIdIsNullAndLessonTypeIsNullAndStatus(Long gymId, String status);
 }
