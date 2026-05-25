@@ -1630,7 +1630,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
         return new GymTypeCountResponse(gender, count);
     }
-
     private String getLocalizedAddressField(Long entityId, String entityType,
             az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null)
@@ -1638,20 +1637,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName,
                 userLanguage);
         if (localized == null || localized.isEmpty()) {
-            try {
-                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
-                f.setAccessible(true);
-                Object v = f.get(address);
-                if (v != null)
-                    return v.toString();
-            } catch (Exception ignored) {
+            if ("addressText".equals(fieldName)) {
+                return address.getAddressText();
+            } else if ("city".equals(fieldName)) {
+                return address.getCity();
+            } else if ("latitude".equals(fieldName)) {
+                return address.getLatitude() != null ? address.getLatitude().toString() : null;
+            } else if ("longitude".equals(fieldName)) {
+                return address.getLongitude() != null ? address.getLongitude().toString() : null;
             }
             return null;
         }
         return localized;
-    }
-
-    private String getLocalizedGymName(Gym gym, String userLanguage) {
+    }    private String getLocalizedGymName(Gym gym, String userLanguage) {
         if (gym == null)
             return null;
         String translated = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);

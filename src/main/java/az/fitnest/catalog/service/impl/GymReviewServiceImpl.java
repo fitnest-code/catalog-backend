@@ -16,7 +16,6 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.user.grpc.UserResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +29,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
@@ -103,7 +101,6 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public Long approveReview(Long reviewId) {
-        log.info("Approving review: {}", reviewId);
         try {
             Review review = reviewRepository.findById(reviewId)
                     .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
@@ -112,14 +109,11 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
 
                 if (review.getRating() != null) {
-                    log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
                     reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
                 }
             }
-            log.info("Successfully approved review: {}", reviewId);
             return review.getGymId();
         } catch (Exception e) {
-            log.error("Error approving review {}", reviewId, e);
             throw e;
         }
     }
@@ -127,15 +121,12 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void rejectReview(Long reviewId) {
-        log.info("Rejecting review: {}", reviewId);
         try {
             if (!reviewRepository.existsById(reviewId)) {
                 throw new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found");
             }
             reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
-            log.info("Successfully rejected review: {}", reviewId);
         } catch (Exception e) {
-            log.error("Error rejecting review {}", reviewId, e);
             throw e;
         }
     }

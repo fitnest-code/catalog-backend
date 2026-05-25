@@ -22,7 +22,6 @@ import az.fitnest.catalog.repository.StoreRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.StoreAdminService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -42,7 +41,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class StoreAdminServiceImpl implements StoreAdminService {
 
     private static final String STORE_COVER_DIR = "stores/covers";
@@ -316,8 +314,6 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         storeRepository.delete(store);
 
         fileStorageService.deleteFilesAfterCommit(filesToDelete);
-
-        log.info("Mağaza uğurla silindi. storeId={}", id);
     }
 
     @Override

@@ -445,12 +445,14 @@ public class StoreServiceImpl implements StoreService {
         if (address == null) return null;
         String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
         if (localized == null || localized.isEmpty()) {
-            try {
-                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
-                f.setAccessible(true);
-                Object v = f.get(address);
-                if (v != null) return v.toString();
-            } catch (Exception ignored) {
+            if ("addressText".equals(fieldName)) {
+                return address.getAddressText();
+            } else if ("city".equals(fieldName)) {
+                return address.getCity();
+            } else if ("latitude".equals(fieldName)) {
+                return address.getLatitude() != null ? address.getLatitude().toString() : null;
+            } else if ("longitude".equals(fieldName)) {
+                return address.getLongitude() != null ? address.getLongitude().toString() : null;
             }
             return null;
         }
