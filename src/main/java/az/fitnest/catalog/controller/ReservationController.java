@@ -37,7 +37,7 @@ public class ReservationController {
     @Operation(summary = "Dərs növlərini əldə edin", description = "Müəyyən kateqoriya üzrə aktiv dərs növlərini qaytarır.")
     public ResponseEntity<List<ReservationLessonResponse>> getLessons(
             @RequestParam Long gymId,
-            @RequestParam Long categoryId) {
+            @RequestParam(required = false) Long categoryId) {
         return ResponseEntity.ok(queryService.getLessonsForReservation(gymId, categoryId));
     }
 
@@ -45,8 +45,8 @@ public class ReservationController {
     @Operation(summary = "Məşqçiləri əldə edin", description = "Seçilmiş dərs növü üzrə aktiv məşqçiləri qaytarır.")
     public ResponseEntity<List<ReservationTeacherResponse>> getTeachersByLesson(
             @RequestParam Long gymId,
-            @RequestParam Long categoryId,
-            @RequestParam Long lessonTypeId) {
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long lessonTypeId) {
         return ResponseEntity.ok(queryService.getTrainersForLesson(gymId, categoryId, lessonTypeId));
     }
 
@@ -65,8 +65,8 @@ public class ReservationController {
     @Operation(summary = "Rezervasiya qaydalarını əldə edin")
     public ResponseEntity<ReservationRuleResponse> getRules(
             @RequestParam Long gymId,
-            @RequestParam Long categoryId,
-            @RequestParam Long lessonId) {
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long lessonId) {
         return ResponseEntity.ok(queryService.getRules(gymId, categoryId, lessonId));
     }
 
@@ -126,7 +126,7 @@ public class ReservationController {
                 .id(reservation.getId())
                 .gymId(reservation.getGym().getId())
                 .gymName(reservation.getGym().getName())
-                .trainerId(reservation.getTrainer().getId())
+                .trainerId(reservation.getTrainer() != null ? reservation.getTrainer().getId() : null)
                 .lessonType(reservation.getLessonType())
                 .categoryName(reservation.getCategory() != null ? reservation.getCategory().getName() : null)
                 .date(reservation.getReservationDate().getDate())

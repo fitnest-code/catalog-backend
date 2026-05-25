@@ -16,7 +16,6 @@ public class ReservationRequest {
     @NotNull(message = "Gym ID is required")
     private Long gymId;
 
-    @NotNull(message = "Category ID is required")
     private Long categoryId;
 
     private Long lessonId;

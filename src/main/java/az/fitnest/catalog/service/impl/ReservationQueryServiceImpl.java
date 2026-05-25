@@ -51,10 +51,16 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
-        return gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE").stream()
+        List<GymLessonType> lessonTypes;
+        if (categoryId != null) {
+            lessonTypes = gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
+        } else {
+            lessonTypes = gymLessonTypeRepository.findByGymIdAndStatus(gymId, "ACTIVE");
+        }
+        return lessonTypes.stream()
                 .map(lt -> ReservationLessonResponse.builder()
                         .gymId(gymId)
-                        .categoryId(categoryId)
+                        .categoryId(lt.getCategory() != null ? lt.getCategory().getId() : null)
                         .lessonId(lt.getId())
                         .lessonName(lt.getName())
                         .build())
@@ -64,7 +70,15 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
     @Transactional(readOnly = true)
     public List<ReservationTeacherResponse> getTrainersForLesson(Long gymId, Long categoryId, Long lessonTypeId) {
         return trainerRepository.findByGymId(gymId, PageRequest.of(0, 100)).getContent().stream()
-                .filter(t -> t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getId().equals(lessonTypeId)))
+                .filter(t -> {
+                    if (lessonTypeId != null) {
+                        return t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getId().equals(lessonTypeId));
+                    }
+                    if (categoryId != null) {
+                        return t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getCategory() != null && lt.getCategory().getId().equals(categoryId));
+                    }
+                    return true;
+                })
                 .filter(t -> Boolean.TRUE.equals(t.getIsReservationEnabled()))
                 .map(t -> ReservationTeacherResponse.builder()
                         .teacherId(t.getId())
@@ -180,7 +194,21 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public ReservationRuleResponse getRules(Long gymId, Long categoryId, Long lessonId) {
-        List<ReservationRule> rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
+        List<ReservationRule> rules;
+        if (categoryId != null && lessonId != null) {
+            rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(gymId, categoryId, lessonId, "ACTIVE");
+        } else {
+            rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(gymId, "ACTIVE");
+            if (lessonId != null) {
+                rules = rules.stream()
+                        .filter(r -> r.getLessonType() != null && r.getLessonType().getId().equals(lessonId))
+                        .collect(Collectors.toList());
+            } else if (categoryId != null) {
+                rules = rules.stream()
+                        .filter(r -> r.getCategory() != null && r.getCategory().getId().equals(categoryId))
+                        .collect(Collectors.toList());
+            }
+        }
 
         String htmlContent = rules.stream()
                 .map(ReservationRule::getDescription)
@@ -213,8 +241,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 .id(reservation.getId())
                 .gymId(reservation.getGym().getId())
                 .gymName(reservation.getGym().getName())
-                .trainerId(reservation.getTrainer().getId())
-                .trainerName(reservation.getTrainer().getFirstName() + " " + reservation.getTrainer().getLastName())
+                .trainerId(reservation.getTrainer() != null ? reservation.getTrainer().getId() : null)
+                .trainerName(reservation.getTrainer() != null ? reservation.getTrainer().getFirstName() + " " + reservation.getTrainer().getLastName() : null)
                 .classType(reservation.getClassType() != null ? reservation.getClassType().getName() : reservation.getLessonType())
                 .categoryName(reservation.getCategory() != null ? reservation.getCategory().getName() : null)
                 .date(reservation.getReservationDate().getDate())
@@ -257,17 +285,40 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 ? session.getClassType().getCategory().getId() : null;
         Long classTypeId = session.getClassType() != null ? session.getClassType().getId() : null;
 
-        String htmlContent = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE")
-                .stream()
+        List<ReservationRule> rules;
+        if (categoryId != null && classTypeId != null) {
+            rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE");
+        } else {
+            rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(session.getGymId(), "ACTIVE");
+            if (classTypeId != null) {
+                rules = rules.stream()
+                        .filter(r -> r.getLessonType() != null && r.getLessonType().getId().equals(classTypeId))
+                        .collect(Collectors.toList());
+            } else if (categoryId != null) {
+                rules = rules.stream()
+                        .filter(r -> r.getCategory() != null && r.getCategory().getId().equals(categoryId))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        String htmlContent = rules.stream()
                 .map(ReservationRule::getDescription)
                 .collect(Collectors.joining("<br/>"));
+
+        String trainerName = session.getTrainer() != null 
+                ? session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName() 
+                : null;
+
+        String classTypeName = session.getClassType() != null 
+                ? session.getClassType().getName() 
+                : null;
 
         return ReservationPreviewResponse.builder()
                 .date(session.getDate())
                 .fromHour(session.getStartTime())
                 .toHour(session.getEndTime())
-                .trainerName(session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName())
-                .classType(session.getClassType().getName())
+                .trainerName(trainerName)
+                .classType(classTypeName)
                 .htmlContent(htmlContent)
                 .build();
     }
@@ -359,7 +410,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 .id(reservation.getId())
                 .gymId(reservation.getGym().getId())
                 .gymName(reservation.getGym().getName())
-                .trainerId(reservation.getTrainer().getId())
+                .trainerId(reservation.getTrainer() != null ? reservation.getTrainer().getId() : null)
                 .lessonType(reservation.getClassType() != null ? reservation.getClassType().getName() : reservation.getLessonType())
                 .categoryName(reservation.getCategory() != null ? reservation.getCategory().getName() : null)
                 .date(reservation.getReservationDate().getDate())

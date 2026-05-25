@@ -63,15 +63,20 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
             throw new BadRequestException("INVALID_SESSION_REFERENCE", "error.invalid_session_reference");
         }
 
-        if (session.getTrainer() != null && !session.getTrainer().getId().equals(trainerId)) {
+        if (trainerId != null && session.getTrainer() != null && !session.getTrainer().getId().equals(trainerId)) {
             throw new BadRequestException("INVALID_SESSION_REFERENCE", "error.invalid_session_reference");
         }
 
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        Category category = null;
+        if (categoryId != null) {
+            category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-        if (gym.getCategory() == null || !gym.getCategory().getId().equals(category.getId())) {
-            throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
+            if (gym.getCategory() == null || !gym.getCategory().getId().equals(category.getId())) {
+                throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
+            }
+        } else if (session.getClassType() != null && session.getClassType().getCategory() != null) {
+            category = session.getClassType().getCategory();
         }
 
         GymLessonType classType = null;
