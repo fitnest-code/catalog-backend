@@ -15,7 +15,7 @@ import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.catalog.util.UserContext;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -180,7 +180,7 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
             }
             return userLanguageCache.computeIfAbsent(userId, id -> {
                 try {
-                    UserResponse user = userServiceGrpcClient.getUserById(id);
+                    CachedUser user = userServiceGrpcClient.getUserById(id);
                     if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                         return user.getLanguage().toUpperCase();
                     }

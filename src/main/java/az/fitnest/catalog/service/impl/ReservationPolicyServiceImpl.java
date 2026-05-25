@@ -8,7 +8,7 @@ import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.order.grpc.ActiveSubscriptionResponse;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +27,7 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
             throw new BadRequestException("RESERVATION_MODULE_NOT_ENABLED", "error.reservation_module_not_enabled");
         }
 
-        UserResponse user = userServiceClient.getUserById(userId);
+        CachedUser user = userServiceClient.getUserById(userId);
 
         ActiveSubscriptionResponse subscription = orderServiceClient.getActiveSubscription(userId);
         if (!"ACTIVE".equalsIgnoreCase(subscription.getSubscriptionStatus())) {

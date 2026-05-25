@@ -139,7 +139,7 @@ public class StoreServiceImpl implements StoreService {
         }
         return userLanguageCache.computeIfAbsent(userId, id -> {
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(id);
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(id);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     return user.getLanguage();
                 }

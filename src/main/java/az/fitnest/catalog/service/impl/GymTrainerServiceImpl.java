@@ -20,7 +20,7 @@ import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.model.entity.GymLessonType;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.UserContext;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.multipart.MultipartFile;
@@ -253,7 +253,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         // 2. Fallback to GRPC User Profile language
         if (userId != null) {
             try {
-                UserResponse user = userServiceGrpcClient.getUserById(userId);
+                CachedUser user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     return user.getLanguage().toUpperCase();
                 }

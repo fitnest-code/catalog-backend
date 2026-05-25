@@ -12,7 +12,7 @@ import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.UserContext;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,7 +112,7 @@ public class ProfessionServiceImpl implements az.fitnest.catalog.service.Profess
         // 2. Fallback to GRPC User Profile language
         if (userId != null) {
             try {
-                UserResponse user = userServiceGrpcClient.getUserById(userId);
+                CachedUser user = userServiceGrpcClient.getUserById(userId);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     return user.getLanguage().toUpperCase();
                 }

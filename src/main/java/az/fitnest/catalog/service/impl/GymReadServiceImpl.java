@@ -32,7 +32,7 @@ import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.UserServiceGrpcClient;
 import az.fitnest.catalog.model.entity.Reservation;
 import az.fitnest.catalog.model.enums.ReservationStatus;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -107,7 +107,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return userLanguageCache.computeIfAbsent(userId, id -> {
             String language = "AZ";
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(id);
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(id);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     language = user.getLanguage().toUpperCase();
                 }
@@ -155,7 +155,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 String avatarUrl = null;
                                 try {
                                     if (r.getUserId() != null) {
-                                        UserResponse user = userServiceGrpcClient.getUserById(r.getUserId());
+                                        CachedUser user = userServiceGrpcClient.getUserById(r.getUserId());
                                         if (user != null) {
                                             fullName = user.getFirstName() + " " + user.getLastName();
                                             avatarUrl = user.getProfileImageUrl();
@@ -1247,7 +1247,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (allowed) {
             String gender = null;
             try {
-                az.fitnest.user.grpc.UserResponse userResp = userServiceGrpcClient.getUserById(userId);
+                az.fitnest.catalog.client.CachedUser userResp = userServiceGrpcClient.getUserById(userId);
                 gender = userResp.getGender();
             } catch (Exception e) {
             }
@@ -1346,7 +1346,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String phone = "";
             String profilePhotoUrl = "";
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(h.getUserId());
                 if (user != null) {
                     firstName = user.getFirstName();
                     lastName = user.getLastName();
@@ -1457,7 +1457,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String phone = "";
             String profilePhotoUrl = "";
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(h.getUserId());
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(h.getUserId());
                 if (user != null) {
                     firstName = user.getFirstName();
                     lastName = user.getLastName();
@@ -1925,7 +1925,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .map(r -> {
                     String userFullName = "N/A";
                     try {
-                        UserResponse user = userServiceGrpcClient.getUserById(r.getUserId());
+                        CachedUser user = userServiceGrpcClient.getUserById(r.getUserId());
                         if (user != null) {
                             userFullName = user.getFirstName() + " " + user.getLastName();
                         }
@@ -1962,7 +1962,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 
-        UserResponse user = null;
+        CachedUser user = null;
         try {
             user = userServiceGrpcClient.getUserById(r.getUserId());
         } catch (Exception e) {

@@ -2,7 +2,6 @@ package az.fitnest.catalog.client;
 
 import az.fitnest.user.grpc.UserServiceGrpc;
 import az.fitnest.user.grpc.GetUserByIdRequest;
-import az.fitnest.user.grpc.UserResponse;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +11,8 @@ public class UserServiceGrpcClient {
     private UserServiceGrpc.UserServiceBlockingStub userServiceStub;
 
     @org.springframework.cache.annotation.Cacheable(value = "users", key = "#userId")
-    public UserResponse getUserById(Long userId) {
+    public CachedUser getUserById(Long userId) {
         GetUserByIdRequest request = GetUserByIdRequest.newBuilder().setUserId(userId).build();
-        return userServiceStub.getUserById(request);
+        return CachedUser.fromProto(userServiceStub.getUserById(request));
     }
 }

@@ -14,7 +14,7 @@ import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.Review;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
-import az.fitnest.user.grpc.UserResponse;
+import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -155,7 +155,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     private GymReviewResponse mapReviewToDto(Review r) {
-        UserResponse user = null;
+        CachedUser user = null;
         String fullName = "";
         String avatarUrl = null;
         try {
