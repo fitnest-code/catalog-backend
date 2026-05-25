@@ -56,6 +56,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<GymWorkHour> generalWorkHours = new java.util.HashSet<>();
 
     @ElementCollection
@@ -63,6 +64,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<GymWorkHour> workHoursWoman = new java.util.HashSet<>();
 
     @ElementCollection
@@ -70,6 +72,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<GymWorkHour> workHoursMan = new java.util.HashSet<>();
 
     @ElementCollection
@@ -79,6 +82,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<az.fitnest.catalog.model.enums.GymWorkHourPeriod> restDays = new java.util.HashSet<>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "gym_id")
@@ -102,6 +106,7 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<GymSubscription> subscriptions = new HashSet<>();
 
     @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)

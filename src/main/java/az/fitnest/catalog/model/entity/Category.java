@@ -43,6 +43,7 @@ public class Category
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<LessonType> lessonTypes = new HashSet<>();
 
     public Long getCategoryId() {

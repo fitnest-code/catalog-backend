@@ -39,6 +39,9 @@ public class StoreServiceImpl implements StoreService {
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
 
+    private final java.util.Map<Long, String> userLanguageCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<Long, String> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
     @Transactional(readOnly = true)
     public PaginatedResponse<StoreMainPageResponse> getStores(Long userId, String q, String type, Double lat, Double lng, int page, int pageSize, String sortDir) {
@@ -74,8 +77,9 @@ public class StoreServiceImpl implements StoreService {
             }
         }
 
+        String userLanguage = getUserLanguage(userId);
         List<StoreMainPageResponse> items = storePage.getContent().stream()
-                .map(s -> mapToSummary(s, userId, lat, lng))
+                .map(s -> mapToSummary(s, userId, lat, lng, userLanguage))
                 .collect(Collectors.toList());
 
         return PaginatedResponse.<StoreMainPageResponse>builder()
@@ -105,15 +109,18 @@ public class StoreServiceImpl implements StoreService {
             });
         }
 
-        List<StoreMainPageResponse> all = filtered.stream().map(s -> mapToSummary(s, userId, lat, lng)).collect(Collectors.toList());
-
         int from = Math.max(0, (page - 1) * pageSize);
-        int to = Math.min(all.size(), from + pageSize);
-        List<StoreMainPageResponse> pageItems = from >= all.size() ? new ArrayList<>() : new ArrayList<>(all.subList(from, to));
+        int to = Math.min(filtered.size(), from + pageSize);
+        List<Store> pageEntities = from >= filtered.size() ? new ArrayList<>() : new ArrayList<>(filtered.subList(from, to));
+
+        String userLanguage = getUserLanguage(userId);
+        List<StoreMainPageResponse> pageItems = pageEntities.stream()
+                .map(s -> mapToSummary(s, userId, lat, lng, userLanguage))
+                .collect(Collectors.toList());
 
         return PaginatedResponse.<StoreMainPageResponse>builder()
                 .items(pageItems)
-                .total(all.size())
+                .total(filtered.size())
                 .page(page)
                 .pageSize(pageSize)
                 .build();
@@ -124,20 +131,25 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private String getUserLanguage(Long userId) {
-        String language = "AZ";
-        if (userId != null) {
+        if (userId == null) {
+            return "AZ";
+        }
+        if (userLanguageCache.size() >= 10000) {
+            userLanguageCache.clear();
+        }
+        return userLanguageCache.computeIfAbsent(userId, id -> {
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(userId);
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(id);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    language = user.getLanguage();
+                    return user.getLanguage();
                 }
             } catch (Exception ignored) {
             }
-        }
-        return language;
+            return "AZ";
+        });
     }
 
-    private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng) {
+    private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng, String userLanguage) {
         Double distance = null;
         if (lat != null && lng != null && store.getAddress() != null && store.getAddress().getLatitude() != null && store.getAddress().getLongitude() != null) {
             distance = calculateDistance(lat, lng, store.getAddress().getLatitude(), store.getAddress().getLongitude());
@@ -148,7 +160,6 @@ public class StoreServiceImpl implements StoreService {
             isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
         }
 
-        String userLanguage = getUserLanguage(userId);
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
 
@@ -170,20 +181,27 @@ public class StoreServiceImpl implements StoreService {
             return defaultAppliesTo;
         }
         if (packageId == null) return "Paket";
-        try {
-            java.util.List<az.fitnest.order.grpc.PackageNameInfo> infos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(packageId));
-            if (infos != null && !infos.isEmpty()) {
-                return infos.get(0).getName();
-            }
-        } catch (Exception ignored) {}
-
-        switch (packageId.intValue()) {
-            case 1: return "Bronze";
-            case 2: return "Silver";
-            case 3: return "Gold";
-            case 4: return "Platinum";
-            default: return "Paket " + packageId;
+        
+        if (packageInfoCache.size() >= 10000) {
+            packageInfoCache.clear();
         }
+        
+        return packageInfoCache.computeIfAbsent(packageId, id -> {
+            try {
+                java.util.List<az.fitnest.order.grpc.PackageNameInfo> infos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(id));
+                if (infos != null && !infos.isEmpty()) {
+                    return infos.get(0).getName();
+                }
+            } catch (Exception ignored) {}
+
+            switch (id.intValue()) {
+                case 1: return "Bronze";
+                case 2: return "Silver";
+                case 3: return "Gold";
+                case 4: return "Platinum";
+                default: return "Paket " + id;
+            }
+        });
     }
 
     private boolean isNew(Store store) {

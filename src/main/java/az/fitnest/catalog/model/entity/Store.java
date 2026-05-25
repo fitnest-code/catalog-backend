@@ -55,10 +55,12 @@ public class Store
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "store_id")
     @Builder.Default
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<StoreDiscount> discounts = new LinkedHashSet<StoreDiscount>();
     @OneToMany(cascade = {CascadeType.ALL}, orphanRemoval = true)
     @JoinColumn(name = "store_id")
     @Builder.Default
+    @org.hibernate.annotations.BatchSize(size = 20)
     private Set<StoreImage> images = new LinkedHashSet<StoreImage>();
     @Embedded
     @AttributeOverrides({
