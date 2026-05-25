@@ -159,4 +159,28 @@ public interface GymRepository
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions"})
     public List<Gym> findWithListDetailsByIdIn(List<Long> ids);
+
+    @org.springframework.data.jpa.repository.Query("SELECT g.category, COUNT(g.id) FROM Gym g WHERE g.category IS NOT NULL GROUP BY g.category")
+    List<Object[]> countGymsByCategory();
+
+    @org.springframework.data.jpa.repository.Query("SELECT s.packageId, COUNT(DISTINCT s.gym.id) FROM GymSubscription s GROUP BY s.packageId")
+    List<Object[]> countGymsBySubscriptionPackageId();
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(g) FROM Gym g WHERE " +
+            "(:categoryId IS NULL OR g.category.id = :categoryId) AND " +
+            "(:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId)) AND " +
+            "(:newThreshold IS NULL OR g.createdDate > :newThreshold)")
+    long countGymsWithFilters(
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+            @org.springframework.data.repository.query.Param("subscriptionId") Long subscriptionId,
+            @org.springframework.data.repository.query.Param("newThreshold") java.time.LocalDateTime newThreshold
+    );
+
+    long countByCreatedDateAfter(java.time.LocalDateTime date);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(g) FROM Gym g WHERE g.workHoursWoman IS NOT EMPTY")
+    long countGymsWithWorkHoursWoman();
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(g) FROM Gym g WHERE g.workHoursMan IS NOT EMPTY")
+    long countGymsWithWorkHoursMan();
 }

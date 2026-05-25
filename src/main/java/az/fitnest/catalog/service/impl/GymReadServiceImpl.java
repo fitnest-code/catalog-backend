@@ -77,6 +77,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.client.StorageGrpcClient storageGrpcClient;
     private final java.util.concurrent.Executor taskExecutor;
 
+    private final java.util.Map<Long, String> userLanguageCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<Long, List<Long>> eligibleSubscriptionIdsCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     private String resolveUserLanguage() {
         Long userId = UserContext.getCurrentUserId();
         return getUserLanguage(userId);
@@ -92,24 +96,32 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public String getUserLanguage(Long userId) {
-        String language = "AZ";
-        if (userId != null) {
+        if (userId == null) {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
+            return (localeLang.equals("EN") || localeLang.equals("RU")) ? localeLang : "AZ";
+        }
+        if (userLanguageCache.size() >= 10000) {
+            userLanguageCache.clear();
+        }
+        return userLanguageCache.computeIfAbsent(userId, id -> {
+            String language = "AZ";
             try {
-                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(userId);
+                az.fitnest.user.grpc.UserResponse user = userServiceGrpcClient.getUserById(id);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
                     language = user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }
-        }
-        if (language.equals("AZ")) {
-            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                    .toUpperCase();
-            if (localeLang.equals("EN") || localeLang.equals("RU")) {
-                language = localeLang;
+            if (language.equals("AZ")) {
+                String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                        .toUpperCase();
+                if (localeLang.equals("EN") || localeLang.equals("RU")) {
+                    language = localeLang;
+                }
             }
-        }
-        return language;
+            return language;
+        });
     }
 
     @Transactional(readOnly = true)
@@ -509,17 +521,25 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .distinct()
                 .toList();
 
-        Map<Long, az.fitnest.order.grpc.PackageNameInfo> globalPackageInfos = new java.util.HashMap<>();
-        if (!allPackageIds.isEmpty()) {
+        List<Long> uncachedPackageIds = allPackageIds.stream()
+                .filter(id -> !packageInfoCache.containsKey(id))
+                .toList();
+        if (!uncachedPackageIds.isEmpty()) {
             try {
-                globalPackageInfos = orderServiceGrpcClient.getPackageNamesByIds(allPackageIds).stream()
-                        .collect(Collectors.toMap(az.fitnest.order.grpc.PackageNameInfo::getPackageId, p -> p, (a, b) -> a));
+                if (packageInfoCache.size() >= 10000) {
+                    packageInfoCache.clear();
+                }
+                List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
+                for (var info : newInfos) {
+                    packageInfoCache.put(info.getPackageId(), info);
+                }
             } catch (Exception e) {
-                // Log exception in production
             }
         }
 
-        final Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = globalPackageInfos;
+        Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = allPackageIds.stream()
+                .filter(packageInfoCache::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache::get));
         final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
 
         List<GymMainPageResponse> items = gymPage.getContent().stream()
@@ -718,49 +738,86 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     private PaginatedResponse<GymMainPageResponse> manualPaginate(List<Gym> candidates, Long userId, Double lat,
                                                                   Double lng, int page, int pageSize, String q, Long categoryId, String userLanguage) {
-        java.util.stream.Stream<Gym> stream = candidates.stream();
-        if (q != null && !q.isBlank()) {
-            String lowerQ = q.toLowerCase();
-            stream = stream.filter(g -> (g.getName() != null && g.getName().toLowerCase().contains(lowerQ)) ||
-                    (g.getAddress() != null && g.getAddress().getAddressText() != null
-                            && g.getAddress().getAddressText().toLowerCase().contains(lowerQ)));
-        }
-        if (categoryId != null) {
-            stream = stream.filter(g -> g.getCategory() != null && g.getCategory().getId().equals(categoryId));
+        List<Gym> filtered = candidates.stream()
+                .filter(g -> {
+                    if (q != null && !q.isBlank()) {
+                        String lowerQ = q.toLowerCase();
+                        boolean nameMatches = g.getName() != null && g.getName().toLowerCase().contains(lowerQ);
+                        boolean addressMatches = g.getAddress() != null && g.getAddress().getAddressText() != null
+                                && g.getAddress().getAddressText().toLowerCase().contains(lowerQ);
+                        if (!nameMatches && !addressMatches) return false;
+                    }
+                    if (categoryId != null) {
+                        if (g.getCategory() == null || !g.getCategory().getId().equals(categoryId)) return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        if (lat != null && lng != null) {
+            filtered.sort(Comparator.comparingDouble(g -> {
+                if (g.getAddress() != null && g.getAddress().getLatitude() != null && g.getAddress().getLongitude() != null) {
+                    return calculateDistanceRaw(lat, lng, g.getAddress().getLatitude(), g.getAddress().getLongitude());
+                }
+                return Double.MAX_VALUE;
+            }));
         }
 
-        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> manualWorkHoursMap = candidates.stream()
+        int total = filtered.size();
+        int from = Math.max(0, (page - 1) * pageSize);
+        int to = Math.min(total, from + pageSize);
+        List<Gym> pageGyms = from >= total ? new java.util.ArrayList<>() : filtered.subList(from, to);
+
+        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> manualWorkHoursMap = pageGyms.stream()
                 .collect(Collectors.toMap(
                         Gym::getId,
                         gym -> gym.getGeneralWorkHours() != null ? new java.util.ArrayList<>(gym.getGeneralWorkHours()) : java.util.Collections.emptyList(),
                         (existing, replacement) -> existing
                 ));
 
-        List<GymMainPageResponse> all = stream.map(g -> mapToGymMainPageDto(
+        List<Long> pagePackageIds = pageGyms.stream()
+                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<Long> uncachedPackageIds = pagePackageIds.stream()
+                .filter(id -> !packageInfoCache.containsKey(id))
+                .toList();
+        if (!uncachedPackageIds.isEmpty()) {
+            try {
+                if (packageInfoCache.size() >= 10000) {
+                    packageInfoCache.clear();
+                }
+                List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
+                for (var info : newInfos) {
+                    packageInfoCache.put(info.getPackageId(), info);
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        Map<Long, az.fitnest.order.grpc.PackageNameInfo> manualPackageMap = pagePackageIds.stream()
+                .filter(packageInfoCache::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache::get));
+
+        List<GymMainPageResponse> pageItems = pageGyms.stream()
+                .map(g -> mapToGymMainPageDto(
                         g,
                         userId,
                         lat,
                         lng,
                         true,
-                        java.util.Collections.emptyMap(),
+                        manualPackageMap,
                         manualWorkHoursMap,
                         userLanguage
                 ))
                 .collect(Collectors.toList());
 
-        if (lat != null && lng != null) {
-            all.sort(Comparator.comparing(GymMainPageResponse::distanceKm,
-                    Comparator.nullsLast(Comparator.naturalOrder())));
-        }
-
-        int from = Math.max(0, (page - 1) * pageSize);
-        int to = Math.min(all.size(), from + pageSize);
-        List<GymMainPageResponse> pageItems = from >= all.size() ? new java.util.ArrayList<>()
-                : new java.util.ArrayList<>(all.subList(from, to));
-
         return PaginatedResponse.<GymMainPageResponse>builder()
                 .items(pageItems)
-                .total(all.size())
+                .total(total)
                 .page(page)
                 .pageSize(pageSize)
                 .build();
@@ -944,43 +1001,21 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public GymCountResponse getGymCount(String type, Long subscriptionId, Long categoryId) {
-        List<Gym> gyms = gymRepository.findAll();
-        if (categoryId != null) {
-            gyms = gyms.stream()
-                    .filter(g -> g.getCategory() != null && g.getCategory().getId().equals(categoryId))
-                    .toList();
-        }
-        if (subscriptionId != null) {
-            gyms = gyms.stream()
-                    .filter(g -> g.getSubscriptions() != null)
-                    .toList();
-        }
+        java.time.LocalDateTime newThreshold = null;
         if (type != null && type.equalsIgnoreCase("new")) {
-            gyms = gyms.stream()
-                    .filter(g -> g.getCreatedDate() != null
-                            && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
-                    .toList();
+            newThreshold = java.time.LocalDateTime.now().minusWeeks(1);
         }
-        return new GymCountResponse(
-                gyms.stream()
-                        .filter(g -> g.getSubscriptions() != null)
-                        .count(),
-                type != null ? type : "all",
-                subscriptionId,
-                categoryId);
+        long count = gymRepository.countGymsWithFilters(categoryId, subscriptionId, newThreshold);
+        return new GymCountResponse(count, type != null ? type : "all", subscriptionId, categoryId);
     }
 
     @Transactional(readOnly = true)
     public GymTypeCountResponse getGymCountByType(String type) {
-        List<Gym> gyms = gymRepository.findAll();
         long count;
         if (type.equalsIgnoreCase("new")) {
-            count = gyms.stream()
-                    .filter(g -> g.getCreatedDate() != null
-                            && g.getCreatedDate().isAfter(java.time.LocalDateTime.now().minusWeeks(1)))
-                    .count();
+            count = gymRepository.countByCreatedDateAfter(java.time.LocalDateTime.now().minusWeeks(1));
         } else {
-            count = gyms.size();
+            count = gymRepository.count();
         }
         return new GymTypeCountResponse(type, count);
     }
@@ -990,19 +1025,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
         String language = getUserLanguage(userId);
 
-        List<Gym> gyms = gymRepository.findAll();
-        java.util.Map<Long, Long> categoryCounts = gyms.stream()
-                .map(gym -> gym.getCategory())
-                .filter(java.util.Objects::nonNull)
-                .collect(java.util.stream.Collectors.groupingBy(
-                        category -> category.getCategoryId(),
-                        java.util.stream.Collectors.counting()));
-        List<Category> allCategories = categoryRepository.findAllById(categoryCounts.keySet());
-        java.util.Map<Long, Category> idToCategory = allCategories.stream()
-                .collect(java.util.stream.Collectors.toMap(Category::getCategoryId, c -> c));
-        return categoryCounts.entrySet().stream()
-                .map(e -> {
-                    Category cat = idToCategory.get(e.getKey());
+        List<Object[]> results = gymRepository.countGymsByCategory();
+        return results.stream()
+                .map(row -> {
+                    Category cat = (Category) row[0];
+                    Long count = (Long) row[1];
                     String catName = "UNKNOWN";
                     String iconUrl = null;
                     if (cat != null) {
@@ -1013,39 +1040,40 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 : cat.getName();
                     }
                     return new GymCategoryCountResponse(
-                            e.getKey(),
+                            cat != null ? cat.getCategoryId() : -1L,
                             catName,
                             iconUrl,
-                            e.getValue());
+                            count);
                 })
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
-        List<Gym> gyms = gymRepository.findAll();
-        java.util.Map<Long, java.util.Set<Long>> packageIdToGyms = new java.util.HashMap<>();
-        for (Gym gym : gyms) {
-            if (gym.getSubscriptions() != null) {
-                for (var subscription : gym.getSubscriptions()) {
-                    Long packageId = subscription.getPackageId();
-                    if (packageId != null) {
-                        packageIdToGyms.computeIfAbsent(packageId, k -> new java.util.HashSet<>()).add(gym.getId());
-                    }
-                }
-            } else {
-            }
+        List<Object[]> results = gymRepository.countGymsBySubscriptionPackageId();
+        if (results.isEmpty()) {
+            return java.util.Collections.emptyList();
         }
-        java.util.List<Long> packageIds = new java.util.ArrayList<>(packageIdToGyms.keySet());
-        java.util.List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient
-                .getPackageNamesByIds(packageIds);
-        java.util.Map<Long, String> packageIdToName = new java.util.HashMap<>();
-        for (az.fitnest.order.grpc.PackageNameInfo info : packageNames) {
-            packageIdToName.put(info.getPackageId(), info.getName());
-        }
-        return packageIdToGyms.entrySet().stream()
-                .map(e -> new GymSubscriptionCountResponse(e.getKey(),
-                        packageIdToName.getOrDefault(e.getKey(), "UNKNOWN"), (long) e.getValue().size()))
+
+        List<Long> packageIds = results.stream()
+                .map(row -> (Long) row[0])
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+        Map<Long, String> packageIdToName = packageNames.stream()
+                .collect(Collectors.toMap(az.fitnest.order.grpc.PackageNameInfo::getPackageId, az.fitnest.order.grpc.PackageNameInfo::getName, (a, b) -> a));
+
+        return results.stream()
+                .map(row -> {
+                    Long packageId = (Long) row[0];
+                    Long count = (Long) row[1];
+                    return new GymSubscriptionCountResponse(
+                            packageId,
+                            packageIdToName.getOrDefault(packageId, "UNKNOWN"),
+                            count
+                    );
+                })
                 .toList();
     }
 
@@ -1611,19 +1639,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional(readOnly = true)
     public GymTypeCountResponse getGymCountByGender(String gender) {
-        List<Gym> gyms = gymRepository.findAll();
-        long count;
         if (gender == null) {
             throw new BadRequestException("GENDER_REQUIRED", "error.gender_required");
         }
+        long count;
         switch (gender.toLowerCase()) {
             case "female":
-                count = gyms.stream().filter(g -> g.getWorkHoursWoman() != null && !g.getWorkHoursWoman().isEmpty())
-                        .count();
+                count = gymRepository.countGymsWithWorkHoursWoman();
                 break;
             case "male":
-                count = gyms.stream().filter(g -> g.getWorkHoursMan() != null && !g.getWorkHoursMan().isEmpty())
-                        .count();
+                count = gymRepository.countGymsWithWorkHoursMan();
                 break;
             default:
                 throw new BadRequestException("INVALID_GENDER", "error.invalid_gender");
@@ -2045,36 +2070,41 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (subscriptionId == null) {
             return java.util.Collections.emptyList();
         }
-        try {
-            List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceGrpcClient.getGymPlans();
-            String userPackageName = null;
-            for (var plan : allPlans) {
-                if (plan.getPackageId() == subscriptionId) {
-                    userPackageName = plan.getName();
-                    break;
-                }
-            }
-            if (userPackageName == null) {
-                List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(subscriptionId));
-                if (!nameInfos.isEmpty()) {
-                    userPackageName = nameInfos.get(0).getName();
-                }
-            }
-            
-            int userRank = getPackageRank(userPackageName);
-            List<Long> eligibleIds = new java.util.ArrayList<>();
-            for (var plan : allPlans) {
-                int planRank = getPackageRank(plan.getName());
-                if (planRank <= userRank) {
-                    eligibleIds.add(plan.getPackageId());
-                }
-            }
-            if (!eligibleIds.contains(subscriptionId)) {
-                eligibleIds.add(subscriptionId);
-            }
-            return eligibleIds;
-        } catch (Exception e) {
-            return java.util.Collections.singletonList(subscriptionId);
+        if (eligibleSubscriptionIdsCache.size() >= 10000) {
+            eligibleSubscriptionIdsCache.clear();
         }
+        return eligibleSubscriptionIdsCache.computeIfAbsent(subscriptionId, id -> {
+            try {
+                List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceGrpcClient.getGymPlans();
+                String userPackageName = null;
+                for (var plan : allPlans) {
+                    if (plan.getPackageId() == id.longValue()) {
+                        userPackageName = plan.getName();
+                        break;
+                    }
+                }
+                if (userPackageName == null) {
+                    List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceGrpcClient.getPackageNamesByIds(java.util.List.of(id));
+                    if (!nameInfos.isEmpty()) {
+                        userPackageName = nameInfos.get(0).getName();
+                    }
+                }
+                
+                int userRank = getPackageRank(userPackageName);
+                List<Long> eligibleIds = new java.util.ArrayList<>();
+                for (var plan : allPlans) {
+                    int planRank = getPackageRank(plan.getName());
+                    if (planRank <= userRank) {
+                        eligibleIds.add(plan.getPackageId());
+                    }
+                }
+                if (!eligibleIds.contains(id)) {
+                    eligibleIds.add(id);
+                }
+                return eligibleIds;
+            } catch (Exception e) {
+                return java.util.Collections.singletonList(id);
+            }
+        });
     }
 }
