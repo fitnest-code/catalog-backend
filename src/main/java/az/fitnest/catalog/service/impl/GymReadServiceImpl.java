@@ -1912,6 +1912,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Override
     @Transactional(readOnly = true)
     public PaginatedResponse<ReservationAdminResponse> getGymReservationsAdmin(Long gymId, ReservationStatus status, int page, int pageSize) {
+        verifyGymOwnership(gymId);
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
         Page<Reservation> reservationPage;
 
@@ -1962,6 +1963,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 
+        verifyGymOwnership(r.getGym().getId());
+
         CachedUser user = null;
         try {
             user = userServiceGrpcClient.getUserById(r.getUserId());
@@ -2001,12 +2004,60 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Override
     @Transactional(readOnly = true)
     public ReservationStatsResponse getGymReservationStats(Long gymId) {
+        verifyGymOwnership(gymId);
         long total = reservationRepository.countByGymId(gymId);
         long pending = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.PENDING);
         long confirmed = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.APPROVED);
         long cancelled = reservationRepository.countByGymIdAndStatus(gymId, ReservationStatus.CANCELLED);
 
         return new ReservationStatsResponse(total, pending, confirmed, cancelled);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ReservationAdminResponse> getAllReservationsAdmin(ReservationStatus status, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), pageSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+        Page<Reservation> reservationPage;
+
+        if (status == null) {
+            reservationPage = reservationRepository.findAll(pageable);
+        } else {
+            reservationPage = reservationRepository.findByStatus(status, pageable);
+        }
+
+        List<ReservationAdminResponse> items = reservationPage.getContent().stream()
+                .map(r -> {
+                    String userFullName = "N/A";
+                    try {
+                        CachedUser user = userServiceGrpcClient.getUserById(r.getUserId());
+                        if (user != null) {
+                            userFullName = user.getFirstName() + " " + user.getLastName();
+                        }
+                    } catch (Exception e) {
+                    }
+
+                    String dateStr = r.getReservationDate() != null ? r.getReservationDate().getDate().toString() : "N/A";
+                    String timeRange = r.getReservationDate() != null ?
+                            r.getReservationDate().getStartTime() + " - " + r.getReservationDate().getEndTime() : "N/A";
+                    String trainerName = r.getTrainer() != null ? r.getTrainer().getName() + " " + r.getTrainer().getSurname() : "N/A";
+
+                    return new ReservationAdminResponse(
+                        r.getId(),
+                        userFullName,
+                        dateStr,
+                        timeRange,
+                        r.getStatus(),
+                        trainerName
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return PaginatedResponse.<ReservationAdminResponse>builder()
+                .items(items)
+                .total(reservationPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
     }
 
     @Override

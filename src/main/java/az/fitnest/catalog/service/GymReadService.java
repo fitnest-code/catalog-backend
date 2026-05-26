@@ -43,4 +43,6 @@ public interface GymReadService {
     az.fitnest.catalog.dto.response.ReservationStatsResponse getGymReservationStats(Long gymId);
     List<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId);
     az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse getGymWorkHours(Long gymId);
+
+    PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse> getAllReservationsAdmin(az.fitnest.catalog.model.enums.ReservationStatus status, int page, int pageSize);
 }

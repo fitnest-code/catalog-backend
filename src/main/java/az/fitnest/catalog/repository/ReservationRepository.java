@@ -78,4 +78,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,
             @org.springframework.data.repository.query.Param("time") java.time.LocalTime time,
             @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    Page<Reservation> findByStatus(az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
 }

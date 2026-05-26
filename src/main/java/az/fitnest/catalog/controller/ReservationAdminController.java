@@ -7,6 +7,7 @@ import az.fitnest.catalog.service.CancellationReasonService;
 import az.fitnest.catalog.service.GymLessonTypeService;
 import az.fitnest.catalog.service.GymTrainerService;
 import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.ReservationCommandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,9 +30,20 @@ public class ReservationAdminController {
 
     private final GymWriteService gymWriteService;
     private final GymTrainerService gymTrainerService;
+    private final GymReadService gymReadService;
     private final ReservationCommandService reservationCommandService;
     private final GymLessonTypeService gymLessonTypeService;
     private final CancellationReasonService cancellationReasonService;
+
+    @Operation(summary = "Bütün rezervasiyaları alın", description = "Sistemdəki bütün rezervasiyaların siyahısını gətirir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse>> getAllReservations(
+            @RequestParam(required = false) az.fitnest.catalog.model.enums.ReservationStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReadService.getAllReservationsAdmin(status, page, pageSize));
+    }
 
     @Operation(summary = "İdman zalı üçün rezervasiyaları aktivləşdirin və ya deaktiv edin")
     @PreAuthorize("hasRole('ADMIN')")

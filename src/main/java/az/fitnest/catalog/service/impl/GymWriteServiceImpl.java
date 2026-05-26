@@ -1430,6 +1430,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 
+        verifyGymOwnership(reservation.getGym().getId());
+
+        az.fitnest.catalog.model.enums.ReservationStatus oldStatus = reservation.getStatus();
         reservation.setStatus(status);
         if (status == az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED || status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
             reservation.setCancelReasonText(reason);
@@ -1439,6 +1442,16 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         reservationRepository.save(reservation);
+
+        if (!Boolean.TRUE.equals(reservation.getAttended()) &&
+            (oldStatus == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED || oldStatus == az.fitnest.catalog.model.enums.ReservationStatus.PENDING) &&
+            (status == az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED || status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED)) {
+            try {
+                orderServiceGrpcClient.restoreSession(reservation.getUserId());
+            } catch (Exception e) {
+                log.error("Failed to restore session for user: {}", reservation.getUserId(), e);
+            }
+        }
     }
 
     @Override
@@ -1609,6 +1622,21 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (!phoneNumbers.add(normalizedPhone)) {
                 throw new BadRequestException("DUPLICATE_ADMIN_PHONE", "error.duplicate_admin_phone");
             }
+        }
+    }
+
+    private void verifyGymOwnership(Long gymId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new az.fitnest.catalog.exception.UnauthorizedException("Unauthorized");
+        }
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            return;
+        }
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null || !gymAdminRepository.existsByGymIdAndUserId(gymId, userId)) {
+            throw new ForbiddenException("You do not have access to this gym");
         }
     }
 }

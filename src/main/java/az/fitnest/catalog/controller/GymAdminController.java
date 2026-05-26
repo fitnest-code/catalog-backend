@@ -646,8 +646,8 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "İdman zalı rezervasiyalarını alın", description = "İdman zalına aid rezervasiyaların siyahısını gətirir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "İdman zalı rezervasiyalarını alın", description = "İdman zalına aid rezervasiyaların siyahısını gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/reservations")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse>> getGymReservations(
             @PathVariable Long id,
@@ -657,16 +657,16 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymReservationsAdmin(id, status, page, pageSize));
     }
 
-    @Operation(summary = "Rezervasiya detallarını alın", description = "ID-yə görə rezervasiyanın detallı məlumatlarını gətirir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Rezervasiya detallarını alın", description = "ID-yə görə rezervasiyanın detallı məlumatlarını gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/reservations/{reservationId}")
     public ResponseEntity<az.fitnest.catalog.dto.response.ReservationDetailAdminResponse> getReservationDetail(@PathVariable Long reservationId) {
         return ResponseEntity.ok(gymReadService.getReservationDetailAdmin(reservationId));
     }
 
-    @Operation(summary = "Rezervasiya statusunu yeniləyin", description = "Rezervasiyanın statusunu təsdiqləyir və ya imtina edir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/reservations/{reservationId}/status")
+    @Operation(summary = "Rezervasiya statusunu yeniləyin", description = "Rezervasiyanın statusunu təsdiqləyir və ya imtina edir. ADMIN və ya idman zalı admini rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
+    @RequestMapping(value = "/reservations/{reservationId}/status", method = {org.springframework.web.bind.annotation.RequestMethod.POST, org.springframework.web.bind.annotation.RequestMethod.PATCH})
     public ResponseEntity<Void> updateReservationStatus(
             @PathVariable Long reservationId,
             @RequestParam az.fitnest.catalog.model.enums.ReservationStatus status,
@@ -675,8 +675,8 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "İdman zalı rezervasiya statistikasını alın", description = "İdman zalına aid rezervasiya statistikasını (ümumi, gözləmədə və s.) gətirir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "İdman zalı rezervasiya statistikasını alın", description = "İdman zalına aid rezervasiya statistikasını (ümumi, gözləmədə və s.) gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/reservations/stats")
     public ResponseEntity<az.fitnest.catalog.dto.response.ReservationStatsResponse> getGymReservationStats(@PathVariable Long id) {
         return ResponseEntity.ok(gymReadService.getGymReservationStats(id));
