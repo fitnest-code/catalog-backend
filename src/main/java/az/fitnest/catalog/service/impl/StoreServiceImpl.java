@@ -131,6 +131,14 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private String getUserLanguage(Long userId) {
+        try {
+            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                    .toUpperCase();
+            if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
+                return localeLang;
+            }
+        } catch (Exception ignored) {
+        }
         if (userId == null) {
             return "AZ";
         }
@@ -141,7 +149,7 @@ public class StoreServiceImpl implements StoreService {
             try {
                 az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(id);
                 if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage();
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }

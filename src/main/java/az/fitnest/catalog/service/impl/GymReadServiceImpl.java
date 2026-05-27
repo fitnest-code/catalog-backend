@@ -102,10 +102,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public String getUserLanguage(Long userId) {
-        if (userId == null) {
+        try {
             String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
                     .toUpperCase();
-            return (localeLang.equals("EN") || localeLang.equals("RU")) ? localeLang : "AZ";
+            if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
+                return localeLang;
+            }
+        } catch (Exception ignored) {
+        }
+        if (userId == null) {
+            return "AZ";
         }
         if (userLanguageCache.size() >= 10000) {
             userLanguageCache.clear();
@@ -118,13 +124,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     language = user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
-            }
-            if (language.equals("AZ")) {
-                String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                        .toUpperCase();
-                if (localeLang.equals("EN") || localeLang.equals("RU")) {
-                    language = localeLang;
-                }
             }
             return language;
         });
