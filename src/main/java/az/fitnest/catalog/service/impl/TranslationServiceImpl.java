@@ -19,6 +19,16 @@ public class TranslationServiceImpl implements TranslationService {
     private final org.springframework.cache.CacheManager cacheManager;
     private final org.springframework.web.client.RestTemplate restTemplate;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private TranslationServiceImpl self;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private TranslationEntityResolver translationEntityResolver;
+
     public TranslationServiceImpl(TranslationRepository translationRepository, org.springframework.cache.CacheManager cacheManager) {
         this.translationRepository = translationRepository;
         this.cacheManager = cacheManager;
@@ -35,7 +45,98 @@ public class TranslationServiceImpl implements TranslationService {
             return null;
         }
 
-        return translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+        if (entityType != null) {
+            String normType = entityType.toUpperCase();
+            if (normType.equals("GYM_STATUS") || normType.equals("GYMSTATUS") || normType.equals("STORE_STATUS") || normType.equals("STORESTATUS")) {
+                String status = entityId.toUpperCase();
+                if (languageCode.equalsIgnoreCase("EN")) {
+                    switch (status) {
+                        case "ACTIVE": return "Active";
+                        case "INACTIVE": return "Inactive";
+                        case "DRAFT": return "Draft";
+                        default: return entityId;
+                    }
+                } else if (languageCode.equalsIgnoreCase("RU")) {
+                    switch (status) {
+                        case "ACTIVE": return "Активный";
+                        case "INACTIVE": return "Неактивный";
+                        case "DRAFT": return "Черновик";
+                        default: return entityId;
+                    }
+                }
+                return entityId;
+            } else if (normType.equals("RESERVATION_STATUS") || normType.equals("RESERVATIONSTATUS")) {
+                String status = entityId.toUpperCase();
+                if (languageCode.equalsIgnoreCase("EN")) {
+                    switch (status) {
+                        case "PENDING": return "Pending";
+                        case "APPROVED": return "Approved";
+                        case "CANCELLED": return "Cancelled";
+                        case "REJECTED": return "Rejected";
+                        case "EXPIRED": return "Expired";
+                        default: return entityId;
+                    }
+                } else if (languageCode.equalsIgnoreCase("RU")) {
+                    switch (status) {
+                        case "PENDING": return "В ожидании";
+                        case "APPROVED": return "Одобрено";
+                        case "CANCELLED": return "Отменено";
+                        case "REJECTED": return "Отклонено";
+                        case "EXPIRED": return "Истек";
+                        default: return entityId;
+                    }
+                }
+                return entityId;
+            } else if (normType.equals("REVIEW_STATUS") || normType.equals("REVIEWSTATUS")) {
+                String status = entityId.toUpperCase();
+                if (languageCode.equalsIgnoreCase("EN")) {
+                    switch (status) {
+                        case "PENDING": return "Pending";
+                        case "ACCEPTED": return "Accepted";
+                        case "REJECTED": return "Rejected";
+                        default: return entityId;
+                    }
+                } else if (languageCode.equalsIgnoreCase("RU")) {
+                    switch (status) {
+                        case "PENDING": return "В ожидании";
+                        case "ACCEPTED": return "Принято";
+                        case "REJECTED": return "Отклонено";
+                        default: return entityId;
+                    }
+                }
+                return entityId;
+            } else if (normType.equals("SESSION_STATUS") || normType.equals("SESSIONSTATUS")) {
+                String status = entityId.toUpperCase();
+                if (languageCode.equalsIgnoreCase("EN")) {
+                    switch (status) {
+                        case "ACTIVE": return "Active";
+                        case "INACTIVE": return "Inactive";
+                        default: return entityId;
+                    }
+                } else if (languageCode.equalsIgnoreCase("RU")) {
+                    switch (status) {
+                        case "ACTIVE": return "Активный";
+                        case "INACTIVE": return "Неактивный";
+                        default: return entityId;
+                    }
+                }
+                return entityId;
+            } else if (normType.equals("ENTRANCE_STATUS")) {
+                String status = entityId;
+                if (languageCode.equalsIgnoreCase("EN")) {
+                    if ("Uğurlu".equalsIgnoreCase(status) || "ELIGIBLE".equalsIgnoreCase(status)) return "Successful";
+                    if ("Uğursuz".equalsIgnoreCase(status) || "INELIGIBLE".equalsIgnoreCase(status)) return "Unsuccessful";
+                    return status;
+                } else if (languageCode.equalsIgnoreCase("RU")) {
+                    if ("Uğurlu".equalsIgnoreCase(status) || "ELIGIBLE".equalsIgnoreCase(status)) return "Успешно";
+                    if ("Uğursuz".equalsIgnoreCase(status) || "INELIGIBLE".equalsIgnoreCase(status)) return "Неуспешно";
+                    return status;
+                }
+                return status;
+            }
+        }
+
+        String existingValue = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
                 entityType.toUpperCase(),
                 entityId,
                 languageCode.toUpperCase(),
@@ -43,6 +144,39 @@ public class TranslationServiceImpl implements TranslationService {
         )
         .map(Translation::getFieldValue)
         .orElse(null);
+
+        if (existingValue != null) {
+            return existingValue;
+        }
+
+        try {
+            Class<?> entityClass = translationEntityResolver.getEntityClass(entityType);
+            if (entityClass != null) {
+                Object entity = null;
+                try {
+                    Long longId = Long.parseLong(entityId);
+                    entity = entityManager.find(entityClass, longId);
+                } catch (NumberFormatException e) {
+                    entity = entityManager.find(entityClass, entityId);
+                }
+
+                if (entity != null) {
+                    String originalValueAz = translationEntityResolver.extractFieldValue(entity, fieldName);
+                    if (originalValueAz != null && !originalValueAz.trim().isEmpty()) {
+                        String translatedValue = translateText(originalValueAz, languageCode.toLowerCase());
+                        if (translatedValue != null && !translatedValue.trim().isEmpty()) {
+                            self.saveOrUpdateTranslation(entityType, entityId, languageCode, fieldName, translatedValue);
+                            return translatedValue;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Soft fallback translation failed for entityType={}, entityId={}, fieldName={}, lang={}",
+                    entityType, entityId, fieldName, languageCode, e);
+        }
+
+        return null;
     }
 
     @Override
@@ -170,7 +304,8 @@ public class TranslationServiceImpl implements TranslationService {
         return null;
     }
 
-    private void saveOrUpdateTranslation(String entityType, String entityId, String languageCode, String fieldName, String fieldValue) {
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void saveOrUpdateTranslation(String entityType, String entityId, String languageCode, String fieldName, String fieldValue) {
         String normalizedEntityType = entityType.toUpperCase();
         String normalizedLanguageCode = languageCode.toUpperCase();
 

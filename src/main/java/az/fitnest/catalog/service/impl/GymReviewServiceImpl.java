@@ -35,6 +35,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
     private final UserServiceGrpcClient userServiceGrpcClient;
+    private final az.fitnest.catalog.service.TranslationService translationService;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymReviewResponse> getReviews(Long gymId, int page, int pageSize, String sort) {
@@ -169,7 +170,13 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
         } catch (Exception e) {
             fullName = "User " + r.getUserId();
         }
-        return GymMapper.toReviewDto(r, fullName, avatarUrl);
+        String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
+        String userLanguage = resolveUserLanguage();
+        String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLanguage) : null;
+        if (translatedStatus == null) {
+            translatedStatus = originalStatus;
+        }
+        return GymMapper.toReviewDto(r, fullName, avatarUrl, translatedStatus);
     }
 
     @Transactional(readOnly = true)
@@ -180,6 +187,12 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     }
 
     private GymReviewResponse toGymReviewDto(Review r) {
+        String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
+        String userLanguage = resolveUserLanguage();
+        String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLanguage) : null;
+        if (translatedStatus == null) {
+            translatedStatus = originalStatus;
+        }
         return new GymReviewResponse(
                 r.getId(),
                 r.getId() != null ? r.getId().toString() : null,
@@ -189,9 +202,23 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
                         .build(),
-                r.getStatus() != null ? r.getStatus().name() : null,
+                translatedStatus,
                 r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null
         );
+    }
+
+    private String resolveUserLanguage() {
+        Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
+        if (userId != null) {
+            try {
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isBlank()) {
+                    return user.getLanguage().toUpperCase();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "AZ";
     }
 
     private Pageable pageable(int page, int size, Sort sort) {

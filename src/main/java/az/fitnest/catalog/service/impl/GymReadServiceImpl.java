@@ -163,7 +163,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                     }
                                 } catch (Exception e) {
                                 }
-                                return GymMapper.toReviewDto(r, fullName, avatarUrl);
+                                String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
+                                String userLanguage = resolveUserLanguage();
+                                String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLanguage) : null;
+                                if (translatedStatus == null) {
+                                    translatedStatus = originalStatus;
+                                }
+                                return GymMapper.toReviewDto(r, fullName, avatarUrl, translatedStatus);
                             }, taskExecutor))
                             .toList();
                 }, taskExecutor)
@@ -1362,6 +1368,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String displayStatus = "Uğursuz";
             if ("ELIGIBLE".equalsIgnoreCase(h.getStatus()) || "Uğurlu".equalsIgnoreCase(h.getStatus())) {
                 displayStatus = "Uğurlu";
+            }
+            String userLanguage = resolveUserLanguage();
+            String translatedStatus = translationService.getTranslatedValue("ENTRANCE_STATUS", displayStatus, "name", userLanguage);
+            if (translatedStatus != null && !translatedStatus.isEmpty()) {
+                displayStatus = translatedStatus;
             }
             return GymEntranceHistoryAdminResponse.builder()
                     .id(h.getId())

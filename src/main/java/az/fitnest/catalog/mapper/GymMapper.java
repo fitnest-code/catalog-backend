@@ -104,7 +104,7 @@ public final class GymMapper {
                 .build();
     }
 
-    public static GymReviewResponse toReviewDto(Review r) {
+    public static GymReviewResponse toReviewDto(Review r, String status) {
         if (r == null) return null;
         return new GymReviewResponse(
                 r.getId(),
@@ -115,12 +115,12 @@ public final class GymMapper {
                         .user_id(r.getUserId() != null ? r.getUserId().toString() : null)
                         .full_name("User " + r.getUserId())
                         .build(),
-                r.getStatus() != null ? r.getStatus().name() : null,
+                status,
                 r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null
         );
     }
 
-    public static GymReviewResponse toReviewDto(Review r, String fullName, String profileImageUrl) {
+    public static GymReviewResponse toReviewDto(Review r, String fullName, String profileImageUrl, String status) {
         if (r == null) return null;
         return new GymReviewResponse(
                 r.getId(),
@@ -132,7 +132,7 @@ public final class GymMapper {
                         .full_name(fullName)
                         .avatar_url(profileImageUrl)
                         .build(),
-                r.getStatus() != null ? r.getStatus().name() : null,
+                status,
                 r.getCreatedDate() != null ? r.getCreatedDate().toLocalDate() : null
         );
     }

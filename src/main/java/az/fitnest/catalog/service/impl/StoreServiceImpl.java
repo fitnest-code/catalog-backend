@@ -230,7 +230,7 @@ public class StoreServiceImpl implements StoreService {
                         .build() : null)
                 .phone(store.getPhone())
                 .category(store.getCategory())
-                .status(store.getStatus())
+                .status(translationService.getTranslatedValue("STORE_STATUS", store.getStatus(), "name", userLanguage) != null ? translationService.getTranslatedValue("STORE_STATUS", store.getStatus(), "name", userLanguage) : store.getStatus())
 
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
