@@ -90,8 +90,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (gymId == null) {
             return java.util.Collections.emptyList();
         }
+        String userLanguage = resolveUserLanguage();
         return supportedServiceRepository.findAllByGymId(gymId).stream()
-                .map(s -> new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), s.getName(), s.getGymId(), s.getIconUrl()))
+                .map(s -> {
+                    String localizedName = translationService.getTranslatedValue(
+                            "SupportedService", s.getId().toString(), "name", userLanguage);
+                    String name = (localizedName != null && !localizedName.isEmpty()) ? localizedName : s.getName();
+                    return new az.fitnest.catalog.dto.response.SupportedServiceResponse(s.getId(), name, s.getGymId(), s.getIconUrl());
+                })
                 .toList();
     }
 
@@ -640,11 +646,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         Collectors.mapping(admin -> admin.getName() + " " + admin.getSurname(),
                                 Collectors.joining(", "))));
 
+        String userLanguage = resolveUserLanguage();
         List<AdminGymResponse> items = gymPage.getContent().stream().map(gym -> {
         String ownerName = ownerNames.get(gym.getId());
 
-            String fullAddress = (gym.getAddress() != null)
-                    ? (gym.getAddress().getCity() + ", " + gym.getAddress().getAddressText())
+            String city = null;
+            String addressText = null;
+            if (gym.getAddress() != null) {
+                city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
+                addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
+            }
+            String fullAddress = (city != null || addressText != null)
+                    ? ((city != null ? city : "") + ", " + (addressText != null ? addressText : ""))
                     : "N/A";
 
             return AdminGymResponse.builder()
@@ -1690,8 +1703,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private String getLocalizedGymName(Gym gym, String userLanguage) {
         if (gym == null)
             return null;
-        String translated = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
-        return (translated != null && !translated.isEmpty()) ? translated : gym.getName();
+        return gym.getName();
     }
 
     @Override
@@ -1751,10 +1763,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 })
                 .toList();
 
-        String localizedGymName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
-        if (localizedGymName == null || localizedGymName.isEmpty()) {
-            localizedGymName = gym.getName();
-        }
+        String localizedGymName = gym.getName();
 
         String localizedGymDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedGymDescription == null || localizedGymDescription.isEmpty()) {
