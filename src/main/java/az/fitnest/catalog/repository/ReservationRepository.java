@@ -80,4 +80,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
     Page<Reservation> findByStatus(az.fitnest.catalog.model.enums.ReservationStatus status, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r.reservationDate.id, COUNT(r) FROM Reservation r WHERE r.reservationDate.id IN :sessionIds AND r.status IN :statuses GROUP BY r.reservationDate.id")
+    List<Object[]> countActiveReservationsForSessions(
+            @org.springframework.data.repository.query.Param("sessionIds") java.util.Collection<Long> sessionIds,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Reservation r JOIN FETCH r.reservationDate WHERE r.userId = :userId AND r.status IN :statuses AND r.reservationDate.date IN :dates")
+    List<Reservation> findReservationsForOverlapCheck(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("dates") java.util.Collection<java.time.LocalDate> dates,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 }

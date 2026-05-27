@@ -192,6 +192,9 @@ grpc:
       deadline-after: 10s
       enable-keep-alive: true
       keep-alive-time: 30s
+    notifications-backend:
+      address: ${NOTIFICATIONS_BACKEND_GRPC_ADDRESS:dns:///notifications-backend:9090}
+      negotiation-type: plaintext
   server:
     compression: gzip
 

@@ -19,9 +19,14 @@ import az.fitnest.catalog.service.ReservationAvailabilityService;
 import az.fitnest.catalog.service.ReservationAuditService;
 import az.fitnest.catalog.service.CancellationReasonService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.client.NotificationsServiceGrpcClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +44,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     private final CancellationReasonService reasonService;
     private final ReservationRuleRepository ruleRepository;
     private final OrderServiceGrpcClient orderServiceClient;
+    private final GymAdminRepository gymAdminRepository;
+    private final NotificationsServiceGrpcClient notificationsServiceClient;
 
     @Transactional
     public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long lessonId, Long trainerId, Long sessionId) {
@@ -110,6 +117,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation = reservationRepository.save(reservation);
 
         auditService.log(reservation.getId(), userId, "CREATE", null, "PENDING", null);
+
+        sendReservationNotificationToAdmins(reservation);
 
         return reservation;
     }
@@ -246,5 +255,52 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                     .build();
         }
         ruleRepository.save(rule);
+    }
+
+    private void sendReservationNotificationToAdmins(Reservation reservation) {
+        if (reservation == null || reservation.getGym() == null) {
+            return;
+        }
+        final Long gymId = reservation.getGym().getId();
+        final String gymName = reservation.getGym().getName();
+        final String lessonName = reservation.getLessonType() != null ? reservation.getLessonType() :
+                (reservation.getCategory() != null ? reservation.getCategory().getName() : "Dərs");
+        final String dateStr = reservation.getReservationDate() != null && reservation.getReservationDate().getDate() != null
+                ? reservation.getReservationDate().getDate().toString() : "";
+        final String timeStr = reservation.getReservationDate() != null && reservation.getReservationDate().getStartTime() != null
+                ? reservation.getReservationDate().getStartTime().toString() : "";
+        
+        final String title = "Yeni Rezervasiya";
+        final String body = String.format("Yeni rezervasiya: %s - %s (%s %s)", gymName, lessonName, dateStr, timeStr);
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        triggerNotificationAsync(gymId, title, body);
+                    }
+                }
+            );
+        } else {
+            triggerNotificationAsync(gymId, title, body);
+        }
+    }
+
+    private void triggerNotificationAsync(Long gymId, String title, String body) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<GymAdmin> admins = gymAdminRepository.findByGymId(gymId);
+                if (admins != null) {
+                    for (GymAdmin admin : admins) {
+                        if (admin.getUserId() != null) {
+                            notificationsServiceClient.sendPushNotification(admin.getUserId(), title, body);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore to avoid breaking execution
+            }
+        });
     }
 }

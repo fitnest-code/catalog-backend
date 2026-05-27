@@ -117,19 +117,42 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         LocalDateTime now = LocalDateTime.now();
 
-        java.util.stream.Stream<TrainerReservationDate> sessionStream = sessions.stream();
-        if (lessonTypeId != null) {
-            sessionStream = sessionStream.filter(session -> session.getClassType() != null && session.getClassType().getId().equals(lessonTypeId));
-        }
-        if (categoryId != null) {
-            sessionStream = sessionStream.filter(session -> session.getClassType() != null && session.getClassType().getCategory() != null && session.getClassType().getCategory().getId().equals(categoryId));
-        }
-
-        return sessionStream
+        List<TrainerReservationDate> filteredSessions = sessions.stream()
                 .filter(session -> {
+                    if (lessonTypeId != null && (session.getClassType() == null || !session.getClassType().getId().equals(lessonTypeId))) {
+                        return false;
+                    }
+                    if (categoryId != null && (session.getClassType() == null || session.getClassType().getCategory() == null || !session.getClassType().getCategory().getId().equals(categoryId))) {
+                        return false;
+                    }
                     LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
                     return !sessionStart.isBefore(now);
                 })
+                .toList();
+
+        if (filteredSessions.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<Long> sessionIds = filteredSessions.stream().map(TrainerReservationDate::getId).toList();
+        List<Object[]> activeBookingCounts = reservationRepository.countActiveReservationsForSessions(
+                sessionIds, List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+        Map<Long, Integer> activeBookingMap = activeBookingCounts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Number) row[1]).intValue()
+                ));
+
+        List<Reservation> userOverlapReservations = java.util.Collections.emptyList();
+        if (userId != null && isGymEnabled) {
+            List<LocalDate> dates = filteredSessions.stream().map(TrainerReservationDate::getDate).distinct().toList();
+            userOverlapReservations = reservationRepository.findReservationsForOverlapCheck(
+                    userId, dates, List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+        }
+
+        final List<Reservation> overlapCheckReservations = userOverlapReservations;
+
+        return filteredSessions.stream()
                 .collect(Collectors.groupingBy(TrainerReservationDate::getDate))
                 .entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -138,8 +161,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     return DayAvailabilityResponse.builder()
                         .date(date)
                         .slots(entry.getValue().stream().map(session -> {
-                            int activeBookings = reservationRepository.countActiveReservations(session.getId(),
-                                List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+                            int activeBookings = activeBookingMap.getOrDefault(session.getId(), 0);
                             int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
 
                             boolean isAcceptable = isGymEnabled;
@@ -152,9 +174,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                                 if (!isSubscriptionActive || !isPackageSupported) {
                                     isAcceptable = false;
                                 } else {
-                                    boolean hasOverlap = reservationRepository.existsOverlappingReservation(
-                                            userId, date, session.getStartTime(), session.getEndTime(),
-                                            List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED));
+                                    boolean hasOverlap = overlapCheckReservations.stream().anyMatch(r -> 
+                                            r.getReservationDate() != null &&
+                                            r.getReservationDate().getDate().equals(date) &&
+                                            r.getReservationDate().getStartTime().isBefore(session.getEndTime()) &&
+                                            r.getReservationDate().getEndTime().isAfter(session.getStartTime())
+                                    );
                                     if (hasOverlap) {
                                         isAcceptable = false;
                                     }
