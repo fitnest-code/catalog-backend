@@ -26,6 +26,9 @@ public class TranslationEntityResolver {
             case "SUPPORTEDSERVICE":
             case "SUPPORTED_SERVICE":
                 return az.fitnest.catalog.model.entity.SupportedService.class;
+            case "RESERVATION_RULE":
+            case "RESERVATIONRULE":
+                return az.fitnest.catalog.model.entity.ReservationRule.class;
             default: return null;
         }
     }

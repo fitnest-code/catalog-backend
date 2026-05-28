@@ -4,6 +4,10 @@ import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.dto.request.*;
 import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.client.UserServiceGrpcClient;
+import az.fitnest.catalog.util.UserContext;
+import az.fitnest.catalog.client.CachedUser;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymLessonType;
@@ -48,6 +52,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
     private final OrderServiceGrpcClient orderServiceClient;
+    private final TranslationService translationService;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional(readOnly = true)
     public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
@@ -240,8 +246,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
             }
         }
 
+        String userLanguage = resolveUserLanguage();
         String htmlContent = rules.stream()
-                .map(ReservationRule::getDescription)
+                .map(r -> {
+                    String translated = translationService.getTranslatedValue("RESERVATION_RULE", String.valueOf(r.getId()), "description", userLanguage);
+                    return (translated == null || translated.isEmpty()) ? r.getDescription() : translated;
+                })
                 .collect(Collectors.joining("\n"));
 
         return new ReservationRuleResponse(htmlContent);
@@ -335,8 +345,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
             }
         }
 
+        String userLanguage = resolveUserLanguage();
         String htmlContent = rules.stream()
-                .map(ReservationRule::getDescription)
+                .map(r -> {
+                    String translated = translationService.getTranslatedValue("RESERVATION_RULE", String.valueOf(r.getId()), "description", userLanguage);
+                    return (translated == null || translated.isEmpty()) ? r.getDescription() : translated;
+                })
                 .collect(Collectors.joining("<br/>"));
 
         String trainerName = session.getTrainer() != null 
@@ -453,5 +467,44 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 .status(reservation.getStatus())
                 .sessionId(reservation.getReservationDate().getId())
                 .build();
+    }
+
+    private String resolveUserLanguage() {
+        Long userId = UserContext.getCurrentUserId();
+        return resolveUserLanguage(userId);
+    }
+
+    private String resolveUserLanguage(Long userId) {
+        // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
+        if (userId != null) {
+            try {
+                CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage().toUpperCase();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 2. Check current request Accept-Language header (unauthenticated / anonymous)
+        try {
+            org.springframework.web.context.request.RequestAttributes requestAttributes = 
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
+                jakarta.servlet.http.HttpServletRequest request = 
+                        ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
+                String acceptLanguage = request.getHeader("Accept-Language");
+                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
+                    String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                            .toUpperCase();
+                    if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
+                        return localeLang;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return "AZ";
     }
 }

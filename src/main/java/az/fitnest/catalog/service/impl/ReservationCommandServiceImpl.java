@@ -18,6 +18,7 @@ import az.fitnest.catalog.service.ReservationPolicyService;
 import az.fitnest.catalog.service.ReservationAvailabilityService;
 import az.fitnest.catalog.service.ReservationAuditService;
 import az.fitnest.catalog.service.CancellationReasonService;
+import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.NotificationsServiceGrpcClient;
 
@@ -46,6 +47,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     private final OrderServiceGrpcClient orderServiceClient;
     private final GymAdminRepository gymAdminRepository;
     private final NotificationsServiceGrpcClient notificationsServiceClient;
+    private final TranslationService translationService;
 
     @Transactional
     public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long lessonId, Long trainerId, Long sessionId) {
@@ -254,7 +256,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                     .status("ACTIVE")
                     .build();
         }
-        ruleRepository.save(rule);
+        rule = ruleRepository.save(rule);
+        translationService.autoTranslateAndSave("RESERVATION_RULE", String.valueOf(rule.getId()), "description", request.getHtmlContent());
     }
 
     private void sendReservationNotificationToAdmins(Reservation reservation) {
