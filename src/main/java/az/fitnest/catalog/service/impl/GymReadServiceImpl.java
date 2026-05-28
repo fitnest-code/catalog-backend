@@ -102,31 +102,47 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public String getUserLanguage(Long userId) {
-        try {
-            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                    .toUpperCase();
-            if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
-                return localeLang;
+        if (userId != null) {
+            if (userLanguageCache.size() >= 10000) {
+                userLanguageCache.clear();
             }
-        } catch (Exception ignored) {
-        }
-        if (userId == null) {
-            return "AZ";
-        }
-        if (userLanguageCache.size() >= 10000) {
-            userLanguageCache.clear();
-        }
-        return userLanguageCache.computeIfAbsent(userId, id -> {
-            String language = "AZ";
             try {
-                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(id);
-                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    language = user.getLanguage().toUpperCase();
+                String cachedLang = userLanguageCache.computeIfAbsent(userId, id -> {
+                    try {
+                        CachedUser user = userServiceGrpcClient.getUserById(id);
+                        if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                            return user.getLanguage().toUpperCase();
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    return "AZ";
+                });
+                if (cachedLang != null) {
+                    return cachedLang;
                 }
             } catch (Exception ignored) {
             }
-            return language;
-        });
+        }
+
+        try {
+            org.springframework.web.context.request.RequestAttributes requestAttributes = 
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
+                jakarta.servlet.http.HttpServletRequest request = 
+                        ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
+                String acceptLanguage = request.getHeader("Accept-Language");
+                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
+                    String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                            .toUpperCase();
+                    if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
+                        return localeLang;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return "AZ";
     }
 
     @Transactional(readOnly = true)

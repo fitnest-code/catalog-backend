@@ -163,32 +163,48 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     private String resolveUserLanguage(Long userId) {
-        // 1. Check current request Accept-Language header first via LocaleContextHolder
-        try {
-            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                    .toUpperCase();
-            if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
-                return localeLang;
-            }
-        } catch (Exception ignored) {
-        }
-
-        // 2. Fallback to GRPC User Profile language
+        // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
         if (userId != null) {
             if (userLanguageCache.size() >= 10000) {
                 userLanguageCache.clear();
             }
-            return userLanguageCache.computeIfAbsent(userId, id -> {
-                try {
-                    CachedUser user = userServiceGrpcClient.getUserById(id);
-                    if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                        return user.getLanguage().toUpperCase();
+            try {
+                String cachedLang = userLanguageCache.computeIfAbsent(userId, id -> {
+                    try {
+                        CachedUser user = userServiceGrpcClient.getUserById(id);
+                        if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                            return user.getLanguage().toUpperCase();
+                        }
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
+                    return "AZ";
+                });
+                if (cachedLang != null) {
+                    return cachedLang;
                 }
-                return "AZ";
-            });
+            } catch (Exception ignored) {
+            }
         }
+
+        // 2. Check current request Accept-Language header (unauthenticated / anonymous)
+        try {
+            org.springframework.web.context.request.RequestAttributes requestAttributes = 
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
+                jakarta.servlet.http.HttpServletRequest request = 
+                        ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
+                String acceptLanguage = request.getHeader("Accept-Language");
+                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
+                    String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
+                            .toUpperCase();
+                    if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
+                        return localeLang;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         return "AZ";
     }
 
