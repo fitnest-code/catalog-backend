@@ -31,6 +31,17 @@ public class IdentityServiceGrpcClient {
     }
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "identityService")
+    public void deactivateUser(Long userId, String reason) {
+        az.fitnest.user.grpc.DeactivateUserRequest request = az.fitnest.user.grpc.DeactivateUserRequest.newBuilder()
+                .setUserId(userId)
+                .setReason(reason != null ? reason : "")
+                .build();
+        identityUserServiceBlockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .deactivateUser(request);
+    }
+
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "identityService")
     public Long createGymAdmin(String name, String surname, String phone, String email, String password) {
         CreateGymAdminRequest request = CreateGymAdminRequest.newBuilder()
                 .setName(name)

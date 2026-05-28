@@ -1298,6 +1298,14 @@ public class GymWriteServiceImpl implements GymWriteService {
             throw new BadRequestException("ADMIN_GYM_MISMATCH", "error.admin_gym_mismatch");
         }
 
+        if (admin.getUserId() != null) {
+            try {
+                identityServiceGrpcClient.deactivateUser(admin.getUserId(), "Gym admin deleted");
+            } catch (Exception e) {
+                log.error("Failed to deactivate deleted gym admin user: {}", e.getMessage(), e);
+            }
+        }
+
         gymAdminRepository.delete(admin);
     }
 
