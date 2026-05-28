@@ -687,9 +687,11 @@ public class GymAdminController {
     @GetMapping("/{id}/lesson-hours")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(
             @PathVariable Long id,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
-        return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id, page, pageSize));
+        return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id, startDate, endDate, page, pageSize));
     }
 
     @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN rolu tələb olunur.")

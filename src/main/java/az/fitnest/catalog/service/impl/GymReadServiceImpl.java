@@ -2086,8 +2086,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Override
     @Transactional(readOnly = true)
-    public PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, int page, int pageSize) {
+    public PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, java.time.LocalDate startDate, java.time.LocalDate endDate, int page, int pageSize) {
         List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository.findByGymId(gymId).stream()
+                .filter(trd -> startDate == null || !trd.getDate().isBefore(startDate))
+                .filter(trd -> endDate == null || !trd.getDate().isAfter(endDate))
                 .map(trd -> new az.fitnest.catalog.dto.response.LessonHourResponse(
                         trd.getId(),
                         trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",

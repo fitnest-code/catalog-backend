@@ -41,7 +41,7 @@ public interface GymReadService {
     az.fitnest.catalog.dto.response.ReservationDetailAdminResponse getReservationDetailAdmin(Long reservationId);
 
     az.fitnest.catalog.dto.response.ReservationStatsResponse getGymReservationStats(Long gymId);
-    PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, int page, int pageSize);
+    PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, java.time.LocalDate startDate, java.time.LocalDate endDate, int page, int pageSize);
     az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse getGymWorkHours(Long gymId);
 
     PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse> getAllReservationsAdmin(az.fitnest.catalog.model.enums.ReservationStatus status, int page, int pageSize);

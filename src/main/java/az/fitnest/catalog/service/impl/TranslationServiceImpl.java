@@ -317,9 +317,14 @@ public class TranslationServiceImpl implements TranslationService {
                 if (rootNode.isArray() && rootNode.size() > 0) {
                     com.fasterxml.jackson.databind.JsonNode firstArray = rootNode.get(0);
                     if (firstArray.isArray() && firstArray.size() > 0) {
-                        com.fasterxml.jackson.databind.JsonNode translationPair = firstArray.get(0);
-                        if (translationPair.isArray() && translationPair.size() > 0) {
-                            return translationPair.get(0).asText();
+                        StringBuilder sb = new StringBuilder();
+                        for (com.fasterxml.jackson.databind.JsonNode segment : firstArray) {
+                            if (segment.isArray() && segment.size() > 0) {
+                                sb.append(segment.get(0).asText());
+                            }
+                        }
+                        if (sb.length() > 0) {
+                            return sb.toString();
                         }
                     }
                 }
