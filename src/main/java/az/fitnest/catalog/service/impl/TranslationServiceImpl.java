@@ -272,7 +272,32 @@ public class TranslationServiceImpl implements TranslationService {
         return null;
     }
 
+    private String sanitizeHtml(String text) {
+        if (text == null) return null;
+        if (!text.contains("<") && !text.contains(">")) {
+            return text;
+        }
+        try {
+            String clean = text.replaceAll("(?i)<head[^>]*?>[\\s\\S]*?</head>", "");
+            clean = clean.replaceAll("(?i)<style[^>]*?>[\\s\\S]*?</style>", "");
+            clean = clean.replaceAll("(?i)<script[^>]*?>[\\s\\S]*?</script>", "");
+            clean = clean.replaceAll("<[^>]*>", " ");
+            clean = clean.replaceAll("\\s+", " ").trim();
+            return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(clean);
+        } catch (Exception e) {
+            log.warn("Failed to sanitize HTML in translation service: {}", e.getMessage());
+            return text;
+        }
+    }
+
     private String translateWithGoogle(String text, String targetLanguage) {
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        text = sanitizeHtml(text);
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
         try {
             java.net.URI uri = org.springframework.web.util.UriComponentsBuilder
                 .fromUriString("https://translate.googleapis.com/translate_a/single")
