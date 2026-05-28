@@ -77,7 +77,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.client.StorageGrpcClient storageGrpcClient;
     private final java.util.concurrent.Executor taskExecutor;
 
-    private final java.util.Map<Long, String> userLanguageCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<Long, List<Long>> eligibleSubscriptionIdsCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -102,28 +101,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public String getUserLanguage(Long userId) {
+        // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
         if (userId != null) {
-            if (userLanguageCache.size() >= 10000) {
-                userLanguageCache.clear();
-            }
             try {
-                String cachedLang = userLanguageCache.computeIfAbsent(userId, id -> {
-                    try {
-                        CachedUser user = userServiceGrpcClient.getUserById(id);
-                        if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                            return user.getLanguage().toUpperCase();
-                        }
-                    } catch (Exception ignored) {
-                    }
-                    return "AZ";
-                });
-                if (cachedLang != null) {
-                    return cachedLang;
+                CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }
         }
 
+        // 2. Check current request Accept-Language header (unauthenticated / anonymous)
         try {
             org.springframework.web.context.request.RequestAttributes requestAttributes = 
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();

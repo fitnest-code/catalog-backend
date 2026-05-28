@@ -38,8 +38,6 @@ public class StoreServiceImpl implements StoreService {
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
-
-    private final java.util.Map<Long, String> userLanguageCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<Long, String> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
@@ -131,6 +129,18 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private String getUserLanguage(Long userId) {
+        // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
+        if (userId != null) {
+            try {
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage().toUpperCase();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 2. Check current request Accept-Language header (unauthenticated / anonymous)
         try {
             String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
                     .toUpperCase();
@@ -139,22 +149,8 @@ public class StoreServiceImpl implements StoreService {
             }
         } catch (Exception ignored) {
         }
-        if (userId == null) {
-            return "AZ";
-        }
-        if (userLanguageCache.size() >= 10000) {
-            userLanguageCache.clear();
-        }
-        return userLanguageCache.computeIfAbsent(userId, id -> {
-            try {
-                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(id);
-                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage().toUpperCase();
-                }
-            } catch (Exception ignored) {
-            }
-            return "AZ";
-        });
+
+        return "AZ";
     }
 
     private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng, String userLanguage) {

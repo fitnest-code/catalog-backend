@@ -38,8 +38,6 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
 
-    private final java.util.Map<Long, String> userLanguageCache = new java.util.concurrent.ConcurrentHashMap<>();
-
     @Transactional(readOnly = true)
     @org.springframework.cache.annotation.Cacheable(value = "categories-paged", key = "{#q, #page, #size, T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()}")
     public PaginatedResponse<CategoryResponse> getCategories(String q, int page, int size) {
@@ -165,22 +163,10 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     private String resolveUserLanguage(Long userId) {
         // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
         if (userId != null) {
-            if (userLanguageCache.size() >= 10000) {
-                userLanguageCache.clear();
-            }
             try {
-                String cachedLang = userLanguageCache.computeIfAbsent(userId, id -> {
-                    try {
-                        CachedUser user = userServiceGrpcClient.getUserById(id);
-                        if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                            return user.getLanguage().toUpperCase();
-                        }
-                    } catch (Exception ignored) {
-                    }
-                    return "AZ";
-                });
-                if (cachedLang != null) {
-                    return cachedLang;
+                CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                    return user.getLanguage().toUpperCase();
                 }
             } catch (Exception ignored) {
             }
