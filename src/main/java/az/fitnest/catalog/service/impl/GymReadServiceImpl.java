@@ -2086,8 +2086,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Override
     @Transactional(readOnly = true)
-    public List<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId) {
-        return trainerReservationDateRepository.findByGymId(gymId).stream()
+    public PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, int page, int pageSize) {
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository.findByGymId(gymId).stream()
                 .map(trd -> new az.fitnest.catalog.dto.response.LessonHourResponse(
                         trd.getId(),
                         trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",
@@ -2100,6 +2100,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
                 .collect(Collectors.toList());
+
+        int from = Math.max(0, (page - 1) * pageSize);
+        int to = Math.min(allHours.size(), from + pageSize);
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> pageItems = from >= allHours.size() ? new java.util.ArrayList<>()
+                : new java.util.ArrayList<>(allHours.subList(from, to));
+
+        return PaginatedResponse.<az.fitnest.catalog.dto.response.LessonHourResponse>builder()
+                .items(pageItems)
+                .total((long) allHours.size())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
     }
     private String cleanPackageName(String name) {
         if (name == null) return null;

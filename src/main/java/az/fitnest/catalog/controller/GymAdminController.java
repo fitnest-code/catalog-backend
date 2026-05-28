@@ -685,8 +685,11 @@ public class GymAdminController {
     @Operation(summary = "Dərs saatlarını alın", description = "İdman zalına aid dərs saatlarının siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/lesson-hours")
-    public ResponseEntity<List<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(@PathVariable Long id) {
-        return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id));
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id, page, pageSize));
     }
 
     @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN rolu tələb olunur.")
