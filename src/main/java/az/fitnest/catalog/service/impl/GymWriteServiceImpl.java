@@ -1275,6 +1275,16 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         gymAdminRepository.save(admin);
 
+        if (admin.getUserId() != null) {
+            identityServiceGrpcClient.updateUserProfile(
+                    admin.getUserId(),
+                    request.name(),
+                    request.surname(),
+                    request.email(),
+                    PhoneUtil.normalize(request.phoneNumber())
+            );
+        }
+
         translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "name", admin.getName());
         translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
     }
