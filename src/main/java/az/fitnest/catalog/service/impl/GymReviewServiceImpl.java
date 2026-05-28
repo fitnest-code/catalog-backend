@@ -36,6 +36,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     private final ReviewRepository reviewRepository;
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final az.fitnest.catalog.service.TranslationService translationService;
+    private final az.fitnest.catalog.client.NotificationsServiceGrpcClient notificationsServiceClient;
 
     @Transactional(readOnly = true)
     public PaginatedResponse<GymReviewResponse> getReviews(Long gymId, int page, int pageSize, String sort) {
@@ -116,6 +117,8 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                     log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
                     reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
                 }
+
+                sendReviewStatusNotification(review, true);
             }
             log.info("Successfully approved review: {}", reviewId);
             return review.getGymId();
@@ -130,15 +133,99 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     public void rejectReview(Long reviewId) {
         log.info("Rejecting review: {}", reviewId);
         try {
-            if (!reviewRepository.existsById(reviewId)) {
-                throw new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found");
+            Review review = reviewRepository.findById(reviewId)
+                    .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+            if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.REJECTED) {
+                reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+                sendReviewStatusNotification(review, false);
             }
-            reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
             log.info("Successfully rejected review: {}", reviewId);
         } catch (Exception e) {
             log.error("Error rejecting review {}", reviewId, e);
             throw e;
         }
+    }
+
+    private void sendReviewStatusNotification(Review review, boolean approved) {
+        if (review == null || review.getUserId() == null) {
+            return;
+        }
+
+        final Long userId = review.getUserId();
+        final String gymName = (review.getGym() != null) ? review.getGym().getName() : "";
+
+        // Resolve language
+        String userLang = "AZ";
+        try {
+            az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+            if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                userLang = user.getLanguage().toUpperCase();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get review author's language preference, defaulting to AZ. User ID: {}", userId, e);
+        }
+
+        // Determine title and body based on approval status and language
+        final String title;
+        final String body;
+
+        if (approved) {
+            switch (userLang) {
+                case "EN":
+                    title = "Review Approved";
+                    body = String.format("Your review for %s has been approved.", gymName);
+                    break;
+                case "RU":
+                    title = "Отзыв одобрен";
+                    body = String.format("Ваш отзыв о спортзале %s был одобрен.", gymName);
+                    break;
+                case "AZ":
+                default:
+                    title = "Rəyiniz təsdiqləndi";
+                    body = String.format("Sizin %s idman zalına yazdığınız rəy təsdiqləndi.", gymName);
+                    break;
+            }
+        } else {
+            switch (userLang) {
+                case "EN":
+                    title = "Review Rejected";
+                    body = String.format("Your review for %s has been rejected.", gymName);
+                    break;
+                case "RU":
+                    title = "Отзыв отклонен";
+                    body = String.format("Ваш отзыв о спортзале %s был отклонен.", gymName);
+                    break;
+                case "AZ":
+                default:
+                    title = "Rəyiniz rədd edildi";
+                    body = String.format("Sizin %s idman zalına yazdığınız rəy rədd edildi.", gymName);
+                    break;
+            }
+        }
+
+        // Send push notification after transaction commits
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        triggerPushNotificationAsync(userId, title, body);
+                    }
+                }
+            );
+        } else {
+            triggerPushNotificationAsync(userId, title, body);
+        }
+    }
+
+    private void triggerPushNotificationAsync(Long userId, String title, String body) {
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                notificationsServiceClient.sendPushNotification(userId, title, body);
+            } catch (Exception e) {
+                log.error("Error triggering push notification for user {}", userId, e);
+            }
+        });
     }
 
     @Transactional(readOnly = true)
