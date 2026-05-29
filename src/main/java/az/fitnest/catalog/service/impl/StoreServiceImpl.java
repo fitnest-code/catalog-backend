@@ -169,28 +169,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private String getUserLanguage(Long userId) {
-        // 1. Fallback to GRPC User Profile language first (Authorization / JWT user ID)
-        if (userId != null) {
-            try {
-                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
-                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage().toUpperCase();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        // 2. Check current request Accept-Language header (unauthenticated / anonymous)
-        try {
-            String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                    .toUpperCase();
-            if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
-                return localeLang;
-            }
-        } catch (Exception ignored) {
-        }
-
-        return "AZ";
+        return az.fitnest.catalog.util.UserContext.getUserLanguage();
     }
 
     private StoreMainPageResponse mapToSummary(Store store, boolean isSaved, String userLanguage, Map<String, String> translationMap, Double lat, Double lng) {

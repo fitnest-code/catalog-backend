@@ -69,37 +69,10 @@ public class LessonTypeAdminServiceImpl implements LessonTypeAdminService {
     }
 
     private String resolveUserLanguage() {
-        Long userId = UserContext.getCurrentUserId();
-        return resolveUserLanguage(userId);
+        return az.fitnest.catalog.util.UserContext.getUserLanguage();
     }
 
     private String resolveUserLanguage(Long userId) {
-        if (userId != null) {
-            try {
-                CachedUser user = userServiceGrpcClient.getUserById(userId);
-                if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
-                    return user.getLanguage().toUpperCase();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        try {
-            org.springframework.web.context.request.RequestAttributes requestAttributes = 
-                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
-            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
-                jakarta.servlet.http.HttpServletRequest request = 
-                        ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
-                String acceptLanguage = request.getHeader("Accept-Language");
-                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
-                    String localeLang = org.springframework.context.i18n.LocaleContextHolder.getLocale().getLanguage()
-                            .toUpperCase();
-                    if (localeLang.equals("EN") || localeLang.equals("RU") || localeLang.equals("AZ")) {
-                        return localeLang;
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return "AZ";
+        return az.fitnest.catalog.util.UserContext.getUserLanguage();
     }
 }

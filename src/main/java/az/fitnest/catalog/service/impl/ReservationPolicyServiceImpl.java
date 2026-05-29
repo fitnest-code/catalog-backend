@@ -19,15 +19,12 @@ import java.time.temporal.ChronoUnit;
 @RequiredArgsConstructor
 public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.ReservationPolicyService {
 
-    private final UserServiceGrpcClient userServiceClient;
     private final OrderServiceGrpcClient orderServiceClient;
 
     public void validateReservationAllowed(Long userId, Gym gym, TrainerReservationDate session) {
         if (!Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
             throw new BadRequestException("RESERVATION_MODULE_NOT_ENABLED", "error.reservation_module_not_enabled");
         }
-
-        CachedUser user = userServiceClient.getUserById(userId);
 
         ActiveSubscriptionResponse subscription = orderServiceClient.getActiveSubscription(userId);
         if (!"ACTIVE".equalsIgnoreCase(subscription.getSubscriptionStatus())) {
