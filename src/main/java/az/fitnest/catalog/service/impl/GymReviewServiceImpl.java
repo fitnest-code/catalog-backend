@@ -112,11 +112,8 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
 
             if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
                 reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
-
-                if (review.getRating() != null) {
-                    log.debug("Updating gym {} rating with review rating: {}", review.getGymId(), review.getRating());
-                    reviewRepository.incrementReviewCountAndRating(review.getGymId(), review.getRating().doubleValue());
-                }
+                reviewRepository.flush();
+                recalculateGymRating(review.getGymId());
 
                 sendReviewStatusNotification(review, true);
             }
@@ -137,12 +134,37 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                     .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
             if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.REJECTED) {
                 reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+                reviewRepository.flush();
+                recalculateGymRating(review.getGymId());
+
                 sendReviewStatusNotification(review, false);
             }
             log.info("Successfully rejected review: {}", reviewId);
         } catch (Exception e) {
             log.error("Error rejecting review {}", reviewId, e);
             throw e;
+        }
+    }
+
+    private void recalculateGymRating(Long gymId) {
+        java.util.Map<String, Object> stats = reviewRepository.getRatingAndCountByGymId(gymId);
+        Double avgRating = 0.0;
+        Long totalCount = 0L;
+        if (stats != null) {
+            Number avg = (Number) stats.get("avgRating");
+            Number cnt = (Number) stats.get("totalCount");
+            if (avg != null) {
+                avgRating = avg.doubleValue();
+            }
+            if (cnt != null) {
+                totalCount = cnt.longValue();
+            }
+        }
+        Gym gym = gymRepository.findById(gymId).orElse(null);
+        if (gym != null) {
+            gym.setRating(avgRating);
+            gym.setReviewsCount(totalCount.intValue());
+            gymRepository.save(gym);
         }
     }
 
