@@ -14,6 +14,8 @@ public interface StoreService {
 
     public StoreDetailResponse getStoreDetail(Long var1, Long var2);
 
+    public StoreDetailResponse getStoreDetailBase(Long storeId, String userLanguage);
+
     public FilterResponse getFilters();
 
     public StoreDetailResponse createStore(StoreRequest var1);

@@ -19,6 +19,7 @@ import az.fitnest.catalog.model.entity.StoreWorkHours;
 import az.fitnest.catalog.model.enums.StoreStatus;
 import az.fitnest.catalog.repository.SavedStoreRepository;
 import az.fitnest.catalog.repository.StoreRepository;
+import az.fitnest.catalog.repository.TranslationRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.StoreAdminService;
 import lombok.RequiredArgsConstructor;
@@ -52,12 +53,13 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     private final StoreRepository storeRepository;
     private final StorageGrpcClient storageGrpcClient;
     private final SavedStoreRepository savedStoreRepository;
+    private final TranslationRepository translationRepository;
     private final FileStorageService fileStorageService;
     private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public Long createMarketStep1(String name, MultipartFile photo) {
 
         String coverUrl = uploadAndGetUrl(photo);
@@ -74,7 +76,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public void createMarketStep2(Long id, StoreStep2Request request) {
 
         Store store = findById(id);
@@ -113,7 +115,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public void createMarketStep3(Long id, StoreStep3Request request) {
 
         // 1. Atomically delete all existing store discount rows via bulk native query to avoid row-by-row cascading overhead and version locking conflicts
@@ -138,7 +140,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
     }
 
     @Override
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public void updateStoreStatus(Long storeId, String status) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new RuntimeException("Store not found with ID: " + storeId));
@@ -215,7 +217,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public void updateStore(Long id, StoreUpdateRequest request, MultipartFile photo) {
 
         Store store = findById(id);
@@ -290,13 +292,18 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations", "admin-store-details"}, allEntries = true)
     public void deleteStore(Long id) {
 
         Store store = storeRepository.findByIdWithAssociations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Mağaza tapılmadı: " + id));
 
         savedStoreRepository.deleteByStoreId(id);
+        
+        try {
+            translationRepository.deleteByEntityTypeAndEntityId("STORE", id.toString());
+        } catch (Exception ignored) {}
+
         storeRepository.deleteStoreDiscountsByStoreId(id);
         storeRepository.deleteStoreImagesByStoreId(id);
 
@@ -322,6 +329,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "admin-store-details", key = "#id")
     public AdminStoreDetailResponse getStoreById(Long id) {
 
         Store store = storeRepository.findByIdWithAssociations(id)

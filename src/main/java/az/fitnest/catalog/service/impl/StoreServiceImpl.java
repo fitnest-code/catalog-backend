@@ -7,6 +7,7 @@ import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.*;
 import az.fitnest.catalog.repository.SavedStoreRepository;
 import az.fitnest.catalog.repository.StoreRepository;
+import az.fitnest.catalog.repository.TranslationRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
 import az.fitnest.catalog.service.StoreService;
@@ -33,12 +34,17 @@ import java.util.stream.Stream;
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
     private final SavedStoreRepository savedStoreRepository;
+    private final TranslationRepository translationRepository;
     private final ReverseGeocodingService reverseGeocodingService;
     private final FileStorageService fileStorageService;
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final java.util.Map<Long, String> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private StoreService self;
 
     @Override
     @Transactional(readOnly = true)
@@ -76,8 +82,25 @@ public class StoreServiceImpl implements StoreService {
         }
 
         String userLanguage = getUserLanguage(userId);
+        Set<Long> savedIdsSet = Collections.emptySet();
+        if (userId != null && !storePage.getContent().isEmpty()) {
+            List<Long> ids = storePage.getContent().stream().map(Store::getId).toList();
+            savedIdsSet = new HashSet<>(savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, ids));
+        }
+        Map<String, String> translationMap = Collections.emptyMap();
+        if (!"AZ".equalsIgnoreCase(userLanguage) && !storePage.getContent().isEmpty()) {
+            List<String> idStrings = storePage.getContent().stream().map(s -> s.getId().toString()).toList();
+            List<Translation> translations = translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("STORE", idStrings, userLanguage);
+            translationMap = new HashMap<>();
+            for (Translation t : translations) {
+                translationMap.put(t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue());
+            }
+        }
+
+        final Set<Long> finalSavedIdsSet = savedIdsSet;
+        final Map<String, String> finalTranslationMap = translationMap;
         List<StoreMainPageResponse> items = storePage.getContent().stream()
-                .map(s -> mapToSummary(s, userId, lat, lng, userLanguage))
+                .map(s -> mapToSummary(s, finalSavedIdsSet.contains(s.getId()), userLanguage, finalTranslationMap, lat, lng))
                 .collect(Collectors.toList());
 
         return PaginatedResponse.<StoreMainPageResponse>builder()
@@ -112,8 +135,25 @@ public class StoreServiceImpl implements StoreService {
         List<Store> pageEntities = from >= filtered.size() ? new ArrayList<>() : new ArrayList<>(filtered.subList(from, to));
 
         String userLanguage = getUserLanguage(userId);
+        Set<Long> savedIdsSet = Collections.emptySet();
+        if (userId != null && !pageEntities.isEmpty()) {
+            List<Long> ids = pageEntities.stream().map(Store::getId).toList();
+            savedIdsSet = new HashSet<>(savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, ids));
+        }
+        Map<String, String> translationMap = Collections.emptyMap();
+        if (!"AZ".equalsIgnoreCase(userLanguage) && !pageEntities.isEmpty()) {
+            List<String> idStrings = pageEntities.stream().map(s -> s.getId().toString()).toList();
+            List<Translation> translations = translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("STORE", idStrings, userLanguage);
+            translationMap = new HashMap<>();
+            for (Translation t : translations) {
+                translationMap.put(t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue());
+            }
+        }
+
+        final Set<Long> finalSavedIdsSet = savedIdsSet;
+        final Map<String, String> finalTranslationMap = translationMap;
         List<StoreMainPageResponse> pageItems = pageEntities.stream()
-                .map(s -> mapToSummary(s, userId, lat, lng, userLanguage))
+                .map(s -> mapToSummary(s, finalSavedIdsSet.contains(s.getId()), userLanguage, finalTranslationMap, lat, lng))
                 .collect(Collectors.toList());
 
         return PaginatedResponse.<StoreMainPageResponse>builder()
@@ -153,26 +193,47 @@ public class StoreServiceImpl implements StoreService {
         return "AZ";
     }
 
-    private StoreMainPageResponse mapToSummary(Store store, Long userId, Double lat, Double lng, String userLanguage) {
+    private StoreMainPageResponse mapToSummary(Store store, boolean isSaved, String userLanguage, Map<String, String> translationMap, Double lat, Double lng) {
         Double distance = null;
         if (lat != null && lng != null && store.getAddress() != null && store.getAddress().getLatitude() != null && store.getAddress().getLongitude() != null) {
             distance = calculateDistance(lat, lng, store.getAddress().getLatitude(), store.getAddress().getLongitude());
         }
 
-        boolean isSaved = false;
-        if (userId != null) {
-            isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
+        String localizedName = null;
+        if (!"AZ".equalsIgnoreCase(userLanguage)) {
+            localizedName = translationMap.get(store.getId() + "_name");
+        }
+        if (localizedName == null) {
+            localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
+        }
+        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
+
+        String localizedCity = null;
+        if (store.getAddress() != null) {
+            if (!"AZ".equalsIgnoreCase(userLanguage)) {
+                localizedCity = translationMap.get(store.getId() + "_city");
+            }
+            if (localizedCity == null) {
+                localizedCity = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage);
+            }
         }
 
-        String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
-        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
+        String localizedAddressText = null;
+        if (store.getAddress() != null) {
+            if (!"AZ".equalsIgnoreCase(userLanguage)) {
+                localizedAddressText = translationMap.get(store.getId() + "_addresstext");
+            }
+            if (localizedAddressText == null) {
+                localizedAddressText = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage);
+            }
+        }
 
         return StoreMainPageResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
                 .coverImageUrl(store.getCoverImageUrl())
-                .city(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage) : null)
-                .addressText(store.getAddress() != null ? getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage) : null)
+                .city(localizedCity)
+                .addressText(localizedAddressText)
                 .discountAppliesTo(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreMainPageResponse.DiscountDto.builder().packageName(resolvePackageName(d.getPackageId(), d.getAppliesTo())).discountPercent(d.getPercent()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null)
                 .isSaved(isSaved)
@@ -213,14 +274,10 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @org.springframework.cache.annotation.Cacheable(value = "stores-details-base", key = "#storeId + '_' + #userLanguage")
     @Transactional(readOnly = true)
-    public StoreDetailResponse getStoreDetail(Long userId, Long storeId) {
+    public StoreDetailResponse getStoreDetailBase(Long storeId, String userLanguage) {
         Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
-        boolean isSaved = false;
-        if (userId != null) {
-            isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(store.getId())).isEmpty();
-        }
-        String userLanguage = getUserLanguage(userId);
         String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
         if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
         return StoreDetailResponse.builder()
@@ -235,14 +292,37 @@ public class StoreServiceImpl implements StoreService {
                 .phone(store.getPhone())
                 .category(store.getCategory())
                 .status(translationService.getTranslatedValue("STORE_STATUS", store.getStatus(), "name", userLanguage) != null ? translationService.getTranslatedValue("STORE_STATUS", store.getStatus(), "name", userLanguage) : store.getStatus())
-
                 .discounts(store.getDiscounts() != null ? store.getDiscounts().stream().map(d -> StoreDiscountResponse.builder().percent(d.getPercent()).appliesTo(d.getAppliesTo()).build()).toList() : Collections.emptyList())
                 .social(store.getSocialLink() != null ? StoreSocialDto.builder().name(store.getSocialLink().getName()).url(store.getSocialLink().getUrl()).build() : null)
                 .images(store.getImages() != null ? store.getImages().stream().map(StoreImage::getUrl).toList() : Collections.emptyList())
-                .isSaved(isSaved)
+                .isSaved(false)
                 .isNew(isNew(store))
                 .build();
-    }
+      }
+
+      @Override
+      @Transactional(readOnly = true)
+      public StoreDetailResponse getStoreDetail(Long userId, Long storeId) {
+          String userLanguage = getUserLanguage(userId);
+          StoreDetailResponse base = self.getStoreDetailBase(storeId, userLanguage);
+          boolean isSaved = false;
+          if (userId != null) {
+              isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(storeId)).isEmpty();
+          }
+          return StoreDetailResponse.builder()
+                  .storeId(base.storeId())
+                  .name(base.name())
+                  .address(base.address())
+                  .phone(base.phone())
+                  .category(base.category())
+                  .status(base.status())
+                  .discounts(base.discounts())
+                  .social(base.social())
+                  .images(base.images())
+                  .isSaved(isSaved)
+                  .isNew(base.isNew())
+                  .build();
+      }
 
     @Override
     @Transactional
@@ -273,7 +353,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations"}, allEntries = true)
     public StoreDetailResponse createStore(StoreRequest request) {
         Store store = new Store();
         updateStoreFromRequest(store, request);
@@ -290,7 +370,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations"}, allEntries = true)
     public StoreDetailResponse updateStore(Long storeId, StoreRequest request) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         updateStoreFromRequest(store, request);
@@ -307,7 +387,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations"}, allEntries = true)
     public void deleteStore(Long storeId) {
 
         Store store = storeRepository.findById(storeId)
@@ -317,16 +397,22 @@ public class StoreServiceImpl implements StoreService {
 
         savedStoreRepository.deleteByStoreId(storeId);
 
+        try {
+            translationRepository.deleteByEntityTypeAndEntityId("STORE", storeId.toString());
+        } catch (Exception ignored) {}
 
-
+        List<String> filesToDelete = new ArrayList<>();
         if (store.getCoverImageUrl() != null) {
-            fileStorageService.deleteFile(store.getCoverImageUrl());
+            filesToDelete.add(store.getCoverImageUrl());
         }
 
         if (store.getImages() != null && !store.getImages().isEmpty()) {
-            List<String> imageUrls = store.getImages().stream().map(StoreImage::getUrl).toList();
-            fileStorageService.deleteFiles(imageUrls);
+            store.getImages().stream()
+                    .map(StoreImage::getUrl)
+                    .filter(url -> url != null && !url.isBlank())
+                    .forEach(filesToDelete::add);
         }
+        fileStorageService.deleteFilesAfterCommit(filesToDelete);
 
         try {
             storeRepository.deleteStoreSocialLinksByStoreId(storeId);
@@ -385,6 +471,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "stores-details-base", allEntries = true)
     public String uploadStoreImage(Long storeId, MultipartFile file) {
         Store store = storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
         String fullUrl = fileStorageService.saveFile(file, "/stores/" + storeId);
@@ -399,6 +486,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "stores-locations", key = "#storeId")
     public LocationResponse getStoreLocation(Long storeId) {
         Store store = getStoreEntityById(storeId);
         Address addr = store.getAddress();
@@ -425,11 +513,9 @@ public class StoreServiceImpl implements StoreService {
         return fileStorageService.saveFile(file, "/stores/" + storeId);
     }
 
-
-
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base"}, allEntries = true)
     public void updateStoreCoverImageUrl(Long storeId, String coverImageUrl) {
         Store store = getStoreEntityById(storeId);
         store.setCoverImageUrl(coverImageUrl);
@@ -438,7 +524,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base", "stores-locations"}, allEntries = true)
     public void deleteAllStores() {
         List<Store> stores = storeRepository.findAll();
         for (Store store : stores) {
@@ -448,7 +534,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "admin-stores", allEntries = true)
+    @CacheEvict(value = {"admin-stores", "stores-details-base"}, allEntries = true)
     public void addDiscount(Long storeId, AddDiscountRequest request) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));

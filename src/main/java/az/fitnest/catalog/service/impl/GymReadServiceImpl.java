@@ -25,6 +25,7 @@ import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
+import az.fitnest.catalog.repository.TranslationRepository;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.PlatformUtil;
 import az.fitnest.catalog.util.UserContext;
@@ -69,6 +70,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final org.springframework.context.MessageSource messageSource;
     private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
+    private final TranslationRepository translationRepository;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final az.fitnest.catalog.repository.SupportedServiceRepository supportedServiceRepository;
     private final az.fitnest.catalog.repository.GymAdminRepository gymAdminRepository;
@@ -558,6 +560,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .collect(Collectors.toMap(id -> id, packageInfoCache::get));
         final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
 
+        Map<String, String> translationLookup = fetchTranslationsInBulk(gymPage.getContent(), userLanguage);
+
         List<GymMainPageResponse> items = gymPage.getContent().stream()
                 .map(gym -> mapToGymMainPageDto(
                         gym,
@@ -567,6 +571,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         finalSavedIds.contains(gym.getId()),
                         finalPackageMap,
                         finalWorkHoursMap,
+                        translationLookup,
                         userLanguage
                 ))
                 .collect(Collectors.toList());
@@ -825,6 +830,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .filter(packageInfoCache::containsKey)
                 .collect(Collectors.toMap(id -> id, packageInfoCache::get));
 
+        Map<String, String> translationLookup = fetchTranslationsInBulk(pageGyms, userLanguage);
+
         List<GymMainPageResponse> pageItems = pageGyms.stream()
                 .map(g -> mapToGymMainPageDto(
                         g,
@@ -834,6 +841,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         true,
                         manualPackageMap,
                         manualWorkHoursMap,
+                        translationLookup,
                         userLanguage
                 ))
                 .collect(Collectors.toList());
@@ -844,9 +852,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .page(page)
                 .pageSize(pageSize)
                 .build();
-    }
-
-    private GymMainPageResponse mapToGymMainPageDto(
+    }    private GymMainPageResponse mapToGymMainPageDto(
             Gym gym,
             Long userId,
             Double userLat,
@@ -854,6 +860,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             boolean isSaved,
             Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap,
             Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap,
+            Map<String, String> translationLookup,
             String userLanguage) {
 
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
@@ -880,7 +887,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         CategoryResponse category = null;
         if (gym.getCategory() != null) {
             Category c = gym.getCategory();
-            String localizedCatName = translationService.getTranslatedValue(
+            String localizedCatName = getTranslatedValueCached(translationLookup,
                     "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
             category = CategoryResponse.builder()
                     .id(c.getCategoryId())
@@ -899,7 +906,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String localizedPackageName = translationService.getTranslatedValue(
+                        String localizedPackageName = getTranslatedValueCached(translationLookup,
                                 "GYMSUBSCRIPTION", planId, "name", userLanguage);
                         String packageName = cleanPackageName(
                                 (localizedPackageName != null && !localizedPackageName.isEmpty())
@@ -908,7 +915,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         );
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
-                                    String localizedBenefit = translationService.getTranslatedValue(
+                                    String localizedBenefit = getTranslatedValueCached(translationLookup,
                                             "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
                                     return GymPlanBenefitResponse.builder()
                                             .description(localizedBenefit != null && !localizedBenefit.isEmpty()
@@ -939,10 +946,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .stars(stars)
                 .isNew(isNew)
                 .location(address != null
-                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", userLanguage)
+                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "addressText", translationLookup, userLanguage)
                         : null)
                 .city(address != null
-                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", userLanguage)
+                        ? getLocalizedAddressField(gym.getId(), "GYM", address, "city", translationLookup, userLanguage)
                         : null)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
@@ -1684,11 +1691,33 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return new GymTypeCountResponse(gender, count);
     }
 
+    private String getTranslatedValueCached(
+            Map<String, String> lookup,
+            String entityType,
+            String entityId,
+            String fieldName,
+            String userLanguage) {
+        if (userLanguage == null || userLanguage.equalsIgnoreCase("AZ")) {
+            return null;
+        }
+        String key = entityType.toUpperCase() + "_" + entityId + "_" + fieldName.toLowerCase();
+        if (lookup != null && lookup.containsKey(key)) {
+            return lookup.get(key);
+        }
+        return translationService.getTranslatedValue(entityType, entityId, fieldName, userLanguage);
+    }
+
     private String getLocalizedAddressField(Long entityId, String entityType,
             az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
+        return getLocalizedAddressField(entityId, entityType, address, fieldName, null, userLanguage);
+    }
+
+    private String getLocalizedAddressField(Long entityId, String entityType,
+            az.fitnest.catalog.model.entity.Address address, String fieldName,
+            Map<String, String> lookup, String userLanguage) {
         if (address == null)
             return null;
-        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName,
+        String localized = getTranslatedValueCached(lookup, entityType, entityId.toString(), fieldName,
                 userLanguage);
         if (localized == null || localized.isEmpty()) {
             try {
@@ -1702,6 +1731,54 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             return null;
         }
         return localized;
+    }
+
+    private Map<String, String> fetchTranslationsInBulk(List<Gym> gyms, String userLanguage) {
+        if (userLanguage == null || userLanguage.equalsIgnoreCase("AZ") || gyms.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+
+        List<String> gymIds = gyms.stream().map(g -> g.getId().toString()).toList();
+        List<String> categoryIds = gyms.stream()
+                .map(Gym::getCategory)
+                .filter(java.util.Objects::nonNull)
+                .map(c -> c.getCategoryId().toString())
+                .distinct()
+                .toList();
+        List<String> subscriptionIds = gyms.stream()
+                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
+                .filter(java.util.Objects::nonNull)
+                .map(Object::toString)
+                .distinct()
+                .toList();
+        List<String> serviceIds = gyms.stream()
+                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(sub -> sub.getSupportedServices() != null ? sub.getSupportedServices().stream() : java.util.stream.Stream.empty())
+                .map(b -> b.getId().toString())
+                .distinct()
+                .toList();
+
+        Map<String, String> lookup = new java.util.HashMap<>();
+
+        if (!gymIds.isEmpty()) {
+            translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("GYM", gymIds, userLanguage.toUpperCase())
+                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
+        }
+        if (!categoryIds.isEmpty()) {
+            translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("CATEGORY", categoryIds, userLanguage.toUpperCase())
+                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
+        }
+        if (!subscriptionIds.isEmpty()) {
+            translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("GYMSUBSCRIPTION", subscriptionIds, userLanguage.toUpperCase())
+                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
+        }
+        if (!serviceIds.isEmpty()) {
+            translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("SUPPORTEDSERVICE", serviceIds, userLanguage.toUpperCase())
+                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
+        }
+
+        return lookup;
     }
 
     private String getLocalizedGymName(Gym gym, String userLanguage) {
