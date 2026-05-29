@@ -79,6 +79,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.client.StorageGrpcClient storageGrpcClient;
     private final java.util.concurrent.Executor taskExecutor;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private GymReadServiceImpl self;
+
     private final java.util.Map<Long, List<Long>> eligibleSubscriptionIdsCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -465,6 +469,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(
+        value = "gym-listings",
+        key = "{#userId != null && 'SAVED'.equalsIgnoreCase(#type) ? #userId : 0, " +
+              "#q != null ? #q : '', " +
+              "#type != null ? #type : '', " +
+              "#categoryId != null ? #categoryId : 0, " +
+              "#subscriptionId != null ? #subscriptionId : 0, " +
+              "#page, #pageSize, " +
+              "#userLat != null ? T(java.lang.Math).round(#userLat * 1000.0) / 1000.0 : null, " +
+              "#userLng != null ? T(java.lang.Math).round(#userLng * 1000.0) / 1000.0 : null, " +
+              "#sortDir != null ? #sortDir : '', " +
+              "#root.target.getUserLanguage(#userId)}"
+    )
     public PaginatedResponse<GymMainPageResponse> getGyms(Long userId, String q, String type, Long categoryId,
                                                           Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
@@ -479,7 +496,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if ("SAVED".equalsIgnoreCase(type)) {
             if (userId == null)
                 return emptyPaginatedResponse(page, pageSize);
-            List<SavedGym> saved = savedGymRepository.findByUserId(userId);
+            List<SavedGym> saved = savedGymRepository.findByUserIdWithGym(userId);
             List<Gym> candidates = saved.stream().map(SavedGym::getGym).toList();
             return manualPaginate(candidates, userId, userLat, userLng, page, pageSize, q, categoryId, userLanguage);
         }
@@ -508,7 +525,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         else {
-            gymPage = gymRepository.findAllGymsWithFilters(searchKey, categoryId, hasSubscriptionFilter, subscriptionIds, pageable);
+            Page<Long> idPage = gymRepository.findGymIdsWithFilters(searchKey, categoryId, hasSubscriptionFilter, subscriptionIds, pageable);
+            if (idPage.isEmpty()) {
+                gymPage = Page.empty(pageable);
+            } else {
+                List<Long> ids = idPage.getContent();
+                List<Gym> gyms = gymRepository.findWithListDetailsByIdIn(ids);
+                Map<Long, Gym> gymMap = gyms.stream().collect(Collectors.toMap(Gym::getId, g -> g));
+                List<Gym> sortedGyms = ids.stream().map(gymMap::get).filter(java.util.Objects::nonNull).toList();
+                gymPage = new org.springframework.data.domain.PageImpl<>(sortedGyms, pageable, idPage.getTotalElements());
+            }
         }
 
         if (gymPage == null) {
@@ -794,7 +820,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         int total = filtered.size();
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(total, from + pageSize);
-        List<Gym> pageGyms = from >= total ? new java.util.ArrayList<>() : filtered.subList(from, to);
+        List<Gym> pageGymsRaw = from >= total ? new java.util.ArrayList<>() : filtered.subList(from, to);
+        List<Long> pageGymIds = pageGymsRaw.stream().map(Gym::getId).toList();
+        List<Gym> pageGymsDetailed = pageGymIds.isEmpty() ? List.of() : gymRepository.findWithListDetailsByIdIn(pageGymIds);
+        Map<Long, Gym> pageGymsDetailedMap = pageGymsDetailed.stream().collect(Collectors.toMap(Gym::getId, g -> g));
+        List<Gym> pageGyms = pageGymIds.stream().map(pageGymsDetailedMap::get).filter(java.util.Objects::nonNull).toList();
 
         Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> manualWorkHoursMap = pageGyms.stream()
                 .collect(Collectors.toMap(
@@ -1054,7 +1084,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public List<GymCategoryCountResponse> getGymCountByCategory() {
         Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
         String language = getUserLanguage(userId);
+        return self.getGymCountByCategoryCached(language);
+    }
 
+    @Cacheable(value = "gym-count-by-category", key = "#language")
+    public List<GymCategoryCountResponse> getGymCountByCategoryCached(String language) {
         List<Object[]> results = gymRepository.countGymsByCategory();
         return results.stream()
                 .map(row -> {
@@ -1079,6 +1113,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "gym-count-by-subscription")
     public List<GymSubscriptionCountResponse> getGymCountBySubscription() {
         List<Object[]> results = gymRepository.countGymsBySubscriptionPackageId();
         if (results.isEmpty()) {
@@ -1090,17 +1125,33 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .filter(java.util.Objects::nonNull)
                 .toList();
 
-        List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(packageIds);
-        Map<Long, String> packageIdToName = packageNames.stream()
-                .collect(Collectors.toMap(az.fitnest.order.grpc.PackageNameInfo::getPackageId, az.fitnest.order.grpc.PackageNameInfo::getName, (a, b) -> a));
+        List<Long> uncachedPackageIds = packageIds.stream()
+                .filter(id -> !packageInfoCache.containsKey(id))
+                .toList();
+        if (!uncachedPackageIds.isEmpty()) {
+            try {
+                if (packageInfoCache.size() >= 10000) {
+                    packageInfoCache.clear();
+                }
+                List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
+                for (var info : newInfos) {
+                    packageInfoCache.put(info.getPackageId(), info);
+                }
+            } catch (Exception e) {
+            }
+        }
 
         return results.stream()
                 .map(row -> {
                     Long packageId = (Long) row[0];
                     Long count = (Long) row[1];
+                    String packageName = "UNKNOWN";
+                    if (packageId != null && packageInfoCache.containsKey(packageId)) {
+                        packageName = packageInfoCache.get(packageId).getName();
+                    }
                     return new GymSubscriptionCountResponse(
                             packageId,
-                            packageIdToName.getOrDefault(packageId, "UNKNOWN"),
+                            packageName,
                             count
                     );
                 })

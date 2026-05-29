@@ -93,7 +93,7 @@ public interface GymRepository
             org.springframework.data.domain.Pageable pageable
     );
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions", "subscriptions.supportedServices", "generalWorkHours"})
     @org.springframework.data.jpa.repository.Query(
             value = "SELECT g FROM Gym g " +
                     "WHERE (:hasSubscriptionFilter = false OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId IN :subscriptionIds)) " +
@@ -101,6 +101,20 @@ public interface GymRepository
                     "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))"
     )
     org.springframework.data.domain.Page<Gym> findAllGymsWithFilters(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+            @org.springframework.data.repository.query.Param("hasSubscriptionFilter") boolean hasSubscriptionFilter,
+            @org.springframework.data.repository.query.Param("subscriptionIds") List<Long> subscriptionIds,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT g.id FROM Gym g " +
+                    "WHERE (:hasSubscriptionFilter = false OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId IN :subscriptionIds)) " +
+                    "AND (:categoryId IS NULL OR g.category.id = :categoryId) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))"
+    )
+    org.springframework.data.domain.Page<Long> findGymIdsWithFilters(
             @org.springframework.data.repository.query.Param("q") String q,
             @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
             @org.springframework.data.repository.query.Param("hasSubscriptionFilter") boolean hasSubscriptionFilter,
@@ -157,7 +171,7 @@ public interface GymRepository
             org.springframework.data.domain.Pageable pageable
     );
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "subscriptions", "subscriptions.supportedServices", "generalWorkHours"})
     public List<Gym> findWithListDetailsByIdIn(List<Long> ids);
 
     @org.springframework.data.jpa.repository.Query("SELECT g.category, COUNT(g.id) FROM Gym g WHERE g.category IS NOT NULL GROUP BY g.category")

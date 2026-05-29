@@ -15,6 +15,9 @@ public interface SavedGymRepository extends JpaRepository<SavedGym, Long> {
 
     List<SavedGym> findByUserId(Long userId);
 
+    @Query("SELECT s FROM SavedGym s JOIN FETCH s.gym WHERE s.userId = :userId")
+    List<SavedGym> findByUserIdWithGym(@Param("userId") Long userId);
+
     void deleteByGymId(Long gymId);
 
     boolean existsByGymId(Long gymId);

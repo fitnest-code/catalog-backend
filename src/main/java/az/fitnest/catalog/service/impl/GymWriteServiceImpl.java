@@ -120,6 +120,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Caching(evict = {
             @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "gym-listings", allEntries = true),
             @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     })
     public void createGym(GymRequest request) {
@@ -181,6 +182,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
             @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "gym-listings", allEntries = true),
             @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     })
     public void updateGym(Long gymId, GymRequest request) {
@@ -285,6 +287,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
             @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "gym-listings", allEntries = true),
             @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     })
     public void deleteGym(Long gymId) {
@@ -337,6 +340,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_AZ'"),
             @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_EN'"),
             @CacheEvict(cacheNames = "gym-detail", key = "T(az.fitnest.catalog.util.UserContext).extractUserId(#principal) + '_' + #gymId + '_RU'"),
+            @CacheEvict(cacheNames = "gym-listings", allEntries = true),
             @CacheEvict(cacheNames = "main-page-gyms", allEntries = true)
     })
     public boolean toggleSave(Object principal, Long gymId) {
@@ -680,6 +684,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
             @CacheEvict(cacheNames = "gymDetails", allEntries = true),
             @CacheEvict(cacheNames = "admin-gyms", allEntries = true),
+            @CacheEvict(cacheNames = "gym-listings", allEntries = true),
             @CacheEvict(cacheNames = "main-page-gyms", allEntries = true),
             @CacheEvict(cacheNames = "nearestGyms", allEntries = true)
     })
@@ -945,7 +950,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
     })
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -985,7 +990,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "admin-gyms"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
     })
     public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
                                   List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
@@ -1383,7 +1388,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
+    @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
@@ -1399,7 +1404,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     @Transactional
-    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms", "nearestGyms"}, allEntries = true)
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms", "nearestGyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
     public void updateGymInfo(Long gymId, az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));

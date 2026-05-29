@@ -38,6 +38,10 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
 
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private CategoryServiceImpl self;
+
     @Transactional(readOnly = true)
     @org.springframework.cache.annotation.Cacheable(value = "categories-paged", key = "{#q, #page, #size, T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()}")
     public PaginatedResponse<CategoryResponse> getCategories(String q, int page, int size) {
@@ -68,9 +72,14 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     }
 
     @Transactional(readOnly = true)
-    @org.springframework.cache.annotation.Cacheable(value = "categories-all", key = "#userId != null ? #userId : 0")
     public List<Category> getAllCategoriesLocalized(Long userId) {
         String language = resolveUserLanguage(userId);
+        return self.getAllCategoriesLocalizedCached(language);
+    }
+
+    @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "categories-all", key = "#language")
+    public List<Category> getAllCategoriesLocalizedCached(String language) {
         List<Category> categories = categoryRepository.findAll();
         for (Category category : categories) {
             String translatedName = translationService.getTranslatedValue("CATEGORY", String.valueOf(category.getId()), "name", language);

@@ -70,7 +70,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     public void addTrainer(Long gymId, TrainerRequest request, MultipartFile photo) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -95,7 +95,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     public void updateTrainer(Long gymId, Long trainerId, TrainerRequest request, MultipartFile photo) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -119,7 +119,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     public void deleteTrainer(Long gymId, Long trainerId) {
         Trainer trainerToDelete = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -173,7 +173,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     protected void updateTrainerPhotoInternal(Long trainerId, String newUrl) {
         Trainer trainer = trainerRepository.findById(trainerId).get();
         trainer.setPicture(newUrl);
@@ -270,7 +270,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     public void toggleTrainerReservation(Long gymId, Long trainerId, boolean enabled, Long lessonId) {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
@@ -350,7 +350,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "admin-gyms"}, allEntries = true)
+    @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     protected void addTrainersInternal(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,
                                       List<String> emails, List<String> phones, List<String> photoUrls, List<String> lessonTypesPerTrainer) {
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
