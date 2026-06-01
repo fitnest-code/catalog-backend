@@ -436,17 +436,11 @@ public class GymWriteServiceImpl implements GymWriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
         for (RoomImageUploadResult res : results) {
-            Room room = gym.getRooms().stream()
-                    .filter(r -> r.getName().equals(res.roomName()))
-                    .findFirst()
-                    .orElseGet(() -> {
-                        Room newRoom = Room.builder()
-                                .name(res.roomName())
-                                .gym(gym)
-                                .build();
-                        gym.getRooms().add(newRoom);
-                        return newRoom;
-                    });
+            Room room = Room.builder()
+                    .name(res.roomName())
+                    .gym(gym)
+                    .build();
+            gym.getRooms().add(room);
 
             RoomImage roomImage = RoomImage.builder()
                     .room(room)
@@ -1202,17 +1196,12 @@ public class GymWriteServiceImpl implements GymWriteService {
             // Step 5: Room images
             if (!roomResults.isEmpty()) {
                 for (RoomImageUploadResult res : roomResults) {
-                    Room room = savedGym.getRooms().stream()
-                            .filter(r -> r.getName().equals(res.roomName()))
-                            .findFirst()
-                            .orElseGet(() -> {
-                                Room newRoom = Room.builder()
-                                        .name(res.roomName())
-                                        .gym(savedGym)
-                                        .build();
-                                savedGym.getRooms().add(newRoom);
-                                return newRoom;
-                            });
+                    Room room = Room.builder()
+                            .name(res.roomName())
+                            .gym(savedGym)
+                            .build();
+                    savedGym.getRooms().add(room);
+
                     RoomImage roomImage = RoomImage.builder()
                             .room(room)
                             .pictureUrl(res.url())
