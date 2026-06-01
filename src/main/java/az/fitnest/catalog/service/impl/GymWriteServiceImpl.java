@@ -521,6 +521,23 @@ public class GymWriteServiceImpl implements GymWriteService {
         throw new ResourceNotFoundException("ROOM_IMAGE_NOT_FOUND", "error.room_image_not_found");
     }
 
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "gym-detail", key = "#gymId"),
+            @CacheEvict(cacheNames = "gymDetails", key = "#gymId")
+    })
+    public void updateRoomName(Long gymId, Long roomId, String name) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Room room = gym.getRooms().stream()
+                .filter(r -> r.getId().equals(roomId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("ROOM_NOT_FOUND", "error.room_not_found"));
+        room.setName(name);
+        gymRepository.save(gym);
+    }
+
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void updateCoverImage(Long gymId, MultipartFile coverPhoto) {
         MultipartFile validatedFile = fileStorageService.validateAndWrapImage(coverPhoto);

@@ -43,6 +43,8 @@ public interface GymWriteService {
 
     void deleteRoomImageById(Long gymId, Long imageId);
 
+    void updateRoomName(Long gymId, Long roomId, String name);
+
     void updateCoverImage(Long gymId, MultipartFile coverPhoto);
 
     void deleteAllGyms();

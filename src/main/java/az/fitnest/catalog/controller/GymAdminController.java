@@ -197,6 +197,17 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "İdman zalının müəyyən bir otağının adını yeniləyin", description = "İdman zalı üçün göstərilən otağın adını yeniləyir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/rooms/{roomId}/name")
+    public ResponseEntity<Void> updateRoomName(
+            @PathVariable Long id,
+            @PathVariable Long roomId,
+            @RequestParam("name") String name) {
+        gymWriteService.updateRoomName(id, roomId, name);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "İdman zalı üz qabığı şəklini yeniləyin", description = "İdman zalı üçün əsas profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
