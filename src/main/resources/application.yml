@@ -46,7 +46,7 @@ spring:
       idle-timeout: 30000
       max-lifetime: 1800000
       keep-alive-time: 60000
-      leak-detection-threshold: 2000
+      leak-detection-threshold: 30000
       auto-commit: false
       data-source-properties:
         reWriteBatchedInserts: true
@@ -55,9 +55,8 @@ spring:
         preparedStatementCacheSizeMiB: 10
         tcpKeepAlive: true
         binaryTransfer: true
-        socketTimeout: 30
-        connectTimeout: 10
-        loginTimeout: 5
+        socketTimeout: 60
+        connectTimeout: 30
   jpa:
     hibernate:
       ddl-auto: update
