@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class TranslationEntityResolver {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TranslationEntityResolver.class);
     private final Map<String, Field> fieldCache = new ConcurrentHashMap<>();
 
     public Class<?> getEntityClass(String entityType) {
@@ -29,6 +28,9 @@ public class TranslationEntityResolver {
             case "RESERVATION_RULE":
             case "RESERVATIONRULE":
                 return az.fitnest.catalog.model.entity.ReservationRule.class;
+            case "CANCELLATION_REASON":
+            case "CANCELLATIONREASON":
+                return az.fitnest.catalog.model.entity.ReservationCancelReason.class;
             default: return null;
         }
     }
@@ -36,25 +38,26 @@ public class TranslationEntityResolver {
     public String extractFieldValue(Object entity, String fieldName) {
         if (entity == null || fieldName == null) return null;
         try {
-            Field field = getCachedField(entity.getClass(), fieldName);
+            Object unproxied = org.hibernate.Hibernate.unproxy(entity);
+            Field field = getCachedField(unproxied.getClass(), fieldName);
             if (field != null) {
-                return getFieldValue(entity, field);
+                return getFieldValue(unproxied, field);
             }
             
-            for (Field f : entity.getClass().getDeclaredFields()) {
+            for (Field f : unproxied.getClass().getDeclaredFields()) {
                 if (!f.getType().isPrimitive() && !f.getType().getName().startsWith("java.lang") && !f.getType().isEnum()) {
                     f.setAccessible(true);
-                    Object child = f.get(entity);
+                    Object child = f.get(unproxied);
                     if (child != null) {
-                        Field childField = getCachedField(child.getClass(), fieldName);
+                        Object unproxiedChild = org.hibernate.Hibernate.unproxy(child);
+                        Field childField = getCachedField(unproxiedChild.getClass(), fieldName);
                         if (childField != null) {
-                            return getFieldValue(child, childField);
+                            return getFieldValue(unproxiedChild, childField);
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to extract field value for fieldName: {}", fieldName, e);
         }
         return null;
     }

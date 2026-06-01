@@ -8,6 +8,7 @@ import az.fitnest.catalog.dto.response.CancelReasonResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.ReservationCancelReason;
 import az.fitnest.catalog.repository.ReservationCancelReasonRepository;
+import az.fitnest.catalog.service.TranslationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,16 +21,23 @@ import java.util.stream.Collectors;
 public class CancellationReasonServiceImpl implements az.fitnest.catalog.service.CancellationReasonService {
 
     private final ReservationCancelReasonRepository reasonRepository;
+    private final TranslationService translationService;
 
     @Transactional(readOnly = true)
     public List<CancelReasonResponse> getReasons() {
+        String userLanguage = az.fitnest.catalog.util.UserContext.getUserLanguage();
         return reasonRepository.findAll()
                 .stream()
-                .map(reason -> CancelReasonResponse.builder()
-                        .code(reason.getCode())
-                        .label(reason.getLabel())
-                        .requiresComment(reason.getRequiresComment())
-                        .build())
+                .map(reason -> {
+                    String localizedLabel = translationService.getTranslatedValue(
+                            "CANCELLATION_REASON", reason.getId().toString(), "label", userLanguage);
+                    String label = (localizedLabel != null && !localizedLabel.isEmpty()) ? localizedLabel : reason.getLabel();
+                    return CancelReasonResponse.builder()
+                            .code(reason.getCode())
+                            .label(label)
+                            .requiresComment(reason.getRequiresComment())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -43,7 +51,8 @@ public class CancellationReasonServiceImpl implements az.fitnest.catalog.service
                 .label(request.label())
                 .requiresComment(request.requiresComment())
                 .build();
-        reasonRepository.save(reason);
+        reason = reasonRepository.save(reason);
+        translationService.autoTranslateAndSave("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
     }
 
     @Transactional
@@ -53,6 +62,7 @@ public class CancellationReasonServiceImpl implements az.fitnest.catalog.service
         reason.setLabel(request.label());
         reason.setRequiresComment(request.requiresComment());
         reasonRepository.save(reason);
+        translationService.autoTranslateAndSave("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
     }
 
     @Transactional

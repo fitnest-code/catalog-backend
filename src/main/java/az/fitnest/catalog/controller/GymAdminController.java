@@ -45,7 +45,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Gym Admin", description = "İdman zallarını idarə etmək üçün administrativ ucluqlar. Bu ucluqlar yalnız ADMIN və SUPER_ADMIN rollarına malik istifadəçilər tərəfindən istifadə edilə bilər.")
 @SecurityRequirement(name = "bearerAuth")
-@lombok.extern.slf4j.Slf4j
 public class GymAdminController {
 
     private final GymWriteService gymWriteService;
@@ -556,7 +555,6 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/validate/step7")
     public ResponseEntity<Void> validateStep7(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
-        log.info("validateStep7 - Incoming payload to validate: {}", request);
         gymWriteService.validateStep7(request);
         return ResponseEntity.ok().build();
     }

@@ -16,7 +16,6 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +29,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
@@ -105,44 +103,30 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public Long approveReview(Long reviewId) {
-        log.info("Approving review: {}", reviewId);
-        try {
-            Review review = reviewRepository.findById(reviewId)
-                    .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
 
-            if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
-                reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
-                reviewRepository.flush();
-                recalculateGymRating(review.getGymId());
+        if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED) {
+            reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.ACCEPTED);
+            reviewRepository.flush();
+            recalculateGymRating(review.getGymId());
 
-                sendReviewStatusNotification(review, true);
-            }
-            log.info("Successfully approved review: {}", reviewId);
-            return review.getGymId();
-        } catch (Exception e) {
-            log.error("Error approving review {}", reviewId, e);
-            throw e;
+            sendReviewStatusNotification(review, true);
         }
+        return review.getGymId();
     }
 
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", allEntries = true)
     public void rejectReview(Long reviewId) {
-        log.info("Rejecting review: {}", reviewId);
-        try {
-            Review review = reviewRepository.findById(reviewId)
-                    .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
-            if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.REJECTED) {
-                reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
-                reviewRepository.flush();
-                recalculateGymRating(review.getGymId());
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REVIEW_NOT_FOUND", "error.review_not_found"));
+        if (review.getStatus() != az.fitnest.catalog.model.enums.ReviewStatus.REJECTED) {
+            reviewRepository.updateStatus(reviewId, az.fitnest.catalog.model.enums.ReviewStatus.REJECTED);
+            reviewRepository.flush();
+            recalculateGymRating(review.getGymId());
 
-                sendReviewStatusNotification(review, false);
-            }
-            log.info("Successfully rejected review: {}", reviewId);
-        } catch (Exception e) {
-            log.error("Error rejecting review {}", reviewId, e);
-            throw e;
+            sendReviewStatusNotification(review, false);
         }
     }
 
@@ -184,7 +168,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 userLang = user.getLanguage().toUpperCase();
             }
         } catch (Exception e) {
-            log.warn("Failed to get review author's language preference, defaulting to AZ. User ID: {}", userId, e);
+            // Ignored
         }
 
         // Determine title and body based on approval status and language
@@ -245,7 +229,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
             try {
                 notificationsServiceClient.sendPushNotification(userId, title, body);
             } catch (Exception e) {
-                log.error("Error triggering push notification for user {}", userId, e);
+                // Ignored
             }
         });
     }

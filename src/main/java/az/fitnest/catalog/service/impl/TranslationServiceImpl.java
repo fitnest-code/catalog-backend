@@ -173,8 +173,6 @@ public class TranslationServiceImpl implements TranslationService {
                 }
             }
         } catch (Exception e) {
-            log.error("Soft fallback translation failed for entityType={}, entityId={}, fieldName={}, lang={}",
-                    entityType, entityId, fieldName, languageCode, e);
         }
 
         return null;
@@ -221,38 +219,27 @@ public class TranslationServiceImpl implements TranslationService {
                 .toList();
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TranslationServiceImpl.class);
-
     @Override
     @org.springframework.scheduling.annotation.Async
     @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public void autoTranslateAndSave(String entityType, String entityId, String fieldName, String originalValueAz) {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
-            log.warn("Auto-translation skipped: originalValueAz is null or empty for entityType={}, entityId={}, fieldName={}", 
-                entityType, entityId, fieldName);
             return;
         }
-
-        log.info("Starting auto-translation process for entityType={}, entityId={}, fieldName={}, originalValueAz='{}'", 
-            entityType, entityId, fieldName, originalValueAz);
 
         // Translate to EN
         String enValue = translateText(originalValueAz, "en");
         if (enValue != null && !enValue.trim().isEmpty()) {
-            log.info("Auto-translated [AZ -> EN] success. Value: '{}'", enValue);
             saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, enValue);
         } else {
-            log.warn("Auto-translation [AZ -> EN] returned empty or null value. Using fallback: '{}'", originalValueAz);
             saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, originalValueAz);
         }
 
         // Translate to RU
         String ruValue = translateText(originalValueAz, "ru");
         if (ruValue != null && !ruValue.trim().isEmpty()) {
-            log.info("Auto-translated [AZ -> RU] success. Value: '{}'", ruValue);
             saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, ruValue);
         } else {
-            log.warn("Auto-translation [AZ -> RU] returned empty or null value. Using fallback: '{}'", originalValueAz);
             saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, originalValueAz);
         }
     }
@@ -262,12 +249,9 @@ public class TranslationServiceImpl implements TranslationService {
         try {
             String googleTranslated = translateWithGoogle(text, targetLanguage);
             if (googleTranslated != null && !googleTranslated.trim().isEmpty()) {
-                log.info("Translation successful using Google Translate [AZ -> {}]: '{}' -> '{}'", 
-                    targetLanguage.toUpperCase(), text, googleTranslated);
                 return googleTranslated;
             }
         } catch (Exception e) {
-            log.error("Google Translate failed. Error: {}", e.getMessage());
         }
         return null;
     }
@@ -285,7 +269,6 @@ public class TranslationServiceImpl implements TranslationService {
             clean = clean.replaceAll("\\s+", " ").trim();
             return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(clean);
         } catch (Exception e) {
-            log.warn("Failed to sanitize HTML in translation service: {}", e.getMessage());
             return text;
         }
     }
@@ -309,7 +292,6 @@ public class TranslationServiceImpl implements TranslationService {
                 .build()
                 .toUri();
 
-            log.info("Google Translate Request [AZ -> {}]: '{}'", targetLanguage.toUpperCase(), text);
             String response = restTemplate.getForObject(uri, String.class);
             if (response != null) {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -330,7 +312,6 @@ public class TranslationServiceImpl implements TranslationService {
                 }
             }
         } catch (Exception e) {
-            log.error("Google Translation API failed for text '{}' to '{}': {}", text, targetLanguage, e.getMessage());
         }
         return null;
     }
@@ -340,19 +321,14 @@ public class TranslationServiceImpl implements TranslationService {
         String normalizedEntityType = entityType.toUpperCase();
         String normalizedLanguageCode = languageCode.toUpperCase();
 
-        log.info("Database Save: entityType={}, entityId={}, languageCode={}, fieldName={}, fieldValue='{}'", 
-            normalizedEntityType, entityId, normalizedLanguageCode, fieldName, fieldValue);
-
         Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
                 normalizedEntityType, entityId, normalizedLanguageCode, fieldName
         ).orElse(null);
 
         if (existing != null) {
-            log.info("Updating existing translation record ID={}", existing.getId());
             existing.setFieldValue(fieldValue);
             translationRepository.save(existing);
         } else {
-            log.info("Creating new translation record");
             Translation translation = Translation.builder()
                     .entityType(normalizedEntityType)
                     .entityId(entityId)
@@ -373,10 +349,8 @@ public class TranslationServiceImpl implements TranslationService {
                 if (cache != null) {
                     String key = entityType + "_" + entityId + "_" + fieldName + "_" + languageCode;
                     cache.evict(key);
-                    log.info("Evicted translation cache for key: {}", key);
                 }
             } catch (Exception e) {
-                log.error("Failed to evict cache: {}", e.getMessage());
             }
         }
     }

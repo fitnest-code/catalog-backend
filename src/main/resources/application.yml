@@ -197,14 +197,3 @@ grpc:
       negotiation-type: plaintext
   server:
     compression: gzip
-
-logging:
-  level:
-    root: ${LOGGING_LEVEL_ROOT:INFO}
-    az.fitnest.catalog: ${LOGGING_LEVEL_AZ_FITNEST_CATALOG:DEBUG}
-    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:DEBUG}
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: logs/catalog-backend.log   # ✅ Updated log file name

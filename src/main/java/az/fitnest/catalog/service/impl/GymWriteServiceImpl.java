@@ -83,7 +83,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
 public class GymWriteServiceImpl implements GymWriteService {
     private final GymRepository gymRepository;
     private final SavedGymRepository savedGymRepository;
@@ -849,8 +848,6 @@ public class GymWriteServiceImpl implements GymWriteService {
                 String url = fileStorageService.saveFile(validated, "/gyms/service-icons");
                 iconUrlByIndex.put(i, url);
             } catch (Exception ex) {
-                log.warn("Xidmət ikonu yüklənə bilmədi. index={}, fileName={}",
-                        i, icon.getOriginalFilename(), ex);
             }
         }
         return iconUrlByIndex;
@@ -1307,7 +1304,6 @@ public class GymWriteServiceImpl implements GymWriteService {
             try {
                 identityServiceGrpcClient.deactivateUser(admin.getUserId(), "Gym admin deleted");
             } catch (Exception e) {
-                log.error("Failed to deactivate deleted gym admin user: {}", e.getMessage(), e);
             }
         }
 
@@ -1472,7 +1468,6 @@ public class GymWriteServiceImpl implements GymWriteService {
             try {
                 orderServiceGrpcClient.restoreSession(reservation.getUserId());
             } catch (Exception e) {
-                log.error("Failed to restore session for user: {}", reservation.getUserId(), e);
             }
         }
     }
@@ -1628,7 +1623,6 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep7(GymCreateStep7Request request) {
-        log.info("validateStep7 Service - Validating admins count: {}", request.admins() != null ? request.admins().size() : 0);
         if (request.admins() == null || request.admins().isEmpty()) {
             throw new BadRequestException("ADMIN_REQUIRED", "error.admin_required");
         }
