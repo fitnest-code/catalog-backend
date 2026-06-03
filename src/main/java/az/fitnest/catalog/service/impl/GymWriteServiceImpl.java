@@ -2,6 +2,7 @@ package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.IdentityServiceGrpcClient;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.client.NotificationsServiceGrpcClient;
 import az.fitnest.catalog.dto.request.GymAdminCreateRequest;
 import az.fitnest.catalog.dto.request.GymAdminUpdateRequest;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
@@ -104,6 +105,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final az.fitnest.catalog.service.TranslationService translationService;
     private final Executor imageUploadExecutor;
+    private final NotificationsServiceGrpcClient notificationsServiceClient;
 
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
@@ -1466,7 +1468,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             reservation.setApprovedAt(LocalDateTime.now());
         }
 
-        reservationRepository.save(reservation);
+        reservation = reservationRepository.save(reservation);
 
         if (!Boolean.TRUE.equals(reservation.getAttended()) &&
             (oldStatus == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED || oldStatus == az.fitnest.catalog.model.enums.ReservationStatus.PENDING) &&
@@ -1475,6 +1477,10 @@ public class GymWriteServiceImpl implements GymWriteService {
                 orderServiceGrpcClient.restoreSession(reservation.getUserId());
             } catch (Exception e) {
             }
+        }
+
+        if (status == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED || status == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED) {
+            sendStatusUpdateNotificationToUser(reservation, status, reason);
         }
     }
 
@@ -1645,6 +1651,58 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (!phoneNumbers.add(normalizedPhone)) {
                 throw new BadRequestException("DUPLICATE_ADMIN_PHONE", "error.duplicate_admin_phone");
             }
+        }
+    }
+
+    private void sendStatusUpdateNotificationToUser(Reservation reservation, az.fitnest.catalog.model.enums.ReservationStatus newStatus, String reason) {
+        if (reservation == null || reservation.getUserId() == null) {
+            return;
+        }
+        final Long userId = reservation.getUserId();
+        final String gymName = reservation.getGym() != null ? reservation.getGym().getName() : "";
+        final String lessonName = reservation.getLessonType() != null ? reservation.getLessonType() :
+                (reservation.getCategory() != null ? reservation.getCategory().getName() : "Məşq");
+        
+        final String title;
+        final String body;
+        
+        if (newStatus == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
+            title = "Rezervasiya təsdiq edilmədi";
+            if (reason != null && !reason.trim().isEmpty()) {
+                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi. Səbəb: %s", gymName, lessonName, reason);
+            } else {
+                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi.", gymName, lessonName);
+            }
+        } else if (newStatus == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED) {
+            title = "Rezervasiya təsdiqləndi";
+            body = String.format("%s - %s rezervasiyanız uğurla təsdiqləndi!", gymName, lessonName);
+        } else {
+            return;
+        }
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        CompletableFuture.runAsync(() -> {
+                            try {
+                                notificationsServiceClient.sendPushNotification(userId, title, body);
+                            } catch (Exception e) {
+                                // Ignore to avoid breaking execution
+                            }
+                        });
+                    }
+                }
+            );
+        } else {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    notificationsServiceClient.sendPushNotification(userId, title, body);
+                } catch (Exception e) {
+                    // Ignore
+                }
+            });
         }
     }
 

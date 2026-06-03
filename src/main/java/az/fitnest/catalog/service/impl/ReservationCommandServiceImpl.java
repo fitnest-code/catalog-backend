@@ -167,7 +167,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
 
         String oldStatus = reservation.getStatus().name();
         reservation.setStatus(request.getStatus());
-        reservationRepository.save(reservation);
+        reservation = reservationRepository.save(reservation);
 
         if (!Boolean.TRUE.equals(reservation.getAttended()) &&
             (oldStatus.equals(ReservationStatus.APPROVED.name()) || oldStatus.equals(ReservationStatus.PENDING.name())) &&
@@ -176,6 +176,10 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         }
 
         auditService.log(reservationId, null, "UPDATE_STATUS", oldStatus, request.getStatus().name(), "Admin update");
+
+        if (request.getStatus() == ReservationStatus.REJECTED || request.getStatus() == ReservationStatus.APPROVED) {
+            sendStatusUpdateNotificationToUser(reservation, request.getStatus(), null);
+        }
     }
 
     @Transactional
@@ -190,9 +194,11 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         String oldStatus = reservation.getStatus().name();
         reservation.setStatus(ReservationStatus.APPROVED);
         reservation.setApprovedAt(LocalDateTime.now());
-        reservationRepository.save(reservation);
+        reservation = reservationRepository.save(reservation);
 
         auditService.log(reservationId, null, "APPROVE", oldStatus, "APPROVED", "Admin approval");
+
+        sendStatusUpdateNotificationToUser(reservation, ReservationStatus.APPROVED, null);
     }
 
     @Transactional
@@ -208,13 +214,67 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         reservation.setStatus(ReservationStatus.REJECTED);
         reservation.setCancelledAt(LocalDateTime.now());
         reservation.setCancelReasonText(reason);
-        reservationRepository.save(reservation);
+        reservation = reservationRepository.save(reservation);
 
         if (!Boolean.TRUE.equals(reservation.getAttended())) {
             orderServiceClient.restoreSession(reservation.getUserId());
         }
 
         auditService.log(reservationId, null, "REJECT", oldStatus, "REJECTED", reason);
+
+        sendStatusUpdateNotificationToUser(reservation, ReservationStatus.REJECTED, reason);
+    }
+
+    private void sendStatusUpdateNotificationToUser(Reservation reservation, ReservationStatus newStatus, String reason) {
+        if (reservation == null || reservation.getUserId() == null) {
+            return;
+        }
+        final Long userId = reservation.getUserId();
+        final String gymName = reservation.getGym() != null ? reservation.getGym().getName() : "";
+        final String lessonName = reservation.getLessonType() != null ? reservation.getLessonType() :
+                (reservation.getCategory() != null ? reservation.getCategory().getName() : "Məşq");
+        
+        final String title;
+        final String body;
+        
+        if (newStatus == ReservationStatus.REJECTED) {
+            title = "Rezervasiya təsdiq edilmədi";
+            if (reason != null && !reason.trim().isEmpty()) {
+                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi. Səbəb: %s", gymName, lessonName, reason);
+            } else {
+                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi.", gymName, lessonName);
+            }
+        } else if (newStatus == ReservationStatus.APPROVED) {
+            title = "Rezervasiya təsdiqləndi";
+            body = String.format("%s - %s rezervasiyanız uğurla təsdiqləndi!", gymName, lessonName);
+        } else {
+            return; // Only notify for approval and rejection
+        }
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        CompletableFuture.runAsync(() -> {
+                            try {
+                                notificationsServiceClient.sendPushNotification(userId, title, body);
+                            } catch (Exception e) {
+                                // Ignore to avoid breaking execution
+                            }
+                        });
+                    }
+                }
+            );
+        } else {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    notificationsServiceClient.sendPushNotification(userId, title, body);
+                } catch (Exception e) {
+                    // Ignore
+                }
+            });
+        }
     }
 
     @Transactional
