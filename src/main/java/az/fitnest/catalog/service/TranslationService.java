@@ -13,4 +13,6 @@ public interface TranslationService {
     void deleteTranslation(Long id);
     List<Translation> getTranslations(String entityType, String entityId, String fieldName, String languageCode);
     void autoTranslateAndSave(String entityType, String entityId, String fieldName, String originalValueAz);
+    String translateText(String text, String targetLanguage);
 }
+

@@ -21,6 +21,7 @@ import az.fitnest.catalog.service.CancellationReasonService;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.client.NotificationsServiceGrpcClient;
+import az.fitnest.catalog.client.UserServiceGrpcClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,6 +49,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     private final GymAdminRepository gymAdminRepository;
     private final NotificationsServiceGrpcClient notificationsServiceClient;
     private final TranslationService translationService;
+    private final UserServiceGrpcClient userServiceGrpcClient;
 
     @Transactional
     public Reservation createReservation(Long userId, Long gymId, Long categoryId, Long lessonId, Long trainerId, Long sessionId) {
@@ -234,19 +236,87 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         final String lessonName = reservation.getLessonType() != null ? reservation.getLessonType() :
                 (reservation.getCategory() != null ? reservation.getCategory().getName() : "Məşq");
         
+        // Resolve user language preference from UserServiceGrpcClient
+        String userLang = "AZ";
+        try {
+            az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+            if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                userLang = user.getLanguage().toUpperCase();
+            }
+        } catch (Exception e) {
+            // Ignored
+        }
+
         final String title;
         final String body;
-        
+
         if (newStatus == ReservationStatus.REJECTED) {
-            title = "Rezervasiya təsdiq edilmədi";
+            String targetReason = reason;
             if (reason != null && !reason.trim().isEmpty()) {
-                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi. Səbəb: %s", gymName, lessonName, reason);
-            } else {
-                body = String.format("%s - %s rezervasiyanız təsdiq edilmədi.", gymName, lessonName);
+                if ("EN".equals(userLang)) {
+                    try {
+                        String translated = translationService.translateText(reason, "en");
+                        if (translated != null && !translated.trim().isEmpty()) {
+                            targetReason = translated;
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                } else if ("RU".equals(userLang)) {
+                    try {
+                        String translated = translationService.translateText(reason, "ru");
+                        if (translated != null && !translated.trim().isEmpty()) {
+                            targetReason = translated;
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+
+            switch (userLang) {
+                case "EN":
+                    title = "Reservation Not Approved";
+                    if (targetReason != null && !targetReason.trim().isEmpty()) {
+                        body = String.format("%s - %s reservation was not approved. Reason: %s", gymName, lessonName, targetReason);
+                    } else {
+                        body = String.format("%s - %s reservation was not approved.", gymName, lessonName);
+                    }
+                    break;
+                case "RU":
+                    title = "Бронирование отклонено";
+                    if (targetReason != null && !targetReason.trim().isEmpty()) {
+                        body = String.format("%s - %s ваше бронирование не одобрено. Причина: %s", gymName, lessonName, targetReason);
+                    } else {
+                        body = String.format("%s - %s ваше бронирование не одобрено.", gymName, lessonName);
+                    }
+                    break;
+                case "AZ":
+                default:
+                    title = "Rezervasiya təsdiq edilmədi";
+                    if (targetReason != null && !targetReason.trim().isEmpty()) {
+                        body = String.format("%s - %s rezervasiyanız təsdiq edilmədi. Səbəb: %s", gymName, lessonName, targetReason);
+                    } else {
+                        body = String.format("%s - %s rezervasiyanız təsdiq edilmədi.", gymName, lessonName);
+                    }
+                    break;
             }
         } else if (newStatus == ReservationStatus.APPROVED) {
-            title = "Rezervasiya təsdiqləndi";
-            body = String.format("%s - %s rezervasiyanız uğurla təsdiqləndi!", gymName, lessonName);
+            switch (userLang) {
+                case "EN":
+                    title = "Reservation Confirmed";
+                    body = String.format("Your reservation for %s - %s has been successfully confirmed!", gymName, lessonName);
+                    break;
+                case "RU":
+                    title = "Бронирование подтверждено";
+                    body = String.format("Ваше бронирование %s - %s успешно подтверждено!", gymName, lessonName);
+                    break;
+                case "AZ":
+                default:
+                    title = "Rezervasiya təsdiqləndi";
+                    body = String.format("%s - %s rezervasiyanız uğurla təsdiqləndi!", gymName, lessonName);
+                    break;
+            }
         } else {
             return; // Only notify for approval and rejection
         }

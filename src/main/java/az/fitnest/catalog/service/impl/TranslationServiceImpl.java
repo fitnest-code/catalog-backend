@@ -244,7 +244,8 @@ public class TranslationServiceImpl implements TranslationService {
         }
     }
 
-    private String translateText(String text, String targetLanguage) {
+    @Override
+    public String translateText(String text, String targetLanguage) {
         // Try Google Translate (Ultra-accurate, extremely reliable, free, no keys needed)
         try {
             String googleTranslated = translateWithGoogle(text, targetLanguage);
