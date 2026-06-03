@@ -44,6 +44,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.ReservationQueryService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReservationQueryServiceImpl.class);
+
     private final CategoryRepository categoryRepository;
     private final GymLessonTypeRepository gymLessonTypeRepository;
     private final TrainerReservationDateRepository sessionRepository;
@@ -96,6 +98,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public List<DayAvailabilityResponse> getAvailabilityForTeacher(Long userId, Long gymId, Long categoryId, Long lessonTypeId, Long trainerId) {
+        log.info("[Availability] userId={}, gymId={}, categoryId={}, lessonTypeId={}, trainerId={}",
+                userId, gymId, categoryId, lessonTypeId, trainerId);
         List<TrainerReservationDate> sessions;
         if (trainerId != null) {
             sessions = sessionRepository.findByTrainerIdOrderByDateAscStartTimeAsc(trainerId);
@@ -107,12 +111,18 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         Gym gym = gymRepository.findById(gymId).orElse(null);
         boolean isGymEnabled = gym != null && Boolean.TRUE.equals(gym.getIsReservationEnabled());
+        log.info("[Availability] Gym: exists={}, isReservationEnabled={}", gym != null, isGymEnabled);
 
         az.fitnest.order.grpc.ActiveSubscriptionResponse subscription = null;
         if (userId != null && isGymEnabled) {
             try {
                 subscription = orderServiceClient.getActiveSubscription(userId);
-            } catch (Exception ignored) {
+                log.info("[Availability] Retrieved subscription details: status={}, packageId={}, packageName={}",
+                        subscription != null ? subscription.getSubscriptionStatus() : "null",
+                        subscription != null ? subscription.getPackageId() : "null",
+                        subscription != null ? subscription.getPackageName() : "null");
+            } catch (Exception ex) {
+                log.error("[Availability] Error retrieving subscription for userId={}: {}", userId, ex.getMessage(), ex);
             }
         }
 
@@ -124,9 +134,14 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     .filter(java.util.Objects::nonNull)
                     .toList();
             isPkgSupported = isPackageSufficient(sub.getPackageId(), gymPackageIds);
+            log.info("[Availability] Package check: userPackageId={}, gymPackageIds={}, isPkgSupported={}",
+                    sub.getPackageId(), gymPackageIds, isPkgSupported);
+        } else {
+            log.info("[Availability] Package check skipped: subIsPresent={}, gymIsPresent={}", sub != null, gym != null);
         }
         final boolean isPackageSupported = isPkgSupported;
         final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
+        log.info("[Availability] Final flags: isSubscriptionActive={}, isPackageSupported={}", isSubscriptionActive, isPackageSupported);
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -178,14 +193,23 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                             int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
 
                             boolean isAcceptable = isGymEnabled;
+                            String rejectReason = null;
+                            if (!isGymEnabled) {
+                                rejectReason = "GYM_RESERVATION_DISABLED";
+                            }
 
                             if (emptySpaces <= 0) {
                                 isAcceptable = false;
+                                rejectReason = "NO_EMPTY_SPACES";
                             }
 
                             if (userId != null && isAcceptable) {
-                                if (!isSubscriptionActive || !isPackageSupported) {
+                                if (!isSubscriptionActive) {
                                     isAcceptable = false;
+                                    rejectReason = "SUBSCRIPTION_NOT_ACTIVE";
+                                } else if (!isPackageSupported) {
+                                    isAcceptable = false;
+                                    rejectReason = "PACKAGE_NOT_SUPPORTED";
                                 } else {
                                     boolean hasOverlap = overlapCheckReservations.stream().anyMatch(r -> 
                                             r.getReservationDate() != null &&
@@ -195,8 +219,14 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                                     );
                                     if (hasOverlap) {
                                         isAcceptable = false;
+                                        rejectReason = "RESERVATION_OVERLAP";
                                     }
                                 }
+                            }
+
+                            if (!isAcceptable) {
+                                log.info("[Availability] TimeSlot not acceptable: sessionId={}, date={}, time={}-{}, reason={}",
+                                        session.getId(), date, session.getStartTime(), session.getEndTime(), rejectReason);
                             }
 
                             return TimeSlotResponse.builder()
