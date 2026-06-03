@@ -117,8 +117,15 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         }
 
         final az.fitnest.order.grpc.ActiveSubscriptionResponse sub = subscription;
-        final boolean isPackageSupported = (sub != null && gym != null) && gym.getSubscriptions().stream()
-                .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(sub.getPackageId()));
+        boolean isPkgSupported = false;
+        if (sub != null && gym != null) {
+            java.util.List<Long> gymPackageIds = gym.getSubscriptions().stream()
+                    .map(s -> s.getPackageId())
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            isPkgSupported = isPackageSufficient(sub.getPackageId(), gymPackageIds);
+        }
+        final boolean isPackageSupported = isPkgSupported;
         final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
 
         LocalDateTime now = LocalDateTime.now();
@@ -475,5 +482,74 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     private String resolveUserLanguage(Long userId) {
         return az.fitnest.catalog.util.UserContext.getUserLanguage();
+    }
+
+    private boolean isPackageSufficient(Long userPackageId, java.util.List<Long> gymPackageIds) {
+        if (userPackageId == null || gymPackageIds == null || gymPackageIds.isEmpty()) {
+            return false;
+        }
+        try {
+            java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceClient.getGymPlans();
+            
+            // Get user package rank
+            String userPackageName = null;
+            for (var plan : allPlans) {
+                if (plan.getPackageId() == userPackageId.longValue()) {
+                    userPackageName = plan.getName();
+                    break;
+                }
+            }
+            if (userPackageName == null) {
+                java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(userPackageId));
+                if (!nameInfos.isEmpty()) {
+                    userPackageName = nameInfos.get(0).getName();
+                }
+            }
+            int userRank = getPackageRank(userPackageName);
+
+            // Check if any supported gym package has rank <= user package rank
+            for (Long gymPkgId : gymPackageIds) {
+                String gymPkgName = null;
+                for (var plan : allPlans) {
+                    if (plan.getPackageId() == gymPkgId.longValue()) {
+                        gymPkgName = plan.getName();
+                        break;
+                    }
+                }
+                if (gymPkgName == null) {
+                    java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(gymPkgId));
+                    if (!nameInfos.isEmpty()) {
+                        gymPkgName = nameInfos.get(0).getName();
+                    }
+                }
+                int gymRank = getPackageRank(gymPkgName);
+                if (gymRank <= userRank) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            return gymPackageIds.contains(userPackageId);
+        }
+        return gymPackageIds.contains(userPackageId);
+    }
+
+    private int getPackageRank(String packageName) {
+        if (packageName == null) {
+            return 0;
+        }
+        String lower = packageName.toLowerCase();
+        if (lower.contains("platinum")) {
+            return 4;
+        }
+        if (lower.contains("gold")) {
+            return 3;
+        }
+        if (lower.contains("silver")) {
+            return 2;
+        }
+        if (lower.contains("bronze")) {
+            return 1;
+        }
+        return 0;
     }
 }

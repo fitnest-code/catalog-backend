@@ -32,8 +32,12 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
         }
 
         long userPackageId = subscription.getPackageId();
-        boolean isPackageSupported = gym.getSubscriptions().stream()
-                .anyMatch(s -> s.getPackageId() != null && s.getPackageId().equals(userPackageId));
+        java.util.List<Long> gymPackageIds = gym.getSubscriptions().stream()
+                .map(s -> s.getPackageId())
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        boolean isPackageSupported = isPackageSufficient(userPackageId, gymPackageIds);
 
         if (!isPackageSupported) {
             throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.gym_not_supported");
@@ -47,6 +51,75 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
         if (ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart) < 2) {
             throw new BadRequestException("BOOKING_RESTRICTED", "error.booking_must_be_2_hours_before");
         }
+    }
+
+    private boolean isPackageSufficient(Long userPackageId, java.util.List<Long> gymPackageIds) {
+        if (userPackageId == null || gymPackageIds == null || gymPackageIds.isEmpty()) {
+            return false;
+        }
+        try {
+            java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceClient.getGymPlans();
+            
+            // Get user package rank
+            String userPackageName = null;
+            for (var plan : allPlans) {
+                if (plan.getPackageId() == userPackageId.longValue()) {
+                    userPackageName = plan.getName();
+                    break;
+                }
+            }
+            if (userPackageName == null) {
+                java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(userPackageId));
+                if (!nameInfos.isEmpty()) {
+                    userPackageName = nameInfos.get(0).getName();
+                }
+            }
+            int userRank = getPackageRank(userPackageName);
+
+            // Check if any supported gym package has rank <= user package rank
+            for (Long gymPkgId : gymPackageIds) {
+                String gymPkgName = null;
+                for (var plan : allPlans) {
+                    if (plan.getPackageId() == gymPkgId.longValue()) {
+                        gymPkgName = plan.getName();
+                        break;
+                    }
+                }
+                if (gymPkgName == null) {
+                    java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(gymPkgId));
+                    if (!nameInfos.isEmpty()) {
+                        gymPkgName = nameInfos.get(0).getName();
+                    }
+                }
+                int gymRank = getPackageRank(gymPkgName);
+                if (gymRank <= userRank) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            return gymPackageIds.contains(userPackageId);
+        }
+        return gymPackageIds.contains(userPackageId);
+    }
+
+    private int getPackageRank(String packageName) {
+        if (packageName == null) {
+            return 0;
+        }
+        String lower = packageName.toLowerCase();
+        if (lower.contains("platinum")) {
+            return 4;
+        }
+        if (lower.contains("gold")) {
+            return 3;
+        }
+        if (lower.contains("silver")) {
+            return 2;
+        }
+        if (lower.contains("bronze")) {
+            return 1;
+        }
+        return 0;
     }
 
     public boolean isFreeCancellationAllowed(Reservation reservation) {
