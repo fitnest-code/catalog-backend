@@ -516,10 +516,17 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     private boolean isPackageSufficient(Long userPackageId, java.util.List<Long> gymPackageIds) {
         if (userPackageId == null || gymPackageIds == null || gymPackageIds.isEmpty()) {
+            log.info("[isPackageSufficient] Invalid inputs: userPackageId={}, gymPackageIds={}", userPackageId, gymPackageIds);
             return false;
         }
         try {
             java.util.List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceClient.getGymPlans();
+            log.info("[isPackageSufficient] Retrieved allPlans count: {}", allPlans != null ? allPlans.size() : "null");
+            if (allPlans != null) {
+                for (var p : allPlans) {
+                    log.info("[isPackageSufficient] Plan from allPlans: id={}, name={}", p.getPackageId(), p.getName());
+                }
+            }
             
             // Get user package rank
             String userPackageName = null;
@@ -531,11 +538,13 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
             }
             if (userPackageName == null) {
                 java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(userPackageId));
+                log.info("[isPackageSufficient] Fallback packageNames for user: {}", nameInfos);
                 if (!nameInfos.isEmpty()) {
                     userPackageName = nameInfos.get(0).getName();
                 }
             }
             int userRank = getPackageRank(userPackageName);
+            log.info("[isPackageSufficient] User package rank: name={}, rank={}", userPackageName, userRank);
 
             // Check if any supported gym package has rank <= user package rank
             for (Long gymPkgId : gymPackageIds) {
@@ -548,19 +557,25 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 }
                 if (gymPkgName == null) {
                     java.util.List<az.fitnest.order.grpc.PackageNameInfo> nameInfos = orderServiceClient.getPackageNamesByIds(java.util.List.of(gymPkgId));
+                    log.info("[isPackageSufficient] Fallback packageNames for gym pkg {}: {}", gymPkgId, nameInfos);
                     if (!nameInfos.isEmpty()) {
                         gymPkgName = nameInfos.get(0).getName();
                     }
                 }
                 int gymRank = getPackageRank(gymPkgName);
-                if (gymRank <= userRank) {
+                log.info("[isPackageSufficient] Gym package rank for pkgId={}: name={}, rank={}", gymPkgId, gymPkgName, gymRank);
+                if (gymRank > 0 && gymRank <= userRank) {
+                    log.info("[isPackageSufficient] Match found! gymRank {} <= userRank {}", gymRank, userRank);
                     return true;
                 }
             }
         } catch (Exception e) {
+            log.error("[isPackageSufficient] Exception occurred during ranking checks: {}", e.getMessage(), e);
             return gymPackageIds.contains(userPackageId);
         }
-        return gymPackageIds.contains(userPackageId);
+        boolean exactContains = gymPackageIds.contains(userPackageId);
+        log.info("[isPackageSufficient] No match by rank. Fallback to exact contains: {}", exactContains);
+        return exactContains;
     }
 
     private int getPackageRank(String packageName) {
