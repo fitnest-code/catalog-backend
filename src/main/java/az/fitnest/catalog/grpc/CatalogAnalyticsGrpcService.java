@@ -44,6 +44,19 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
     ) {
         List<Long> userIds = request.getUserIdsList();
         System.out.println("DEBUG: getGymAdminsByUsers called with userIds: " + userIds);
+        
+        // Print all gym admins in the database for diagnostics
+        try {
+            List<GymAdmin> dbAll = gymAdminRepository.findAll();
+            System.out.println("DEBUG: [DIAGNOSTIC] Total gym admins in DB: " + dbAll.size());
+            for (GymAdmin a : dbAll) {
+                System.out.println("DEBUG: [DIAGNOSTIC] DB Admin: id=" + a.getId() + ", userId=" + a.getUserId() + ", name=" + a.getName() + " " + a.getSurname() + ", gym=" + (a.getGym() != null ? a.getGym().getName() : "null"));
+            }
+        } catch (Exception e) {
+            System.err.println("DEBUG: failed to fetch all gym admins from database!");
+            e.printStackTrace();
+        }
+
         List<GymAdmin> admins = null;
         try {
             admins = gymAdminRepository.findAllByUserIdIn(userIds);
