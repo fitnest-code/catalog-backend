@@ -43,15 +43,31 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
             StreamObserver<GetGymAdminsByUsersResponse> responseObserver
     ) {
         List<Long> userIds = request.getUserIdsList();
-        List<GymAdmin> admins = gymAdminRepository.findAllByUserIdIn(userIds);
+        System.out.println("DEBUG: getGymAdminsByUsers called with userIds: " + userIds);
+        List<GymAdmin> admins = null;
+        try {
+            admins = gymAdminRepository.findAllByUserIdIn(userIds);
+            System.out.println("DEBUG: found admins in db: " + (admins == null ? "null" : admins.size()));
+            if (admins != null) {
+                for (GymAdmin a : admins) {
+                    System.out.println("DEBUG: admin userId=" + a.getUserId() + ", gym=" + (a.getGym() != null ? a.getGym().getName() : "null") + ", role=" + a.getRole());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("DEBUG: findAllByUserIdIn failed in catalog-backend!");
+            e.printStackTrace();
+        }
 
-        List<GymAdminDetail> details = admins.stream()
-                .map(admin -> GymAdminDetail.newBuilder()
-                        .setUserId(admin.getUserId())
-                        .setGymName(admin.getGym() != null ? admin.getGym().getName() : "")
-                        .setRole(admin.getRole() != null ? admin.getRole() : "")
-                        .build())
-                .collect(Collectors.toList());
+        List<GymAdminDetail> details = new java.util.ArrayList<>();
+        if (admins != null) {
+            details = admins.stream()
+                    .map(admin -> GymAdminDetail.newBuilder()
+                            .setUserId(admin.getUserId())
+                            .setGymName(admin.getGym() != null ? admin.getGym().getName() : "")
+                            .setRole(admin.getRole() != null ? admin.getRole() : "")
+                            .build())
+                    .collect(Collectors.toList());
+        }
 
         responseObserver.onNext(
                 GetGymAdminsByUsersResponse.newBuilder()
