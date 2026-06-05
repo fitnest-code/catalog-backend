@@ -15,4 +15,5 @@ public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     boolean existsByGymIdAndPhoneNumber(Long gymId, String phoneNumber);
     boolean existsByGymIdAndUserId(Long gymId, Long userId);
     java.util.List<GymAdmin> findByUserId(Long userId);
+    List<GymAdmin> findAllByUserIdIn(List<Long> userIds);
 }

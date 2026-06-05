@@ -1,8 +1,12 @@
 package az.fitnest.catalog.grpc;
 
+import az.fitnest.catalog.model.entity.GymAdmin;
+import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.repository.GymAnalyticsRepository;
 import az.fitnest.catalog.repository.GymAnalyticsRepository.PartnersKpiProjection;
 import io.grpc.stub.StreamObserver;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.server.service.GrpcService;
 
@@ -15,6 +19,7 @@ import net.devh.boot.grpc.server.service.GrpcService;
 public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBase {
 
     private final GymAnalyticsRepository gymAnalyticsRepository;
+    private final GymAdminRepository gymAdminRepository;
 
     @Override
     public void getActivePartnersKpi(
@@ -27,6 +32,30 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
                 ActivePartnersKpiResponse.newBuilder()
                         .setTotalActivePartners(kpi.getTotalActivePartners())
                         .setPercentageChange(kpi.getPercentageChange())
+                        .build()
+        );
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getGymAdminsByUsers(
+            GetGymAdminsByUsersRequest request,
+            StreamObserver<GetGymAdminsByUsersResponse> responseObserver
+    ) {
+        List<Long> userIds = request.getUserIdsList();
+        List<GymAdmin> admins = gymAdminRepository.findAllByUserIdIn(userIds);
+
+        List<GymAdminDetail> details = admins.stream()
+                .map(admin -> GymAdminDetail.newBuilder()
+                        .setUserId(admin.getUserId())
+                        .setGymName(admin.getGym() != null ? admin.getGym().getName() : "")
+                        .setRole(admin.getRole() != null ? admin.getRole() : "")
+                        .build())
+                .collect(Collectors.toList());
+
+        responseObserver.onNext(
+                GetGymAdminsByUsersResponse.newBuilder()
+                        .addAllAdmins(details)
                         .build()
         );
         responseObserver.onCompleted();
