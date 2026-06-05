@@ -2,6 +2,8 @@ package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.GymAdmin;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.List;
 
@@ -15,5 +17,6 @@ public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     boolean existsByGymIdAndPhoneNumber(Long gymId, String phoneNumber);
     boolean existsByGymIdAndUserId(Long gymId, Long userId);
     java.util.List<GymAdmin> findByUserId(Long userId);
-    List<GymAdmin> findAllByUserIdIn(List<Long> userIds);
+    @Query("SELECT ga FROM GymAdmin ga LEFT JOIN FETCH ga.gym WHERE ga.userId IN :userIds")
+    List<GymAdmin> findAllByUserIdIn(@Param("userIds") List<Long> userIds);
 }
