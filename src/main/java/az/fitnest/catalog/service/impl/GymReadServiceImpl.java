@@ -645,11 +645,20 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Page<Gym> gymPage = gymRepository.findAll(spec, pageable);
 
         List<Long> gymIds = gymPage.getContent().stream().map(Gym::getId).toList();
-        Map<Long, String> ownerNames = gymAdminRepository.findAllByGymIdIn(gymIds).stream()
-                .filter(admin -> "Super admin".equalsIgnoreCase(admin.getRole()))
-                .collect(Collectors.groupingBy(admin -> admin.getGym().getId(),
-                        Collectors.mapping(admin -> admin.getName() + " " + admin.getSurname(),
-                                Collectors.joining(", "))));
+        List<az.fitnest.catalog.model.entity.GymAdmin> allAdmins = gymAdminRepository.findAllByGymIdIn(gymIds);
+        Map<Long, String> ownerNames = new java.util.HashMap<>();
+        Map<Long, List<az.fitnest.catalog.model.entity.GymAdmin>> adminsByGym = allAdmins.stream()
+                .filter(admin -> "Super admin".equalsIgnoreCase(admin.getRole()) || "Admin".equalsIgnoreCase(admin.getRole()))
+                .filter(admin -> admin.getGym() != null && admin.getGym().getId() != null)
+                .collect(Collectors.groupingBy(admin -> admin.getGym().getId()));
+        for (Map.Entry<Long, List<az.fitnest.catalog.model.entity.GymAdmin>> entry : adminsByGym.entrySet()) {
+            List<az.fitnest.catalog.model.entity.GymAdmin> admins = new java.util.ArrayList<>(entry.getValue());
+            admins.sort(java.util.Comparator.comparing(az.fitnest.catalog.model.entity.GymAdmin::getId));
+            az.fitnest.catalog.model.entity.GymAdmin firstAdmin = admins.get(0);
+            String fullName = (firstAdmin.getName() != null ? firstAdmin.getName() : "") 
+                    + " " + (firstAdmin.getSurname() != null ? firstAdmin.getSurname() : "");
+            ownerNames.put(entry.getKey(), fullName.trim());
+        }
 
         String userLanguage = resolveUserLanguage();
         List<AdminGymResponse> items = gymPage.getContent().stream().map(gym -> {
