@@ -19,4 +19,11 @@ public interface GymAdminRepository extends JpaRepository<GymAdmin, Long> {
     java.util.List<GymAdmin> findByUserId(Long userId);
     @Query("SELECT ga FROM GymAdmin ga LEFT JOIN FETCH ga.gym WHERE ga.userId IN :userIds")
     List<GymAdmin> findAllByUserIdIn(@Param("userIds") List<Long> userIds);
+
+    @Query("SELECT ga FROM GymAdmin ga LEFT JOIN FETCH ga.gym WHERE ga.userId IN :userIds OR ga.phoneNumber IN :phoneNumbers OR ga.email IN :emails")
+    List<GymAdmin> findAllByUserIdInOrPhoneNumberInOrEmailIn(
+            @Param("userIds") List<Long> userIds,
+            @Param("phoneNumbers") List<String> phoneNumbers,
+            @Param("emails") List<String> emails
+    );
 }

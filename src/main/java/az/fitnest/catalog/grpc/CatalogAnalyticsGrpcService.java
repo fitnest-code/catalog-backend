@@ -43,13 +43,22 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
             StreamObserver<GetGymAdminsByUsersResponse> responseObserver
     ) {
         List<Long> userIds = request.getUserIdsList();
-        List<GymAdmin> admins = gymAdminRepository.findAllByUserIdIn(userIds);
+        List<String> phoneNumbers = request.getPhoneNumbersList();
+        List<String> emails = request.getEmailsList();
+
+        List<Long> queryUserIds = userIds.isEmpty() ? List.of(-1L) : userIds;
+        List<String> queryPhones = phoneNumbers.isEmpty() ? List.of("") : phoneNumbers;
+        List<String> queryEmails = emails.isEmpty() ? List.of("") : emails;
+
+        List<GymAdmin> admins = gymAdminRepository.findAllByUserIdInOrPhoneNumberInOrEmailIn(queryUserIds, queryPhones, queryEmails);
 
         List<GymAdminDetail> details = admins.stream()
                 .map(admin -> GymAdminDetail.newBuilder()
                         .setUserId(admin.getUserId() != null ? admin.getUserId() : 0L)
                         .setGymName(admin.getGym() != null ? admin.getGym().getName() : "")
                         .setRole(admin.getRole() != null ? admin.getRole() : "")
+                        .setPhoneNumber(admin.getPhoneNumber() != null ? admin.getPhoneNumber() : "")
+                        .setEmail(admin.getEmail() != null ? admin.getEmail() : "")
                         .build())
                 .collect(Collectors.toList());
 
