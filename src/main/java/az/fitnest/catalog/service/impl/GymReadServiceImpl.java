@@ -316,7 +316,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             localizedDescription = gym.getDescription();
         List<RestDayRequest> restDays = gym.getRestDays() != null
                 ? gym.getRestDays().stream()
-                        .map(rd -> new RestDayRequest(rd.name()))
+                        .map(rd -> new RestDayRequest(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(rd, userLanguage)))
                         .collect(java.util.stream.Collectors.toList())
                 : java.util.Collections.emptyList();
 
@@ -1918,9 +1918,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         
+        String userLang = resolveUserLanguage();
+
         java.util.Set<GymWorkHourResponse> general = gym.getGeneralWorkHours().stream()
                 .map(wh -> GymWorkHourResponse.builder()
-                        .period(wh.getPeriod().name())
+                        .period(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(wh.getPeriod(), userLang))
                         .from(wh.getFromTime())
                         .to(wh.getToTime())
                         .build())
@@ -1928,7 +1930,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         java.util.Set<GymWorkHourResponse> woman = gym.getWorkHoursWoman().stream()
                 .map(wh -> GymWorkHourResponse.builder()
-                        .period(wh.getPeriod().name())
+                        .period(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(wh.getPeriod(), userLang))
                         .from(wh.getFromTime())
                         .to(wh.getToTime())
                         .build())
@@ -1936,14 +1938,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         java.util.Set<GymWorkHourResponse> man = gym.getWorkHoursMan().stream()
                 .map(wh -> GymWorkHourResponse.builder()
-                        .period(wh.getPeriod().name())
+                        .period(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(wh.getPeriod(), userLang))
                         .from(wh.getFromTime())
                         .to(wh.getToTime())
                         .build())
                 .collect(Collectors.toSet());
 
         java.util.Set<az.fitnest.catalog.dto.request.RestDayRequest> rests = gym.getRestDays().stream()
-                .map(rd -> new az.fitnest.catalog.dto.request.RestDayRequest(rd.name()))
+                .map(rd -> new az.fitnest.catalog.dto.request.RestDayRequest(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(rd, userLang)))
                 .collect(Collectors.toSet());
 
         return az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse.builder()

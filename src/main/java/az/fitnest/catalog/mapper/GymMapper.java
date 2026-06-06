@@ -187,7 +187,7 @@ public final class GymMapper {
             az.fitnest.catalog.model.enums.GymWorkHourPeriod.SUNDAY, "Воскресенье"
     );
 
-    private static String getLocalizedDay(az.fitnest.catalog.model.enums.GymWorkHourPeriod period, String lang) {
+    public static String getLocalizedDay(az.fitnest.catalog.model.enums.GymWorkHourPeriod period, String lang) {
         if (period == null) return null;
         if (lang != null && lang.equalsIgnoreCase("RU")) return RU_DAYS.getOrDefault(period, period.name());
         if (lang != null && lang.equalsIgnoreCase("EN")) return EN_DAYS.getOrDefault(period, period.name());
