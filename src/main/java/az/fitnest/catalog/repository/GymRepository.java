@@ -177,7 +177,7 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT g.category, COUNT(g.id) FROM Gym g WHERE g.category IS NOT NULL GROUP BY g.category")
     List<Object[]> countGymsByCategory();
 
-    @org.springframework.data.jpa.repository.Query("SELECT s.packageId, COUNT(DISTINCT s.gym.id) FROM GymSubscription s GROUP BY s.packageId")
+    @org.springframework.data.jpa.repository.Query("SELECT s.packageId, COUNT(DISTINCT s.gym.id) FROM GymSubscription s WHERE s.packageId = (SELECT MAX(s2.packageId) FROM GymSubscription s2 WHERE s2.gym.id = s.gym.id) GROUP BY s.packageId")
     List<Object[]> countGymsBySubscriptionPackageId();
 
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(g) FROM Gym g WHERE " +
