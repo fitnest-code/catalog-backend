@@ -113,6 +113,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Transactional(readOnly = true)
     @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
+        final String userLang = getUserLanguage(userId);
         Gym gym = gymRepository.findWithDetailsById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
@@ -150,8 +151,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 } catch (Exception e) {
                                 }
                                 String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
-                                String userLanguage = resolveUserLanguage();
-                                String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLanguage) : null;
+                                String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLang) : null;
                                 if (translatedStatus == null) {
                                     translatedStatus = originalStatus;
                                 }
@@ -163,13 +163,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .thenApply(v -> futures.stream().map(CompletableFuture::join).toList()));
 
         CompletableFuture<List<GymWorkHourResponse>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() -> {
-            String userLang = getUserLanguage(userId);
             return GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId), userLang);
         }, taskExecutor);
 
         CompletableFuture<List<GymRoomResponse>> roomsFuture = CompletableFuture.supplyAsync(() -> {
             if (gym.getRooms() == null) return new ArrayList<>();
-            String userLang = getUserLanguage(userId);
             return gym.getRooms().stream().map(room -> {
                 String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLang);
                 if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
@@ -188,7 +186,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         CompletableFuture.allOf(isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, roomsFuture).join();
 
-        String userLanguage = getUserLanguage(userId);
+        String userLanguage = userLang;
         boolean isSaved = isSavedFuture.join();
         List<GymReviewResponse> recentReviews = recentReviewsFuture.join();
         List<GymWorkHourResponse> generalWorkHours = generalWorkHoursFuture.join();
