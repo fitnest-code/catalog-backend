@@ -107,6 +107,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     public String getUserLanguage(Long userId) {
+        if (userId != null) {
+            try {
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isBlank()) {
+                    String lang = user.getLanguage().toUpperCase().trim();
+                    if (lang.equals("EN") || lang.equals("RU") || lang.equals("AZ")) {
+                        return lang;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
         return az.fitnest.catalog.util.UserContext.getUserLanguage();
     }
 

@@ -9,6 +9,12 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public class UserContext {
 
+    private static az.fitnest.catalog.client.UserServiceGrpcClient userServiceGrpcClient;
+
+    public static void setUserServiceGrpcClient(az.fitnest.catalog.client.UserServiceGrpcClient client) {
+        userServiceGrpcClient = client;
+    }
+
     public static Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Long) {
@@ -25,6 +31,20 @@ public class UserContext {
     }
 
     public static String getUserLanguage() {
+        Long userId = getCurrentUserId();
+        if (userId != null && userServiceGrpcClient != null) {
+            try {
+                az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+                if (user != null && user.getLanguage() != null && !user.getLanguage().isBlank()) {
+                    String lang = user.getLanguage().toUpperCase().trim();
+                    if (lang.equals("EN") || lang.equals("RU") || lang.equals("AZ")) {
+                        return lang;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         try {
             java.util.Locale locale = LocaleContextHolder.getLocale();
             if (locale != null && locale.getLanguage() != null) {
@@ -54,4 +74,5 @@ public class UserContext {
         return "AZ";
     }
 }
+
 
