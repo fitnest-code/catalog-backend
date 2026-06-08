@@ -112,4 +112,17 @@ public interface GymWriteService {
     void validateStep6(GymCreateStep6Request request, List<MultipartFile> serviceIcons);
 
     void validateStep7(az.fitnest.catalog.dto.request.GymCreateStep7Request request);
+
+    // V2 APIs
+    GymCreateStep1Response createGymStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request);
+    void validateStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request);
+    void createGymStep5V2(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos);
+    void validateStep5V2(MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos);
+    void createGymStep6V2(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep6RequestV2 request, List<MultipartFile> serviceIcons);
+    void validateStep6V2(az.fitnest.catalog.dto.request.GymCreateStep6RequestV2 request, List<MultipartFile> serviceIcons);
+    void updateGymSubscriptionsV2(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep6RequestV2 request);
+    void updateGymInfoV2(Long id, az.fitnest.catalog.dto.request.GymInfoUpdateRequestV2 request);
+    Long createGymCompleteV2(az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2 request, MultipartFile coverPhoto,
+                             List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                             List<MultipartFile> serviceIcons);
 }

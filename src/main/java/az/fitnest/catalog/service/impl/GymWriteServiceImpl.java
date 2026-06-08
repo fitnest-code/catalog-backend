@@ -13,6 +13,11 @@ import az.fitnest.catalog.dto.request.GymCreateStep3Request;
 import az.fitnest.catalog.dto.request.GymCreateStep6Request;
 import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequest;
 import az.fitnest.catalog.dto.request.GymCreateStep7Request;
+import az.fitnest.catalog.dto.request.GymCreateStep1RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep6RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequestV2;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2;
+import az.fitnest.catalog.dto.request.GymInfoUpdateRequestV2;
 import az.fitnest.catalog.dto.request.GymRequest;
 import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
 import az.fitnest.catalog.dto.request.SupportedServiceRequest;
@@ -1776,6 +1781,571 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
     }
 
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
+    public GymCreateStep1Response createGymStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+        if (categories.size() != request.categoryIds().size()) {
+            throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+        }
+
+        Gym gym = new Gym();
+        gym.setName(request.name());
+        gym.setDescription(request.description());
+        gym.setPhone(PhoneUtil.normalize(request.phone()));
+        gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
+        gym.setCategories(new HashSet<>(categories));
+        gym.setCategory(categories.get(0)); // compatibility
+        gym.setStatus(GymStatus.DRAFT);
+        gym.setCreationStep(1);
+        gym = gymRepository.save(gym);
+
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+
+        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+            int order = 1;
+            for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
+                az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
+                        .gym(gym)
+                        .name(glt.getName())
+                        .category(categories.get(0)) // compatibility
+                        .status("ACTIVE")
+                        .sortOrder(order++)
+                        .build();
+                gymLessonTypeRepository.save(gymLessonType);
+            }
+        }
+
+        return new GymCreateStep1Response(gym.getId());
+    }
+
+    @Override
+    public void validateStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        }
+        for (Long categoryId : request.categoryIds()) {
+            categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        }
+
+        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+            if (globalLessonTypes.size() != request.lessonTypeIds().size()) {
+                throw new BadRequestException("INVALID_LESSON_TYPES", "error.invalid_lesson_types");
+            }
+        }
+    }
+
+    private record RoomImageUploadResultV2(String roomName, Long categoryId, String url) {}
+
+    @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "gymDetails", key = "#gymId"),
+            @CacheEvict(cacheNames = "gym-images", key = "#gymId")
+    })
+    public void createGymStep5V2(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
+        CompletableFuture<String> coverFuture = null;
+        if (coverPhoto != null && !coverPhoto.isEmpty()) {
+            MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
+            coverFuture = CompletableFuture.supplyAsync(() ->
+                            fileStorageService.saveFile(validatedCover, "/gyms/covers"),
+                    imageUploadExecutor
+            );
+        }
+
+        List<CompletableFuture<RoomImageUploadResultV2>> roomFutures = new ArrayList<>();
+        if (roomNames != null && roomPhotos != null && roomNames.size() == roomPhotos.size() && !roomNames.isEmpty()) {
+            for (int i = 0; i < roomPhotos.size(); i++) {
+                MultipartFile originalFile = roomPhotos.get(i);
+                if (originalFile == null || originalFile.isEmpty()) continue;
+
+                String roomName = roomNames.get(i);
+                Long categoryId = (roomCategoryIds != null && roomCategoryIds.size() > i) ? roomCategoryIds.get(i) : null;
+                MultipartFile validatedFile = fileStorageService.validateAndWrapImage(originalFile);
+
+                roomFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validatedFile, "/gyms/rooms");
+                    return new RoomImageUploadResultV2(roomName, categoryId, url);
+                }, imageUploadExecutor));
+            }
+        }
+
+        String coverUrl = null;
+        if (coverFuture != null) {
+            coverUrl = coverFuture.join();
+        }
+
+        List<RoomImageUploadResultV2> roomResults = roomFutures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        final String finalCoverUrl = coverUrl;
+        new TransactionTemplate(transactionManager).execute(status -> {
+            if (finalCoverUrl != null) {
+                updateCoverImageInternal(gymId, finalCoverUrl);
+            }
+            if (!roomResults.isEmpty()) {
+                applyRoomImagesUpdateInternalV2(gymId, roomResults);
+            }
+            completeStep5Internal(gymId);
+            return null;
+        });
+    }
+
+    @Transactional
+    protected void applyRoomImagesUpdateInternalV2(Long gymId, List<RoomImageUploadResultV2> results) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        for (RoomImageUploadResultV2 res : results) {
+            Category category = null;
+            if (res.categoryId() != null) {
+                category = categoryRepository.findById(res.categoryId()).orElse(null);
+            }
+            Room room = Room.builder()
+                    .name(res.roomName())
+                    .gym(gym)
+                    .category(category)
+                    .build();
+            gym.getRooms().add(room);
+
+            RoomImage roomImage = RoomImage.builder()
+                    .room(room)
+                    .pictureUrl(res.url())
+                    .build();
+
+            room.getImages().add(roomImage);
+        }
+        gymRepository.save(gym);
+    }
+
+    @Override
+    public void validateStep5V2(MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
+        if (roomCategoryIds != null) {
+            for (Long categoryId : roomCategoryIds) {
+                if (categoryId != null) {
+                    categoryRepository.findById(categoryId)
+                            .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+                }
+            }
+        }
+        validateStep5(coverPhoto, roomNames, roomPhotos);
+    }
+
+    @Override
+    @Transactional
+    public void createGymStep6V2(Long gymId, GymCreateStep6RequestV2 request, List<MultipartFile> serviceIcons) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        validateStep(gym, 5);
+
+        Map<Integer, String> iconUrlByIndex = uploadServiceIcons(serviceIcons);
+
+        updateGymSubscriptionsInternalV2(gym, request, iconUrlByIndex);
+        updateStep(gym, 5);
+    }
+
+    @Override
+    public void validateStep6V2(GymCreateStep6RequestV2 request, List<MultipartFile> serviceIcons) {
+        if (request.subscriptions() == null || request.subscriptions().isEmpty()) {
+            throw new BadRequestException("SUBSCRIPTION_REQUIRED", "error.subscription_required");
+        }
+
+        for (GymCreateStep6SubscriptionRequestV2 subReq : request.subscriptions()) {
+            if (!orderServiceGrpcClient.checkPackageExists(subReq.packageId())) {
+                throw new BadRequestException("PACKAGE_NOT_FOUND", "error.package_not_found");
+            }
+            if (subReq.categoryId() != null) {
+                categoryRepository.findById(subReq.categoryId())
+                        .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+            }
+        }
+
+        if (serviceIcons != null && !serviceIcons.isEmpty()) {
+            for (MultipartFile icon : serviceIcons) {
+                if (icon != null && !icon.isEmpty()) {
+                    fileStorageService.validateAndWrapImage(icon);
+                }
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "gym-detail", allEntries = true)
+    public void updateGymSubscriptionsV2(Long gymId, GymCreateStep6RequestV2 request) {
+        Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        updateGymSubscriptionsInternalV2(gym, request, Collections.emptyMap());
+    }
+
+    @Override
+    @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms", "nearestGyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
+    public void updateGymInfoV2(Long gymId, az.fitnest.catalog.dto.request.GymInfoUpdateRequestV2 request) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+            if (categories.size() != request.categoryIds().size()) {
+                throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+            }
+            gym.setCategories(new HashSet<>(categories));
+            gym.setCategory(categories.get(0)); // compatibility
+        }
+
+        if (request.name() != null) gym.setName(request.name());
+        if (request.description() != null) gym.setDescription(request.description());
+        if (request.phone() != null) gym.setPhone(request.phone());
+        if (request.email() != null) gym.setEmail(request.email().isBlank() ? null : request.email());
+
+        if (gym.getAddress() == null) {
+            gym.setAddress(new Address());
+        }
+
+        if (request.city() != null) gym.getAddress().setCity(request.city());
+        if (request.address() != null) gym.getAddress().setAddressText(request.address());
+        if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
+        if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
+
+        gymRepository.save(gym);
+
+        if (request.name() != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+        }
+        if (request.description() != null) {
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        }
+        if (gym.getAddress() != null) {
+            if (request.address() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+            }
+            if (request.city() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            }
+        }
+    }
+
+    @Override
+    public Long createGymCompleteV2(az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2 request, MultipartFile coverPhoto,
+                                    List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                                    List<MultipartFile> serviceIcons) {
+
+        GymCreateStep1RequestV2 step1 = GymCreateStep1RequestV2.builder()
+                .categoryIds(request.categoryIds())
+                .name(request.name())
+                .phone(request.phone())
+                .description(request.description())
+                .email(request.email())
+                .lessonTypeIds(request.lessonTypeIds())
+                .build();
+        validateStep1V2(step1);
+
+        if (request.trainers() != null && !request.trainers().isEmpty()) {
+            List<String> emails = request.trainers().stream().map(GymCreateCompleteRequestV2.TrainerCreateData::email).filter(e -> e != null && !e.isBlank()).toList();
+            List<String> phones = request.trainers().stream().map(GymCreateCompleteRequestV2.TrainerCreateData::phone).filter(p -> p != null && !p.isBlank()).toList();
+            validateStep2(emails, phones);
+        }
+
+        GymCreateStep2Request step3 = GymCreateStep2Request.builder()
+                .generalWorkHours(request.generalWorkHours())
+                .workHoursWoman(request.workHoursWoman())
+                .workHoursMan(request.workHoursMan())
+                .restDays(request.restDays())
+                .build();
+        validateStep3(step3);
+
+        GymCreateStep3Request step4 = GymCreateStep3Request.builder()
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .build();
+        validateStep4(step4);
+
+        validateStep5V2(coverPhoto, request.roomNames(), request.roomCategoryIds(), roomPhotos);
+
+        GymCreateStep6RequestV2 step6 = GymCreateStep6RequestV2.builder()
+                .subscriptions(request.subscriptions())
+                .build();
+        validateStep6V2(step6, serviceIcons);
+
+        GymCreateStep7Request step7 = GymCreateStep7Request.builder()
+                .admins(request.admins())
+                .build();
+        validateStep7(step7);
+
+        GeocodingResponse geocoding = reverseGeocodingService.reverseGeocode(request.latitude(), request.longitude());
+
+        CompletableFuture<String> coverFuture = null;
+        if (coverPhoto != null && !coverPhoto.isEmpty()) {
+            MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
+            coverFuture = CompletableFuture.supplyAsync(() ->
+                    fileStorageService.saveFile(validatedCover, "/gyms/covers"), imageUploadExecutor);
+        }
+
+        List<CompletableFuture<String>> trainerPhotoFutures = new ArrayList<>();
+        if (trainerPhotos != null) {
+            for (MultipartFile photo : trainerPhotos) {
+                if (photo != null && !photo.isEmpty()) {
+                    MultipartFile validated = fileStorageService.validateAndWrapImage(photo);
+                    trainerPhotoFutures.add(CompletableFuture.supplyAsync(() ->
+                            fileStorageService.saveFile(validated, "/gyms/trainers"), imageUploadExecutor));
+                } else {
+                    trainerPhotoFutures.add(CompletableFuture.completedFuture(null));
+                }
+            }
+        }
+
+        List<CompletableFuture<RoomImageUploadResultV2>> roomFutures = new ArrayList<>();
+        if (request.roomNames() != null && roomPhotos != null && request.roomNames().size() == roomPhotos.size()) {
+            for (int i = 0; i < roomPhotos.size(); i++) {
+                MultipartFile file = roomPhotos.get(i);
+                if (file == null || file.isEmpty()) continue;
+                String roomName = request.roomNames().get(i);
+                Long categoryId = (request.roomCategoryIds() != null && request.roomCategoryIds().size() > i) ? request.roomCategoryIds().get(i) : null;
+                MultipartFile validated = fileStorageService.validateAndWrapImage(file);
+                roomFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validated, "/gyms/rooms");
+                    return new RoomImageUploadResultV2(roomName, categoryId, url);
+                }, imageUploadExecutor));
+            }
+        }
+
+        CompletableFuture<Map<Integer, String>> serviceIconsFuture = CompletableFuture.supplyAsync(() ->
+                uploadServiceIcons(serviceIcons), imageUploadExecutor);
+
+        List<CompletableFuture<GymAdminCreateResult>> adminFutures = request.admins().stream()
+                .map(adminReq -> CompletableFuture.supplyAsync(() -> {
+                    Long userId = identityServiceGrpcClient.createGymAdmin(
+                            adminReq.name(), adminReq.surname(),
+                            PhoneUtil.normalize(adminReq.phoneNumber()),
+                            adminReq.email(), adminReq.password()
+                    );
+                    return new GymAdminCreateResult(adminReq, userId);
+                }, imageUploadExecutor))
+                .toList();
+
+        String finalCoverUrl = coverFuture != null ? coverFuture.join() : null;
+        List<String> trainerPhotoUrls = trainerPhotoFutures.stream().map(CompletableFuture::join).toList();
+        List<RoomImageUploadResultV2> roomResults = roomFutures.stream().map(CompletableFuture::join).toList();
+        List<GymAdminCreateResult> adminResults = adminFutures.stream().map(CompletableFuture::join).toList();
+        Map<Integer, String> iconUrlByIndex = serviceIconsFuture.join();
+
+        Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
+            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
+            if (categories.isEmpty()) {
+                throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+            }
+            Gym gym = new Gym();
+            gym.setName(request.name());
+            gym.setDescription(request.description());
+            gym.setPhone(PhoneUtil.normalize(request.phone()));
+            gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
+            gym.setCategories(new HashSet<>(categories));
+            gym.setCategory(categories.get(0)); // compatibility
+
+            updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
+            updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
+            updateWorkHours(gym.getWorkHoursMan(), request.workHoursMan());
+
+            if (request.restDays() != null) {
+                Set<GymWorkHourPeriod> restDays = request.restDays().stream()
+                        .flatMap(r -> az.fitnest.catalog.mapper.GymMapper.expandPeriods(r.period()).stream())
+                        .collect(Collectors.toSet());
+                gym.getRestDays().addAll(restDays);
+            }
+
+            Address address = new Address();
+            address.setLatitude(request.latitude());
+            address.setLongitude(request.longitude());
+            if (geocoding != null) {
+                address.setAddressText(geocoding.addressText());
+                address.setCity(geocoding.city());
+            }
+            gym.setAddress(address);
+
+            if (finalCoverUrl != null) {
+                gym.setCoverImageUrl(finalCoverUrl);
+            }
+
+            gym.setStatus(GymStatus.ACTIVE);
+            gym.setCreationStep(7);
+
+            Gym savedGym = gymRepository.save(gym);
+            Long savedGymId = savedGym.getId();
+
+            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "name", request.name());
+            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "description", request.description());
+            if (savedGym.getAddress() != null) {
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+            }
+
+            if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
+                List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
+                int order = 1;
+                for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
+                    az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
+                            .gym(savedGym)
+                            .name(glt.getName())
+                            .category(categories.get(0)) // compatibility
+                            .status("ACTIVE")
+                            .sortOrder(order++)
+                            .build();
+                    gymLessonTypeRepository.save(gymLessonType);
+                }
+            }
+
+            if (request.trainers() != null && !request.trainers().isEmpty()) {
+                List<String> names = request.trainers().stream().map(GymCreateCompleteRequestV2.TrainerCreateData::name).toList();
+                List<String> surnames = request.trainers().stream().map(GymCreateCompleteRequestV2.TrainerCreateData::surname).toList();
+                List<Long> professionIds = request.trainers().stream().map(GymCreateCompleteRequestV2.TrainerCreateData::professionId).toList();
+                List<String> emails = request.trainers().stream().map(t -> t.email() != null ? t.email() : "").toList();
+                List<String> phones = request.trainers().stream().map(t -> t.phone() != null ? t.phone() : "").toList();
+                List<String> lessonTypesPerTrainer = request.trainers().stream().map(t -> t.lessonTypeIds() != null ? t.lessonTypeIds() : "").toList();
+
+                gymTrainerService.addTrainersWithUrls(savedGymId, names, surnames, professionIds, emails, phones, trainerPhotoUrls, lessonTypesPerTrainer);
+            }
+
+            if (!roomResults.isEmpty()) {
+                for (RoomImageUploadResultV2 res : roomResults) {
+                    Category category = null;
+                    if (res.categoryId() != null) {
+                        category = categoryRepository.findById(res.categoryId()).orElse(null);
+                    }
+                    Room room = Room.builder()
+                            .name(res.roomName())
+                            .gym(savedGym)
+                            .category(category)
+                            .build();
+                    savedGym.getRooms().add(room);
+
+                    RoomImage roomImage = RoomImage.builder()
+                            .room(room)
+                            .pictureUrl(res.url())
+                            .build();
+                    room.getImages().add(roomImage);
+                }
+                gymRepository.save(savedGym);
+            }
+
+            updateGymSubscriptionsInternalV2(savedGym, step6, iconUrlByIndex);
+
+            for (GymAdminCreateResult res : adminResults) {
+                String role = (res.req().role() != null && !res.req().role().trim().isEmpty()) ? res.req().role() : "Super admin";
+                az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
+                        az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
+                );
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+            }
+
+            return savedGymId;
+        });
+
+        gymQrCodeService.generateAndSaveQrCode(gymId);
+
+        return gymId;
+    }
+
+    private void updateGymSubscriptionsInternalV2(
+            Gym gym,
+            GymCreateStep6RequestV2 request,
+            Map<Integer, String> iconUrlByIndex) {
+
+        Long gymId = gym.getId();
+        gym.getSubscriptions().clear();
+        gymRepository.saveAndFlush(gym);
+
+        Set<String> processedPairs = new HashSet<>();
+        Map<String, SupportedService> nameToService = new HashMap<>();
+        int globalIconIndex = 0;
+
+        for (GymCreateStep6SubscriptionRequestV2 subReq : request.subscriptions()) {
+            String pairKey = subReq.packageId() + "_" + subReq.categoryId();
+            if (!processedPairs.add(pairKey)) continue;
+
+            Category category = categoryRepository.findById(subReq.categoryId()).orElse(null);
+
+            GymSubscription subscription = new GymSubscription();
+            subscription.setGym(gym);
+            subscription.setPackageId(subReq.packageId());
+            subscription.setDailyPrice(subReq.dailyPrice());
+            subscription.setCategory(category);
+
+            Set<SupportedService> services = new HashSet<>();
+
+            if (subReq.supportedServicesId() != null && !subReq.supportedServicesId().isEmpty()) {
+                List<SupportedService> existingServices = supportedServiceRepository
+                        .findAllById(subReq.supportedServicesId())
+                        .stream()
+                        .filter(s -> s.getGymId() == null || s.getGymId().equals(gymId))
+                        .toList();
+                services.addAll(existingServices);
+            }
+
+            if (subReq.customServices() != null && !subReq.customServices().isEmpty()) {
+                for (String customServiceName : subReq.customServices()) {
+                    if (customServiceName == null || customServiceName.trim().isEmpty()) {
+                        globalIconIndex++;
+                        continue;
+                    }
+
+                    String trimmedName = customServiceName.trim();
+                    String iconUrl = iconUrlByIndex.get(globalIconIndex);
+                    globalIconIndex++;
+
+                    SupportedService service = nameToService.get(trimmedName.toLowerCase());
+                    if (service == null) {
+                        Optional<SupportedService> existingOpt = supportedServiceRepository
+                                .findByNameIgnoreCaseAndGymId(trimmedName, gymId);
+
+                        if (existingOpt.isPresent()) {
+                            service = existingOpt.get();
+                            if (iconUrl != null) {
+                                if (service.getIconUrl() != null) {
+                                    fileStorageService.deleteFilesAfterCommit(
+                                            List.of(service.getIconUrl())
+                                    );
+                                }
+                                service.setIconUrl(iconUrl);
+                                service = supportedServiceRepository.save(service);
+                            }
+                        } else {
+                            service = new SupportedService();
+                            service.setName(trimmedName);
+                            service.setGymId(gymId);
+                            if (iconUrl != null) {
+                                service.setIconUrl(iconUrl);
+                            }
+                            service = supportedServiceRepository.save(service);
+                            translationService.autoTranslateAndSave(
+                                    "SupportedService",
+                                    service.getId().toString(),
+                                    "name",
+                                    service.getName()
+                            );
+                        }
+                        nameToService.put(trimmedName.toLowerCase(), service);
+                    }
+                    services.add(service);
+                }
+            }
+
+            subscription.setSupportedServices(services);
+            gym.getSubscriptions().add(subscription);
+        }
+
+        gymRepository.save(gym);
+    }
+
     private void verifyGymOwnership(Long gymId) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
@@ -1791,3 +2361,4 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
     }
 }
+

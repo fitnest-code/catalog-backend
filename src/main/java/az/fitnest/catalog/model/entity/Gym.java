@@ -118,6 +118,17 @@ public class Gym
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "gym_categories",
+        joinColumns = @JoinColumn(name = "gym_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<Category> categories = new java.util.HashSet<>();
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;

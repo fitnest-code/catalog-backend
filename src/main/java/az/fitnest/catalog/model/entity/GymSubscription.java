@@ -34,4 +34,8 @@ public class GymSubscription extends BaseAuditableEntity {
         inverseJoinColumns = @JoinColumn(name = "supported_service_id")
     )
     private Set<SupportedService> supportedServices = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 }
