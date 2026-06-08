@@ -2400,7 +2400,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymRoomResponseV2> rooms = roomsFuture.join();
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null) {
+        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
             for (Category c : gym.getCategories()) {
                 String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
                 categoryDtos.add(CategoryResponse.builder()
@@ -2411,6 +2411,17 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .coverImageUrl(c.getPhotoUrl())
                         .build());
             }
+        } else if (gym.getCategory() != null) {
+            // Fallback for legacy gyms: old single category_id FK
+            Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
         }
 
         List<GymTrainerResponse> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerResponse>map(t -> {
@@ -2748,7 +2759,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null) {
+        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
             for (Category c : gym.getCategories()) {
                 String localizedCatName = getTranslatedValueCached(translationLookup,
                         "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
@@ -2760,6 +2771,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .coverImageUrl(c.getPhotoUrl())
                         .build());
             }
+        } else if (gym.getCategory() != null) {
+            // Fallback for legacy gyms: old single category_id FK
+            Category c = gym.getCategory();
+            String localizedCatName = getTranslatedValueCached(translationLookup,
+                    "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getCategoryId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
         }
 
         List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
@@ -2838,7 +2861,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String userLanguage = resolveUserLanguage();
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null) {
+        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
             for (Category c : gym.getCategories()) {
                 String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
                 categoryDtos.add(CategoryResponse.builder()
@@ -2849,6 +2872,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .coverImageUrl(c.getPhotoUrl())
                         .build());
             }
+        } else if (gym.getCategory() != null) {
+            // Fallback for legacy gyms created before multi-category (V2):
+            // they only have category_id FK, the gym_categories join table is empty.
+            Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
         }
 
         List<az.fitnest.catalog.dto.response.RoomImageDtoV2> roomDtos = new java.util.ArrayList<>();
