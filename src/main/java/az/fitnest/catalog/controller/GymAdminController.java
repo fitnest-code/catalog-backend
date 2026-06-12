@@ -303,7 +303,7 @@ public class GymAdminController {
             @PathVariable("trainerId") Long trainerId,
             @RequestParam("name") String name,
             @RequestParam("surname") String surname,
-            @RequestParam("professionId") Long professionId,
+            @RequestParam(value = "professionId", required = false) Long professionId,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "email", required = false) String email,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
@@ -331,6 +331,14 @@ public class GymAdminController {
             @RequestParam("file") MultipartFile file) {
         gymTrainerService.updateTrainerPhoto(gymId, trainerId, file);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Giriş tarixçəsini silin", description = "Bütün idman zallarının giriş tarixçəsini silir və gəlirləri sıfırlayır. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/history")
+    public ResponseEntity<Void> deleteGymEntranceHistory() {
+        gymWriteService.deleteGymEntranceHistory();
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "İdman zalı giriş tarixçəsini alın", description = "İdman zalı üçün bütün giriş cəhdlərinin (uğurlu/uğursuz) siyahısını gətirir. ADMIN rolu tələb olunur.")

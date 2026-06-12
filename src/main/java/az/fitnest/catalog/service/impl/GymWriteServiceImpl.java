@@ -592,6 +592,12 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteGymEntranceHistory() {
+        gymEntranceHistoryRepository.deleteAllInBatch();
+    }
+
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteAllGymSubscriptions(Long gymId) {
