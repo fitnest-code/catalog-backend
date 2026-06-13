@@ -1,58 +1,92 @@
 package az.fitnest.catalog.service.impl;
 
-import az.fitnest.catalog.model.entity.Category;
-import az.fitnest.catalog.model.entity.RoomImage;
-
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
+import az.fitnest.catalog.client.CachedUser;
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.client.UserServiceGrpcClient;
+import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.request.RestDayRequest;
+import az.fitnest.catalog.dto.response.AdminGymResponse;
+import az.fitnest.catalog.dto.response.AdminQrScanHistoryResponse;
 import az.fitnest.catalog.dto.response.CategoryResponse;
+import az.fitnest.catalog.dto.response.CategoryWithMainResponse;
+import az.fitnest.catalog.dto.response.GymAdminResponse;
+import az.fitnest.catalog.dto.response.GymCategoryCountResponse;
+import az.fitnest.catalog.dto.response.GymCountResponse;
+import az.fitnest.catalog.dto.response.GymDetailResponse;
+import az.fitnest.catalog.dto.response.GymDetailResponseV2;
+import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
+import az.fitnest.catalog.dto.response.GymEntranceHistoryAdminResponse;
+import az.fitnest.catalog.dto.response.GymEntranceResponse;
+import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
+import az.fitnest.catalog.dto.response.GymImageItemResponse;
+import az.fitnest.catalog.dto.response.GymImageResponse;
+import az.fitnest.catalog.dto.response.GymInfoAdminResponseV2;
+import az.fitnest.catalog.dto.response.GymMainPageResponse;
+import az.fitnest.catalog.dto.response.GymMainPageResponseV2;
+import az.fitnest.catalog.dto.response.GymNearbyResponse;
+import az.fitnest.catalog.dto.response.GymPlanBenefitResponse;
+import az.fitnest.catalog.dto.response.GymPlanItemResponse;
+import az.fitnest.catalog.dto.response.GymPlanItemResponseV2;
+import az.fitnest.catalog.dto.response.GymReviewResponse;
+import az.fitnest.catalog.dto.response.GymRoomResponse;
+import az.fitnest.catalog.dto.response.GymRoomResponseV2;
+import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
+import az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponseV2;
+import az.fitnest.catalog.dto.response.GymTrainerResponse;
+import az.fitnest.catalog.dto.response.GymTypeCountResponse;
+import az.fitnest.catalog.dto.response.GymWorkHourResponse;
+import az.fitnest.catalog.dto.response.LessonTypeResponse;
+import az.fitnest.catalog.dto.response.LocationResponse;
 import az.fitnest.catalog.dto.response.ProfessionResponse;
-import az.fitnest.catalog.mapper.GymMapper;
-import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.dto.response.ReservationAdminResponse;
+import az.fitnest.catalog.dto.response.ReservationDetailAdminResponse;
+import az.fitnest.catalog.dto.response.ReservationStatsResponse;
+import az.fitnest.catalog.dto.response.RoomImageDtoV2;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ForbiddenException;
+import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.exception.UnauthorizedException;
+import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.model.entity.Address;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.SavedGym;
+import az.fitnest.catalog.model.entity.GymCategory;
 import az.fitnest.catalog.model.entity.GymEntranceHistory;
+import az.fitnest.catalog.model.entity.Reservation;
+import az.fitnest.catalog.model.entity.RoomImage;
+import az.fitnest.catalog.model.entity.SavedGym;
+import az.fitnest.catalog.model.enums.ReservationStatus;
+import az.fitnest.catalog.repository.CategoryRepository;
+import az.fitnest.catalog.repository.GymCategoryRepository;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
-import az.fitnest.catalog.repository.ReviewRepository;
-import az.fitnest.catalog.repository.TrainerReservationDateRepository;
-import az.fitnest.catalog.repository.TrainerRepository;
-import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
+import az.fitnest.catalog.repository.ReviewRepository;
+import az.fitnest.catalog.repository.TrainerRepository;
+import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.repository.TranslationRepository;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.PlatformUtil;
 import az.fitnest.catalog.util.UserContext;
-import az.fitnest.catalog.client.OrderServiceGrpcClient;
-import az.fitnest.catalog.client.UserServiceGrpcClient;
-import az.fitnest.catalog.model.entity.Reservation;
-import az.fitnest.catalog.model.enums.ReservationStatus;
-import az.fitnest.catalog.client.CachedUser;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.jpa.domain.Specification;
-import jakarta.persistence.criteria.Predicate;
-import java.util.ArrayList;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,6 +112,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.service.GymQrCodeService gymQrCodeService;
     private final az.fitnest.catalog.client.StorageGrpcClient storageGrpcClient;
     private final java.util.concurrent.Executor taskExecutor;
+    private final GymCategoryRepository gymCategoryRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -2320,8 +2355,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Transactional(readOnly = true)
     public GymDetailResponseV2 getGymDetailV2(Long userId, Long gymId) {
         final String userLang = getUserLanguage(userId);
+
         Gym gym = gymRepository.findWithDetailsById(gymId)
-                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "GYM_NOT_FOUND", "error.gym_not_found"));
 
         CompletableFuture<Boolean> isSavedFuture = CompletableFuture.supplyAsync(() -> {
             if (userId != null) {
@@ -2331,7 +2368,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }, taskExecutor);
 
         CompletableFuture<List<GymTrainerResponse>> trainerDtosFuture = CompletableFuture
-                .supplyAsync(() -> trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
+                .supplyAsync(() -> trainerRepository
+                        .findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
                         .getContent().stream()
                         .map(GymMapper::toTrainerDto)
                         .toList(), taskExecutor);
@@ -2339,206 +2377,251 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         CompletableFuture<List<GymReviewResponse>> recentReviewsFuture = CompletableFuture
                 .supplyAsync(() -> {
                     List<az.fitnest.catalog.model.entity.Review> reviews = reviewRepository
-                            .findByGymId(gymId, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdDate")))
+                            .findByGymId(gymId, PageRequest.of(0, 3,
+                                    Sort.by(Sort.Direction.DESC, "createdDate")))
                             .getContent();
-
                     return reviews.stream()
                             .map(r -> CompletableFuture.supplyAsync(() -> {
                                 String fullName = "User " + r.getUserId();
                                 String avatarUrl = null;
                                 try {
                                     if (r.getUserId() != null) {
-                                        CachedUser user = userServiceGrpcClient.getUserById(r.getUserId());
+                                        CachedUser user = userServiceGrpcClient
+                                                .getUserById(r.getUserId());
                                         if (user != null) {
-                                            fullName = user.getFirstName() + " " + user.getLastName();
+                                            fullName = user.getFirstName()
+                                                    + " " + user.getLastName();
                                             avatarUrl = user.getProfileImageUrl();
                                         }
                                     }
-                                } catch (Exception e) {
-                                }
-                                String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
-                                String translatedStatus = (originalStatus != null) ? translationService.getTranslatedValue("REVIEW_STATUS", originalStatus, "name", userLang) : null;
-                                if (translatedStatus == null) {
-                                    translatedStatus = originalStatus;
-                                }
+                                } catch (Exception ignored) {}
+                                String originalStatus = r.getStatus() != null
+                                        ? r.getStatus().name() : null;
+                                String translatedStatus = originalStatus != null
+                                        ? translationService.getTranslatedValue(
+                                        "REVIEW_STATUS", originalStatus,
+                                        "name", userLang)
+                                        : null;
+                                if (translatedStatus == null) translatedStatus = originalStatus;
                                 return GymMapper.toReviewDto(r, fullName, avatarUrl, translatedStatus);
                             }, taskExecutor))
                             .toList();
                 }, taskExecutor)
-                .thenCompose(futures -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                        .thenApply(v -> futures.stream().map(CompletableFuture::join).toList()));
+                .thenCompose(futures ->
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                                .thenApply(v -> futures.stream()
+                                        .map(CompletableFuture::join).toList()));
 
-        CompletableFuture<List<GymWorkHourResponse>> generalWorkHoursFuture = CompletableFuture.supplyAsync(() -> {
-            return GymMapper.toGroupedWorkHourDtos(gymRepository.findGeneralWorkHoursByGymId(gymId), userLang);
-        }, taskExecutor);
+        CompletableFuture<List<GymWorkHourResponse>> generalWorkHoursFuture =
+                CompletableFuture.supplyAsync(() ->
+                                GymMapper.toGroupedWorkHourDtos(
+                                        gymRepository.findGeneralWorkHoursByGymId(gymId), userLang),
+                        taskExecutor);
 
-        CompletableFuture<List<GymRoomResponseV2>> roomsFuture = CompletableFuture.supplyAsync(() -> {
-            if (gym.getRooms() == null) return new ArrayList<>();
-            return gym.getRooms().stream().map(room -> {
-                String localizedRoomName = translationService.getTranslatedValue("ROOM", room.getId().toString(), "name", userLang);
-                if (localizedRoomName == null || localizedRoomName.isEmpty()) localizedRoomName = room.getName();
+        CompletableFuture<List<GymRoomResponseV2>> roomsFuture =
+                CompletableFuture.supplyAsync(() -> {
+                    if (gym.getRooms() == null) return new ArrayList<>();
+                    return gym.getRooms().stream().map(room -> {
+                        String localizedRoomName = translationService.getTranslatedValue(
+                                "ROOM", room.getId().toString(), "name", userLang);
+                        if (localizedRoomName == null || localizedRoomName.isEmpty())
+                            localizedRoomName = room.getName();
+                        List<String> imageUrls = room.getImages() != null
+                                ? room.getImages().stream()
+                                .map(RoomImage::getPictureUrl).toList()
+                                : java.util.Collections.emptyList();
+                        return GymRoomResponseV2.builder()
+                                .id(room.getId())
+                                .room_name(localizedRoomName)
+                                .categoryId(room.getCategory() != null
+                                        ? room.getCategory().getId() : null)
+                                .urls(imageUrls)
+                                .build();
+                    }).toList();
+                }, taskExecutor);
 
-                List<String> imageUrls = room.getImages() != null
-                        ? room.getImages().stream().map(RoomImage::getPictureUrl).toList()
-                        : java.util.Collections.emptyList();
+        CompletableFuture<List<CategoryWithMainResponse>> categoryDtosFuture =
+                CompletableFuture.supplyAsync(() -> {
+                    List<CategoryWithMainResponse> result = new ArrayList<>();
+                    List<GymCategory> pivots = gymCategoryRepository.findByGymId(gymId);
 
-                return GymRoomResponseV2.builder()
-                        .id(room.getId())
-                        .room_name(localizedRoomName)
-                        .categoryId(room.getCategory() != null ? room.getCategory().getId() : null)
-                        .urls(imageUrls)
-                        .build();
-            }).toList();
-        }, taskExecutor);
+                    if (!pivots.isEmpty()) {
+                        // V2 zalı — pivot cədvəlindən oxu
+                        for (GymCategory pivot : pivots) {
+                            Category c = pivot.getCategory();
+                            String localizedCatName = translationService.getTranslatedValue(
+                                    "CATEGORY", c.getId().toString(), "name", userLang);
+                            result.add(CategoryWithMainResponse.builder()
+                                    .id(c.getId())
+                                    .name(localizedCatName != null && !localizedCatName.isEmpty()
+                                            ? localizedCatName : c.getName())
+                                    .photoUrl(c.getPhotoUrl())
+                                    .iconUrl(c.getIconUrl())
+                                    .isMain(pivot.isMain())
+                                    .build());
+                        }
+                    } else if (gym.getCategory() != null) {
+                        Category c = gym.getCategory();
+                        String localizedCatName = translationService.getTranslatedValue(
+                                "CATEGORY", c.getId().toString(), "name", userLang);
+                        result.add(CategoryWithMainResponse.builder()
+                                .id(c.getId())
+                                .name(localizedCatName != null && !localizedCatName.isEmpty()
+                                        ? localizedCatName : c.getName())
+                                .photoUrl(c.getPhotoUrl())
+                                .iconUrl(c.getIconUrl())
+                                .isMain(true)
+                                .build());
+                    }
+                    return result;
+                }, taskExecutor);
 
-        CompletableFuture.allOf(isSavedFuture, trainerDtosFuture, recentReviewsFuture, generalWorkHoursFuture, roomsFuture).join();
+        CompletableFuture.allOf(
+                isSavedFuture,
+                trainerDtosFuture,
+                recentReviewsFuture,
+                generalWorkHoursFuture,
+                roomsFuture,
+                categoryDtosFuture
+        ).join();
 
-        String userLanguage = userLang;
         boolean isSaved = isSavedFuture.join();
         List<GymReviewResponse> recentReviews = recentReviewsFuture.join();
         List<GymWorkHourResponse> generalWorkHours = generalWorkHoursFuture.join();
         List<GymRoomResponseV2> rooms = roomsFuture.join();
+        List<CategoryWithMainResponse> categoryDtos = categoryDtosFuture.join();
 
-        List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
-                        .id(c.getId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                        .photoUrl(c.getPhotoUrl())
-                        .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
-                        .build());
-            }
-        } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms: old single category_id FK
-            Category c = gym.getCategory();
-            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            categoryDtos.add(CategoryResponse.builder()
-                    .id(c.getId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                    .photoUrl(c.getPhotoUrl())
-                    .iconUrl(c.getIconUrl())
-                    .coverImageUrl(c.getPhotoUrl())
-                    .build());
-        }
+        List<GymTrainerResponse> trainerDtos = trainerDtosFuture.join().stream()
+                .<GymTrainerResponse>map(t -> {
+                    String localizedName = translationService.getTranslatedValue(
+                            "Trainer", t.trainer_id(), "name", userLang);
+                    if (localizedName == null || localizedName.isEmpty())
+                        localizedName = t.name();
 
-        List<GymTrainerResponse> trainerDtos = trainerDtosFuture.join().stream().<GymTrainerResponse>map(t -> {
-            String localizedTrainerName = translationService.getTranslatedValue("Trainer", t.trainer_id(), "name", userLanguage);
-            if (localizedTrainerName == null || localizedTrainerName.isEmpty()) {
-                localizedTrainerName = t.name();
-            }
-            String localizedTrainerSurname = translationService.getTranslatedValue("Trainer", t.trainer_id(), "surname", userLanguage);
-            if (localizedTrainerSurname == null || localizedTrainerSurname.isEmpty()) {
-                localizedTrainerSurname = t.surname();
-            }
+                    String localizedSurname = translationService.getTranslatedValue(
+                            "Trainer", t.trainer_id(), "surname", userLang);
+                    if (localizedSurname == null || localizedSurname.isEmpty())
+                        localizedSurname = t.surname();
 
-            ProfessionResponse profDto = t.profession();
-            if (t.profession() != null && t.profession().id() != null) {
-                String localizedProfession = translationService.getTranslatedValue("PROFESSION",
-                        t.profession().id().toString(), "name", userLanguage);
-                if (localizedProfession != null && !localizedProfession.isEmpty()) {
-                    profDto = ProfessionResponse.builder()
-                            .id(t.profession().id())
-                            .name(localizedProfession)
+                    ProfessionResponse profDto = t.profession();
+                    if (t.profession() != null && t.profession().id() != null) {
+                        String localizedProfession = translationService.getTranslatedValue(
+                                "PROFESSION", t.profession().id().toString(),
+                                "name", userLang);
+                        if (localizedProfession != null && !localizedProfession.isEmpty()) {
+                            profDto = ProfessionResponse.builder()
+                                    .id(t.profession().id())
+                                    .name(localizedProfession)
+                                    .build();
+                        }
+                    }
+                    return GymTrainerResponse.builder()
+                            .trainer_id(t.trainer_id())
+                            .name(localizedName)
+                            .surname(localizedSurname)
+                            .profession(profDto)
+                            .picture(t.picture())
+                            .phone(t.phone())
+                            .email(t.email())
                             .build();
-                }
-            }
-
-            return GymTrainerResponse.builder()
-                    .trainer_id(t.trainer_id())
-                    .name(localizedTrainerName)
-                    .surname(localizedTrainerSurname)
-                    .profession(profDto)
-                    .picture(t.picture())
-                    .phone(t.phone())
-                    .email(t.email())
-                    .build();
-        }).collect(Collectors.toList());
+                })
+                .collect(Collectors.toList());
 
         List<GymWorkHourResponse> workHoursWoman = null;
         if (gym.getWorkHoursWoman() != null && !gym.getWorkHoursWoman().isEmpty()) {
-            workHoursWoman = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursWoman(), userLanguage);
+            workHoursWoman = GymMapper.toGroupedWorkHourDtos(
+                    gym.getWorkHoursWoman(), userLang);
         }
         List<GymWorkHourResponse> workHoursMan = null;
         if (gym.getWorkHoursMan() != null && !gym.getWorkHoursMan().isEmpty()) {
-            workHoursMan = GymMapper.toGroupedWorkHourDtos(gym.getWorkHoursMan(), userLanguage);
+            workHoursMan = GymMapper.toGroupedWorkHourDtos(
+                    gym.getWorkHoursMan(), userLang);
         }
         if (generalWorkHours != null && generalWorkHours.isEmpty())
             generalWorkHours = null;
 
-        List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
+        List<GymPlanItemResponseV2> supportedSubscriptions = new ArrayList<>();
         try {
             if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
                 List<Long> packageIds = gym.getSubscriptions().stream()
-                        .map(sub -> sub.getPackageId())
+                        .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                         .filter(java.util.Objects::nonNull)
                         .toList();
-                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
-                        .getPackageNamesByIds(packageIds);
-                java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo = packageInfos.stream()
-                        .collect(java.util.stream.Collectors.toMap(
+                List<az.fitnest.order.grpc.PackageNameInfo> packageInfos =
+                        orderServiceGrpcClient.getPackageNamesByIds(packageIds);
+                Map<Long, az.fitnest.order.grpc.PackageNameInfo> idToInfo =
+                        packageInfos.stream().collect(Collectors.toMap(
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
+
                 supportedSubscriptions = gym.getSubscriptions().stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
-                            az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
+                            az.fitnest.order.grpc.PackageNameInfo info =
+                                    idToInfo.get(sub.getPackageId());
                             String planId = sub.getPackageId().toString();
-                            String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
-                                    planId, "name", userLanguage);
-                            String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
-                                    ? localizedPackageName
-                                    : info.getName());
-                            List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
-                                    .map(b -> {
-                                        String localizedBenefit = translationService.getTranslatedValue(
-                                                "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
-                                        return GymPlanBenefitResponse.builder()
-                                                .description(localizedBenefit != null && !localizedBenefit.isEmpty()
-                                                        ? localizedBenefit
-                                                        : b.getName())
-                                                .iconImageUrl(b.getIconUrl())
-                                                .build();
-                                    })
-                                    .toList();
+                            String localizedPackageName = translationService
+                                    .getTranslatedValue("GYMSUBSCRIPTION",
+                                            planId, "name", userLang);
+                            String packageName = cleanPackageName(
+                                    localizedPackageName != null && !localizedPackageName.isEmpty()
+                                            ? localizedPackageName : info.getName());
+                            List<GymPlanBenefitResponse> benefitsList =
+                                    sub.getSupportedServices().stream()
+                                            .map(b -> {
+                                                String localizedBenefit = translationService
+                                                        .getTranslatedValue("SUPPORTEDSERVICE",
+                                                                b.getId().toString(), "name", userLang);
+                                                return GymPlanBenefitResponse.builder()
+                                                        .description(localizedBenefit != null
+                                                                && !localizedBenefit.isEmpty()
+                                                                ? localizedBenefit : b.getName())
+                                                        .iconImageUrl(b.getIconUrl())
+                                                        .build();
+                                            })
+                                            .toList();
                             return GymPlanItemResponseV2.builder()
                                     .plan_id(planId)
                                     .packageName(packageName)
-                                    .categoryId(sub.getCategory() != null ? sub.getCategory().getId() : null)
+                                    .categoryId(sub.getCategory() != null
+                                            ? sub.getCategory().getId() : null)
                                     .dailyPrice(sub.getDailyPrice())
                                     .benefits(benefitsList)
                                     .build();
                         })
-                        .collect(java.util.stream.Collectors.toList());
+                        .collect(Collectors.toList());
             }
         } catch (Exception e) {
-            System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
         }
-        String localizedName = getLocalizedGymName(gym, userLanguage);
-        String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(),
-                "description", userLanguage);
+
+        String localizedName = getLocalizedGymName(gym, userLang);
+
+        String localizedDescription = translationService.getTranslatedValue(
+                "GYM", gym.getId().toString(), "description", userLang);
         if (localizedDescription == null || localizedDescription.isEmpty())
             localizedDescription = gym.getDescription();
+
         List<RestDayRequest> restDays = gym.getRestDays() != null
                 ? gym.getRestDays().stream()
-                        .map(rd -> new RestDayRequest(az.fitnest.catalog.mapper.GymMapper.getLocalizedDay(rd, userLanguage)))
-                        .collect(java.util.stream.Collectors.toList())
+                .map(rd -> new RestDayRequest(
+                        GymMapper.getLocalizedDay(rd, userLang)))
+                .collect(Collectors.toList())
                 : java.util.Collections.emptyList();
 
         return new GymDetailResponseV2(
                 gym.getId().toString(),
                 localizedName,
                 localizedDescription,
-                gym.getAddress() != null ? new az.fitnest.catalog.dto.response.LocationResponse(
+                gym.getAddress() != null
+                        ? new LocationResponse(
                         gym.getAddress().getLatitude(),
                         gym.getAddress().getLongitude(),
-                        getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText",
-                                userLanguage),
-                        getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage)
-                ) : null,
+                        getLocalizedAddressField(gym.getId(), "GYM",
+                                gym.getAddress(), "addressText", userLang),
+                        getLocalizedAddressField(gym.getId(), "GYM",
+                                gym.getAddress(), "city", userLang))
+                        : null,
                 isSaved,
                 gym.getPhone(),
                 gym.getEmail(),
@@ -2749,62 +2832,75 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 && address != null
                 && address.getLatitude() != null
                 && address.getLongitude() != null) {
-
             distanceKm = Math.round(
-                    calculateDistanceRaw(
-                            userLat, userLng,
-                            address.getLatitude(), address.getLongitude()
-                    ) * 10.0
+                    calculateDistanceRaw(userLat, userLng,
+                            address.getLatitude(), address.getLongitude()) * 10.0
             ) / 10.0;
         }
 
-        List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = getTranslatedValueCached(translationLookup,
-                        "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
+        List<CategoryWithMainResponse> categoryDtos = new ArrayList<>();
+        Set<GymCategory> pivots = gym.getGymCategories();
+
+        if (pivots != null && !pivots.isEmpty()) {
+            for (GymCategory pivot : pivots) {
+                Category c = pivot.getCategory();
+                String localizedCatName = getTranslatedValueCached(
+                        translationLookup,
+                        "CATEGORY",
+                        c.getCategoryId().toString(),
+                        "name",
+                        userLanguage);
+                categoryDtos.add(CategoryWithMainResponse.builder()
                         .id(c.getCategoryId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                        .name(localizedCatName != null && !localizedCatName.isEmpty()
+                                ? localizedCatName : c.getName())
                         .photoUrl(c.getPhotoUrl())
                         .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
+                        .isMain(pivot.isMain())
                         .build());
             }
         } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms: old single category_id FK
             Category c = gym.getCategory();
-            String localizedCatName = getTranslatedValueCached(translationLookup,
-                    "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
-            categoryDtos.add(CategoryResponse.builder()
+            String localizedCatName = getTranslatedValueCached(
+                    translationLookup,
+                    "CATEGORY",
+                    c.getCategoryId().toString(),
+                    "name",
+                    userLanguage);
+            categoryDtos.add(CategoryWithMainResponse.builder()
                     .id(c.getCategoryId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty()
+                            ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
                     .iconUrl(c.getIconUrl())
-                    .coverImageUrl(c.getPhotoUrl())
+                    .isMain(true)
                     .build());
         }
 
-        List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
+        List<GymPlanItemResponseV2> supportedSubscriptions = new ArrayList<>();
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
             supportedSubscriptions = gym.getSubscriptions().stream()
                     .filter(sub -> sub.getPackageId() != null)
                     .map(sub -> {
-                        az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
+                        az.fitnest.order.grpc.PackageNameInfo info =
+                                packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String localizedPackageName = getTranslatedValueCached(translationLookup,
-                                "GYMSUBSCRIPTION", planId, "name", userLanguage);
+                        String localizedPackageName = getTranslatedValueCached(
+                                translationLookup, "GYMSUBSCRIPTION", planId,
+                                "name", userLanguage);
                         String packageName = cleanPackageName(
                                 (localizedPackageName != null && !localizedPackageName.isEmpty())
                                         ? localizedPackageName
-                                        : (info != null ? info.getName() : "Bronze")
-                        );
-                        List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
+                                        : (info != null ? info.getName() : "Bronze"));
+                        List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices()
+                                .stream()
                                 .map(b -> {
-                                    String localizedBenefit = getTranslatedValueCached(translationLookup,
-                                            "SUPPORTEDSERVICE", b.getId().toString(), "name", userLanguage);
+                                    String localizedBenefit = getTranslatedValueCached(
+                                            translationLookup, "SUPPORTEDSERVICE",
+                                            b.getId().toString(), "name", userLanguage);
                                     return GymPlanBenefitResponse.builder()
-                                            .description(localizedBenefit != null && !localizedBenefit.isEmpty()
+                                            .description(localizedBenefit != null
+                                                    && !localizedBenefit.isEmpty()
                                                     ? localizedBenefit : b.getName())
                                             .iconImageUrl(b.getIconUrl())
                                             .build();
@@ -2813,7 +2909,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         return GymPlanItemResponseV2.builder()
                                 .plan_id(planId)
                                 .packageName(packageName)
-                                .categoryId(sub.getCategory() != null ? sub.getCategory().getId() : null)
+                                .categoryId(sub.getCategory() != null
+                                        ? sub.getCategory().getId() : null)
                                 .dailyPrice(sub.getDailyPrice())
                                 .benefits(benefitsList)
                                 .build();
@@ -2823,15 +2920,20 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         String localizedName = getLocalizedGymName(gym, userLanguage);
 
-        List<az.fitnest.catalog.model.entity.GymWorkHour> gymWorkHours = workHoursMap.getOrDefault(gym.getId(), java.util.Collections.emptyList());
-        String workHoursText = az.fitnest.catalog.mapper.GymMapper.toWorkHoursText(gymWorkHours, userLanguage);
+        List<az.fitnest.catalog.model.entity.GymWorkHour> gymWorkHours =
+                workHoursMap.getOrDefault(gym.getId(), java.util.Collections.emptyList());
+        String workHoursText = az.fitnest.catalog.mapper.GymMapper
+                .toWorkHoursText(gymWorkHours, userLanguage);
 
         String city = null;
         String location = null;
         if (address != null) {
-            city = getTranslatedValueCached(translationLookup, "GYM", gym.getId().toString(), "city", userLanguage);
+            city = getTranslatedValueCached(translationLookup, "GYM",
+                    gym.getId().toString(), "city", userLanguage);
             if (city == null || city.isEmpty()) city = address.getCity();
-            location = getTranslatedValueCached(translationLookup, "GYM", gym.getId().toString(), "addressText", userLanguage);
+
+            location = getTranslatedValueCached(translationLookup, "GYM",
+                    gym.getId().toString(), "addressText", userLanguage);
             if (location == null || location.isEmpty()) location = address.getAddressText();
         }
 
@@ -2845,7 +2947,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .city(city)
                 .distanceKm(distanceKm)
                 .isSaved(isSaved)
-                .categories(categoryDtos)
+                .categories(categoryDtos)           // List<CategoryWithMainResponse>
                 .supportedSubscriptions(supportedSubscriptions)
                 .workHoursText(workHoursText)
                 .build();
@@ -2860,43 +2962,50 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         String userLanguage = resolveUserLanguage();
 
-        List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
+        List<CategoryWithMainResponse> categoryDtos = new java.util.ArrayList<>();
+        List<GymCategory> gymCategoryPivots = gymCategoryRepository.findByGymId(gymId);
+
+        if (!gymCategoryPivots.isEmpty()) {
+            for (GymCategory pivot : gymCategoryPivots) {
+                Category c = pivot.getCategory();
+                String localizedCatName = translationService.getTranslatedValue(
+                        "CATEGORY", c.getId().toString(), "name", userLanguage);
+                categoryDtos.add(CategoryWithMainResponse.builder()
                         .id(c.getId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                        .name(localizedCatName != null && !localizedCatName.isEmpty()
+                                ? localizedCatName : c.getName())
                         .photoUrl(c.getPhotoUrl())
                         .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
+                        .isMain(pivot.isMain())
                         .build());
             }
         } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms created before multi-category (V2):
-            // they only have category_id FK, the gym_categories join table is empty.
             Category c = gym.getCategory();
-            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            categoryDtos.add(CategoryResponse.builder()
+            String localizedCatName = translationService.getTranslatedValue(
+                    "CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryWithMainResponse.builder()
                     .id(c.getId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty()
+                            ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
                     .iconUrl(c.getIconUrl())
-                    .coverImageUrl(c.getPhotoUrl())
+                    .isMain(true)
                     .build());
         }
 
-        List<az.fitnest.catalog.dto.response.RoomImageDtoV2> roomDtos = new java.util.ArrayList<>();
+        List<RoomImageDtoV2> roomDtos = new java.util.ArrayList<>();
         if (gym.getRooms() != null) {
             for (az.fitnest.catalog.model.entity.Room room : gym.getRooms()) {
                 String imgUrl = room.getImages() != null && !room.getImages().isEmpty()
-                        ? room.getImages().stream().findFirst().map(RoomImage::getPictureUrl).orElse(null)
+                        ? room.getImages().stream().findFirst()
+                        .map(RoomImage::getPictureUrl).orElse(null)
                         : null;
-                roomDtos.add(az.fitnest.catalog.dto.response.RoomImageDtoV2.builder()
+                roomDtos.add(RoomImageDtoV2.builder()
                         .id(room.getId())
                         .name(room.getName())
                         .imageUrl(imgUrl)
-                        .categoryId(room.getCategory() != null ? room.getCategory().getId() : null)
+                        .categoryId(room.getCategory() != null
+                                ? room.getCategory().getId() : null)
                         .build());
             }
         }
@@ -2906,27 +3015,34 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Double lat = null;
         Double lng = null;
         if (gym.getAddress() != null) {
-            city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
-            addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
+            city = getLocalizedAddressField(gym.getId(), "GYM",
+                    gym.getAddress(), "city", userLanguage);
+            addressText = getLocalizedAddressField(gym.getId(), "GYM",
+                    gym.getAddress(), "addressText", userLanguage);
             lat = gym.getAddress().getLatitude();
             lng = gym.getAddress().getLongitude();
         }
 
         String created = "";
         if (gym.getCreatedDate() != null) {
-            created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            created = gym.getCreatedDate().format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         }
 
-        List<LessonTypeResponse> lessonTypes = gymLessonTypeRepository.findByGymId(gymId).stream()
+        List<LessonTypeResponse> lessonTypes = gymLessonTypeRepository
+                .findByGymId(gymId).stream()
                 .map(lt -> {
-                    String localizedLt = translationService.getTranslatedValue("GymLessonType", lt.getId().toString(), "name", userLanguage);
-                    return new LessonTypeResponse(lt.getId(), localizedLt != null ? localizedLt : lt.getName());
+                    String localizedLt = translationService.getTranslatedValue(
+                            "GymLessonType", lt.getId().toString(), "name", userLanguage);
+                    return new LessonTypeResponse(lt.getId(),
+                            localizedLt != null ? localizedLt : lt.getName());
                 })
                 .toList();
 
         String localizedGymName = gym.getName();
 
-        String localizedGymDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
+        String localizedGymDescription = translationService.getTranslatedValue(
+                "GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedGymDescription == null || localizedGymDescription.isEmpty()) {
             localizedGymDescription = gym.getDescription();
         }

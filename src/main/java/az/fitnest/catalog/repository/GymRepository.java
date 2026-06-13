@@ -4,6 +4,7 @@ package az.fitnest.catalog.repository;
 import az.fitnest.catalog.model.entity.Gym;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -32,8 +33,22 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT w FROM Gym g JOIN g.generalWorkHours w WHERE g.id = :gymId")
     public List<az.fitnest.catalog.model.entity.GymWorkHour> findGeneralWorkHoursByGymId(@org.springframework.data.repository.query.Param("gymId") Long gymId);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "category", "categories", "subscriptions", "subscriptions.supportedServices", "rooms", "rooms.images", "generalWorkHours", "workHoursWoman", "workHoursMan", "restDays"})
-    public Optional<Gym> findWithDetailsById(Long id);
+    @Query("""
+                SELECT DISTINCT g FROM Gym g
+                LEFT JOIN FETCH g.gymCategories gc
+                LEFT JOIN FETCH gc.category
+                LEFT JOIN FETCH g.subscriptions s
+                LEFT JOIN FETCH s.supportedServices
+                LEFT JOIN FETCH g.rooms r
+                LEFT JOIN FETCH r.images
+                LEFT JOIN FETCH g.generalWorkHours
+                LEFT JOIN FETCH g.workHoursWoman
+                LEFT JOIN FETCH g.workHoursMan
+                LEFT JOIN FETCH g.restDays
+                WHERE g.id = :id
+                  AND g.status = 'ACTIVE'
+            """)
+    Optional<Gym> findWithDetailsById(@Param("id") Long id);
 
     @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))")
     public org.springframework.data.domain.Page<Gym> findByNameOrDescriptionContainingIgnoreCase(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
@@ -171,8 +186,16 @@ public interface GymRepository
             org.springframework.data.domain.Pageable pageable
     );
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"category", "categories", "subscriptions", "subscriptions.supportedServices", "generalWorkHours"})
-    public List<Gym> findWithListDetailsByIdIn(List<Long> ids);
+    @Query("""
+                SELECT DISTINCT g FROM Gym g
+                LEFT JOIN FETCH g.gymCategories gc
+                LEFT JOIN FETCH gc.category
+                LEFT JOIN FETCH g.subscriptions s
+                LEFT JOIN FETCH s.supportedServices
+                LEFT JOIN FETCH g.generalWorkHours
+                WHERE g.id IN :ids
+            """)
+    List<Gym> findWithListDetailsByIdIn(@Param("ids") List<Long> ids);
 
     @org.springframework.data.jpa.repository.Query("SELECT g.category, COUNT(g.id) FROM Gym g WHERE g.category IS NOT NULL GROUP BY g.category")
     List<Object[]> countGymsByCategory();

@@ -9,56 +9,62 @@ import az.fitnest.catalog.dto.response.GymWorkHourResponse;
 
 @Builder
 public record GymCreateCompleteRequestV2(
-    // Step 1: Gym Info
-    @NotEmpty(message = "Kateqoriyalar tələb olunur")
-    List<Long> categoryIds,
 
-    @NotBlank(message = "Ad boş ola bilməz")
-    @Size(min = 2, max = 100)
-    String name,
+        // Step 1
+        @NotEmpty(message = "Kateqoriyalar tələb olunur")
+        @Valid
+        List<GymCategoryRequest> categories,
 
-    @NotBlank(message = "Telefon boş ola bilməz")
-    @Pattern(regexp = "^(\\+994|0)?\\s?(10|50|51|55|60|70|77|99)(\\s?\\d){7}$", message = "Yanlış mobil nömrə formatı")
-    String phone,
+        @NotBlank(message = "Ad boş ola bilməz")
+        @Size(min = 2, max = 100)
+        String name,
 
-    @Size(max = 2000)
-    String description,
+        @NotBlank(message = "Telefon boş ola bilməz")
+        @Pattern(
+                regexp = "^(\\+994|0)?\\s?(10|50|51|55|60|70|77|99)(\\s?\\d){7}$",
+                message = "Yanlış mobil nömrə formatı"
+        )
+        String phone,
 
-    @Email(message = "Yanlış email formatı")
-    String email,
+        @Size(max = 2000)
+        String description,
 
-    List<Long> lessonTypeIds,
+        @Email(message = "Yanlış email formatı")
+        String email,
 
-    // Step 2: Trainer metadata (photos sent as separate multipart parts)
-    List<TrainerCreateData> trainers,
+        List<Long> lessonTypeIds,
 
-    // Step 3: Working Hours
-    Set<GymWorkHourResponse> generalWorkHours,
-    Set<GymWorkHourResponse> workHoursWoman,
-    Set<GymWorkHourResponse> workHoursMan,
-    Set<RestDayRequest> restDays,
+        // Step 2
+        List<TrainerCreateData> trainers,
 
-    // Step 4: Address
-    @NotNull Double latitude,
-    @NotNull Double longitude,
+        // Step 3
+        Set<GymWorkHourResponse> generalWorkHours,
+        Set<GymWorkHourResponse> workHoursWoman,
+        Set<GymWorkHourResponse> workHoursMan,
+        Set<RestDayRequest> restDays,
 
-    // Step 5: Room names and category IDs (files sent as separate multipart parts)
-    List<String> roomNames,
-    List<Long> roomCategoryIds,
+        // Step 4
+        @NotNull Double latitude,
+        @NotNull Double longitude,
 
-    // Step 6: Subscriptions
-    @NotEmpty @Valid List<GymCreateStep6SubscriptionRequestV2> subscriptions,
+        // Step 5
+        List<String> roomNames,
+        List<Long> roomCategoryIds,
 
-    // Step 7: Admins
-    @NotEmpty @Valid List<GymAdminCreateRequest> admins
+        // Step 6
+        @NotEmpty @Valid List<GymCreateStep6SubscriptionRequestV2> subscriptions,
+
+        // Step 7
+        @NotEmpty @Valid List<GymAdminCreateRequest> admins
+
 ) {
     @Builder
     public record TrainerCreateData(
-        String name,
-        String surname,
-        Long professionId,
-        String email,
-        String phone,
-        String lessonTypeIds // comma-separated
+            String name,
+            String surname,
+            Long professionId,
+            String email,
+            String phone,
+            String lessonTypeIds
     ) {}
 }

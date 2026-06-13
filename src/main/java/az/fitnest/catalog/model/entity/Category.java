@@ -1,13 +1,16 @@
 package az.fitnest.catalog.model.entity;
 
-import az.fitnest.catalog.model.entity.BaseAuditableEntity;
-import az.fitnest.catalog.model.entity.Gym;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -36,9 +39,9 @@ public class Category
 
     @ManyToMany
     @JoinTable(
-        name = "category_lesson_types",
-        joinColumns = @jakarta.persistence.JoinColumn(name = "category_id"),
-        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "lesson_type_id")
+            name = "category_lesson_types",
+            joinColumns = @jakarta.persistence.JoinColumn(name = "category_id"),
+            inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "lesson_type_id")
     )
     @Builder.Default
     @EqualsAndHashCode.Exclude

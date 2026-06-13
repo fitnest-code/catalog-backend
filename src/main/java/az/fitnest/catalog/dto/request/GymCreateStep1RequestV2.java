@@ -1,32 +1,39 @@
 package az.fitnest.catalog.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
+
 import java.util.List;
 
 @Builder
 public record GymCreateStep1RequestV2(
-    @NotEmpty(message = "Kateqoriyalar tələb olunur")
-    List<Long> categoryIds,
 
-    @NotBlank(message = "Ad boş ola bilməz")
-    @Size(min = 2, max = 100)
-    String name,
+        @NotEmpty(message = "Kateqoriyalar tələb olunur")
+        @Valid
+        List<GymCategoryRequest> categories,
 
-    @NotBlank(message = "Telefon boş ola bilməz")
-    @Pattern(regexp = "^(\\+994|0)?\\s?(10|50|51|55|60|70|77|99)(\\s?\\d){7}$", message = "Yanlış mobil nömrə formatı")
-    String phone,
+        @NotBlank(message = "Ad boş ola bilməz")
+        @Size(min = 2, max = 100)
+        String name,
 
-    @Size(max = 2000)
-    String description,
+        @NotBlank(message = "Telefon boş ola bilməz")
+        @Pattern(
+                regexp = "^(\\+994|0)?\\s?(10|50|51|55|60|70|77|99)(\\s?\\d){7}$",
+                message = "Yanlış mobil nömrə formatı"
+        )
+        String phone,
 
-    @Email(message = "Yanlış email formatı")
-    String email,
+        @Size(max = 2000)
+        String description,
 
-    List<Long> lessonTypeIds
-) {}
+        @Email(message = "Yanlış email formatı")
+        String email,
+
+        List<Long> lessonTypeIds
+) {
+}

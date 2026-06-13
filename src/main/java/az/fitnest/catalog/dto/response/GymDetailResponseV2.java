@@ -22,7 +22,7 @@ public record GymDetailResponseV2(
     List<GymRoomResponseV2> rooms,
     List<GymTrainerResponse> trainers,
     List<GymReviewResponse> recent_reviews,
-    List<CategoryResponse> categories,
+    List<CategoryWithMainResponse> categories,
     String coverImageUrl,
     Double rating,
     Integer reviewsCount,
