@@ -224,7 +224,7 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query(
             value = "SELECT g.id FROM Gym g " +
                     "WHERE (:hasSubscriptionFilter = false OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId IN :subscriptionIds)) " +
-                    "AND (:categoryId IS NULL OR EXISTS (SELECT c FROM g.categories c WHERE c.id = :categoryId)) " +
+                    "AND (:categoryId IS NULL OR EXISTS (SELECT gc FROM g.gymCategories gc WHERE gc.category.id = :categoryId)) " +
                     "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))"
     )
     org.springframework.data.domain.Page<Long> findGymIdsWithFiltersV2(
