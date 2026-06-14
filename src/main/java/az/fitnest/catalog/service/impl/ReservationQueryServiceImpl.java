@@ -196,59 +196,59 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 .map(entry -> {
                     LocalDate date = entry.getKey();
                     return DayAvailabilityResponse.builder()
-                        .date(date)
-                        .slots(entry.getValue().stream().map(session -> {
-                            int activeBookings = activeBookingMap.getOrDefault(session.getId(), 0);
-                            int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
+                            .date(date)
+                            .slots(entry.getValue().stream().map(session -> {
+                                        int activeBookings = activeBookingMap.getOrDefault(session.getId(), 0);
+                                        int emptySpaces = Math.max(0, session.getEmptySpaces() - activeBookings);
 
-                            boolean isAcceptable = isGymEnabled;
-                            String rejectReason = null;
-                            if (!isGymEnabled) {
-                                rejectReason = "GYM_RESERVATION_DISABLED";
-                            }
+                                        boolean isAcceptable = isGymEnabled;
+                                        String rejectReason = null;
+                                        if (!isGymEnabled) {
+                                            rejectReason = "GYM_RESERVATION_DISABLED";
+                                        }
 
-                            if (emptySpaces <= 0) {
-                                isAcceptable = false;
-                                rejectReason = "NO_EMPTY_SPACES";
-                            }
+                                        if (emptySpaces <= 0) {
+                                            isAcceptable = false;
+                                            rejectReason = "NO_EMPTY_SPACES";
+                                        }
 
-                            if (userId != null && isAcceptable) {
-                                if (!isSubscriptionActive) {
-                                    isAcceptable = false;
-                                    rejectReason = "SUBSCRIPTION_NOT_ACTIVE";
-                                } else if (!isPackageSupported) {
-                                    isAcceptable = false;
-                                    rejectReason = "PACKAGE_NOT_SUPPORTED";
-                                } else {
-                                    boolean hasOverlap = overlapCheckReservations.stream().anyMatch(r -> 
-                                            r.getReservationDate() != null &&
-                                            r.getReservationDate().getDate().equals(date) &&
-                                            r.getReservationDate().getStartTime().isBefore(session.getEndTime()) &&
-                                            r.getReservationDate().getEndTime().isAfter(session.getStartTime())
-                                    );
-                                    if (hasOverlap) {
-                                        isAcceptable = false;
-                                        rejectReason = "RESERVATION_OVERLAP";
-                                    }
-                                }
-                            }
+                                        if (userId != null && isAcceptable) {
+                                            if (!isSubscriptionActive) {
+                                                isAcceptable = false;
+                                                rejectReason = "SUBSCRIPTION_NOT_ACTIVE";
+                                            } else if (!isPackageSupported) {
+                                                isAcceptable = false;
+                                                rejectReason = "PACKAGE_NOT_SUPPORTED";
+                                            } else {
+                                                boolean hasOverlap = overlapCheckReservations.stream().anyMatch(r ->
+                                                        r.getReservationDate() != null &&
+                                                                r.getReservationDate().getDate().equals(date) &&
+                                                                r.getReservationDate().getStartTime().isBefore(session.getEndTime()) &&
+                                                                r.getReservationDate().getEndTime().isAfter(session.getStartTime())
+                                                );
+                                                if (hasOverlap) {
+                                                    isAcceptable = false;
+                                                    rejectReason = "RESERVATION_OVERLAP";
+                                                }
+                                            }
+                                        }
 
-                            if (!isAcceptable) {
-                                log.info("[Availability] TimeSlot not acceptable: sessionId={}, date={}, time={}-{}, reason={}",
-                                        session.getId(), date, session.getStartTime(), session.getEndTime(), rejectReason);
-                            }
+                                        if (!isAcceptable) {
+                                            log.info("[Availability] TimeSlot not acceptable: sessionId={}, date={}, time={}-{}, reason={}",
+                                                    session.getId(), date, session.getStartTime(), session.getEndTime(), rejectReason);
+                                        }
 
-                            return TimeSlotResponse.builder()
-                                    .sessionId(session.getId())
-                                    .startTime(session.getStartTime())
-                                    .endTime(session.getEndTime())
-                                    .emptySpaces(emptySpaces)
-                                    .isRegisterAcceptable(isAcceptable)
-                                    .build();
-                        })
-                        .filter(slot -> slot.getEmptySpaces() > 0)
-                        .collect(Collectors.toList()))
-                        .build();
+                                        return TimeSlotResponse.builder()
+                                                .sessionId(session.getId())
+                                                .startTime(session.getStartTime())
+                                                .endTime(session.getEndTime())
+                                                .emptySpaces(emptySpaces)
+                                                .registerAcceptable(isAcceptable)
+                                                .build();
+                                    })
+                                    .filter(slot -> slot.getEmptySpaces() > 0 && Boolean.TRUE.equals(slot.getRegisterAcceptable()))
+                                    .collect(Collectors.toList()))
+                            .build();
                 })
                 .filter(day -> !day.getSlots().isEmpty())
                 .collect(Collectors.toList());
@@ -399,12 +399,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                 })
                 .collect(Collectors.joining("<br/>"));
 
-        String trainerName = session.getTrainer() != null 
-                ? session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName() 
+        String trainerName = session.getTrainer() != null
+                ? session.getTrainer().getFirstName() + " " + session.getTrainer().getLastName()
                 : null;
 
-        String classTypeName = session.getClassType() != null 
-                ? session.getClassType().getName() 
+        String classTypeName = session.getClassType() != null
+                ? session.getClassType().getName()
                 : null;
 
         return ReservationPreviewResponse.builder()
@@ -536,7 +536,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     log.info("[isPackageSufficient] Plan from allPlans: id={}, name={}", p.getPackageId(), p.getName());
                 }
             }
-            
+
             // Get user package rank
             String userPackageName = null;
             for (var plan : allPlans) {

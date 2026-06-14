@@ -1,12 +1,11 @@
 package az.fitnest.catalog.dto.response;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.*;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalTime;
 
 @Data
@@ -24,5 +23,5 @@ public class TimeSlotResponse {
 
     private Long sessionId;
 
-    private Boolean isRegisterAcceptable;
+    private Boolean registerAcceptable;
 }
