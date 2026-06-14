@@ -149,7 +149,10 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         LocalDateTime cutoff = LocalDateTime.now(clock)
                 .plusHours(bookingProperties.getMinHoursBeforeStart());
-        log.info("[Availability] cutoff={}, now={}", cutoff, LocalDateTime.now(clock));
+        log.info("[Availability] now={}, minHours={}, cutoff={}",
+                LocalDateTime.now(clock),
+                bookingProperties.getMinHoursBeforeStart(),
+                cutoff);
 
         List<TrainerReservationDate> filteredSessions = sessions.stream()
                 .filter(session -> {
