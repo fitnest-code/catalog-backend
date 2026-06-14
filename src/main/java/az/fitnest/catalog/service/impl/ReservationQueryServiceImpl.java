@@ -162,8 +162,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     if (categoryId != null && (session.getClassType() == null || session.getClassType().getCategory() == null || !session.getClassType().getCategory().getId().equals(categoryId))) {
                         return false;
                     }
-                    LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
-                    return !sessionStart.isBefore(LocalDateTime.now(clock));
+                    return true;
                 })
                 .toList();
 
@@ -208,7 +207,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                                         }
 
                                         LocalDateTime sessionStart = LocalDateTime.of(date, session.getStartTime());
-                                        if (sessionStart.isBefore(cutoff)) {
+                                        if (isAcceptable && sessionStart.isBefore(cutoff)) {
                                             isAcceptable = false;
                                             rejectReason = "TOO_LATE_TO_BOOK";
                                         }
@@ -252,11 +251,9 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                                                 .registerAcceptable(isAcceptable)
                                                 .build();
                                     })
-                                    .filter(slot -> slot.getEmptySpaces() > 0)
                                     .collect(Collectors.toList()))
                             .build();
                 })
-                .filter(day -> !day.getSlots().isEmpty())
                 .collect(Collectors.toList());
     }
 
