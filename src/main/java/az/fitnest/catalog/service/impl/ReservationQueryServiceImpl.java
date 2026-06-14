@@ -1,5 +1,6 @@
 package az.fitnest.catalog.service.impl;
 
+import az.fitnest.catalog.configuration.ReservationBookingProperties;
 import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.dto.request.*;
 import az.fitnest.catalog.dto.response.*;
@@ -32,6 +33,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -56,6 +58,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
     private final OrderServiceGrpcClient orderServiceClient;
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
+    private final Clock clock;
+    private final ReservationBookingProperties bookingProperties;
 
     @Transactional(readOnly = true)
     public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
@@ -143,7 +147,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
         log.info("[Availability] Final flags: isSubscriptionActive={}, isPackageSupported={}", isSubscriptionActive, isPackageSupported);
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = LocalDateTime.now(clock)
+                .plusHours(bookingProperties.getMinHoursBeforeStart());
 
         List<TrainerReservationDate> filteredSessions = sessions.stream()
                 .filter(session -> {
@@ -154,7 +159,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                         return false;
                     }
                     LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
-                    return !sessionStart.isBefore(now);
+                    return !sessionStart.isBefore(cutoff);
                 })
                 .toList();
 
@@ -426,7 +431,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         List<TrainerReservationDate> slots = sessionRepository.findByTrainerIdAndDate(trainerId, date);
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         List<GymReservationDetailsResponse.TimeSlotDto> timeSlots = slots.stream()
                 .filter(slot -> !LocalDateTime.of(slot.getDate(), slot.getStartTime()).isBefore(now))

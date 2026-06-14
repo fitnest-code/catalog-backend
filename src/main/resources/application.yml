@@ -203,3 +203,7 @@ grpc:
       negotiation-type: plaintext
   server:
     compression: gzip
+
+reservation:
+  booking:
+    min-hours-before-start: 2

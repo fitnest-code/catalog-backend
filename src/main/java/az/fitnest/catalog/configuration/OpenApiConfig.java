@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 
+import java.time.Clock;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -41,5 +42,10 @@ public class OpenApiConfig {
             openAPI.servers(List.of(new Server().url(this.serverUrl).description("API Server")));
         }
         return openAPI;
+    }
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone();
     }
 }
