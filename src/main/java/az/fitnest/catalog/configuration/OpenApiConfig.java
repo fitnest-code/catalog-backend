@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +47,6 @@ public class OpenApiConfig {
 
     @Bean
     public Clock clock() {
-        return Clock.systemDefaultZone();
+        return Clock.system(ZoneId.of("Asia/Baku"));
     }
 }
