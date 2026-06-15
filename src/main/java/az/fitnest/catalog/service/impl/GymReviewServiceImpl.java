@@ -16,6 +16,7 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReviewRepository;
 import az.fitnest.catalog.client.CachedUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymReviewService {
     private final GymRepository gymRepository;
     private final ReviewRepository reviewRepository;
@@ -261,6 +263,7 @@ public class GymReviewServiceImpl implements az.fitnest.catalog.service.GymRevie
                 }
             }
         } catch (Exception e) {
+            log.warn("Failed to fetch user {} from UserService: {}", r.getUserId(), e.getMessage());
             fullName = "User " + r.getUserId();
         }
         String originalStatus = r.getStatus() != null ? r.getStatus().name() : null;
