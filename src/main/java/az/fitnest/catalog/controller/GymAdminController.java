@@ -699,8 +699,8 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymReservationStats(id));
     }
 
-    @Operation(summary = "Dərs saatlarını alın", description = "İdman zalına aid dərs saatlarının siyahısını gətirir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Dərs saatlarını alın", description = "İdman zalına aid dərs saatlarının siyahısını gətirir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/{id}/lesson-hours")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(
             @PathVariable Long id,
@@ -711,16 +711,16 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymLessonHoursAdmin(id, startDate, endDate, page, pageSize));
     }
 
-    @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @PostMapping("/{id}/lesson-hours")
     public ResponseEntity<Void> addLessonHour(@PathVariable Long id, @RequestBody az.fitnest.catalog.dto.request.LessonHourRequest request) {
         gymWriteService.addLessonHourAdmin(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Operation(summary = "Dərs saatını silin", description = "ID-yə görə dərs saatını silir. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Dərs saatını silin", description = "ID-yə görə dərs saatını silir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @DeleteMapping("/lesson-hours/{lessonHourId}")
     public ResponseEntity<Void> deleteLessonHour(@PathVariable Long lessonHourId) {
         gymWriteService.deleteLessonHourAdmin(lessonHourId);

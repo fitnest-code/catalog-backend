@@ -1500,6 +1500,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Override
     @Transactional
     public void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request) {
+        verifyGymOwnership(gymId);
         Trainer trainer = null;
         if (request.trainerId() != null) {
             trainer = trainerRepository.findById(request.trainerId())
@@ -1538,6 +1539,9 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteLessonHourAdmin(Long lessonHourId) {
         trainerReservationDateRepository.findById(lessonHourId).ifPresent(session -> {
             Long gymId = session.getGymId();
+            if (gymId != null) {
+                verifyGymOwnership(gymId);
+            }
             trainerReservationDateRepository.deleteById(lessonHourId);
             if (gymId != null && trainerReservationDateRepository.findByGymId(gymId).isEmpty()) {
                 gymRepository.findById(gymId).ifPresent(gym -> {
