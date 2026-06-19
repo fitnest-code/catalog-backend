@@ -2034,9 +2034,6 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.subCategoryId() != null) {
             Category subCategory = categoryRepository.findById(request.subCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
-            if (Boolean.TRUE.equals(subCategory.getIsMainCategory())) {
-                throw new BadRequestException("SUB_CATEGORY_CANNOT_BE_MAIN", "error.sub_category_cannot_be_main");
-            }
             gym.setSubCategory(subCategory);
         } else {
             gym.setSubCategory(null);
@@ -2081,7 +2078,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                                     List<MultipartFile> serviceIcons) {
 
         GymCreateStep1RequestV2 step1 = GymCreateStep1RequestV2.builder()
-                .categoryIds(request.categoryIds())
+                .mainCategoryId(request.mainCategoryId())
+                .subCategoryId(request.subCategoryId())
                 .name(request.name())
                 .phone(request.phone())
                 .description(request.description())

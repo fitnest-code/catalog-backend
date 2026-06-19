@@ -19,6 +19,7 @@ public class AddressResponseDeserializer extends JsonDeserializer<AddressRespons
 
         Double lat = null;
         Double lng = null;
+        Double alt = null;
         String addressText = null;
 
         if (node.isTextual()) {
@@ -33,12 +34,16 @@ public class AddressResponseDeserializer extends JsonDeserializer<AddressRespons
         } else if (node.isObject()) {
             JsonNode latNode = node.get("latitude");
             JsonNode lngNode = node.get("longitude");
+            JsonNode altNode = node.get("altitude");
             JsonNode addrNode = node.get("addressText");
             if (latNode != null && latNode.isNumber()) {
                 lat = latNode.doubleValue();
             }
             if (lngNode != null && lngNode.isNumber()) {
                 lng = lngNode.doubleValue();
+            }
+            if (altNode != null && altNode.isNumber()) {
+                alt = altNode.doubleValue();
             }
             if (addrNode != null && addrNode.isTextual()) {
                 addressText = addrNode.asText();
@@ -48,6 +53,7 @@ public class AddressResponseDeserializer extends JsonDeserializer<AddressRespons
         return AddressResponse.builder()
                 .latitude(lat)
                 .longitude(lng)
+                .altitude(alt)
                 .addressText(addressText)
                 .build();
     }
