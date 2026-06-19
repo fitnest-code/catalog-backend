@@ -1,4 +1,6 @@
 package az.fitnest.catalog.controller;
+import az.fitnest.catalog.dto.response.GymMainPageResponseV2;
+import az.fitnest.catalog.dto.response.GymDetailResponseV2;
 
 import az.fitnest.catalog.dto.response.GymDetailResponse;
 import az.fitnest.catalog.dto.*;
@@ -65,7 +67,7 @@ import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
 import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
 
 @RestController
-@RequestMapping("/api/v1/gyms")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Tag(name = "Gyms", description = "İdman zallarını idarə etmək və kəşf etmək üçün ucluqlar, o cümlədən paketlər, məşqçilər və istifadəçi rəyləri")
 public class GymController {
@@ -75,7 +77,7 @@ public class GymController {
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
 
-    @GetMapping("/{gymId:\\d+}")
+    @GetMapping("/v1/gyms/{gymId:\\d+}")
     @Operation(summary = "İdman zalı təfərrüatlarını əldə edin", description = "Xüsusi bir idman zalının tam təfərrüatlarını, o cümlədən yerləşmə yeri, obyektləri və istifadəçiyə xüsusi favorit statusunu əldə edir.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalı təfərrüatları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymDetailResponse.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
     public ResponseEntity<GymDetailResponse> getGymDetail(@AuthenticationPrincipal Object principal, @Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
@@ -83,14 +85,14 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymDetail(userId, gymId));
     }
 
-    @GetMapping("/{gymId:\\d+}/images")
+    @GetMapping("/v1/gyms/{gymId:\\d+}/images")
     @Operation(summary = "İdman zalı şəkillərini əldə edin", description = "İdman zalı ilə əlaqəli bütün şəkillərin (loqo, üz qabığı, interyer) siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Şəkillər uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymImageResponse.class))})})
     public ResponseEntity<GymImageResponse> getGymImages(@PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymImages(gymId));
     }
 
-    @GetMapping("/{gymId:\\d+}/qr")
+    @GetMapping("/v1/gyms/{gymId:\\d+}/qr")
     @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "QR kod URL-i uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = GymQrResponse.class))})})
     public ResponseEntity<GymQrResponse> getGymQrUrl(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
@@ -98,7 +100,7 @@ public class GymController {
         return ResponseEntity.ok(new GymQrResponse(qrCodeUrl));
     }
 
-    @GetMapping("/{gymId:\\d+}/trainers")
+    @GetMapping("/v1/gyms/{gymId:\\d+}/trainers")
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məşqçilər uğurla əldə edildi")})
     public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
@@ -110,7 +112,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymTrainerService.getTrainers(gymId, page, safePageSize, sortDir.name().toLowerCase()));
     }
 
-    @GetMapping("/{gymId:\\d+}/reviews")
+    @GetMapping("/v1/gyms/{gymId:\\d+}/reviews")
     @Operation(summary = "İdman zalı rəylərini əldə edin", description = "İdman zalı üçün istifadəçi rəylərinin səhifələnmiş siyahısını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Rəylər uğurla əldə edildi")})
     public ResponseEntity<PaginatedResponse<GymReviewResponse>> getReviews(@PathVariable Long gymId, @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page, @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size, @Parameter(description = "Çeşidləmə qaydası (məsələn, ən yeni, ən yüksək reytinq)") @RequestParam(required = false) String sort) {
@@ -118,7 +120,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReviewService.getReviews(gymId, page, safePageSize, sort));
     }
 
-    @PostMapping("/{gymId:\\d+}/reviews")
+    @PostMapping("/v1/gyms/{gymId:\\d+}/reviews")
     @Operation(summary = "Rəy əlavə edin", description = "İdman zalı üçün yeni istifadəçi rəyi və reytinqi əlavə edir. Reytinq 1-5 arasında olmalıdır.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Rəy uğurla əlavə edildi"), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
@@ -131,7 +133,7 @@ public class GymController {
         return ResponseEntity.status(201).build();
     }
 
-    @GetMapping
+    @GetMapping("/v1/gyms")
     @Operation(summary = "İdman zallarını əldə edin", description = "Bütün idman zalı siyahıları üçün birləşdirilmiş ucluq (Hamısı, Ən Yaxın, Yeni, Saxlanılanlar). Görünüşləri dəyişmək üçün 'type' parametrindən istifadə edin.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "İdman zalları uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = PaginatedResponse.class))}), @ApiResponse(responseCode = "401", description = "İstifadəçi autentifikasiya olunmayıb")})
     @SecurityRequirement(name = "bearerAuth")
@@ -152,7 +154,7 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGyms(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
     }
 
-    @PostMapping("/{gymId:\\d+}/save")
+    @PostMapping("/v1/gyms/{gymId:\\d+}/save")
     @Operation(summary = "İdman zalını saxla/sil", description = "Autentifikasiya olunmuş istifadəçi üçün idman zalının 'saxlanılanlar' statusunu dəyişir.")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
@@ -166,14 +168,14 @@ public class GymController {
         return ResponseEntity.ok(new az.fitnest.catalog.dto.response.ToggleSaveResponse(isSaved));
     }
 
-    @GetMapping("/{gymId:\\d+}/location")
+    @GetMapping("/v1/gyms/{gymId:\\d+}/location")
     @Operation(summary = "İdman zalının yerləşdiyi yeri əldə edin", description = "İdman zalı üçün həll edilmiş ünvan mətni ilə birlikdə enlik və uzunluq koordinatlarını qaytarır.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Məkan uğurla əldə edildi", content = {@Content(schema = @Schema(implementation = LocationResponse.class))}), @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")})
     public ResponseEntity<LocationResponse> getGymLocation(@Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
         return ResponseEntity.ok(this.gymReadService.getGymLocation(gymId));
     }
 
-    @PostMapping("/entrance/scan")
+    @PostMapping("/v1/gyms/entrance/scan")
     @Operation(summary = "Scan gym QR code for entrance", description = "Checks proximity, working hours, and subscription eligibility. Performs automatic check-in if allowed.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
@@ -197,7 +199,7 @@ public class GymController {
         }
     }
 
-    @PostMapping("/entrance/eligibility")
+    @PostMapping("/v1/gyms/entrance/eligibility")
     @Operation(summary = "Check gym entrance eligibility", description = "Checks entry limit and subscription status.")
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
@@ -211,7 +213,7 @@ public class GymController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/count")
+    @GetMapping("/v1/gyms/count")
     @Operation(summary = "Get gym count", description = "Returns count of gyms filtered by type (all, new), subscriptionId, and categoryId.")
     public ResponseEntity<GymCountResponse> getGymCount(
             @RequestParam(value = "type", required = false, defaultValue = "all") String type,
@@ -221,27 +223,31 @@ public class GymController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/count/by-type")
+    @GetMapping("/v1/gyms/count/by-type")
     @Operation(summary = "Get gym count by type", description = "Returns count of gyms for the requested type (all, new).")
     public ResponseEntity<GymTypeCountResponse> getGymCountByType(@RequestParam(value = "type", required = false, defaultValue = "all") String type) {
         return ResponseEntity.ok(gymReadService.getGymCountByType(type));
     }
 
-    @GetMapping("/count/by-category")
+    @GetMapping("/v1/gyms/count/by-category")
     @Operation(summary = "Get gym count by category", description = "Returns all categories with their gym counts.")
     public ResponseEntity<List<GymCategoryCountResponse>> getGymCountByCategory() {
         return ResponseEntity.ok(gymReadService.getGymCountByCategory());
     }
 
-    @GetMapping("/count/by-subscription")
+    @GetMapping("/v1/gyms/count/by-subscription")
     @Operation(summary = "Get gym count by subscription", description = "Returns all subscriptions with their gym counts.")
     public ResponseEntity<List<GymSubscriptionCountResponse>> getGymCountBySubscription() {
         return ResponseEntity.ok(gymReadService.getGymCountBySubscription());
     }
 
-    @GetMapping("/count/by-gender")
+    @GetMapping("/v1/gyms/count/by-gender")
     @Operation(summary = "Get gym count by gender", description = "Returns count of gyms with gender-specific work hours (male/female).")
     public ResponseEntity<GymTypeCountResponse> getGymCountByGender(@RequestParam("gender") String gender) {
         return ResponseEntity.ok(gymReadService.getGymCountByGender(gender));
     }
+
+    // --- V2 Endpoints ---
+
+    
 }

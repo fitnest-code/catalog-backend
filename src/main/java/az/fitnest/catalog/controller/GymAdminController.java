@@ -1,4 +1,10 @@
 package az.fitnest.catalog.controller;
+import az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponseV2;
+import az.fitnest.catalog.dto.response.GymInfoAdminResponseV2;
+import az.fitnest.catalog.dto.request.GymInfoUpdateRequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep6RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep1RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2;
 
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
@@ -41,7 +47,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/admin/gyms")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Tag(name = "Gym Admin", description = "İdman zallarını idarə etmək üçün administrativ ucluqlar. Bu ucluqlar yalnız ADMIN və SUPER_ADMIN rollarına malik istifadəçilər tərəfindən istifadə edilə bilər.")
 @SecurityRequirement(name = "bearerAuth")
@@ -54,7 +60,7 @@ public class GymAdminController {
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
+    @PostMapping("/v1/admin/gyms")
     public ResponseEntity<Void> createGym(@Valid @RequestBody GymRequest request) {
         gymWriteService.createGym(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -62,7 +68,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalını yeniləyin", description = "Mövcud idman zalının məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
+    @PutMapping("/v1/admin/gyms/{id}")
     public ResponseEntity<Void> updateGym(@PathVariable Long id, @Valid @RequestBody GymRequest request) {
         gymWriteService.updateGym(id, request);
         return ResponseEntity.ok().build();
@@ -70,21 +76,21 @@ public class GymAdminController {
 
     @Operation(summary = "Zal məlumatlarını alın", description = "İdman zalı üçün info-tab məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/details")
+    @GetMapping("/v1/admin/gyms/{id}/details")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymInfoAdminResponse> getGymDetails(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymDetailsAdmin(gymId));
     }
 
     @Operation(summary = "Zal iş saatlarını alın", description = "İdman zalı üçün iş saatları məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/work-hours")
+    @GetMapping("/v1/admin/gyms/{id}/work-hours")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymWorkHoursAdminResponse> getGymWorkHours(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymWorkHours(gymId));
     }
 
     @Operation(summary = "İdman zalının iş saatlarını yeniləyin", description = "İdman zalının iş saatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/work-hours")
+    @PutMapping("/v1/admin/gyms/{id}/work-hours")
     public ResponseEntity<Void> updateGymWorkHours(@PathVariable("id") Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         gymWriteService.updateGymWorkHours(id, request);
         return ResponseEntity.ok().build();
@@ -92,21 +98,21 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı QR kod URL-ni əldə edin", description = "İdman zalının QR kod şəkli üçün yayım URL-ni qaytarır. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/qr")
+    @GetMapping("/v1/admin/gyms/{id}/qr")
     public ResponseEntity<GymQrResponse> getGymQrUrl(@PathVariable Long id) {
         return ResponseEntity.ok(new GymQrResponse(this.gymReadService.getGymQrUrl(id)));
     }
 
     @Operation(summary = "Zal abunəliklərini alın", description = "İdman zalı üçün aktiv abunəlik və xidmət məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/subscriptions")
+    @GetMapping("/v1/admin/gyms/{id}/subscriptions")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymSubscriptionsAdminResponse> getGymSubscriptions(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymSubscriptions(gymId));
     }
 
     @Operation(summary = "Zal məlumatlarını yeniləyin", description = "İdman zalı üçün yalnız info-tab məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/details")
+    @PutMapping("/v1/admin/gyms/{id}/details")
     public ResponseEntity<Void> updateGymDetails(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymInfoUpdateRequest request) {
         gymWriteService.updateGymInfo(gymId, request);
         return ResponseEntity.ok().build();
@@ -114,7 +120,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı üçün mövcud abunəlik planlarını aktivləşdirin", description = "İdman zalı üçün göstərilən abunəlik planlarını aktivləşdirir. Mövcud planların üstünlükləri qorunur, siyahıda olmayanlar isə silinir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/subscriptions/enable")
+    @PostMapping("/v1/admin/gyms/{id}/subscriptions/enable")
     public ResponseEntity<Void> enableGymSubscription(
             @PathVariable("id") Long gymId,
             @RequestParam("subscriptionId") Long subscriptionId) {
@@ -124,7 +130,7 @@ public class GymAdminController {
 
     @Operation(summary = "Aktivləşdirilmiş abunəlik üçün üstünlükləri yeniləyin", description = "İdman zalı üçün artıq aktivləşdirilmiş olan müəyyən bir abunəliyin üstünlüklərini (benefits) yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/subscriptions/{planId}/benefits")
+    @PutMapping("/v1/admin/gyms/{id}/subscriptions/{planId}/benefits")
     public ResponseEntity<Void> updateGymSubscriptionBenefits(@PathVariable Long id, @PathVariable Long planId,
                                                               @Valid @RequestBody GymSubscriptionBenefitsUpdateRequest request) {
         gymWriteService.updateGymSubscriptionBenefits(id, planId, request);
@@ -133,7 +139,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalına aid rəyləri alın", description = "İdman zalı üçün bütün rəylərin siyahısını gətirir. Status üzrə filtrləmə mümkündür.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/reviews")
+    @GetMapping("/v1/admin/gyms/{id}/reviews")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.GymReviewResponse>> getGymReviews(
             @PathVariable("id") Long gymId,
             @RequestParam(required = false) az.fitnest.catalog.model.enums.ReviewStatus status,
@@ -146,14 +152,14 @@ public class GymAdminController {
 
     @Operation(summary = "Rəy detallarını alın", description = "Müəyyən bir rəyin detallarını gətirir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/reviews/{reviewId}")
+    @GetMapping("/v1/admin/gyms/reviews/{reviewId}")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymReviewResponse> getReviewDetail(@PathVariable Long reviewId) {
         return ResponseEntity.ok(gymReviewService.getReviewDetail(reviewId));
     }
 
     @Operation(summary = "İdman zalını silin", description = "İdman zalını sistemdən silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/v1/admin/gyms/{id}")
     public ResponseEntity<Void> deleteGym(@PathVariable Long id) {
         gymWriteService.deleteGym(id);
         return ResponseEntity.noContent().build();
@@ -161,7 +167,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalına otaq şəkli əlavə edin", description = "İdman zalı üçün otaq şəkilləri yükləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> addRoomImages(
             @PathVariable Long id,
             @RequestParam("roomNames") java.util.List<String> roomNames,
@@ -175,7 +181,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalının bütün otaqlarını silin", description = "İdman zalı üçün bütün otaqları və onların şəkillərini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/rooms")
+    @DeleteMapping("/v1/admin/gyms/{id}/rooms")
     public ResponseEntity<Void> deleteAllGymRooms(@PathVariable Long id) {
         gymWriteService.deleteAllGymRooms(id);
         return ResponseEntity.noContent().build();
@@ -183,7 +189,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalının müəyyən bir otağını silin", description = "İdman zalı üçün göstərilən otağı və onun şəkillərini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/rooms/{roomId}")
+    @DeleteMapping("/v1/admin/gyms/{id}/rooms/{roomId}")
     public ResponseEntity<Void> deleteGymRoomById(@PathVariable Long id, @PathVariable Long roomId) {
         gymWriteService.deleteGymRoomById(id, roomId);
         return ResponseEntity.noContent().build();
@@ -191,7 +197,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalının müəyyən bir otaq şəklini silin", description = "İdman zalının otaqlarına aid olan müəyyən bir şəkli silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/rooms/images/{imageId}")
+    @DeleteMapping("/v1/admin/gyms/{id}/rooms/images/{imageId}")
     public ResponseEntity<Void> deleteRoomImageById(@PathVariable Long id, @PathVariable Long imageId) {
         gymWriteService.deleteRoomImageById(id, imageId);
         return ResponseEntity.noContent().build();
@@ -199,7 +205,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalının müəyyən bir otağının adını yeniləyin", description = "İdman zalı üçün göstərilən otağın adını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/rooms/{roomId}/name")
+    @PutMapping("/v1/admin/gyms/{id}/rooms/{roomId}/name")
     public ResponseEntity<Void> updateRoomName(
             @PathVariable Long id,
             @PathVariable Long roomId,
@@ -210,7 +216,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı üz qabığı şəklini yeniləyin", description = "İdman zalı üçün əsas profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateCoverImage(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         gymWriteService.updateCoverImage(id, file);
         return ResponseEntity.ok().build();
@@ -218,7 +224,7 @@ public class GymAdminController {
 
     @Operation(summary = "Bütün idman zallarını silin (Kritik)", description = "Sistemdəki BÜTÜN idman zallarını silir. Bu əməliyyat üçün ADMIN rolu tələb olunur və bu hərəkət geri qaytarıla bilməz.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/all")
+    @DeleteMapping("/v1/admin/gyms/all")
     public ResponseEntity<Void> deleteAllGyms() {
         gymWriteService.deleteAllGyms();
         return ResponseEntity.noContent().build();
@@ -226,7 +232,7 @@ public class GymAdminController {
 
     @Operation(summary = "Mövcud olmayan və ya təsdiqlənməmiş rəyi təsdiqləyin", description = "İdman zalına verilmiş rəyi təsdiqləyir və ümumi reytinqə daxil edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/reviews/{reviewId}/approve")
+    @PutMapping("/v1/admin/gyms/reviews/{reviewId}/approve")
     public ResponseEntity<Void> approveReview(@PathVariable Long reviewId) {
         gymReviewService.approveReview(reviewId);
         return ResponseEntity.ok().build();
@@ -234,7 +240,7 @@ public class GymAdminController {
 
     @Operation(summary = "Rəyi rədd edin", description = "İdman zalına verilmiş rəyi rədd edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/reviews/{reviewId}/reject")
+    @PutMapping("/v1/admin/gyms/reviews/{reviewId}/reject")
     public ResponseEntity<Void> rejectReview(@PathVariable Long reviewId) {
         gymReviewService.rejectReview(reviewId);
         return ResponseEntity.ok().build();
@@ -242,7 +248,7 @@ public class GymAdminController {
 
     @Operation(summary = "Təsdiq gözləyən rəyləri alın", description = "Sistemdə təsdiq gözləyən (PENDING) rəylərin siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/reviews/pending")
+    @GetMapping("/v1/admin/gyms/reviews/pending")
     public ResponseEntity<PaginatedResponse<GymReviewResponse>> getPendingReviews(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
@@ -251,7 +257,7 @@ public class GymAdminController {
 
     @Operation(summary = "Bütün abunəlikləri silin", description = "İdman zalı üçün bütün abunəlikləri silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/subscriptions")
+    @DeleteMapping("/v1/admin/gyms/{id}/subscriptions")
     public ResponseEntity<Void> deleteAllGymSubscriptions(@PathVariable("id") Long gymId) {
         gymWriteService.deleteAllGymSubscriptions(gymId);
         return ResponseEntity.noContent().build();
@@ -259,7 +265,7 @@ public class GymAdminController {
 
     @Operation(summary = "Abunəliyi silin", description = "İdman zalı üçün müəyyən bir abunəliyi silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/subscriptions/{subscriptionId}")
+    @DeleteMapping("/v1/admin/gyms/{id}/subscriptions/{subscriptionId}")
     public ResponseEntity<Void> deleteGymSubscriptionById(@PathVariable("id") Long gymId,
                                                           @PathVariable("subscriptionId") Long subscriptionId) {
         gymWriteService.deleteGymSubscriptionById(gymId, subscriptionId);
@@ -268,7 +274,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/trainers")
+    @GetMapping("/v1/admin/gyms/{id}/trainers")
     public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
             @PathVariable("id") Long gymId,
             @RequestParam(defaultValue = "1") int page,
@@ -280,7 +286,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı üçün təlimçi yaradın", description = "İdman zalına yeni təlimçi əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/trainers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/trainers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> addTrainer(
             @PathVariable("id") Long gymId,
             @RequestParam("name") String name,
@@ -297,7 +303,7 @@ public class GymAdminController {
 
     @Operation(summary = "Təlimçini yeniləyin", description = "İdman zalına aid təlimçinin məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = "/{id}/trainers/{trainerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/v1/admin/gyms/{id}/trainers/{trainerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateTrainer(
             @PathVariable("id") Long gymId,
             @PathVariable("trainerId") Long trainerId,
@@ -315,7 +321,7 @@ public class GymAdminController {
 
     @Operation(summary = "Təlimçini silin", description = "İdman zalına aid təlimçini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/trainers/{trainerId}")
+    @DeleteMapping("/v1/admin/gyms/{id}/trainers/{trainerId}")
     public ResponseEntity<Void> deleteTrainer(@PathVariable("id") Long gymId,
                                               @PathVariable("trainerId") Long trainerId) {
         gymTrainerService.deleteTrainer(gymId, trainerId);
@@ -324,7 +330,7 @@ public class GymAdminController {
 
     @Operation(summary = "Təlimçinin şəklini yeniləyin", description = "İdman zalına aid təlimçi üçün profil şəklini yükləyir və ya yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/trainers/{trainerId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/trainers/{trainerId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateTrainerPhoto(
             @PathVariable("id") Long gymId,
             @PathVariable("trainerId") Long trainerId,
@@ -335,7 +341,7 @@ public class GymAdminController {
 
     @Operation(summary = "Giriş tarixçəsini silin", description = "Bütün idman zallarının giriş tarixçəsini silir və gəlirləri sıfırlayır. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/history")
+    @DeleteMapping("/v1/admin/gyms/history")
     public ResponseEntity<Void> deleteGymEntranceHistory() {
         gymWriteService.deleteGymEntranceHistory();
         return ResponseEntity.noContent().build();
@@ -343,14 +349,14 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı giriş tarixçəsini alın", description = "İdman zalı üçün bütün giriş cəhdlərinin (uğurlu/uğursuz) siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/history")
+    @GetMapping("/v1/admin/gyms/{id}/history")
     public ResponseEntity<List<GymEntranceHistoryAdminResponse>> getGymEntranceHistory(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
 
     @Operation(summary = "İdman zalı analitikasını alın", description = "İdman zalı üçün ümumi gəlir, uğurlu/uğursuz girişlər və tarixçə siyahısını gətirir.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/analytics")
+    @GetMapping("/v1/admin/gyms/{id}/analytics")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymAnalyticsResponse> getGymAnalytics(
             @PathVariable("id") Long gymId,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
@@ -364,7 +370,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/list")
+    @GetMapping("/v1/admin/gyms/list")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.AdminGymResponse>> getAllGyms(
             @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı, ünvan və ya şəhər üzrə axtarış") @RequestParam(required = false) String query,
             @io.swagger.v3.oas.annotations.Parameter(description = "Sıralama qaydası. Dəyərlər: "
@@ -382,7 +388,7 @@ public class GymAdminController {
 
     @Operation(summary = "İstifadəçinin QR skan tarixçəsini alın", description = "Müəyyən bir istifadəçinin bütün QR skan cəhdlərinin (uğurlu/uğursuz) siyahısını, zal adlarını və platforma məlumatlarını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/users/{userId}/qr-history")
+    @GetMapping("/v1/admin/gyms/users/{userId}/qr-history")
     public ResponseEntity<List<az.fitnest.catalog.dto.response.AdminQrScanHistoryResponse>> getUserQrScanHistory(
             @PathVariable Long userId,
             @io.swagger.v3.oas.annotations.Parameter(description = "Zal adı üzrə axtarış") @RequestParam(required = false) String query,
@@ -403,7 +409,7 @@ public class GymAdminController {
 
     @Operation(summary = "Tam idman zalı yaradın (Birdəfəlik)", description = "Bütün 7 addımı birləşdirərək idman zalını bir dəfəyə yaradır. Daha sürətli və atomik əməliyyat.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GymCreateStep1Response> createGymComplete(
             @RequestPart("data") @Valid GymCreateCompleteRequest request,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
@@ -416,14 +422,14 @@ public class GymAdminController {
 
     @Operation(summary = "Step 1: Yeni idman zalı yaradın (DRAFT)", description = "Sistemə yeni idman zalı layihəsini əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/step1")
+    @PostMapping("/v1/admin/gyms/step1")
     public ResponseEntity<az.fitnest.catalog.dto.response.GymCreateStep1Response> createGymStep1(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1(request));
     }
 
     @Operation(summary = "Step 2: İdman zalına təlimçilər əlavə edin", description = "İdman zalına çoxlu təlimçi əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createGymStep2(
             @PathVariable Long id,
             @RequestParam(value = "names", required = false) List<String> names,
@@ -439,7 +445,7 @@ public class GymAdminController {
 
     @Operation(summary = "Step 3: İdman zalının iş saatlarını qeyd edin", description = "İdman zalının iş saatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step3")
+    @PostMapping("/v1/admin/gyms/{id}/step3")
     public ResponseEntity<Void> createGymStep3(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         gymWriteService.createGymStep3(id, request);
         return ResponseEntity.ok().build();
@@ -447,7 +453,7 @@ public class GymAdminController {
 
     @Operation(summary = "Step 4: İdman zalının koordinatlarını qeyd edin", description = "İdman zalının ünvanını və koordinatlarını qeyd edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step4")
+    @PostMapping("/v1/admin/gyms/{id}/step4")
     public ResponseEntity<Void> createGymStep4(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         gymWriteService.createGymStep4(id, request);
         return ResponseEntity.ok().build();
@@ -455,7 +461,7 @@ public class GymAdminController {
 
     @Operation(summary = "Step 5: İdman zalına şəkillər əlavə edin", description = "İdman zalı üçün üz qabığı və otaq şəkilləri yükləyir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createGymStep5(
             @PathVariable Long id,
             @RequestParam("coverPhoto") MultipartFile coverPhoto,
@@ -471,7 +477,7 @@ public class GymAdminController {
                     "Xidmət ikonları varsa multipart şəklində göndərilir."
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/{id}/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/{id}/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createGymStep6(
             @PathVariable Long id,
 
@@ -492,7 +498,7 @@ public class GymAdminController {
 
     @Operation(summary = "Step 7: İdman zalı üçün admin yaradın və aktivləşdirin", description = "İdman zalı üçün admin yaradır və idman zalını ACTIVE edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/step7")
+    @PostMapping("/v1/admin/gyms/{id}/step7")
     public ResponseEntity<Void> createGymStep7(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         gymWriteService.createGymStep7(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -500,7 +506,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 1", description = "Zal məlumatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/validate/step1")
+    @PostMapping("/v1/admin/gyms/validate/step1")
     public ResponseEntity<Void> validateStep1(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep1Request request) {
         gymWriteService.validateStep1(request);
         return ResponseEntity.ok().build();
@@ -508,7 +514,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 2", description = "Məşqçi məlumatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/validate/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/validate/step2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> validateStep2(
             @RequestParam("names") List<String> names,
             @RequestParam("surnames") List<String> surnames,
@@ -523,7 +529,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 3", description = "İş saatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/validate/step3")
+    @PostMapping("/v1/admin/gyms/validate/step3")
     public ResponseEntity<Void> validateStep3(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep2Request request) {
         gymWriteService.validateStep3(request);
         return ResponseEntity.ok().build();
@@ -531,7 +537,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 4", description = "Ünvan məlumatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/validate/step4")
+    @PostMapping("/v1/admin/gyms/validate/step4")
     public ResponseEntity<Void> validateStep4(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep3Request request) {
         gymWriteService.validateStep4(request);
         return ResponseEntity.ok().build();
@@ -539,7 +545,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 5", description = "Şəkil məlumatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/validate/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/validate/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> validateStep5(
             @RequestParam(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestParam(value = "roomNames", required = false) List<String> roomNames,
@@ -553,7 +559,7 @@ public class GymAdminController {
             description = "Abunəlik və xidmət məlumatlarını, həmçinin xidmət ikonlarını yoxlayır."
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/validate/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/validate/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> validateStep6(
             @io.swagger.v3.oas.annotations.Parameter(
                     description = "Abunəlik və xidmət məlumatları (JSON)",
@@ -572,7 +578,7 @@ public class GymAdminController {
 
     @Operation(summary = "Validate Step 7", description = "Admin məlumatlarını yoxlayır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/validate/step7")
+    @PostMapping("/v1/admin/gyms/validate/step7")
     public ResponseEntity<Void> validateStep7(@Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep7Request request) {
         gymWriteService.validateStep7(request);
         return ResponseEntity.ok().build();
@@ -580,7 +586,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı abunəliklərini yeniləyin", description = "İdman zalına aid abunəlik paketlərini və onlara daxil olan xidmətləri yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/subscriptions")
+    @PutMapping("/v1/admin/gyms/{id}/subscriptions")
     public ResponseEntity<Void> updateGymSubscriptions(@PathVariable Long id, @Valid @RequestBody az.fitnest.catalog.dto.request.GymCreateStep6Request request) {
         gymWriteService.updateGymSubscriptions(id, request);
         return ResponseEntity.ok().build();
@@ -588,7 +594,7 @@ public class GymAdminController {
 
     @Operation(summary = "Dəstəklənən xidmət əlavə edin", description = "Sistemə yeni dəstəklənən xidmət əlavə edir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/services", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/v1/admin/gyms/services", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<az.fitnest.catalog.dto.response.SupportedServiceResponse> createSupportedService(
             @RequestPart("data") @Valid az.fitnest.catalog.dto.request.SupportedServiceRequest request,
             @RequestPart(value = "icon", required = false) MultipartFile icon) {
@@ -597,14 +603,14 @@ public class GymAdminController {
 
     @Operation(summary = "Dəstəklənən xidmətləri siyahılayın", description = "Sistemdəki dəstəklənən xidmətləri qaytarır. gymId göndərilərsə həmin idman zalına aid xidmətləri qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/services")
+    @GetMapping("/v1/admin/gyms/services")
     public ResponseEntity<java.util.List<az.fitnest.catalog.dto.response.SupportedServiceResponse>> getSupportedServices(@RequestParam(required = false) Long gymId) {
         return ResponseEntity.ok(gymReadService.getAllSupportedServices(gymId));
     }
 
     @Operation(summary = "Dəstəklənən xidməti silin", description = "ID-yə görə dəstəklənən xidməti silir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/services/{id}")
+    @DeleteMapping("/v1/admin/gyms/services/{id}")
     public ResponseEntity<Void> deleteSupportedService(@PathVariable Long id) {
         gymWriteService.deleteSupportedService(id);
         return ResponseEntity.ok().build();
@@ -612,21 +618,21 @@ public class GymAdminController {
 
     @Operation(summary = "Koordinatlara görə ünvanı alın", description = "Verilmiş enlik (latitude) və uzunluq (longitude) koordinatlarına uyğun ünvanı qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/geocoding/reverse")
+    @GetMapping("/v1/admin/gyms/geocoding/reverse")
     public ResponseEntity<GeocodingResponse> reverseGeocode(@RequestParam Double lat, @RequestParam Double lng) {
         return ResponseEntity.ok(gymWriteService.reverseGeocode(lat, lng));
     }
 
     @Operation(summary = "Mətnə görə ünvan və koordinat axtarışı", description = "Verilmiş sorğu mətninə uyğun ünvan siyahısını və koordinatları qaytarır.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/geocoding/forward")
+    @GetMapping("/v1/admin/gyms/geocoding/forward")
     public ResponseEntity<java.util.List<GeocodingResponse>> forwardGeocode(@RequestParam String query) {
         return ResponseEntity.ok(gymWriteService.forwardGeocode(query));
     }
 
     @Operation(summary = "İdman zalını aktivləşdirin və ya deaktiv edin", description = "İdman zalının statusunu ACTIVE və ya INACTIVE olaraq dəyişir.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{id}/status")
+    @PatchMapping("/v1/admin/gyms/{id}/status")
     public ResponseEntity<Void> toggleGymStatus(@PathVariable Long id, @RequestParam boolean enabled) {
         gymWriteService.toggleGymStatus(id, enabled);
         return ResponseEntity.ok().build();
@@ -634,14 +640,14 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı adminlərini alın", description = "İdman zalını idarə edən adminlərin siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/{id}/admins")
+    @GetMapping("/v1/admin/gyms/{id}/admins")
     public ResponseEntity<List<az.fitnest.catalog.dto.response.GymAdminResponse>> getGymAdmins(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymReadService.getGymAdmins(gymId));
     }
 
     @Operation(summary = "İdman zalına yeni admin əlavə edin", description = "İdman zalına yeni admin əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/admins")
+    @PostMapping("/v1/admin/gyms/{id}/admins")
     public ResponseEntity<Void> addGymAdmin(@PathVariable("id") Long gymId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymAdminCreateRequest request) {
         gymWriteService.addGymAdmin(gymId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -649,7 +655,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı adminini yeniləyin", description = "İdman zalına aid admin məlumatlarını yeniləyir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/admins/{adminId}")
+    @PutMapping("/v1/admin/gyms/{id}/admins/{adminId}")
     public ResponseEntity<Void> updateGymAdmin(@PathVariable("id") Long gymId, @PathVariable("adminId") Long adminId, @Valid @RequestBody az.fitnest.catalog.dto.request.GymAdminUpdateRequest request) {
         gymWriteService.updateGymAdmin(gymId, adminId, request);
         return ResponseEntity.ok().build();
@@ -657,7 +663,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı adminini silin", description = "İdman zalına aid admini silir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/admins/{adminId}")
+    @DeleteMapping("/v1/admin/gyms/{id}/admins/{adminId}")
     public ResponseEntity<Void> deleteGymAdmin(@PathVariable("id") Long gymId, @PathVariable("adminId") Long adminId) {
         gymWriteService.deleteGymAdmin(gymId, adminId);
         return ResponseEntity.noContent().build();
@@ -665,7 +671,7 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı rezervasiyalarını alın", description = "İdman zalına aid rezervasiyaların siyahısını gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/reservations")
+    @GetMapping("/v1/admin/gyms/{id}/reservations")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.ReservationAdminResponse>> getGymReservations(
             @PathVariable Long id,
             @RequestParam(required = false) az.fitnest.catalog.model.enums.ReservationStatus status,
@@ -676,7 +682,7 @@ public class GymAdminController {
 
     @Operation(summary = "Rezervasiya detallarını alın", description = "ID-yə görə rezervasiyanın detallı məlumatlarını gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/reservations/{reservationId}")
+    @GetMapping("/v1/admin/gyms/reservations/{reservationId}")
     public ResponseEntity<az.fitnest.catalog.dto.response.ReservationDetailAdminResponse> getReservationDetail(@PathVariable Long reservationId) {
         return ResponseEntity.ok(gymReadService.getReservationDetailAdmin(reservationId));
     }
@@ -694,14 +700,14 @@ public class GymAdminController {
 
     @Operation(summary = "İdman zalı rezervasiya statistikasını alın", description = "İdman zalına aid rezervasiya statistikasını (ümumi, gözləmədə və s.) gətirir. ADMIN və ya idman zalı admini rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/reservations/stats")
+    @GetMapping("/v1/admin/gyms/{id}/reservations/stats")
     public ResponseEntity<az.fitnest.catalog.dto.response.ReservationStatsResponse> getGymReservationStats(@PathVariable Long id) {
         return ResponseEntity.ok(gymReadService.getGymReservationStats(id));
     }
 
     @Operation(summary = "Dərs saatlarını alın", description = "İdman zalına aid dərs saatlarının siyahısını gətirir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @GetMapping("/{id}/lesson-hours")
+    @GetMapping("/v1/admin/gyms/{id}/lesson-hours")
     public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHours(
             @PathVariable Long id,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
@@ -713,7 +719,7 @@ public class GymAdminController {
 
     @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @PostMapping("/{id}/lesson-hours")
+    @PostMapping("/v1/admin/gyms/{id}/lesson-hours")
     public ResponseEntity<Void> addLessonHour(@PathVariable Long id, @RequestBody az.fitnest.catalog.dto.request.LessonHourRequest request) {
         gymWriteService.addLessonHourAdmin(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -721,9 +727,14 @@ public class GymAdminController {
 
     @Operation(summary = "Dərs saatını silin", description = "ID-yə görə dərs saatını silir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @DeleteMapping("/lesson-hours/{lessonHourId}")
+    @DeleteMapping("/v1/admin/gyms/lesson-hours/{lessonHourId}")
     public ResponseEntity<Void> deleteLessonHour(@PathVariable Long lessonHourId) {
         gymWriteService.deleteLessonHourAdmin(lessonHourId);
         return ResponseEntity.noContent().build();
     }
+
+    // --- V2 Endpoints ---
+
+
+    
 }
