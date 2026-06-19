@@ -8,5 +8,6 @@ import lombok.Builder;
 @Builder
 public record GymCreateStep3Request(
     @NotNull Double latitude,
-    @NotNull Double longitude
+    @NotNull Double longitude,
+    Double altitude
 ) {}

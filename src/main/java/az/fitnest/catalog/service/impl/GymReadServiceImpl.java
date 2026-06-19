@@ -1865,11 +1865,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String addressText = null;
         Double lat = null;
         Double lng = null;
+        Double altitude = null;
         if (gym.getAddress() != null) {
             city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
             addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
             lat = gym.getAddress().getLatitude();
             lng = gym.getAddress().getLongitude();
+            altitude = gym.getAddress().getAltitude();
         }
 
         String created = "";
@@ -1905,6 +1907,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .address(addressText)
                 .latitude(lat)
                 .longitude(lng)
+                .altitude(altitude)
                 .status(gym.getStatus())
                 .createdAt(created)
                 .lessonTypes(lessonTypes)
@@ -2401,20 +2404,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymRoomResponseV2> rooms = roomsFuture.join();
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
-                        .id(c.getId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                        .photoUrl(c.getPhotoUrl())
-                        .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
-                        .build());
-            }
-        } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms: old single category_id FK
+        if (gym.getCategory() != null) {
             Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
+        }
+        if (gym.getSubCategory() != null) {
+            Category c = gym.getSubCategory();
             String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
             categoryDtos.add(CategoryResponse.builder()
                     .id(c.getId())
@@ -2760,21 +2762,20 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = getTranslatedValueCached(translationLookup,
-                        "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
-                        .id(c.getCategoryId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                        .photoUrl(c.getPhotoUrl())
-                        .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
-                        .build());
-            }
-        } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms: old single category_id FK
+        if (gym.getCategory() != null) {
             Category c = gym.getCategory();
+            String localizedCatName = getTranslatedValueCached(translationLookup,
+                    "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getCategoryId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
+        }
+        if (gym.getSubCategory() != null) {
+            Category c = gym.getSubCategory();
             String localizedCatName = getTranslatedValueCached(translationLookup,
                     "CATEGORY", c.getCategoryId().toString(), "name", userLanguage);
             categoryDtos.add(CategoryResponse.builder()
@@ -2862,21 +2863,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String userLanguage = resolveUserLanguage();
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        if (gym.getCategories() != null && !gym.getCategories().isEmpty()) {
-            for (Category c : gym.getCategories()) {
-                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-                categoryDtos.add(CategoryResponse.builder()
-                        .id(c.getId())
-                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                        .photoUrl(c.getPhotoUrl())
-                        .iconUrl(c.getIconUrl())
-                        .coverImageUrl(c.getPhotoUrl())
-                        .build());
-            }
-        } else if (gym.getCategory() != null) {
-            // Fallback for legacy gyms created before multi-category (V2):
-            // they only have category_id FK, the gym_categories join table is empty.
+        if (gym.getCategory() != null) {
             Category c = gym.getCategory();
+            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+            categoryDtos.add(CategoryResponse.builder()
+                    .id(c.getId())
+                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                    .photoUrl(c.getPhotoUrl())
+                    .iconUrl(c.getIconUrl())
+                    .coverImageUrl(c.getPhotoUrl())
+                    .build());
+        }
+        if (gym.getSubCategory() != null) {
+            Category c = gym.getSubCategory();
             String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
             categoryDtos.add(CategoryResponse.builder()
                     .id(c.getId())
@@ -2906,11 +2905,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String addressText = null;
         Double lat = null;
         Double lng = null;
+        Double altitude = null;
         if (gym.getAddress() != null) {
             city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
             addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
             lat = gym.getAddress().getLatitude();
             lng = gym.getAddress().getLongitude();
+            altitude = gym.getAddress().getAltitude();
         }
 
         String created = "";
@@ -2945,6 +2946,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .address(addressText)
                 .latitude(lat)
                 .longitude(lng)
+                .altitude(altitude)
                 .status(gym.getStatus())
                 .createdAt(created)
                 .lessonTypes(lessonTypes)

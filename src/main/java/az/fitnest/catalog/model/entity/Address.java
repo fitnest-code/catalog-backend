@@ -13,4 +13,13 @@ public class Address {
     private String city;
     private Double latitude;
     private Double longitude;
+    private Double altitude;
+
+    public Address(String addressText, String city, Double latitude, Double longitude) {
+        this.addressText = addressText;
+        this.city = city;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.altitude = null;
+    }
 }

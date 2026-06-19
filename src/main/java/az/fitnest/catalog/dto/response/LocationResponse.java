@@ -9,5 +9,10 @@ public record LocationResponse(
     Double latitude,
     Double longitude,
     String addressText,
-    String city
-) {}
+    String city,
+    Double altitude
+) {
+    public LocationResponse(Double latitude, Double longitude, String addressText, String city) {
+        this(latitude, longitude, addressText, city, null);
+    }
+}

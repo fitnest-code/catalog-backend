@@ -35,6 +35,8 @@ public record GymInfoAdminResponse(
     Double latitude,
     @Schema(description = "Uzunluq")
     Double longitude,
+    @Schema(description = "Hündürlük (Altitude)")
+    Double altitude,
     @Schema(description = "Status")
     GymStatus status,
     @Schema(description = "Yaradılma tarixi")

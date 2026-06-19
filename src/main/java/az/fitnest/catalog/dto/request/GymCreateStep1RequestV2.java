@@ -11,8 +11,10 @@ import java.util.List;
 
 @Builder
 public record GymCreateStep1RequestV2(
-    @NotEmpty(message = "Kateqoriyalar tələb olunur")
-    List<Long> categoryIds,
+    @NotNull(message = "Kateqoriya tələb olunur")
+    Long mainCategoryId,
+
+    Long subCategoryId,
 
     @NotBlank(message = "Ad boş ola bilməz")
     @Size(min = 2, max = 100)

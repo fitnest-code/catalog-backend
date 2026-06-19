@@ -147,6 +147,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         Address address = new Address();
         address.setLatitude(request.address().latitude());
         address.setLongitude(request.address().longitude());
+        address.setAltitude(request.address().altitude());
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
@@ -216,6 +217,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
         address.setLatitude(request.address().latitude());
         address.setLongitude(request.address().longitude());
+        address.setAltitude(request.address().altitude());
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
@@ -762,6 +764,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         Address address = new Address();
         address.setLatitude(request.latitude());
         address.setLongitude(request.longitude());
+        address.setAltitude(request.altitude());
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
@@ -1169,6 +1172,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             Address address = new Address();
             address.setLatitude(request.latitude());
             address.setLongitude(request.longitude());
+            address.setAltitude(request.altitude());
             if (geocoding != null) {
                 address.setAddressText(geocoding.addressText());
                 address.setCity(geocoding.city());
@@ -1445,6 +1449,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
+        if (request.altitude() != null) gym.getAddress().setAltitude(request.altitude());
 
         gymRepository.save(gym);
 
@@ -1795,12 +1800,19 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Transactional
     @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public GymCreateStep1Response createGymStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
-            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        if (request.mainCategoryId() == null) {
+            throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-        if (categories.size() != request.categoryIds().size()) {
-            throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+        if (request.mainCategoryId().equals(request.subCategoryId())) {
+            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        }
+        Category mainCategory = categoryRepository.findById(request.mainCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+
+        Category subCategory = null;
+        if (request.subCategoryId() != null) {
+            subCategory = categoryRepository.findById(request.subCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
         }
 
         Gym gym = new Gym();
@@ -1808,8 +1820,8 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setDescription(request.description());
         gym.setPhone(PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
-        gym.setCategories(new HashSet<>(categories));
-        gym.setCategory(categories.get(0)); // compatibility
+        gym.setCategory(mainCategory);
+        gym.setSubCategory(subCategory);
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
@@ -1824,7 +1836,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                 az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
                         .gym(gym)
                         .name(glt.getName())
-                        .category(categories.get(0)) // compatibility
+                        .category(mainCategory)
                         .status("ACTIVE")
                         .sortOrder(order++)
                         .build();
@@ -1837,12 +1849,18 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
-            throw new BadRequestException("CATEGORY_REQUIRED", "error.category_required");
+        if (request.mainCategoryId() == null) {
+            throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        for (Long categoryId : request.categoryIds()) {
-            categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+        if (request.mainCategoryId().equals(request.subCategoryId())) {
+            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        }
+        categoryRepository.findById(request.mainCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+
+        if (request.subCategoryId() != null) {
+            categoryRepository.findById(request.subCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
         }
 
         if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
@@ -2003,13 +2021,25 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        if (request.categoryIds() != null && !request.categoryIds().isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-            if (categories.size() != request.categoryIds().size()) {
-                throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+        if (request.mainCategoryId() != null && request.mainCategoryId().equals(request.subCategoryId())) {
+            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        }
+
+        if (request.mainCategoryId() != null) {
+            Category mainCategory = categoryRepository.findById(request.mainCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+            gym.setCategory(mainCategory);
+        }
+
+        if (request.subCategoryId() != null) {
+            Category subCategory = categoryRepository.findById(request.subCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
+            if (Boolean.TRUE.equals(subCategory.getIsMainCategory())) {
+                throw new BadRequestException("SUB_CATEGORY_CANNOT_BE_MAIN", "error.sub_category_cannot_be_main");
             }
-            gym.setCategories(new HashSet<>(categories));
-            gym.setCategory(categories.get(0)); // compatibility
+            gym.setSubCategory(subCategory);
+        } else {
+            gym.setSubCategory(null);
         }
 
         if (request.name() != null) gym.setName(request.name());
@@ -2025,6 +2055,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
+        if (request.altitude() != null) gym.getAddress().setAltitude(request.altitude());
 
         gymRepository.save(gym);
 
@@ -2149,17 +2180,28 @@ public class GymWriteServiceImpl implements GymWriteService {
         Map<Integer, String> iconUrlByIndex = serviceIconsFuture.join();
 
         Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
-            List<Category> categories = categoryRepository.findAllById(request.categoryIds());
-            if (categories.isEmpty()) {
-                throw new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found");
+            if (request.mainCategoryId() == null) {
+                throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
             }
+            if (request.mainCategoryId().equals(request.subCategoryId())) {
+                throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+            }
+            Category mainCategory = categoryRepository.findById(request.mainCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+
+            Category subCategory = null;
+            if (request.subCategoryId() != null) {
+                subCategory = categoryRepository.findById(request.subCategoryId())
+                        .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
+            }
+
             Gym gym = new Gym();
             gym.setName(request.name());
             gym.setDescription(request.description());
             gym.setPhone(PhoneUtil.normalize(request.phone()));
             gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
-            gym.setCategories(new HashSet<>(categories));
-            gym.setCategory(categories.get(0)); // compatibility
+            gym.setCategory(mainCategory);
+            gym.setSubCategory(subCategory);
 
             updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
             updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());
@@ -2175,6 +2217,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             Address address = new Address();
             address.setLatitude(request.latitude());
             address.setLongitude(request.longitude());
+            address.setAltitude(request.altitude());
             if (geocoding != null) {
                 address.setAddressText(geocoding.addressText());
                 address.setCity(geocoding.city());
@@ -2205,7 +2248,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                     az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
                             .gym(savedGym)
                             .name(glt.getName())
-                            .category(categories.get(0)) // compatibility
+                            .category(mainCategory)
                             .status("ACTIVE")
                             .sortOrder(order++)
                             .build();

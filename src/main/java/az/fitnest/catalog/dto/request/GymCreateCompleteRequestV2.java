@@ -10,8 +10,10 @@ import az.fitnest.catalog.dto.response.GymWorkHourResponse;
 @Builder
 public record GymCreateCompleteRequestV2(
     // Step 1: Gym Info
-    @NotEmpty(message = "Kateqoriyalar tələb olunur")
-    List<Long> categoryIds,
+    @NotNull(message = "Kateqoriya tələb olunur")
+    Long mainCategoryId,
+
+    Long subCategoryId,
 
     @NotBlank(message = "Ad boş ola bilməz")
     @Size(min = 2, max = 100)
@@ -41,6 +43,7 @@ public record GymCreateCompleteRequestV2(
     // Step 4: Address
     @NotNull Double latitude,
     @NotNull Double longitude,
+    Double altitude,
 
     // Step 5: Room names and category IDs (files sent as separate multipart parts)
     List<String> roomNames,

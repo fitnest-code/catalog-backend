@@ -175,7 +175,9 @@ public class CategoryServiceImpl implements az.fitnest.catalog.service.CategoryS
     @Transactional
     @org.springframework.cache.annotation.CacheEvict(value = {"categories-paged", "categories-all"}, allEntries = true)
     public CategoryResponse createCategory(String name, MultipartFile photo, MultipartFile icon, List<Long> lessonTypeIds) {
-        Category category = Category.builder().name(name).build();
+        Category category = Category.builder()
+                .name(name)
+                .build();
         if (lessonTypeIds != null && !lessonTypeIds.isEmpty()) {
             category.setLessonTypes(new java.util.HashSet<>(lessonTypeRepository.findAllById(lessonTypeIds)));
         }

@@ -10,9 +10,12 @@ import java.util.List;
 
 @Builder
 public record GymInfoUpdateRequestV2(
-    @NotEmpty(message = "Kateqoriyalar boş ola bilməz")
-    @Schema(description = "Kateqoriya ID-ləri")
-    List<Long> categoryIds,
+    @NotNull(message = "Kateqoriya tələb olunur")
+    @Schema(description = "Əsas kateqoriya ID")
+    Long mainCategoryId,
+
+    @Schema(description = "Sub kateqoriya ID")
+    Long subCategoryId,
 
     @NotBlank(message = "Zal adı boş ola bilməz")
     @Schema(description = "Zal adı")
@@ -40,5 +43,8 @@ public record GymInfoUpdateRequestV2(
     Double latitude,
 
     @Schema(description = "Uzunluq")
-    Double longitude
+    Double longitude,
+
+    @Schema(description = "Hündürlük (Altitude)")
+    Double altitude
 ) {}

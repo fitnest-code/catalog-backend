@@ -116,19 +116,23 @@ public class Gym
     private Set<az.fitnest.catalog.model.entity.Room> rooms = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "gym_categories",
-        joinColumns = @JoinColumn(name = "gym_id"),
-        inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<Category> categories = new java.util.HashSet<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sub_category_id")
+    private Category subCategory;
+
+    public Set<Category> getCategories() {
+        Set<Category> cats = new java.util.HashSet<>();
+        if (category != null) {
+            cats.add(category);
+        }
+        if (subCategory != null) {
+            cats.add(subCategory);
+        }
+        return cats;
+    }
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;

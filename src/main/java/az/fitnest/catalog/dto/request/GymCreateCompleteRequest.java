@@ -44,6 +44,7 @@ public record GymCreateCompleteRequest(
     // Step 4: Address
     @NotNull Double latitude,
     @NotNull Double longitude,
+    Double altitude,
 
     // Step 5: Room names (files sent as separate multipart parts)
     List<String> roomNames,

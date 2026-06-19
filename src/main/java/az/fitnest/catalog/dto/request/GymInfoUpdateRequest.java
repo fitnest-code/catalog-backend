@@ -38,5 +38,8 @@ public record GymInfoUpdateRequest(
     Double latitude,
 
     @Schema(description = "Uzunluq")
-    Double longitude
+    Double longitude,
+
+    @Schema(description = "Hündürlük (Altitude)")
+    Double altitude
 ) {}
