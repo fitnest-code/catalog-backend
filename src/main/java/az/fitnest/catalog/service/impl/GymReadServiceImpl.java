@@ -2863,27 +2863,31 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String userLanguage = resolveUserLanguage();
 
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
+        CategoryResponse mainCategoryDto = null;
         if (gym.getCategory() != null) {
             Category c = gym.getCategory();
             String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            categoryDtos.add(CategoryResponse.builder()
+            mainCategoryDto = CategoryResponse.builder()
                     .id(c.getId())
                     .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
                     .iconUrl(c.getIconUrl())
                     .coverImageUrl(c.getPhotoUrl())
-                    .build());
+                    .build();
+            categoryDtos.add(mainCategoryDto);
         }
+        CategoryResponse subCategoryDto = null;
         if (gym.getSubCategory() != null) {
             Category c = gym.getSubCategory();
             String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            categoryDtos.add(CategoryResponse.builder()
+            subCategoryDto = CategoryResponse.builder()
                     .id(c.getId())
                     .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
                     .photoUrl(c.getPhotoUrl())
                     .iconUrl(c.getIconUrl())
                     .coverImageUrl(c.getPhotoUrl())
-                    .build());
+                    .build();
+            categoryDtos.add(subCategoryDto);
         }
 
         List<az.fitnest.catalog.dto.response.RoomImageDtoV2> roomDtos = new java.util.ArrayList<>();
@@ -2936,6 +2940,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return GymInfoAdminResponseV2.builder()
                 .id(gym.getId())
                 .categories(categoryDtos)
+                .category(mainCategoryDto)
+                .subCategory(subCategoryDto)
                 .name(localizedGymName)
                 .description(localizedGymDescription)
                 .coverImageUrl(gym.getCoverImageUrl())

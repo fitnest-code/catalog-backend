@@ -11,6 +11,10 @@ public record GymInfoAdminResponseV2(
     Long id,
     @Schema(description = "Kateqoriyalar")
     List<CategoryResponse> categories,
+    @Schema(description = "Əsas Kateqoriya")
+    CategoryResponse category,
+    @Schema(description = "Alt Kateqoriya")
+    CategoryResponse subCategory,
     @Schema(description = "Zal adı")
     String name,
     @Schema(description = "Haqqında / Təsvir")
