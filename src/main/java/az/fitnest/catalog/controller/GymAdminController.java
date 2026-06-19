@@ -735,6 +735,110 @@ public class GymAdminController {
 
     // --- V2 Endpoints ---
 
+@Operation(summary = "Tam idman zalı yaradın (V2, Birdəfəlik)", description = "Bütün 7 addımı birləşdirərək idman zalını V2 ilə bir dəfəyə yaradır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v2/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GymCreateStep1Response> createGymCompleteV2(
+            @RequestPart("data") @Valid GymCreateCompleteRequestV2 request,
+            @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
+            @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        Long gymId = gymWriteService.createGymCompleteV2(request, coverPhoto, trainerPhotos, roomPhotos, serviceIcons);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
+    }
+
+    @Operation(summary = "Step 1: Yeni idman zalı yaradın (V2, DRAFT)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/v2/admin/gyms/step1")
+    public ResponseEntity<GymCreateStep1Response> createGymStep1V2(@Valid @RequestBody GymCreateStep1RequestV2 request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1V2(request));
+    }
+
+    @Operation(summary = "Validate Step 1 (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/v2/admin/gyms/validate/step1")
+    public ResponseEntity<Void> validateStep1V2(@Valid @RequestBody GymCreateStep1RequestV2 request) {
+        gymWriteService.validateStep1V2(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 5: İdman zalına şəkillər əlavə edin (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v2/admin/gyms/{id}/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep5V2(
+            @PathVariable Long id,
+            @RequestParam("coverPhoto") MultipartFile coverPhoto,
+            @RequestParam(value = "roomNames", required = false) List<String> roomNames,
+            @RequestParam(value = "roomCategoryIds", required = false) List<Long> roomCategoryIds,
+            @RequestParam(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
+        gymWriteService.createGymStep5V2(id, coverPhoto, roomNames, roomCategoryIds, roomPhotos);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 5 (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v2/admin/gyms/validate/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep5V2(
+            @RequestParam(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestParam(value = "roomNames", required = false) List<String> roomNames,
+            @RequestParam(value = "roomCategoryIds", required = false) List<Long> roomCategoryIds,
+            @RequestParam(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
+        gymWriteService.validateStep5V2(coverPhoto, roomNames, roomCategoryIds, roomPhotos);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 6: İdman zalı üçün abunəlik və xidmətləri aktivləşdirin (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v2/admin/gyms/{id}/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep6V2(
+            @PathVariable Long id,
+            @RequestPart("data") @Valid GymCreateStep6RequestV2 request,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        gymWriteService.createGymStep6V2(id, request, serviceIcons);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 6 (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v2/admin/gyms/validate/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep6V2(
+            @RequestPart("data") @Valid GymCreateStep6RequestV2 request,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        gymWriteService.validateStep6V2(request, serviceIcons);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Zal abunəliklərini alın (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/v2/admin/gyms/{id}/subscriptions")
+    public ResponseEntity<GymSubscriptionsAdminResponseV2> getGymSubscriptionsV2(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymSubscriptionsV2(gymId));
+    }
+
+    @Operation(summary = "İdman zalı abunəliklərini yeniləyin (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/v2/admin/gyms/{id}/subscriptions")
+    public ResponseEntity<Void> updateGymSubscriptionsV2(@PathVariable Long id, @Valid @RequestBody GymCreateStep6RequestV2 request) {
+        gymWriteService.updateGymSubscriptionsV2(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Zal məlumatlarını alın (V2)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
+    @GetMapping("/v2/admin/gyms/{id}/details")
+    public ResponseEntity<GymInfoAdminResponseV2> getGymDetailsV2(@PathVariable("id") Long gymId) {
+        return ResponseEntity.ok(gymReadService.getGymDetailsAdminV2(gymId));
+    }
+
+    @Operation(summary = "Zal məlumatlarını yeniləyin (V2)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/v2/admin/gyms/{id}/details")
+    public ResponseEntity<Void> updateGymDetailsV2(@PathVariable("id") Long gymId, @Valid @RequestBody GymInfoUpdateRequestV2 request) {
+        gymWriteService.updateGymInfoV2(gymId, request);
+        return ResponseEntity.ok().build();
+    }
+
 
     
 }
