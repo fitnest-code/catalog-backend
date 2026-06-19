@@ -10,12 +10,12 @@ import java.util.List;
 
 @Builder
 public record GymInfoUpdateRequestV2(
-    @NotNull(message = "Kateqoriya tələb olunur")
-    @Schema(description = "Əsas kateqoriya ID")
-    Long mainCategoryId,
+    @NotEmpty(message = "Ən azı bir əsas kateqoriya seçilməlidir")
+    @Schema(description = "Əsas kateqoriya ID-ləri")
+    List<Long> mainCategoryIds,
 
-    @Schema(description = "Sub kateqoriya ID")
-    Long subCategoryId,
+    @Schema(description = "Sub kateqoriya ID-ləri")
+    List<Long> subCategoryIds,
 
     @NotBlank(message = "Zal adı boş ola bilməz")
     @Schema(description = "Zal adı")

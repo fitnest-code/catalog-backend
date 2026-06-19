@@ -115,21 +115,63 @@ public class Gym
     @EqualsAndHashCode.Exclude
     private Set<az.fitnest.catalog.model.entity.Room> rooms = new HashSet<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "gym_main_categories",
+        joinColumns = @JoinColumn(name = "gym_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<Category> mainCategories = new java.util.HashSet<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sub_category_id")
-    private Category subCategory;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "gym_sub_categories",
+        joinColumns = @JoinColumn(name = "gym_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Set<Category> subCategories = new java.util.HashSet<>();
+
+    public Category getCategory() {
+        return mainCategories != null && !mainCategories.isEmpty() ? mainCategories.iterator().next() : null;
+    }
+
+    public void setCategory(Category category) {
+        if (this.mainCategories == null) {
+            this.mainCategories = new java.util.HashSet<>();
+        }
+        this.mainCategories.clear();
+        if (category != null) {
+            this.mainCategories.add(category);
+        }
+    }
+
+    public Category getSubCategory() {
+        return subCategories != null && !subCategories.isEmpty() ? subCategories.iterator().next() : null;
+    }
+
+    public void setSubCategory(Category subCategory) {
+        if (this.subCategories == null) {
+            this.subCategories = new java.util.HashSet<>();
+        }
+        this.subCategories.clear();
+        if (subCategory != null) {
+            this.subCategories.add(subCategory);
+        }
+    }
 
     public Set<Category> getCategories() {
         Set<Category> cats = new java.util.HashSet<>();
-        if (category != null) {
-            cats.add(category);
+        if (mainCategories != null) {
+            cats.addAll(mainCategories);
         }
-        if (subCategory != null) {
-            cats.add(subCategory);
+        if (subCategories != null) {
+            cats.addAll(subCategories);
         }
         return cats;
     }

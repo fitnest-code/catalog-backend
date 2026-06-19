@@ -1800,19 +1800,27 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Transactional
     @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public GymCreateStep1Response createGymStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.mainCategoryId() == null) {
+        if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
             throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        if (request.mainCategoryId().equals(request.subCategoryId())) {
-            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        if (request.subCategoryIds() != null) {
+            for (Long mainId : request.mainCategoryIds()) {
+                if (request.subCategoryIds().contains(mainId)) {
+                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+                }
+            }
         }
-        Category mainCategory = categoryRepository.findById(request.mainCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+        List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
+        if (mainCategories.size() != request.mainCategoryIds().size()) {
+            throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
+        }
 
-        Category subCategory = null;
-        if (request.subCategoryId() != null) {
-            subCategory = categoryRepository.findById(request.subCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
+        List<Category> subCategories = new java.util.ArrayList<>();
+        if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
+            subCategories = categoryRepository.findAllById(request.subCategoryIds());
+            if (subCategories.size() != request.subCategoryIds().size()) {
+                throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+            }
         }
 
         Gym gym = new Gym();
@@ -1820,8 +1828,8 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setDescription(request.description());
         gym.setPhone(PhoneUtil.normalize(request.phone()));
         gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
-        gym.setCategory(mainCategory);
-        gym.setSubCategory(subCategory);
+        gym.setMainCategories(new java.util.HashSet<>(mainCategories));
+        gym.setSubCategories(new java.util.HashSet<>(subCategories));
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
@@ -1836,7 +1844,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                 az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
                         .gym(gym)
                         .name(glt.getName())
-                        .category(mainCategory)
+                        .category(mainCategories.isEmpty() ? null : mainCategories.get(0))
                         .status("ACTIVE")
                         .sortOrder(order++)
                         .build();
@@ -1849,18 +1857,26 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.mainCategoryId() == null) {
+        if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
             throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        if (request.mainCategoryId().equals(request.subCategoryId())) {
-            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        if (request.subCategoryIds() != null) {
+            for (Long mainId : request.mainCategoryIds()) {
+                if (request.subCategoryIds().contains(mainId)) {
+                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+                }
+            }
         }
-        categoryRepository.findById(request.mainCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+        List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
+        if (mainCategories.size() != request.mainCategoryIds().size()) {
+            throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
+        }
 
-        if (request.subCategoryId() != null) {
-            categoryRepository.findById(request.subCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
+        if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
+            List<Category> subCategories = categoryRepository.findAllById(request.subCategoryIds());
+            if (subCategories.size() != request.subCategoryIds().size()) {
+                throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+            }
         }
 
         if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
@@ -2021,22 +2037,30 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        if (request.mainCategoryId() != null && request.mainCategoryId().equals(request.subCategoryId())) {
-            throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+        if (request.mainCategoryIds() != null && request.subCategoryIds() != null) {
+            for (Long mainId : request.mainCategoryIds()) {
+                if (request.subCategoryIds().contains(mainId)) {
+                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+                }
+            }
         }
 
-        if (request.mainCategoryId() != null) {
-            Category mainCategory = categoryRepository.findById(request.mainCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
-            gym.setCategory(mainCategory);
+        if (request.mainCategoryIds() != null) {
+            List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
+            if (mainCategories.size() != request.mainCategoryIds().size()) {
+                throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
+            }
+            gym.setMainCategories(new java.util.HashSet<>(mainCategories));
         }
 
-        if (request.subCategoryId() != null) {
-            Category subCategory = categoryRepository.findById(request.subCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
-            gym.setSubCategory(subCategory);
+        if (request.subCategoryIds() != null) {
+            List<Category> subCategories = categoryRepository.findAllById(request.subCategoryIds());
+            if (subCategories.size() != request.subCategoryIds().size()) {
+                throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+            }
+            gym.setSubCategories(new java.util.HashSet<>(subCategories));
         } else {
-            gym.setSubCategory(null);
+            gym.getSubCategories().clear();
         }
 
         if (request.name() != null) gym.setName(request.name());
@@ -2078,8 +2102,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                                     List<MultipartFile> serviceIcons) {
 
         GymCreateStep1RequestV2 step1 = GymCreateStep1RequestV2.builder()
-                .mainCategoryId(request.mainCategoryId())
-                .subCategoryId(request.subCategoryId())
+                .mainCategoryIds(request.mainCategoryIds())
+                .subCategoryIds(request.subCategoryIds())
                 .name(request.name())
                 .phone(request.phone())
                 .description(request.description())
@@ -2178,28 +2202,38 @@ public class GymWriteServiceImpl implements GymWriteService {
         Map<Integer, String> iconUrlByIndex = serviceIconsFuture.join();
 
         Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
-            if (request.mainCategoryId() == null) {
+            if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
                 throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
             }
-            if (request.mainCategoryId().equals(request.subCategoryId())) {
-                throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+            if (request.subCategoryIds() != null) {
+                for (Long mainId : request.mainCategoryIds()) {
+                    if (request.subCategoryIds().contains(mainId)) {
+                        throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
+                    }
+                }
             }
-            Category mainCategory = categoryRepository.findById(request.mainCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found"));
+            List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
+            if (mainCategories.size() != request.mainCategoryIds().size()) {
+                throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
+            }
 
-            Category subCategory = null;
-            if (request.subCategoryId() != null) {
-                subCategory = categoryRepository.findById(request.subCategoryId())
-                        .orElseThrow(() -> new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found"));
+            List<Category> subCategories = new java.util.ArrayList<>();
+            if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
+                subCategories = categoryRepository.findAllById(request.subCategoryIds());
+                if (subCategories.size() != request.subCategoryIds().size()) {
+                    throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+                }
             }
+
+            Category mainCategory = mainCategories.isEmpty() ? null : mainCategories.get(0);
 
             Gym gym = new Gym();
             gym.setName(request.name());
             gym.setDescription(request.description());
             gym.setPhone(PhoneUtil.normalize(request.phone()));
             gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
-            gym.setCategory(mainCategory);
-            gym.setSubCategory(subCategory);
+            gym.setMainCategories(new java.util.HashSet<>(mainCategories));
+            gym.setSubCategories(new java.util.HashSet<>(subCategories));
 
             updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
             updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());

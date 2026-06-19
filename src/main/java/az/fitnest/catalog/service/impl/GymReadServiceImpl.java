@@ -2862,33 +2862,40 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         String userLanguage = resolveUserLanguage();
 
+        List<CategoryResponse> mainCategoryDtos = new java.util.ArrayList<>();
+        if (gym.getMainCategories() != null) {
+            for (Category c : gym.getMainCategories()) {
+                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+                mainCategoryDtos.add(CategoryResponse.builder()
+                        .id(c.getId())
+                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                        .photoUrl(c.getPhotoUrl())
+                        .iconUrl(c.getIconUrl())
+                        .coverImageUrl(c.getPhotoUrl())
+                        .build());
+            }
+        }
+
+        List<CategoryResponse> subCategoryDtos = new java.util.ArrayList<>();
+        if (gym.getSubCategories() != null) {
+            for (Category c : gym.getSubCategories()) {
+                String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
+                subCategoryDtos.add(CategoryResponse.builder()
+                        .id(c.getId())
+                        .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
+                        .photoUrl(c.getPhotoUrl())
+                        .iconUrl(c.getIconUrl())
+                        .coverImageUrl(c.getPhotoUrl())
+                        .build());
+            }
+        }
+
         List<CategoryResponse> categoryDtos = new java.util.ArrayList<>();
-        CategoryResponse mainCategoryDto = null;
-        if (gym.getCategory() != null) {
-            Category c = gym.getCategory();
-            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            mainCategoryDto = CategoryResponse.builder()
-                    .id(c.getId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                    .photoUrl(c.getPhotoUrl())
-                    .iconUrl(c.getIconUrl())
-                    .coverImageUrl(c.getPhotoUrl())
-                    .build();
-            categoryDtos.add(mainCategoryDto);
-        }
-        CategoryResponse subCategoryDto = null;
-        if (gym.getSubCategory() != null) {
-            Category c = gym.getSubCategory();
-            String localizedCatName = translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", userLanguage);
-            subCategoryDto = CategoryResponse.builder()
-                    .id(c.getId())
-                    .name(localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : c.getName())
-                    .photoUrl(c.getPhotoUrl())
-                    .iconUrl(c.getIconUrl())
-                    .coverImageUrl(c.getPhotoUrl())
-                    .build();
-            categoryDtos.add(subCategoryDto);
-        }
+        categoryDtos.addAll(mainCategoryDtos);
+        categoryDtos.addAll(subCategoryDtos);
+
+        CategoryResponse mainCategoryDto = mainCategoryDtos.isEmpty() ? null : mainCategoryDtos.get(0);
+        CategoryResponse subCategoryDto = subCategoryDtos.isEmpty() ? null : subCategoryDtos.get(0);
 
         List<az.fitnest.catalog.dto.response.RoomImageDtoV2> roomDtos = new java.util.ArrayList<>();
         if (gym.getRooms() != null) {
@@ -2940,6 +2947,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return GymInfoAdminResponseV2.builder()
                 .id(gym.getId())
                 .categories(categoryDtos)
+                .mainCategories(mainCategoryDtos)
+                .subCategories(subCategoryDtos)
                 .category(mainCategoryDto)
                 .subCategory(subCategoryDto)
                 .name(localizedGymName)
