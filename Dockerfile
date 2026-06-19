@@ -9,11 +9,11 @@ COPY gradlew .
 COPY gradle gradle
 COPY build.gradle settings.gradle ./
 COPY src/main/proto src/main/proto
-RUN ./gradlew dependencies --no-daemon
+RUN --mount=type=cache,target=/home/gradle/.gradle ./gradlew dependencies --no-daemon
 
 # Copy source and build
 COPY . .
-RUN ./gradlew clean bootJar --no-build-cache --no-daemon
+RUN --mount=type=cache,target=/home/gradle/.gradle ./gradlew bootJar --no-daemon
 
 # -----------------------------
 # Stage 2: Runtime image
