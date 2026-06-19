@@ -28,11 +28,7 @@ public class Category
 
     @Column(name = "icon_url")
     private String iconUrl;
-    @jakarta.persistence.OneToMany(mappedBy = "category")
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<Gym> gyms = new HashSet<Gym>();
+
 
     @ManyToMany
     @JoinTable(
