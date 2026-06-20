@@ -51,4 +51,6 @@ public interface GymReadService {
     PaginatedResponse<GymMainPageResponseV2> getGymsV2(Long userId, String q, String type, Long categoryId, Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir);
     GymInfoAdminResponseV2 getGymDetailsAdminV2(Long gymId);
     GymSubscriptionsAdminResponseV2 getGymSubscriptionsV2(Long gymId);
+
+    PaginatedResponse<LessonHourResponse> getGymLessonHoursArchiveAdmin(Long gymId, int page, int pageSize);
 }

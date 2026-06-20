@@ -2197,25 +2197,61 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Transactional(readOnly = true)
     public PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursAdmin(Long gymId, java.time.LocalDate startDate, java.time.LocalDate endDate, int page, int pageSize) {
         verifyGymOwnership(gymId);
-        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository.findByGymId(gymId).stream()
-                .filter(trd -> startDate == null || !trd.getDate().isBefore(startDate))
-                .filter(trd -> endDate == null || !trd.getDate().isAfter(endDate))
-                .map(trd -> new az.fitnest.catalog.dto.response.LessonHourResponse(
-                        trd.getId(),
-                        trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",
-                        trd.getClassType() != null ? trd.getClassType().getName() : "N/A",
-                        trd.getDate(),
-                        trd.getStartTime() + " - " + trd.getEndTime(),
-                        trd.getEmptySpaces(),
-                        trd.getStatus()
-                ))
+
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
+        // Bu endpoint heç vaxt bugündən köhnə dərsləri göstərmir; keçmiş "Arxiv" endpoint-inin işidir.
+        java.time.LocalDate effectiveStart = (startDate == null || startDate.isBefore(today)) ? today : startDate;
+
+        List<az.fitnest.catalog.model.entity.TrainerReservationDate> source = (endDate != null)
+                ? trainerReservationDateRepository.findByGymIdAndDateBetween(gymId, effectiveStart, endDate)
+                : trainerReservationDateRepository.findByGymIdAndDateGreaterThanEqual(gymId, effectiveStart);
+
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = source.stream()
+                .map(this::toLessonHourResponse)
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
                 .collect(Collectors.toList());
 
+        return paginateLessonHours(allHours, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> getGymLessonHoursArchiveAdmin(Long gymId, int page, int pageSize) {
+        verifyGymOwnership(gymId);
+
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
+        java.time.LocalDate weekAgo = today.minusDays(7);
+        java.time.LocalDate archiveEnd = today.minusDays(1);
+
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository
+                .findByGymIdAndDateBetween(gymId, weekAgo, archiveEnd).stream()
+                .map(this::toLessonHourResponse)
+                .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date).reversed()
+                        .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
+
+        return paginateLessonHours(allHours, page, pageSize);
+    }
+
+    private az.fitnest.catalog.dto.response.LessonHourResponse toLessonHourResponse(az.fitnest.catalog.model.entity.TrainerReservationDate trd) {
+        return new az.fitnest.catalog.dto.response.LessonHourResponse(
+                trd.getId(),
+                trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",
+                trd.getClassType() != null ? trd.getClassType().getName() : "N/A",
+                trd.getDate(),
+                trd.getStartTime() + " - " + trd.getEndTime(),
+                trd.getEmptySpaces(),
+                trd.getStatus()
+        );
+    }
+
+    private PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse> paginateLessonHours(
+            List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours, int page, int pageSize) {
         int from = Math.max(0, (page - 1) * pageSize);
         int to = Math.min(allHours.size(), from + pageSize);
-        List<az.fitnest.catalog.dto.response.LessonHourResponse> pageItems = from >= allHours.size() ? new java.util.ArrayList<>()
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> pageItems = from >= allHours.size()
+                ? new java.util.ArrayList<>()
                 : new java.util.ArrayList<>(allHours.subList(from, to));
 
         return PaginatedResponse.<az.fitnest.catalog.dto.response.LessonHourResponse>builder()
@@ -2225,6 +2261,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .pageSize(pageSize)
                 .build();
     }
+
     private String cleanPackageName(String name) {
         if (name == null) return null;
         return name.replace(" Plan", "").replace(" plan", "").trim();

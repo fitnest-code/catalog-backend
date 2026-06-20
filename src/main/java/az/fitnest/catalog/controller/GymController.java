@@ -266,5 +266,13 @@ public class GymController {
         return ResponseEntity.ok(this.gymReadService.getGymsV2(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
     }
 
-    
+    @Operation(summary = "Arxiv dərs saatlarını alın", description = "İdman zalına aid keçmiş (son 1 həftə) dərs saatlarının siyahısını gətirir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
+    @GetMapping("/v1/admin/gyms/{id}/lesson-hours/archive")
+    public ResponseEntity<PaginatedResponse<az.fitnest.catalog.dto.response.LessonHourResponse>> getGymLessonHoursArchive(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(gymReadService.getGymLessonHoursArchiveAdmin(id, page, pageSize));
+    }
 }
