@@ -1315,26 +1315,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         if (allowed) {
-            String gender = null;
-            try {
-                az.fitnest.catalog.client.CachedUser userResp = userServiceGrpcClient.getUserById(userId);
-                gender = userResp.getGender();
-            } catch (Exception e) {
-            }
-
-            boolean withinHours = isWithinWorkingHours(gym, gender);
-            if (!withinHours) {
-                allowed = false;
-                reason = "OUT_OF_WORKING_HOURS";
-            } else {
-                Address address = gym.getAddress();
-                if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null
-                        && lng != null) {
-                    double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
-                    if (distance > 0.2) {
-                        allowed = false;
-                        reason = "TOO_FAR_FROM_GYM";
-                    }
+            Address address = gym.getAddress();
+            if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null
+                    && lng != null) {
+                double distance = calculateDistanceRaw(lat, lng, address.getLatitude(), address.getLongitude());
+                if (distance > 0.2) {
+                    allowed = false;
+                    reason = "TOO_FAR_FROM_GYM";
                 }
             }
         }

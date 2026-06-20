@@ -1,31 +1,23 @@
 package az.fitnest.catalog.controller;
-import az.fitnest.catalog.dto.response.GymMainPageResponseV2;
-import az.fitnest.catalog.dto.response.GymDetailResponseV2;
 
+import az.fitnest.catalog.dto.PaginatedResponse;
+import az.fitnest.catalog.dto.SortDirection;
+import az.fitnest.catalog.dto.request.ReviewRequest;
+import az.fitnest.catalog.dto.response.GymCategoryCountResponse;
+import az.fitnest.catalog.dto.response.GymCountResponse;
 import az.fitnest.catalog.dto.response.GymDetailResponse;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.dto.response.GymImageDto;
-import az.fitnest.catalog.dto.response.LocationResponse;
-import az.fitnest.catalog.dto.response.GymQrResponse;
+import az.fitnest.catalog.dto.response.GymDetailResponseV2;
+import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
+import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
 import az.fitnest.catalog.dto.response.GymImageResponse;
 import az.fitnest.catalog.dto.response.GymMainPageResponse;
-import az.fitnest.catalog.dto.PaginatedResponse;
-import az.fitnest.catalog.dto.response.GymCountResponse;
-import az.fitnest.catalog.dto.response.GymTypeCountResponse;
-import az.fitnest.catalog.dto.response.GymCategoryCountResponse;
-import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
-
-import az.fitnest.catalog.dto.request.GymRequest;
-import az.fitnest.catalog.dto.request.GymSubscriptionsUpdateRequest;
+import az.fitnest.catalog.dto.response.GymMainPageResponseV2;
+import az.fitnest.catalog.dto.response.GymQrResponse;
 import az.fitnest.catalog.dto.response.GymReviewResponse;
+import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
 import az.fitnest.catalog.dto.response.GymTrainerResponse;
-import az.fitnest.catalog.dto.request.ReviewRequest;
-import az.fitnest.catalog.dto.request.TrainerRequest;
-import az.fitnest.catalog.dto.request.UpdateImageUrlRequest;
-import az.fitnest.catalog.grpc.CreateGymRequest;
-import az.fitnest.catalog.grpc.UpdateGymRequest;
+import az.fitnest.catalog.dto.response.GymTypeCountResponse;
+import az.fitnest.catalog.dto.response.LocationResponse;
 import az.fitnest.catalog.service.GymImageService;
 import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.GymReviewService;
@@ -42,29 +34,18 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
-import az.fitnest.catalog.dto.SortDirection;
-import az.fitnest.catalog.mapper.GymProtoMapper;
-import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
-import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
