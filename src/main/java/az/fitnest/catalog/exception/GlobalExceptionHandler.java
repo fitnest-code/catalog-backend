@@ -209,6 +209,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = {Exception.class})
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex, WebRequest request) {
+        ex.printStackTrace();
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .code("INTERNAL_SERVER_ERROR")

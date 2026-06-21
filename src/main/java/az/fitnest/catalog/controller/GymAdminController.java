@@ -689,7 +689,7 @@ public class GymAdminController {
 
     @Operation(summary = "Rezervasiya statusunu yeniləyin", description = "Rezervasiyanın statusunu təsdiqləyir və ya imtina edir. ADMIN və ya idman zalı admini rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
-    @RequestMapping(value = "/reservations/{reservationId}/status", method = {org.springframework.web.bind.annotation.RequestMethod.POST, org.springframework.web.bind.annotation.RequestMethod.PATCH})
+    @RequestMapping(value = "/v1/admin/gyms/reservations/{reservationId}/status", method = {org.springframework.web.bind.annotation.RequestMethod.POST, org.springframework.web.bind.annotation.RequestMethod.PATCH, org.springframework.web.bind.annotation.RequestMethod.PUT})
     public ResponseEntity<Void> updateReservationStatus(
             @PathVariable Long reservationId,
             @RequestParam az.fitnest.catalog.model.enums.ReservationStatus status,
