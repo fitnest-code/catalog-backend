@@ -78,7 +78,7 @@ public class ReservationAdminController {
     }
 
     @Operation(summary = "Rezervasiya statusunu yeniləyin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @PutMapping("/{reservationId}/status")
     public ResponseEntity<Void> updateReservationStatus(
             @PathVariable Long reservationId,
@@ -88,7 +88,7 @@ public class ReservationAdminController {
     }
 
     @Operation(summary = "Rezervasiyanı təsdiqləyin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @PutMapping("/{reservationId}/approve")
     public ResponseEntity<Void> approveReservation(@PathVariable Long reservationId) {
         reservationCommandService.approveReservation(reservationId);
@@ -96,7 +96,7 @@ public class ReservationAdminController {
     }
 
     @Operation(summary = "Rezervasiyanı rədd edin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @PutMapping("/{reservationId}/reject")
     public ResponseEntity<Void> rejectReservation(
             @PathVariable Long reservationId,

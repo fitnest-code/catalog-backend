@@ -167,6 +167,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 
+        verifyReservationGymAccess(reservation.getGym().getId());
+
         String oldStatus = reservation.getStatus().name();
         reservation.setStatus(request.getStatus());
         reservation = reservationRepository.save(reservation);
@@ -189,6 +191,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
 
+        verifyReservationGymAccess(reservation.getGym().getId());
+
         if (reservation.getStatus() != ReservationStatus.PENDING) {
             throw new BadRequestException("INVALID_STATUS", "error.reservation_not_pending");
         }
@@ -207,6 +211,8 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     public void rejectReservation(Long reservationId, String reason) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESERVATION_NOT_FOUND", "error.reservation_not_found"));
+
+        verifyReservationGymAccess(reservation.getGym().getId());
 
         if (reservation.getStatus() != ReservationStatus.PENDING) {
             throw new BadRequestException("INVALID_STATUS", "error.reservation_not_pending");
@@ -435,5 +441,20 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                 // Ignore to avoid breaking execution
             }
         });
+    }
+
+    private void verifyReservationGymAccess(Long gymId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new az.fitnest.catalog.exception.UnauthorizedException("Unauthorized");
+        }
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            return;
+        }
+        Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
+        if (userId == null || !gymAdminRepository.existsByGymIdAndUserId(gymId, userId)) {
+            throw new az.fitnest.catalog.exception.ForbiddenException("You do not have access to this gym");
+        }
     }
 }
