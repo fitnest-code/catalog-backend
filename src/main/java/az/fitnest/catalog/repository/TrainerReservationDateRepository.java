@@ -41,4 +41,6 @@ public interface TrainerReservationDateRepository extends JpaRepository<TrainerR
     List<TrainerReservationDate> findByGymIdAndDateGreaterThanEqual(Long gymId, LocalDate date);
 
     List<TrainerReservationDate> findByGymIdAndDateBetween(Long gymId, LocalDate startDate, LocalDate endDate);
+
+    List<TrainerReservationDate> findByGymIdAndDateBefore(Long gymId, LocalDate date);
 }

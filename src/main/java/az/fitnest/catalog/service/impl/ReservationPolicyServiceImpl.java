@@ -9,11 +9,13 @@ import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.order.grpc.ActiveSubscriptionResponse;
 import az.fitnest.catalog.client.CachedUser;
+import az.fitnest.catalog.configuration.ReservationBookingProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.Clock;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,8 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReservationPolicyServiceImpl.class);
 
     private final OrderServiceGrpcClient orderServiceClient;
+    private final Clock clock;
+    private final ReservationBookingProperties bookingProperties;
 
     public void validateReservationAllowed(Long userId, Gym gym, TrainerReservationDate session) {
         if (!Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
@@ -45,12 +49,14 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
             throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.gym_not_supported");
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime sessionStart = LocalDateTime.of(session.getDate(), session.getStartTime());
-        if (sessionStart.isBefore(LocalDateTime.now())) {
+        if (sessionStart.isBefore(now)) {
             throw new BadRequestException("SESSION_EXPIRED", "error.session_expired");
         }
 
-        if (ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart) < 2) {
+        LocalDateTime cutoff = now.plusHours(bookingProperties.getMinHoursBeforeStart());
+        if (sessionStart.isBefore(cutoff)) {
             throw new BadRequestException("BOOKING_RESTRICTED", "error.booking_must_be_2_hours_before");
         }
     }
@@ -145,7 +151,7 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
                 reservation.getReservationDate().getStartTime()
         );
 
-        long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart);
+        long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(clock), sessionStart);
         return hoursUntilSession >= 12;
     }
 
@@ -163,7 +169,7 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
                 reservation.getReservationDate().getStartTime()
         );
 
-        long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(), sessionStart);
+        long hoursUntilSession = ChronoUnit.HOURS.between(LocalDateTime.now(clock), sessionStart);
         if (hoursUntilSession < 12) {
             throw new BadRequestException("CANCELLATION_DISABLED", "error.cancellation_disabled_less_than_12_hours");
         }

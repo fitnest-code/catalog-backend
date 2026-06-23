@@ -350,7 +350,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
     @Transactional(readOnly = true)
     public ReservationWidgetResponse getReservationWidget(Long userId) {
         List<ReservationStatus> activeStatuses = List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         List<ReservationResponse> active = reservationRepository.findByUserId(userId, PageRequest.of(0, 50, Sort.by("reservationDate.date").ascending()))
                 .stream()
                 .filter(r -> activeStatuses.contains(r.getStatus()))
