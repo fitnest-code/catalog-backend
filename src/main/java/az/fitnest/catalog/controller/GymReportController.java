@@ -27,6 +27,12 @@ import java.util.stream.Collectors;
 public class GymReportController {
 
     private static final Map<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    static {
+        PACKAGE_NAME_CACHE.put(1L, "Bronze");
+        PACKAGE_NAME_CACHE.put(2L, "Silver");
+        PACKAGE_NAME_CACHE.put(3L, "Gold");
+        PACKAGE_NAME_CACHE.put(4L, "Platinum");
+    }
 
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymRepository gymRepository;
@@ -66,10 +72,16 @@ public class GymReportController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<Long, String> gymNamesMap = new HashMap<>();
+        Map<Long, az.fitnest.catalog.model.entity.Gym> gymsMap = new HashMap<>();
         if (!gymIds.isEmpty()) {
-            gymNamesMap = gymRepository.findAllById(gymIds).stream()
-                    .collect(Collectors.toMap(az.fitnest.catalog.model.entity.Gym::getId, az.fitnest.catalog.model.entity.Gym::getName));
+            try {
+                var gymsWithDetails = gymRepository.findWithListDetailsByIdIn(new ArrayList<>(gymIds));
+                for (var gym : gymsWithDetails) {
+                    gymsMap.put(gym.getId(), gym);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch gyms with details via entity graph: {}", e.getMessage());
+            }
         }
 
         Map<Long, String> packageNamesMap = new HashMap<>();
@@ -103,15 +115,14 @@ public class GymReportController {
             long count = ((Number) row[2]).longValue();
             double sumAmount = ((Number) row[3]).doubleValue();
 
-            String gymName = gymNamesMap.getOrDefault(gymId, "Unknown Gym");
+            az.fitnest.catalog.model.entity.Gym gym = gymsMap.get(gymId);
+            String gymName = gym != null ? gym.getName() : "Unknown Gym";
             String subscriptionName = "N/A";
             if (packageId != null) {
                 subscriptionName = packageNamesMap.getOrDefault(packageId, "N/A");
             } else {
                 try {
-                    var gymOpt = gymRepository.findById(gymId);
-                    if (gymOpt.isPresent()) {
-                        var gym = gymOpt.get();
+                    if (gym != null) {
                         double averagePrice = count > 0 ? sumAmount / count : 0.0;
                         var matchedSub = gym.getSubscriptions().stream()
                                 .filter(sub -> sub.getDailyPrice() != null && Math.abs(sub.getDailyPrice() - averagePrice) < 0.01)

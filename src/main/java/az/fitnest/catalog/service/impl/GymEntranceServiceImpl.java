@@ -36,6 +36,12 @@ import java.util.stream.Collectors;
 public class GymEntranceServiceImpl implements GymEntranceService {
 
     private static final java.util.concurrent.ConcurrentHashMap<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    static {
+        PACKAGE_NAME_CACHE.put(1L, "Bronze");
+        PACKAGE_NAME_CACHE.put(2L, "Silver");
+        PACKAGE_NAME_CACHE.put(3L, "Gold");
+        PACKAGE_NAME_CACHE.put(4L, "Platinum");
+    }
 
     private final GymRepository gymRepository;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
