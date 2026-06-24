@@ -13,4 +13,12 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
     List<GymEntranceHistory> findByGymIdAndScanDateBetweenOrderByScanDateDesc(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
     void deleteByGymId(Long gymId);
     boolean existsByGymId(Long gymId);
+
+    long countByStatusInAndScanDateBetween(java.util.List<String> statuses, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Query("SELECT h.gymId, h.packageId, COUNT(h.id), SUM(h.amount) " +
+            "FROM GymEntranceHistory h " +
+            "WHERE h.status IN ('ELIGIBLE', 'Uğurlu') AND h.scanDate BETWEEN :start AND :end " +
+            "GROUP BY h.gymId, h.packageId")
+    List<Object[]> getGymPaymentsReport(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start, @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
 }

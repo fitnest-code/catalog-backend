@@ -36,4 +36,7 @@ public class GymEntranceHistory extends BaseAuditableEntity {
 
     @Column(name = "amount")
     private Double amount;
+
+    @Column(name = "package_id")
+    private Long packageId;
 }

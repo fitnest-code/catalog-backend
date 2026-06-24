@@ -301,6 +301,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         String status = "ELIGIBLE";
 
         Double amount = 0.0;
+        Long packageId = null;
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
@@ -314,6 +315,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 reason = "VISIT_LIMIT_EXCEEDED";
             } else {
                 long userPackageId = subResp.getPackageId();
+                packageId = userPackageId;
                 boolean checkHierarchySuccess = false;
                 try {
                     List<Long> allPackageIds = new ArrayList<>();
@@ -450,6 +452,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .reason(reason)
                 .platform(platform)
                 .amount(amount)
+                .packageId(packageId)
                 .build();
         gymEntranceHistoryRepository.save(history);
 
