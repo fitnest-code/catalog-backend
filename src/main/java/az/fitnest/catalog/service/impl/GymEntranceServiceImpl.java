@@ -384,6 +384,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                         }
                         if (bestSub != null) {
                             amount = bestSub.getDailyPrice() != null ? bestSub.getDailyPrice() : 0.0;
+                            packageId = bestSub.getPackageId();
                             checkHierarchySuccess = true;
                         }
                     }
@@ -401,6 +402,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                         reason = "GYM_NOT_SUPPORTED";
                     } else {
                         amount = matchedSub.get().getDailyPrice() != null ? matchedSub.get().getDailyPrice() : 0.0;
+                        packageId = matchedSub.get().getPackageId();
                     }
                 }
             }
