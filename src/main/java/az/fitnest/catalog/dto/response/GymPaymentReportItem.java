@@ -5,5 +5,6 @@ public record GymPaymentReportItem(
     String gymName,
     long qrCount,
     String subscription,
-    double amount
+    double amount,
+    double baseAmount
 ) {}

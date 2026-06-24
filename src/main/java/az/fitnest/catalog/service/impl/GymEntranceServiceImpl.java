@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GymEntranceServiceImpl implements GymEntranceService {
 
+    private static final java.util.concurrent.ConcurrentHashMap<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final GymRepository gymRepository;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymAdminRepository gymAdminRepository;
@@ -328,13 +330,24 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                         }
                     }
 
-                    List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(allPackageIds);
-                    Map<Long, String> packageNamesMap = packageNames.stream()
-                            .collect(Collectors.toMap(
-                                    az.fitnest.order.grpc.PackageNameInfo::getPackageId,
-                                    az.fitnest.order.grpc.PackageNameInfo::getName,
-                                    (a, b) -> a
-                            ));
+                    Map<Long, String> packageNamesMap = new java.util.HashMap<>();
+                    List<Long> missingPackageIds = new ArrayList<>();
+                    for (Long pkgId : allPackageIds) {
+                        String cachedName = PACKAGE_NAME_CACHE.get(pkgId);
+                        if (cachedName != null) {
+                            packageNamesMap.put(pkgId, cachedName);
+                        } else {
+                            missingPackageIds.add(pkgId);
+                        }
+                    }
+
+                    if (!missingPackageIds.isEmpty()) {
+                        List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(missingPackageIds);
+                        for (var info : packageNames) {
+                            PACKAGE_NAME_CACHE.put(info.getPackageId(), info.getName());
+                            packageNamesMap.put(info.getPackageId(), info.getName());
+                        }
+                    }
 
                     String userPackageName = packageNamesMap.get(userPackageId);
                     int userRank = getPackageRank(userPackageName);
@@ -370,7 +383,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                             }
                         }
                         if (bestSub != null) {
-                            amount = bestSub.getDailyPrice();
+                            amount = bestSub.getDailyPrice() != null ? bestSub.getDailyPrice() : 0.0;
                             checkHierarchySuccess = true;
                         }
                     }
@@ -387,7 +400,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                         allowed = false;
                         reason = "GYM_NOT_SUPPORTED";
                     } else {
-                        amount = matchedSub.get().getDailyPrice();
+                        amount = matchedSub.get().getDailyPrice() != null ? matchedSub.get().getDailyPrice() : 0.0;
                     }
                 }
             }

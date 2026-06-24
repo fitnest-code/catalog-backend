@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @SecurityRequirement(name = "bearerAuth")
 public class GymReportController {
 
+    private static final Map<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymRepository gymRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
@@ -71,10 +73,21 @@ public class GymReportController {
         }
 
         Map<Long, String> packageNamesMap = new HashMap<>();
-        if (!packageIds.isEmpty()) {
+        List<Long> missingPackageIds = new ArrayList<>();
+        for (Long pkgId : packageIds) {
+            String cachedName = PACKAGE_NAME_CACHE.get(pkgId);
+            if (cachedName != null) {
+                packageNamesMap.put(pkgId, cachedName);
+            } else {
+                missingPackageIds.add(pkgId);
+            }
+        }
+
+        if (!missingPackageIds.isEmpty()) {
             try {
-                var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(new ArrayList<>(packageIds));
+                var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(missingPackageIds);
                 for (var info : nameInfos) {
+                    PACKAGE_NAME_CACHE.put(info.getPackageId(), info.getName());
                     packageNamesMap.put(info.getPackageId(), info.getName());
                 }
             } catch (Exception e) {
@@ -105,12 +118,14 @@ public class GymReportController {
                                 .findFirst();
                         if (matchedSub.isPresent() && matchedSub.get().getPackageId() != null) {
                             Long estimatedPkgId = matchedSub.get().getPackageId();
-                            subscriptionName = packageNamesMap.getOrDefault(estimatedPkgId, "N/A");
-                            if ("N/A".equals(subscriptionName)) {
+                            subscriptionName = PACKAGE_NAME_CACHE.get(estimatedPkgId);
+                            if (subscriptionName == null) {
                                 var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(List.of(estimatedPkgId));
                                 if (!nameInfos.isEmpty()) {
                                     subscriptionName = nameInfos.get(0).getName();
-                                    packageNamesMap.put(estimatedPkgId, subscriptionName);
+                                    PACKAGE_NAME_CACHE.put(estimatedPkgId, subscriptionName);
+                                } else {
+                                    subscriptionName = "N/A";
                                 }
                             }
                         }
@@ -120,7 +135,7 @@ public class GymReportController {
                 }
             }
 
-            responseList.add(new GymPaymentReportItem(idCounter++, gymName, count, subscriptionName, sumAmount));
+            responseList.add(new GymPaymentReportItem(idCounter++, gymName, count, subscriptionName, sumAmount, sumAmount));
         }
 
         return ResponseEntity.ok(responseList);
