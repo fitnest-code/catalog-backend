@@ -11,9 +11,11 @@ import az.fitnest.catalog.dto.response.GymWorkHourResponse;
 public record GymCreateCompleteRequestV2(
     // Step 1: Gym Info
     @NotEmpty(message = "Kateqoriya tələb olunur")
-    List<Long> mainCategoryIds,
+    List<CategoryDetail> mainCategoryDetails,
 
-    List<Long> subCategoryIds,
+    List<CategoryDetail> subCategoryDetails,
+
+    Boolean hasSubcategories,
 
     @NotBlank(message = "Ad boş ola bilməz")
     @Size(min = 2, max = 100)

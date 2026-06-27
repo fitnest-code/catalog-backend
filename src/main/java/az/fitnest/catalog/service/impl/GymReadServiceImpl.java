@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.model.entity.Category;
+import az.fitnest.catalog.model.entity.GymDescription;
 import az.fitnest.catalog.model.entity.RoomImage;
 
 import az.fitnest.catalog.dto.*;
@@ -26,6 +27,7 @@ import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
 import az.fitnest.catalog.repository.TranslationRepository;
+import az.fitnest.catalog.repository.GymDescriptionRepository;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.PlatformUtil;
 import az.fitnest.catalog.util.UserContext;
@@ -59,6 +61,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
     private final GymRepository gymRepository;
+    private final GymDescriptionRepository gymDescriptionRepository;
     private final az.fitnest.catalog.repository.SavedGymRepository savedGymRepository;
     private final GymImageRepository gymImageRepository;
     private final TrainerRepository trainerRepository;
@@ -2358,6 +2361,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             localizedGymDescription = gym.getDescription();
         }
 
+        List<GymDescriptionResponse> descriptions = new java.util.ArrayList<>();
+        if (gym.getDescriptions() != null) {
+            for (GymDescription desc : gym.getDescriptions()) {
+                String localizedCatName = translationService.getTranslatedValue("CATEGORY", desc.getCategory().getId().toString(), "name", userLanguage);
+                descriptions.add(new GymDescriptionResponse(
+                        desc.getCategory().getId(),
+                        localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : desc.getCategory().getName(),
+                        desc.getPhone(),
+                        desc.getDescription()
+                ));
+            }
+        }
+
         return GymInfoAdminResponseV2.builder()
                 .id(gym.getId())
                 .categories(categoryDtos)
@@ -2365,6 +2381,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .subCategories(subCategoryDtos)
                 .category(mainCategoryDto)
                 .subCategory(subCategoryDto)
+                .descriptions(descriptions)
                 .name(localizedGymName)
                 .description(localizedGymDescription)
                 .coverImageUrl(gym.getCoverImageUrl())
@@ -2378,6 +2395,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .altitude(altitude)
                 .status(gym.getStatus())
                 .createdAt(created)
+                .hasSubcategories(gym.getHasSubcategories())
                 .lessonTypes(lessonTypes)
                 .build();
     }

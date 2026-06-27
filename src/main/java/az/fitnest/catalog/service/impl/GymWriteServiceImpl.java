@@ -44,6 +44,9 @@ import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
+import az.fitnest.catalog.dto.request.CategoryDetail;
+import az.fitnest.catalog.model.entity.GymDescription;
+import az.fitnest.catalog.repository.GymDescriptionRepository;
 import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
@@ -91,6 +94,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GymWriteServiceImpl implements GymWriteService {
     private final GymRepository gymRepository;
+    private final GymDescriptionRepository gymDescriptionRepository;
     private final SavedGymRepository savedGymRepository;
     private final CategoryRepository categoryRepository;
     private final ReverseGeocodingService reverseGeocodingService;
@@ -1799,25 +1803,26 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Transactional
     @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
     public GymCreateStep1Response createGymStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
+        if (request.mainCategoryDetails() == null || request.mainCategoryDetails().isEmpty()) {
             throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        if (request.subCategoryIds() != null) {
-            for (Long mainId : request.mainCategoryIds()) {
-                if (request.subCategoryIds().contains(mainId)) {
-                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
-                }
+        List<Long> mainCategoryIds = request.mainCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+        List<Long> subCategoryIds = request.subCategoryDetails() == null ? new ArrayList<>() : request.subCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+
+        for (Long mainId : mainCategoryIds) {
+            if (subCategoryIds.contains(mainId)) {
+                throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
             }
         }
-        List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
-        if (mainCategories.size() != request.mainCategoryIds().size()) {
+        List<Category> mainCategories = categoryRepository.findAllById(mainCategoryIds);
+        if (mainCategories.size() != mainCategoryIds.size()) {
             throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
         }
 
         List<Category> subCategories = new java.util.ArrayList<>();
-        if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
-            subCategories = categoryRepository.findAllById(request.subCategoryIds());
-            if (subCategories.size() != request.subCategoryIds().size()) {
+        if (!subCategoryIds.isEmpty()) {
+            subCategories = categoryRepository.findAllById(subCategoryIds);
+            if (subCategories.size() != subCategoryIds.size()) {
                 throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
             }
         }
@@ -1829,9 +1834,38 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
         gym.setMainCategories(new java.util.HashSet<>(mainCategories));
         gym.setSubCategories(new java.util.HashSet<>(subCategories));
+        gym.setHasSubcategories(request.hasSubcategories() != null && request.hasSubcategories());
         gym.setStatus(GymStatus.DRAFT);
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
+
+        // Save category specific descriptions
+        for (CategoryDetail detail : request.mainCategoryDetails()) {
+            Category category = mainCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+            if (category != null) {
+                GymDescription gymDesc = GymDescription.builder()
+                        .gym(gym)
+                        .category(category)
+                        .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                        .description(detail.description())
+                        .build();
+                gymDescriptionRepository.save(gymDesc);
+            }
+        }
+        if (request.subCategoryDetails() != null) {
+            for (CategoryDetail detail : request.subCategoryDetails()) {
+                Category category = subCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+                if (category != null) {
+                    GymDescription gymDesc = GymDescription.builder()
+                            .gym(gym)
+                            .category(category)
+                            .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                            .description(detail.description())
+                            .build();
+                    gymDescriptionRepository.save(gymDesc);
+                }
+            }
+        }
 
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
@@ -1856,24 +1890,25 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public void validateStep1V2(az.fitnest.catalog.dto.request.GymCreateStep1RequestV2 request) {
-        if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
+        if (request.mainCategoryDetails() == null || request.mainCategoryDetails().isEmpty()) {
             throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
         }
-        if (request.subCategoryIds() != null) {
-            for (Long mainId : request.mainCategoryIds()) {
-                if (request.subCategoryIds().contains(mainId)) {
-                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
-                }
+        List<Long> mainCategoryIds = request.mainCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+        List<Long> subCategoryIds = request.subCategoryDetails() == null ? new ArrayList<>() : request.subCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+
+        for (Long mainId : mainCategoryIds) {
+            if (subCategoryIds.contains(mainId)) {
+                throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
             }
         }
-        List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
-        if (mainCategories.size() != request.mainCategoryIds().size()) {
+        List<Category> mainCategories = categoryRepository.findAllById(mainCategoryIds);
+        if (mainCategories.size() != mainCategoryIds.size()) {
             throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
         }
 
-        if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
-            List<Category> subCategories = categoryRepository.findAllById(request.subCategoryIds());
-            if (subCategories.size() != request.subCategoryIds().size()) {
+        if (!subCategoryIds.isEmpty()) {
+            List<Category> subCategories = categoryRepository.findAllById(subCategoryIds);
+            if (subCategories.size() != subCategoryIds.size()) {
                 throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
             }
         }
@@ -2036,36 +2071,68 @@ public class GymWriteServiceImpl implements GymWriteService {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        if (request.mainCategoryIds() != null && request.subCategoryIds() != null) {
-            for (Long mainId : request.mainCategoryIds()) {
-                if (request.subCategoryIds().contains(mainId)) {
+        if (request.mainCategoryDetails() != null) {
+            gym.getDescriptions().clear();
+            List<Long> mainCategoryIds = request.mainCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+            List<Long> subCategoryIds = request.subCategoryDetails() == null ? new ArrayList<>() : request.subCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+
+            for (Long mainId : mainCategoryIds) {
+                if (subCategoryIds.contains(mainId)) {
                     throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
                 }
             }
-        }
 
-        if (request.mainCategoryIds() != null) {
-            List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
-            if (mainCategories.size() != request.mainCategoryIds().size()) {
+            List<Category> mainCategories = categoryRepository.findAllById(mainCategoryIds);
+            if (mainCategories.size() != mainCategoryIds.size()) {
                 throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
             }
             gym.setMainCategories(new java.util.HashSet<>(mainCategories));
-        }
 
-        if (request.subCategoryIds() != null) {
-            List<Category> subCategories = categoryRepository.findAllById(request.subCategoryIds());
-            if (subCategories.size() != request.subCategoryIds().size()) {
-                throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+            List<Category> subCategories = new java.util.ArrayList<>();
+            if (!subCategoryIds.isEmpty()) {
+                subCategories = categoryRepository.findAllById(subCategoryIds);
+                if (subCategories.size() != subCategoryIds.size()) {
+                    throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
+                }
+                gym.setSubCategories(new java.util.HashSet<>(subCategories));
+            } else {
+                gym.getSubCategories().clear();
             }
-            gym.setSubCategories(new java.util.HashSet<>(subCategories));
-        } else {
-            gym.getSubCategories().clear();
+
+            // Save new descriptions
+            for (CategoryDetail detail : request.mainCategoryDetails()) {
+                Category category = mainCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+                if (category != null) {
+                    GymDescription gymDesc = GymDescription.builder()
+                            .gym(gym)
+                            .category(category)
+                            .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                            .description(detail.description())
+                            .build();
+                    gym.getDescriptions().add(gymDesc);
+                }
+            }
+            if (request.subCategoryDetails() != null) {
+                for (CategoryDetail detail : request.subCategoryDetails()) {
+                    Category category = subCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+                    if (category != null) {
+                        GymDescription gymDesc = GymDescription.builder()
+                                .gym(gym)
+                                .category(category)
+                                .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                                .description(detail.description())
+                                .build();
+                        gym.getDescriptions().add(gymDesc);
+                    }
+                }
+            }
         }
 
         if (request.name() != null) gym.setName(request.name());
         if (request.description() != null) gym.setDescription(request.description());
         if (request.phone() != null) gym.setPhone(request.phone());
         if (request.email() != null) gym.setEmail(request.email().isBlank() ? null : request.email());
+        if (request.hasSubcategories() != null) gym.setHasSubcategories(request.hasSubcategories());
 
         if (gym.getAddress() == null) {
             gym.setAddress(new Address());
@@ -2101,8 +2168,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                                     List<MultipartFile> serviceIcons) {
 
         GymCreateStep1RequestV2 step1 = GymCreateStep1RequestV2.builder()
-                .mainCategoryIds(request.mainCategoryIds())
-                .subCategoryIds(request.subCategoryIds())
+                .mainCategoryDetails(request.mainCategoryDetails())
+                .subCategoryDetails(request.subCategoryDetails())
                 .name(request.name())
                 .phone(request.phone())
                 .description(request.description())
@@ -2201,25 +2268,26 @@ public class GymWriteServiceImpl implements GymWriteService {
         Map<Integer, String> iconUrlByIndex = serviceIconsFuture.join();
 
         Long gymId = new TransactionTemplate(transactionManager).execute(status -> {
-            if (request.mainCategoryIds() == null || request.mainCategoryIds().isEmpty()) {
+            if (request.mainCategoryDetails() == null || request.mainCategoryDetails().isEmpty()) {
                 throw new BadRequestException("MAIN_CATEGORY_REQUIRED", "error.main_category_required");
             }
-            if (request.subCategoryIds() != null) {
-                for (Long mainId : request.mainCategoryIds()) {
-                    if (request.subCategoryIds().contains(mainId)) {
-                        throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
-                    }
+            List<Long> mainCategoryIds = request.mainCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+            List<Long> subCategoryIds = request.subCategoryDetails() == null ? new ArrayList<>() : request.subCategoryDetails().stream().map(CategoryDetail::categoryId).toList();
+
+            for (Long mainId : mainCategoryIds) {
+                if (subCategoryIds.contains(mainId)) {
+                    throw new BadRequestException("CATEGORIES_MUST_BE_DIFFERENT", "error.categories_must_be_different");
                 }
             }
-            List<Category> mainCategories = categoryRepository.findAllById(request.mainCategoryIds());
-            if (mainCategories.size() != request.mainCategoryIds().size()) {
+            List<Category> mainCategories = categoryRepository.findAllById(mainCategoryIds);
+            if (mainCategories.size() != mainCategoryIds.size()) {
                 throw new ResourceNotFoundException("MAIN_CATEGORY_NOT_FOUND", "error.main_category_not_found");
             }
 
             List<Category> subCategories = new java.util.ArrayList<>();
-            if (request.subCategoryIds() != null && !request.subCategoryIds().isEmpty()) {
-                subCategories = categoryRepository.findAllById(request.subCategoryIds());
-                if (subCategories.size() != request.subCategoryIds().size()) {
+            if (!subCategoryIds.isEmpty()) {
+                subCategories = categoryRepository.findAllById(subCategoryIds);
+                if (subCategories.size() != subCategoryIds.size()) {
                     throw new ResourceNotFoundException("SUB_CATEGORY_NOT_FOUND", "error.sub_category_not_found");
                 }
             }
@@ -2233,6 +2301,35 @@ public class GymWriteServiceImpl implements GymWriteService {
             gym.setEmail(request.email() != null && request.email().isBlank() ? null : request.email());
             gym.setMainCategories(new java.util.HashSet<>(mainCategories));
             gym.setSubCategories(new java.util.HashSet<>(subCategories));
+            gym.setHasSubcategories(request.hasSubcategories() != null && request.hasSubcategories());
+
+            // Save descriptions
+            for (CategoryDetail detail : request.mainCategoryDetails()) {
+                Category category = mainCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+                if (category != null) {
+                    GymDescription gymDesc = GymDescription.builder()
+                            .gym(gym)
+                            .category(category)
+                            .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                            .description(detail.description())
+                            .build();
+                    gym.getDescriptions().add(gymDesc);
+                }
+            }
+            if (request.subCategoryDetails() != null) {
+                for (CategoryDetail detail : request.subCategoryDetails()) {
+                    Category category = subCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
+                    if (category != null) {
+                        GymDescription gymDesc = GymDescription.builder()
+                                .gym(gym)
+                                .category(category)
+                                .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
+                                .description(detail.description())
+                                .build();
+                        gym.getDescriptions().add(gymDesc);
+                    }
+                }
+            }
 
             updateWorkHours(gym.getGeneralWorkHours(), request.generalWorkHours());
             updateWorkHours(gym.getWorkHoursWoman(), request.workHoursWoman());

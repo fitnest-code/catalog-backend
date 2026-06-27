@@ -106,6 +106,12 @@ public class Gym
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    private List<GymDescription> descriptions = new ArrayList<GymDescription>();
+
+    @OneToMany(mappedBy = "gym", cascade = {CascadeType.ALL}, orphanRemoval = true)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @org.hibernate.annotations.BatchSize(size = 20)
     private Set<GymSubscription> subscriptions = new HashSet<>();
 
@@ -184,6 +190,9 @@ public class Gym
     @Column(name = "is_new")
     @Builder.Default
     private Boolean isNew = false;
+    @Column(name = "has_subcategories")
+    @Builder.Default
+    private Boolean hasSubcategories = false;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     @Builder.Default

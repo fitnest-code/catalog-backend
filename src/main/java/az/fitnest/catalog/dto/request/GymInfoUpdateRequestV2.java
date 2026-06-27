@@ -11,11 +11,14 @@ import java.util.List;
 @Builder
 public record GymInfoUpdateRequestV2(
     @NotEmpty(message = "Ən azı bir əsas kateqoriya seçilməlidir")
-    @Schema(description = "Əsas kateqoriya ID-ləri")
-    List<Long> mainCategoryIds,
+    @Schema(description = "Əsas kateqoriya detalları")
+    List<CategoryDetail> mainCategoryDetails,
 
-    @Schema(description = "Sub kateqoriya ID-ləri")
-    List<Long> subCategoryIds,
+    @Schema(description = "Sub kateqoriya detalları")
+    List<CategoryDetail> subCategoryDetails,
+
+    @Schema(description = "Alt kateqoriyalar mövcuddur flag")
+    Boolean hasSubcategories,
 
     @NotBlank(message = "Zal adı boş ola bilməz")
     @Schema(description = "Zal adı")

@@ -19,6 +19,8 @@ public record GymInfoAdminResponseV2(
     CategoryResponse category,
     @Schema(description = "Alt Kateqoriya")
     CategoryResponse subCategory,
+    @Schema(description = "Kateqoriya-spesifik təsvirlər və nömrələr")
+    List<GymDescriptionResponse> descriptions,
     @Schema(description = "Zal adı")
     String name,
     @Schema(description = "Haqqında / Təsvir")
@@ -45,6 +47,8 @@ public record GymInfoAdminResponseV2(
     GymStatus status,
     @Schema(description = "Yaradılma tarixi")
     String createdAt,
+    @Schema(description = "Alt kateqoriyalar mövcuddur flag")
+    Boolean hasSubcategories,
     @Schema(description = "Zalın dərs növləri")
     List<LessonTypeResponse> lessonTypes
 ) {}

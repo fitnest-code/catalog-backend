@@ -12,9 +12,9 @@ import java.util.List;
 @Builder
 public record GymCreateStep1RequestV2(
     @NotEmpty(message = "Kateqoriya tələb olunur")
-    List<Long> mainCategoryIds,
+    List<CategoryDetail> mainCategoryDetails,
 
-    List<Long> subCategoryIds,
+    List<CategoryDetail> subCategoryDetails,
 
     @NotBlank(message = "Ad boş ola bilməz")
     @Size(min = 2, max = 100)
@@ -29,6 +29,8 @@ public record GymCreateStep1RequestV2(
 
     @Email(message = "Yanlış email formatı")
     String email,
+
+    Boolean hasSubcategories,
 
     List<Long> lessonTypeIds
 ) {}
