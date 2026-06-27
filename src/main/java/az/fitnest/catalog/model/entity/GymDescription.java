@@ -29,4 +29,7 @@ public class GymDescription {
 
     @Column(name = "phone")
     private String phone;
+
+    @Column(name = "cover_image_url")
+    private String coverImageUrl;
 }

@@ -1923,12 +1923,14 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     private record RoomImageUploadResultV2(String roomName, Long categoryId, String url) {}
 
+    private static record CategoryCoverUploadResult(Long categoryId, String url) {}
+
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "gymDetails", key = "#gymId"),
             @CacheEvict(cacheNames = "gym-images", key = "#gymId")
     })
-    public void createGymStep5V2(Long gymId, MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
+    public void createGymStep5V2(Long gymId, MultipartFile coverPhoto, List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
         CompletableFuture<String> coverFuture = null;
         if (coverPhoto != null && !coverPhoto.isEmpty()) {
             MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
@@ -1936,6 +1938,20 @@ public class GymWriteServiceImpl implements GymWriteService {
                             fileStorageService.saveFile(validatedCover, "/gyms/covers"),
                     imageUploadExecutor
             );
+        }
+
+        List<CompletableFuture<CategoryCoverUploadResult>> categoryCoverFutures = new ArrayList<>();
+        if (categoryCovers != null && categoryCoverCategoryIds != null && categoryCovers.size() == categoryCoverCategoryIds.size() && !categoryCovers.isEmpty()) {
+            for (int i = 0; i < categoryCovers.size(); i++) {
+                MultipartFile file = categoryCovers.get(i);
+                if (file == null || file.isEmpty()) continue;
+                Long categoryId = categoryCoverCategoryIds.get(i);
+                MultipartFile validatedFile = fileStorageService.validateAndWrapImage(file);
+                categoryCoverFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validatedFile, "/gyms/covers");
+                    return new CategoryCoverUploadResult(categoryId, url);
+                }, imageUploadExecutor));
+            }
         }
 
         List<CompletableFuture<RoomImageUploadResultV2>> roomFutures = new ArrayList<>();
@@ -1960,6 +1976,10 @@ public class GymWriteServiceImpl implements GymWriteService {
             coverUrl = coverFuture.join();
         }
 
+        List<CategoryCoverUploadResult> categoryCoverResults = categoryCoverFutures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
         List<RoomImageUploadResultV2> roomResults = roomFutures.stream()
                 .map(CompletableFuture::join)
                 .toList();
@@ -1969,12 +1989,35 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (finalCoverUrl != null) {
                 updateCoverImageInternal(gymId, finalCoverUrl);
             }
+            if (!categoryCoverResults.isEmpty()) {
+                applyCategoryCoversUpdateInternal(gymId, categoryCoverResults);
+            }
             if (!roomResults.isEmpty()) {
                 applyRoomImagesUpdateInternalV2(gymId, roomResults);
             }
             completeStep5Internal(gymId);
             return null;
         });
+    }
+
+    @Transactional
+    protected void applyCategoryCoversUpdateInternal(Long gymId, List<CategoryCoverUploadResult> results) {
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        for (CategoryCoverUploadResult res : results) {
+            GymDescription desc = gymDescriptionRepository.findByGymIdAndCategoryId(gymId, res.categoryId())
+                    .orElseGet(() -> {
+                        Category category = categoryRepository.findById(res.categoryId()).orElse(null);
+                        GymDescription newDesc = GymDescription.builder()
+                                .gym(gym)
+                                .category(category)
+                                .build();
+                        gym.getDescriptions().add(newDesc);
+                        return newDesc;
+                    });
+            desc.setCoverImageUrl(res.url());
+            gymDescriptionRepository.save(desc);
+        }
     }
 
     @Transactional
@@ -2005,7 +2048,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Override
-    public void validateStep5V2(MultipartFile coverPhoto, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
+    public void validateStep5V2(MultipartFile coverPhoto, List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds, List<String> roomNames, List<Long> roomCategoryIds, List<MultipartFile> roomPhotos) {
         if (roomCategoryIds != null) {
             for (Long categoryId : roomCategoryIds) {
                 if (categoryId != null) {
@@ -2014,7 +2057,22 @@ public class GymWriteServiceImpl implements GymWriteService {
                 }
             }
         }
+        if (categoryCoverCategoryIds != null) {
+            for (Long categoryId : categoryCoverCategoryIds) {
+                if (categoryId != null) {
+                    categoryRepository.findById(categoryId)
+                            .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
+                }
+            }
+        }
         validateStep5(coverPhoto, roomNames, roomPhotos);
+        if (categoryCovers != null) {
+            for (MultipartFile file : categoryCovers) {
+                if (file != null && !file.isEmpty()) {
+                    fileStorageService.validateAndWrapImage(file);
+                }
+            }
+        }
     }
 
     @Override
@@ -2108,6 +2166,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                             .category(category)
                             .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
                             .description(detail.description())
+                            .coverImageUrl(detail.coverImageUrl())
                             .build();
                     gym.getDescriptions().add(gymDesc);
                 }
@@ -2121,6 +2180,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                                 .category(category)
                                 .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
                                 .description(detail.description())
+                                .coverImageUrl(detail.coverImageUrl())
                                 .build();
                         gym.getDescriptions().add(gymDesc);
                     }
@@ -2164,6 +2224,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     public Long createGymCompleteV2(az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2 request, MultipartFile coverPhoto,
+                                    List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds,
                                     List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
                                     List<MultipartFile> serviceIcons) {
 
@@ -2198,7 +2259,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                 .build();
         validateStep4(step4);
 
-        validateStep5V2(coverPhoto, request.roomNames(), request.roomCategoryIds(), roomPhotos);
+        validateStep5V2(coverPhoto, categoryCovers, categoryCoverCategoryIds, request.roomNames(), request.roomCategoryIds(), roomPhotos);
 
         GymCreateStep6RequestV2 step6 = GymCreateStep6RequestV2.builder()
                 .subscriptions(request.subscriptions())
@@ -2217,6 +2278,20 @@ public class GymWriteServiceImpl implements GymWriteService {
             MultipartFile validatedCover = fileStorageService.validateAndWrapImage(coverPhoto);
             coverFuture = CompletableFuture.supplyAsync(() ->
                     fileStorageService.saveFile(validatedCover, "/gyms/covers"), imageUploadExecutor);
+        }
+
+        List<CompletableFuture<CategoryCoverUploadResult>> categoryCoverFutures = new ArrayList<>();
+        if (categoryCovers != null && categoryCoverCategoryIds != null && categoryCovers.size() == categoryCoverCategoryIds.size()) {
+            for (int i = 0; i < categoryCovers.size(); i++) {
+                MultipartFile file = categoryCovers.get(i);
+                if (file == null || file.isEmpty()) continue;
+                Long categoryId = categoryCoverCategoryIds.get(i);
+                MultipartFile validated = fileStorageService.validateAndWrapImage(file);
+                categoryCoverFutures.add(CompletableFuture.supplyAsync(() -> {
+                    String url = fileStorageService.saveFile(validated, "/gyms/covers");
+                    return new CategoryCoverUploadResult(categoryId, url);
+                }, imageUploadExecutor));
+            }
         }
 
         List<CompletableFuture<String>> trainerPhotoFutures = new ArrayList<>();
@@ -2262,6 +2337,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                 .toList();
 
         String finalCoverUrl = coverFuture != null ? coverFuture.join() : null;
+        List<CategoryCoverUploadResult> categoryCoverResults = categoryCoverFutures.stream().map(CompletableFuture::join).toList();
         List<String> trainerPhotoUrls = trainerPhotoFutures.stream().map(CompletableFuture::join).toList();
         List<RoomImageUploadResultV2> roomResults = roomFutures.stream().map(CompletableFuture::join).toList();
         List<GymAdminCreateResult> adminResults = adminFutures.stream().map(CompletableFuture::join).toList();
@@ -2307,11 +2383,18 @@ public class GymWriteServiceImpl implements GymWriteService {
             for (CategoryDetail detail : request.mainCategoryDetails()) {
                 Category category = mainCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
                 if (category != null) {
+                    String coverUrl = categoryCoverResults.stream()
+                            .filter(r -> r.categoryId().equals(detail.categoryId()))
+                            .map(CategoryCoverUploadResult::url)
+                            .findFirst()
+                            .orElse(detail.coverImageUrl());
+
                     GymDescription gymDesc = GymDescription.builder()
                             .gym(gym)
                             .category(category)
                             .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
                             .description(detail.description())
+                            .coverImageUrl(coverUrl)
                             .build();
                     gym.getDescriptions().add(gymDesc);
                 }
@@ -2320,11 +2403,18 @@ public class GymWriteServiceImpl implements GymWriteService {
                 for (CategoryDetail detail : request.subCategoryDetails()) {
                     Category category = subCategories.stream().filter(c -> c.getId().equals(detail.categoryId())).findFirst().orElse(null);
                     if (category != null) {
+                        String coverUrl = categoryCoverResults.stream()
+                                .filter(r -> r.categoryId().equals(detail.categoryId()))
+                                .map(CategoryCoverUploadResult::url)
+                                .findFirst()
+                                .orElse(detail.coverImageUrl());
+
                         GymDescription gymDesc = GymDescription.builder()
                                 .gym(gym)
                                 .category(category)
                                 .phone(detail.phone() != null ? PhoneUtil.normalize(detail.phone()) : null)
                                 .description(detail.description())
+                                .coverImageUrl(coverUrl)
                                 .build();
                         gym.getDescriptions().add(gymDesc);
                     }

@@ -2369,7 +2369,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         desc.getCategory().getId(),
                         localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : desc.getCategory().getName(),
                         desc.getPhone(),
-                        desc.getDescription()
+                        desc.getDescription(),
+                        desc.getCoverImageUrl()
                 ));
             }
         }

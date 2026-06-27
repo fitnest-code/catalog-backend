@@ -6,5 +6,6 @@ public record CategoryDetail(
     @NotNull(message = "Kateqoriya ID boş ola bilməz")
     Long categoryId,
     String phone,
-    String description
+    String description,
+    String coverImageUrl
 ) {}

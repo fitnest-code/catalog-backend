@@ -741,10 +741,12 @@ public class GymAdminController {
     public ResponseEntity<GymCreateStep1Response> createGymCompleteV2(
             @RequestPart("data") @Valid GymCreateCompleteRequestV2 request,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestPart(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
+            @RequestPart(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
             @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
             @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
             @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
-        Long gymId = gymWriteService.createGymCompleteV2(request, coverPhoto, trainerPhotos, roomPhotos, serviceIcons);
+        Long gymId = gymWriteService.createGymCompleteV2(request, coverPhoto, categoryCovers, categoryCoverCategoryIds, trainerPhotos, roomPhotos, serviceIcons);
         return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
     }
 
@@ -768,11 +770,13 @@ public class GymAdminController {
     @PostMapping(value = "/v2/admin/gyms/{id}/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createGymStep5V2(
             @PathVariable Long id,
-            @RequestParam("coverPhoto") MultipartFile coverPhoto,
+            @RequestParam(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestParam(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
+            @RequestParam(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
             @RequestParam(value = "roomNames", required = false) List<String> roomNames,
             @RequestParam(value = "roomCategoryIds", required = false) List<Long> roomCategoryIds,
             @RequestParam(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
-        gymWriteService.createGymStep5V2(id, coverPhoto, roomNames, roomCategoryIds, roomPhotos);
+        gymWriteService.createGymStep5V2(id, coverPhoto, categoryCovers, categoryCoverCategoryIds, roomNames, roomCategoryIds, roomPhotos);
         return ResponseEntity.ok().build();
     }
 
@@ -781,10 +785,12 @@ public class GymAdminController {
     @PostMapping(value = "/v2/admin/gyms/validate/step5", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> validateStep5V2(
             @RequestParam(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestParam(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
+            @RequestParam(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
             @RequestParam(value = "roomNames", required = false) List<String> roomNames,
             @RequestParam(value = "roomCategoryIds", required = false) List<Long> roomCategoryIds,
             @RequestParam(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos) {
-        gymWriteService.validateStep5V2(coverPhoto, roomNames, roomCategoryIds, roomPhotos);
+        gymWriteService.validateStep5V2(coverPhoto, categoryCovers, categoryCoverCategoryIds, roomNames, roomCategoryIds, roomPhotos);
         return ResponseEntity.ok().build();
     }
 

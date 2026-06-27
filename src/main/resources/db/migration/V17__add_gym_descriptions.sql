@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS gym_descriptions (
     category_id BIGINT NOT NULL,
     description TEXT,
     phone VARCHAR(255),
+    cover_image_url VARCHAR(255),
     CONSTRAINT fk_gym_descriptions_gym FOREIGN KEY (gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
     CONSTRAINT fk_gym_descriptions_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );
