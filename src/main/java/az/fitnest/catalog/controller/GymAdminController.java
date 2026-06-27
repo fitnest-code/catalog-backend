@@ -18,6 +18,7 @@ import az.fitnest.catalog.dto.response.GymEntranceHistoryAdminResponse;
 import az.fitnest.catalog.dto.response.GymQrResponse;
 import az.fitnest.catalog.dto.response.GymReviewResponse;
 import az.fitnest.catalog.dto.response.GymTrainerResponse;
+import az.fitnest.catalog.dto.response.GymTrainerResponseV2;
 import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.GymReviewService;
 import az.fitnest.catalog.service.GymTrainerService;
@@ -845,6 +846,15 @@ public class GymAdminController {
         return ResponseEntity.ok().build();
     }
 
-
-    
+    @Operation(summary = "İdman zalı məşqçilərini əldə edin (V2)", description = "İdman zalında çalışan məşqçilərin siyahısını kateqoriya ID-ləri ilə birlikdə qaytarır. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/v2/admin/gyms/{id}/trainers")
+    public ResponseEntity<PaginatedResponse<GymTrainerResponseV2>> getTrainersV2(
+            @PathVariable("id") Long gymId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(value = "sort_dir", defaultValue = "DESC") az.fitnest.catalog.dto.SortDirection sortDir) {
+        int safePageSize = Math.min(pageSize, 100);
+        return ResponseEntity.ok(gymTrainerService.getTrainersV2(gymId, page, safePageSize, sortDir.name().toLowerCase()));
+    }
 }

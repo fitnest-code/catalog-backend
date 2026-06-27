@@ -12,6 +12,7 @@ import java.util.List;
 
 public interface GymTrainerService {
     PaginatedResponse<GymTrainerResponse> getTrainers(Long gymId, int page, int pageSize, String sortDir);
+    PaginatedResponse<GymTrainerResponseV2> getTrainersV2(Long gymId, int page, int pageSize, String sortDir);
     void addTrainer(Long gymId, TrainerRequest request, MultipartFile photo);
     void updateTrainer(Long gymId, Long trainerId, TrainerRequest request, MultipartFile photo);
     void deleteTrainer(Long gymId, Long trainerId);

@@ -69,6 +69,27 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PaginatedResponse<GymTrainerResponseV2> getTrainersV2(Long gymId, int page, int pageSize, String sortDir) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<Trainer> trainerPage = trainerRepository.findByGymId(gymId, pageable(page, pageSize, Sort.by(direction, "id")));
+        String userLanguage = resolveUserLanguage();
+        List<GymTrainerResponseV2> items = trainerPage.getContent().stream()
+                .map(t -> toGymTrainerDtoV2(t, userLanguage))
+                .collect(Collectors.toList());
+
+        return PaginatedResponse.<GymTrainerResponseV2>builder()
+                .items(items)
+                .total(trainerPage.getTotalElements())
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
     @Transactional
     @CacheEvict(cacheNames = {"gym-detail", "main-page-gyms", "gym-listings", "admin-gyms"}, allEntries = true)
     public void addTrainer(Long gymId, TrainerRequest request, MultipartFile photo) {
@@ -225,6 +246,61 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .phone(t.getPhone())
                 .email(t.getEmail())
                 .lessonTypeIds(lessonTypeIds)
+                .build();
+    }
+
+    private GymTrainerResponseV2 toGymTrainerDtoV2(Trainer t, String language) {
+        ProfessionResponse professionDto = null;
+        if (t.getProfession() != null) {
+            String localizedName = translationService.getTranslatedValue("PROFESSION", String.valueOf(t.getProfession().getId()), "name", language);
+            if (localizedName == null || localizedName.isEmpty()) {
+                localizedName = t.getProfession().getName();
+            }
+            professionDto = ProfessionResponse.builder()
+                    .id(t.getProfession().getId())
+                    .name(localizedName)
+                    .build();
+        }
+
+        java.util.List<Long> lessonTypeIds = new java.util.ArrayList<>();
+        java.util.List<Long> categoryIds = new java.util.ArrayList<>();
+        if (t.getEnabledLessonTypes() != null) {
+            java.util.List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAll();
+            for (az.fitnest.catalog.model.entity.GymLessonType gl : t.getEnabledLessonTypes()) {
+                globalLessons.stream()
+                    .filter(glt -> glt.getName().equalsIgnoreCase(gl.getName()))
+                    .findFirst()
+                    .ifPresentOrElse(
+                        glt -> lessonTypeIds.add(glt.getId()),
+                        () -> lessonTypeIds.add(gl.getId())
+                    );
+                if (gl.getCategory() != null) {
+                    categoryIds.add(gl.getCategory().getId());
+                }
+            }
+        }
+
+        java.util.List<Long> distinctCategoryIds = categoryIds.stream().distinct().collect(Collectors.toList());
+
+        String localizedName = translationService.getTranslatedValue("Trainer", String.valueOf(t.getId()), "name", language);
+        if (localizedName == null || localizedName.isEmpty()) {
+            localizedName = t.getName();
+        }
+        String localizedSurname = translationService.getTranslatedValue("Trainer", String.valueOf(t.getId()), "surname", language);
+        if (localizedSurname == null || localizedSurname.isEmpty()) {
+            localizedSurname = t.getSurname();
+        }
+
+        return GymTrainerResponseV2.builder()
+                .trainer_id(t.getId() != null ? t.getId().toString() : null)
+                .name(localizedName)
+                .surname(localizedSurname)
+                .profession(professionDto)
+                .picture(t.getPicture())
+                .phone(t.getPhone())
+                .email(t.getEmail())
+                .lessonTypeIds(lessonTypeIds)
+                .categoryIds(distinctCategoryIds)
                 .build();
     }
 
