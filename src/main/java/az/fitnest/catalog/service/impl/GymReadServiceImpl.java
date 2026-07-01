@@ -284,11 +284,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                             String planId = sub.getPackageId().toString();
-                            String localizedPackageName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
-                                    planId, "name", userLanguage);
-                            String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
-                                    ? localizedPackageName
-                                    : info.getName());
+                            String packageName = cleanPackageName(info.getName());
                             List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                     .map(b -> {
                                         String localizedBenefit = translationService.getTranslatedValue(
@@ -856,13 +852,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String localizedPackageName = getTranslatedValueCached(translationLookup,
-                                "SUBSCRIPTIONPACKAGE", planId, "name", userLanguage);
-                        String packageName = cleanPackageName(
-                                (localizedPackageName != null && !localizedPackageName.isEmpty())
-                                        ? localizedPackageName
-                                        : (info != null ? info.getName() : null)
-                        );
+                        String packageName = cleanPackageName(info != null ? info.getName() : null);
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
                                     String localizedBenefit = getTranslatedValueCached(translationLookup,
@@ -1369,10 +1359,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                            String localizedName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
-                                    sub.getPackageId().toString(), "name", userLanguage);
-                            if (localizedName == null || localizedName.isEmpty())
-                                localizedName = info.getName();
+                            String localizedName = cleanPackageName(info.getName());
 
                             List<az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse> benefits = sub
                                     .getSupportedServices().stream()
@@ -1907,11 +1894,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                             String planId = sub.getPackageId().toString();
-                            String localizedPackageName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
-                                    planId, "name", userLanguage);
-                            String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
-                                    ? localizedPackageName
-                                    : info.getName());
+                            String packageName = cleanPackageName(info.getName());
                             List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                     .map(b -> {
                                         String localizedBenefit = translationService.getTranslatedValue(
@@ -2426,10 +2409,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                            String localizedName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
-                                    sub.getPackageId().toString(), "name", userLanguage);
-                            if (localizedName == null || localizedName.isEmpty())
-                                localizedName = info.getName();
+                            String localizedName = cleanPackageName(info.getName());
 
                             List<az.fitnest.catalog.dto.response.GymPlanBenefitAdminResponse> benefits = sub
                                     .getSupportedServices().stream()
