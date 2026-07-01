@@ -861,7 +861,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         String packageName = cleanPackageName(
                                 (localizedPackageName != null && !localizedPackageName.isEmpty())
                                         ? localizedPackageName
-                                        : (info != null ? info.getName() : "Bronze")
+                                        : (info != null ? info.getName() : null)
                         );
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
@@ -2216,7 +2216,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         String packageName = cleanPackageName(
                                 (localizedPackageName != null && !localizedPackageName.isEmpty())
                                         ? localizedPackageName
-                                        : (info != null ? info.getName() : "Bronze")
+                                        : (info != null ? info.getName() : null)
                         );
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
