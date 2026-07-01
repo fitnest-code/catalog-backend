@@ -284,7 +284,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                             String planId = sub.getPackageId().toString();
-                            String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                            String localizedPackageName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
                                     planId, "name", userLanguage);
                             String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
                                     ? localizedPackageName
@@ -857,7 +857,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
                         String localizedPackageName = getTranslatedValueCached(translationLookup,
-                                "GYMSUBSCRIPTION", planId, "name", userLanguage);
+                                "SUBSCRIPTIONPACKAGE", planId, "name", userLanguage);
                         String packageName = cleanPackageName(
                                 (localizedPackageName != null && !localizedPackageName.isEmpty())
                                         ? localizedPackageName
@@ -1369,7 +1369,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
-                            String localizedName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                            String localizedName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
                                     sub.getPackageId().toString(), "name", userLanguage);
                             if (localizedName == null || localizedName.isEmpty())
                                 localizedName = info.getName();
@@ -1907,7 +1907,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .map(sub -> {
                             az.fitnest.order.grpc.PackageNameInfo info = idToInfo.get(sub.getPackageId());
                             String planId = sub.getPackageId().toString();
-                            String localizedPackageName = translationService.getTranslatedValue("GYMSUBSCRIPTION",
+                            String localizedPackageName = translationService.getTranslatedValue("SUBSCRIPTIONPACKAGE",
                                     planId, "name", userLanguage);
                             String packageName = cleanPackageName((localizedPackageName != null && !localizedPackageName.isEmpty())
                                     ? localizedPackageName
@@ -2026,9 +2026,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
             boolean hasSubscriptionFilter = (subscriptionId != null);
             List<Long> subscriptionIds = getEligibleSubscriptionIds(subscriptionId);
-            if (subscriptionIds.isEmpty()) {
-                subscriptionIds = java.util.Collections.singletonList(-1L);
-            }
 
             if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
                 Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
