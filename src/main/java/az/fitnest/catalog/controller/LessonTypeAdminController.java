@@ -40,6 +40,22 @@ public class LessonTypeAdminController {
         return ResponseEntity.ok(lessonTypeAdminService.getAllLessonTypes());
     }
 
+    @Operation(summary = "Növü ID-yə görə gətir", description = "Verilmiş ID-yə əsasən növü qaytarır.")
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<LessonTypeResponse> getLessonTypeById(@PathVariable Long id) {
+        return ResponseEntity.ok(lessonTypeAdminService.getLessonTypeById(id));
+    }
+
+    @Operation(summary = "Növü yeniləyin", description = "Verilmiş ID-yə əsasən növün adını yeniləyir.")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<LessonTypeResponse> updateLessonType(
+            @PathVariable Long id,
+            @Valid @RequestBody LessonTypeRequest request) {
+        return ResponseEntity.ok(lessonTypeAdminService.updateLessonType(id, request));
+    }
+
     @Operation(summary = "Növü sil", description = "Verilmiş ID-yə əsasən növü sistemdən silir.")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

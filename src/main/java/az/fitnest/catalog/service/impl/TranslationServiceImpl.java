@@ -150,6 +150,10 @@ public class TranslationServiceImpl implements TranslationService {
             return existingValue;
         }
 
+        if (entityType != null && entityType.equalsIgnoreCase("CATEGORY")) {
+            return null;
+        }
+
         try {
             Class<?> entityClass = translationEntityResolver.getEntityClass(entityType);
             if (entityClass != null) {

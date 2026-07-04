@@ -68,6 +68,24 @@ public class LessonTypeAdminServiceImpl implements LessonTypeAdminService {
         });
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public LessonTypeResponse getLessonTypeById(Long id) {
+        LessonType lessonType = lessonTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+        return new LessonTypeResponse(lessonType.getId(), lessonType.getName());
+    }
+
+    @Override
+    @Transactional
+    public LessonTypeResponse updateLessonType(Long id, LessonTypeRequest request) {
+        LessonType lessonType = lessonTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+        lessonType.setName(request.getName().trim());
+        lessonType = lessonTypeRepository.save(lessonType);
+        return new LessonTypeResponse(lessonType.getId(), lessonType.getName());
+    }
+
     private String resolveUserLanguage() {
         return az.fitnest.catalog.util.UserContext.getUserLanguage();
     }

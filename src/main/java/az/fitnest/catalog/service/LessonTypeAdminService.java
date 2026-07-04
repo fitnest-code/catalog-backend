@@ -10,5 +10,9 @@ public interface LessonTypeAdminService {
 
     List<LessonTypeResponse> getAllLessonTypes();
 
+    LessonTypeResponse getLessonTypeById(Long id);
+
+    LessonTypeResponse updateLessonType(Long id, LessonTypeRequest request);
+
     void deleteLessonType(Long id);
 }
