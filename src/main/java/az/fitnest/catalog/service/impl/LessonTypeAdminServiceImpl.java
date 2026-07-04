@@ -8,6 +8,7 @@ import az.fitnest.catalog.repository.LessonTypeRepository;
 import az.fitnest.catalog.service.LessonTypeAdminService;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.UserContext;
+import az.fitnest.catalog.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
