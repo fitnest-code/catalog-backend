@@ -2269,6 +2269,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .photoUrl(c.getPhotoUrl())
                         .iconUrl(c.getIconUrl())
                         .coverImageUrl(c.getPhotoUrl())
+                        .lessonTypes(mapCategoryLessonTypes(c, userLanguage))
                         .build());
             }
         }
@@ -2283,6 +2284,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .photoUrl(c.getPhotoUrl())
                         .iconUrl(c.getIconUrl())
                         .coverImageUrl(c.getPhotoUrl())
+                        .lessonTypes(mapCategoryLessonTypes(c, userLanguage))
                         .build());
             }
         }
@@ -2327,9 +2329,24 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             created = gym.getCreatedDate().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         }
 
-        List<LessonTypeResponse> lessonTypes = gymLessonTypeRepository.findByGymId(gymId).stream()
+        java.util.Set<az.fitnest.catalog.model.entity.LessonType> gymCategoryLessonTypes = new java.util.LinkedHashSet<>();
+        if (gym.getMainCategories() != null) {
+            for (Category c : gym.getMainCategories()) {
+                if (c.getLessonTypes() != null) {
+                    gymCategoryLessonTypes.addAll(c.getLessonTypes());
+                }
+            }
+        }
+        if (gym.getSubCategories() != null) {
+            for (Category c : gym.getSubCategories()) {
+                if (c.getLessonTypes() != null) {
+                    gymCategoryLessonTypes.addAll(c.getLessonTypes());
+                }
+            }
+        }
+        List<LessonTypeResponse> lessonTypes = gymCategoryLessonTypes.stream()
                 .map(lt -> {
-                    String localizedLt = translationService.getTranslatedValue("GymLessonType", lt.getId().toString(), "name", userLanguage);
+                    String localizedLt = translationService.getTranslatedValue("LessonType", lt.getId().toString(), "name", userLanguage);
                     return new LessonTypeResponse(lt.getId(), localizedLt != null ? localizedLt : lt.getName());
                 })
                 .toList();
@@ -2379,6 +2396,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .hasSubcategories(gym.getHasSubcategories())
                 .lessonTypes(lessonTypes)
                 .build();
+    }
+
+    private List<LessonTypeResponse> mapCategoryLessonTypes(Category category, String userLanguage) {
+        if (category.getLessonTypes() == null) {
+            return java.util.List.of();
+        }
+        return category.getLessonTypes().stream()
+                .map(lt -> {
+                    String localizedLt = translationService.getTranslatedValue("LessonType", lt.getId().toString(), "name", userLanguage);
+                    return new LessonTypeResponse(lt.getId(), localizedLt != null ? localizedLt : lt.getName());
+                })
+                .toList();
     }
 
     @Override

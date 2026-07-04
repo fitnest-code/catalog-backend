@@ -169,15 +169,78 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         trainer.setPhone(az.fitnest.catalog.util.PhoneUtil.normalize(request.phone()));
         trainer.setEmail(request.email());
 
-        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
-            List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAllById(request.lessonTypeIds());
-            List<String> globalNames = globalLessons.stream().map(az.fitnest.catalog.model.entity.LessonType::getName).toList();
-            List<GymLessonType> gymLessons = gymLessonTypeRepository.findByGymId(gymId);
+        if (request.lessonTypeIds() != null) {
             trainer.getEnabledLessonTypes().clear();
-            gymLessons.stream()
-                .filter(gl -> request.lessonTypeIds().contains(gl.getId()) || globalNames.stream().anyMatch(name -> name.equalsIgnoreCase(gl.getName())))
-                .forEach(trainer.getEnabledLessonTypes()::add);
+            trainer.getEnabledLessonTypes().addAll(resolveGymLessonTypes(gymId, request.lessonTypeIds()));
         }
+    }
+
+    /**
+     * Lesson types selected in the UI come from the gym's category catalog (global LessonType ids),
+     * not from previously-saved GymLessonType rows, which may not exist yet for this gym. Reuse an
+     * existing GymLessonType by name if one is already saved for this gym (also accepts a raw
+     * GymLessonType id for backward compatibility), otherwise create one from the matching category's
+     * LessonType so the trainer can be linked to it.
+     */
+    private List<GymLessonType> resolveGymLessonTypes(Long gymId, List<Long> lessonTypeIds) {
+        if (lessonTypeIds.isEmpty()) {
+            return List.of();
+        }
+
+        az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        List<GymLessonType> existingGymLessons = gymLessonTypeRepository.findByGymId(gymId);
+        java.util.Map<Long, GymLessonType> byId = existingGymLessons.stream()
+                .collect(Collectors.toMap(GymLessonType::getId, gl -> gl));
+        java.util.Map<String, GymLessonType> byName = existingGymLessons.stream()
+                .collect(Collectors.toMap(gl -> gl.getName().toLowerCase(), gl -> gl, (a, b) -> a));
+
+        java.util.Set<az.fitnest.catalog.model.entity.Category> gymCategories = new java.util.HashSet<>();
+        if (gym.getMainCategories() != null) {
+            gymCategories.addAll(gym.getMainCategories());
+        }
+        if (gym.getSubCategories() != null) {
+            gymCategories.addAll(gym.getSubCategories());
+        }
+
+        java.util.Map<Long, az.fitnest.catalog.model.entity.LessonType> globalById = lessonTypeRepository.findAllById(lessonTypeIds).stream()
+                .collect(Collectors.toMap(az.fitnest.catalog.model.entity.LessonType::getId, lt -> lt));
+
+        List<GymLessonType> resolved = new java.util.ArrayList<>();
+        for (Long id : lessonTypeIds) {
+            GymLessonType existing = byId.get(id);
+            if (existing != null) {
+                resolved.add(existing);
+                continue;
+            }
+
+            az.fitnest.catalog.model.entity.LessonType global = globalById.get(id);
+            if (global == null) {
+                continue;
+            }
+
+            GymLessonType byNameMatch = byName.get(global.getName().toLowerCase());
+            if (byNameMatch != null) {
+                resolved.add(byNameMatch);
+                continue;
+            }
+
+            az.fitnest.catalog.model.entity.Category owningCategory = gymCategories.stream()
+                    .filter(c -> c.getLessonTypes() != null && c.getLessonTypes().contains(global))
+                    .findFirst()
+                    .orElse(null);
+            GymLessonType created = gymLessonTypeRepository.save(GymLessonType.builder()
+                    .gym(gym)
+                    .name(global.getName())
+                    .category(owningCategory)
+                    .status("ACTIVE")
+                    .sortOrder(0)
+                    .build());
+            byName.put(created.getName().toLowerCase(), created);
+            resolved.add(created);
+        }
+        return resolved;
     }
 
     public void updateTrainerPhoto(Long gymId, Long trainerId, MultipartFile file) {
