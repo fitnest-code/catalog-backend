@@ -343,6 +343,36 @@ public class TranslationServiceImpl implements TranslationService {
         evictCache(normalizedEntityType, entityId, fieldName, normalizedLanguageCode);
     }
 
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
+    public Translation saveOrUpdateTranslation(CreateTranslationRequest request) {
+        String normalizedEntityType = request.entityType().toUpperCase();
+        String normalizedLanguageCode = request.languageCode().toUpperCase();
+
+        Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                normalizedEntityType, request.entityId(), normalizedLanguageCode, request.fieldName()
+        ).orElse(null);
+
+        Translation saved;
+        if (existing != null) {
+            existing.setFieldValue(request.fieldValue());
+            saved = translationRepository.save(existing);
+        } else {
+            Translation translation = Translation.builder()
+                    .entityType(normalizedEntityType)
+                    .entityId(request.entityId())
+                    .languageCode(normalizedLanguageCode)
+                    .fieldName(request.fieldName())
+                    .fieldValue(request.fieldValue())
+                    .build();
+            saved = translationRepository.save(translation);
+        }
+
+        evictCache(normalizedEntityType, request.entityId(), request.fieldName(), normalizedLanguageCode);
+        return saved;
+    }
+
     private void evictCache(String entityType, String entityId, String fieldName, String languageCode) {
         if (cacheManager != null) {
             try {

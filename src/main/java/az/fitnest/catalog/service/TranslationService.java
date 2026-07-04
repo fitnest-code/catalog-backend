@@ -10,6 +10,7 @@ import java.util.List;
 public interface TranslationService {
     String getTranslatedValue(String entityType, String entityId, String fieldName, String languageCode);
     Translation createTranslation(CreateTranslationRequest request);
+    Translation saveOrUpdateTranslation(CreateTranslationRequest request);
     void deleteTranslation(Long id);
     List<Translation> getTranslations(String entityType, String entityId, String fieldName, String languageCode);
     void autoTranslateAndSave(String entityType, String entityId, String fieldName, String originalValueAz);

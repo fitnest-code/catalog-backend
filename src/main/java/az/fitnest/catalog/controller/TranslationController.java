@@ -54,4 +54,20 @@ public class TranslationController {
         List<Translation> results = translationService.getTranslations(entityType, entityId, fieldName, languageCode);
         return ResponseEntity.ok(results);
     }
+
+    @Operation(summary = "Tərcüməni əlavə edin və ya yeniləyin", description = "Verilmiş obyekt, dil və sahə üçün tərcüməni əlavə edir və ya yeniləyir.")
+    @PutMapping
+    public ResponseEntity<ApiResponse<Translation>> saveOrUpdateTranslation(@RequestBody CreateTranslationRequest request) {
+        Translation saved = translationService.saveOrUpdateTranslation(request);
+        return ResponseEntity.ok(ApiResponse.success(saved));
+    }
+
+    @Operation(summary = "Toplu tərcümələri əlavə edin və ya yeniləyin", description = "Verilmiş tərcümə siyahısını əlavə edir və ya yeniləyir.")
+    @PostMapping("/bulk")
+    public ResponseEntity<ApiResponse<List<Translation>>> saveOrUpdateTranslationsBulk(@RequestBody List<CreateTranslationRequest> requests) {
+        List<Translation> savedList = requests.stream()
+                .map(translationService::saveOrUpdateTranslation)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(savedList));
+    }
 }
