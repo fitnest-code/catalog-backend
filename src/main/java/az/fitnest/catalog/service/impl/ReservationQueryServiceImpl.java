@@ -147,10 +147,10 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         final boolean isSubscriptionActive = sub != null && "Active".equalsIgnoreCase(sub.getSubscriptionStatus());
         log.info("[Availability] Final flags: isSubscriptionActive={}, isPackageSupported={}", isSubscriptionActive, isPackageSupported);
 
-        LocalDateTime cutoff = LocalDateTime.now(clock)
-                .plusHours(bookingProperties.getMinHoursBeforeStart());
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime cutoff = now.plusHours(bookingProperties.getMinHoursBeforeStart());
         log.info("[Availability] now={}, minHours={}, cutoff={}",
-                LocalDateTime.now(clock),
+                now,
                 bookingProperties.getMinHoursBeforeStart(),
                 cutoff);
 
@@ -160,6 +160,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                         return false;
                     }
                     if (categoryId != null && (session.getClassType() == null || session.getClassType().getCategory() == null || !session.getClassType().getCategory().getId().equals(categoryId))) {
+                        return false;
+                    }
+                    // Past sessions (earlier dates or today's already-started times) are hidden
+                    // entirely instead of being returned with registerAcceptable=false
+                    if (session.getDate() == null || session.getStartTime() == null
+                            || LocalDateTime.of(session.getDate(), session.getStartTime()).isBefore(now)) {
                         return false;
                     }
                     return true;
