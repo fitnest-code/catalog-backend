@@ -215,8 +215,9 @@ public class TranslationServiceImpl implements TranslationService {
 
     @Override
     public List<Translation> getTranslations(String entityType, String entityId, String fieldName, String languageCode) {
+        String normType = entityType != null ? entityType.toUpperCase() : null;
         return translationRepository.findAll().stream()
-                .filter(t -> entityType == null || t.getEntityType().equals(entityType))
+                .filter(t -> normType == null || t.getEntityType().equals(normType))
                 .filter(t -> entityId == null || t.getEntityId().equals(entityId))
                 .filter(t -> fieldName == null || t.getFieldName().equals(fieldName))
                 .filter(t -> languageCode == null || t.getLanguageCode().equalsIgnoreCase(languageCode))
