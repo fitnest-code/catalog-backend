@@ -55,6 +55,21 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private final az.fitnest.catalog.service.TranslationService translationService;
 
     private String getUserLanguage(Long userId) {
+        try {
+            var requestAttributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
+                jakarta.servlet.http.HttpServletRequest request = ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
+                String acceptLanguage = request.getHeader("Accept-Language");
+                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
+                    String upper = acceptLanguage.trim().split("[,;-]")[0].toUpperCase();
+                    if (upper.equals("EN") || upper.equals("RU") || upper.equals("AZ")) {
+                        return upper;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         if (userId != null) {
             try {
                 az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
