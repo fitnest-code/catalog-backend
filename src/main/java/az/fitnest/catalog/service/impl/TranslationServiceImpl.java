@@ -150,7 +150,7 @@ public class TranslationServiceImpl implements TranslationService {
             return existingValue;
         }
 
-        if (entityType != null && entityType.equalsIgnoreCase("CATEGORY")) {
+        if (entityType != null && (entityType.equalsIgnoreCase("CATEGORY") || entityType.equalsIgnoreCase("LESSONTYPE") || entityType.equalsIgnoreCase("LESSON_TYPE"))) {
             return null;
         }
 

@@ -36,8 +36,6 @@ public class LessonTypeAdminServiceImpl implements LessonTypeAdminService {
                 .build();
         lessonType = lessonTypeRepository.save(lessonType);
 
-        translationService.autoTranslateAndSave("LessonType", String.valueOf(lessonType.getId()), "name", lessonType.getName());
-
         return new LessonTypeResponse(lessonType.getId(), lessonType.getName());
     }
 
