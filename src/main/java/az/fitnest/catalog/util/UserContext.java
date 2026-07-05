@@ -31,6 +31,21 @@ public class UserContext {
     }
 
     public static String getUserLanguage() {
+        try {
+            var requestAttributes = RequestContextHolder.getRequestAttributes();
+            if (requestAttributes instanceof ServletRequestAttributes) {
+                HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+                String acceptLanguage = request.getHeader("Accept-Language");
+                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
+                    String upper = acceptLanguage.trim().split("[,;-]")[0].toUpperCase();
+                    if (upper.equals("EN") || upper.equals("RU") || upper.equals("AZ")) {
+                        return upper;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         Long userId = getCurrentUserId();
         if (userId != null && userServiceGrpcClient != null) {
             try {
@@ -51,21 +66,6 @@ public class UserContext {
                 String lang = locale.getLanguage().toUpperCase();
                 if (lang.equals("EN") || lang.equals("RU") || lang.equals("AZ")) {
                     return lang;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        try {
-            var requestAttributes = RequestContextHolder.getRequestAttributes();
-            if (requestAttributes instanceof ServletRequestAttributes) {
-                HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-                String acceptLanguage = request.getHeader("Accept-Language");
-                if (acceptLanguage != null && !acceptLanguage.trim().isEmpty()) {
-                    String upper = acceptLanguage.trim().split("[,;-]")[0].toUpperCase();
-                    if (upper.equals("EN") || upper.equals("RU") || upper.equals("AZ")) {
-                        return upper;
-                    }
                 }
             }
         } catch (Exception ignored) {
