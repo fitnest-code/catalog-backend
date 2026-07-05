@@ -150,7 +150,12 @@ public class TranslationServiceImpl implements TranslationService {
             return existingValue;
         }
 
-        if (entityType != null && (entityType.equalsIgnoreCase("CATEGORY") || entityType.equalsIgnoreCase("LESSONTYPE") || entityType.equalsIgnoreCase("LESSON_TYPE"))) {
+        if (entityType != null && (entityType.equalsIgnoreCase("CATEGORY") || entityType.equalsIgnoreCase("LESSONTYPE") || entityType.equalsIgnoreCase("LESSON_TYPE")
+                || entityType.equalsIgnoreCase("GYM") || entityType.equalsIgnoreCase("ROOM")
+                || entityType.equalsIgnoreCase("SUPPORTED_SERVICE") || entityType.equalsIgnoreCase("SUPPORTEDSERVICE")
+                || entityType.equalsIgnoreCase("RESERVATION_RULE") || entityType.equalsIgnoreCase("RESERVATIONRULE")
+                || entityType.equalsIgnoreCase("GYMLESSONTYPE") || entityType.equalsIgnoreCase("GYMSUBSCRIPTION")
+                || entityType.equalsIgnoreCase("TRAINER") || entityType.equalsIgnoreCase("PROFESSION"))) {
             return null;
         }
 
