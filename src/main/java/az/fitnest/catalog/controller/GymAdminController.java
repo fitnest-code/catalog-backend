@@ -28,9 +28,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.validation.Validator;
-import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -61,8 +58,6 @@ public class GymAdminController {
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
     private final GymReadService gymReadService;
-    private final ObjectMapper objectMapper;
-    private final Validator validator;
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -417,21 +412,11 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/v1/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GymCreateStep1Response> createGymComplete(
-            @RequestPart("data") MultipartFile dataFile,
+            @RequestPart("data") @Valid GymCreateCompleteRequest request,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
             @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
             @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
-        GymCreateCompleteRequest request;
-        try {
-            request = objectMapper.readValue(dataFile.getBytes(), GymCreateCompleteRequest.class);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid json format in data part", e);
-        }
-        var violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
         Long gymId = gymWriteService.createGymComplete(request, coverPhoto, trainerPhotos, roomPhotos, serviceIcons);
         return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
     }
@@ -755,23 +740,13 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/v2/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GymCreateStep1Response> createGymCompleteV2(
-            @RequestPart("data") MultipartFile dataFile,
+            @RequestPart("data") @Valid GymCreateCompleteRequestV2 request,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestPart(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
-            @RequestPart(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
+            @RequestParam(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
             @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
             @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
             @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
-        GymCreateCompleteRequestV2 request;
-        try {
-            request = objectMapper.readValue(dataFile.getBytes(), GymCreateCompleteRequestV2.class);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid json format in data part", e);
-        }
-        var violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
         Long gymId = gymWriteService.createGymCompleteV2(request, coverPhoto, categoryCovers, categoryCoverCategoryIds, trainerPhotos, roomPhotos, serviceIcons);
         return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
     }
