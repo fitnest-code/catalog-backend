@@ -2351,7 +2351,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 })
                 .toList();
 
-        String localizedGymName = gym.getName();
+        String localizedGymName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
+        if (localizedGymName == null || localizedGymName.isEmpty()) {
+            localizedGymName = gym.getName();
+        }
 
         String localizedGymDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedGymDescription == null || localizedGymDescription.isEmpty()) {
@@ -2362,11 +2365,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (gym.getDescriptions() != null) {
             for (GymDescription desc : gym.getDescriptions()) {
                 String localizedCatName = translationService.getTranslatedValue("CATEGORY", desc.getCategory().getId().toString(), "name", userLanguage);
+                String localizedCatDesc = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description_" + desc.getCategory().getId(), userLanguage);
                 descriptions.add(new GymDescriptionResponse(
                         desc.getCategory().getId(),
                         localizedCatName != null && !localizedCatName.isEmpty() ? localizedCatName : desc.getCategory().getName(),
                         desc.getPhone(),
-                        desc.getDescription(),
+                        localizedCatDesc != null && !localizedCatDesc.isEmpty() ? localizedCatDesc : desc.getDescription(),
                         desc.getCoverImageUrl()
                 ));
             }
