@@ -417,14 +417,14 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/v1/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GymCreateStep1Response> createGymComplete(
-            @RequestPart("data") String dataJson,
+            @RequestPart("data") MultipartFile dataFile,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
             @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
             @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
         GymCreateCompleteRequest request;
         try {
-            request = objectMapper.readValue(dataJson, GymCreateCompleteRequest.class);
+            request = objectMapper.readValue(dataFile.getBytes(), GymCreateCompleteRequest.class);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid json format in data part", e);
         }
@@ -755,7 +755,7 @@ public class GymAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/v2/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GymCreateStep1Response> createGymCompleteV2(
-            @RequestPart("data") String dataJson,
+            @RequestPart("data") MultipartFile dataFile,
             @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
             @RequestPart(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
             @RequestPart(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
@@ -764,7 +764,7 @@ public class GymAdminController {
             @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
         GymCreateCompleteRequestV2 request;
         try {
-            request = objectMapper.readValue(dataJson, GymCreateCompleteRequestV2.class);
+            request = objectMapper.readValue(dataFile.getBytes(), GymCreateCompleteRequestV2.class);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid json format in data part", e);
         }
