@@ -12,6 +12,7 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
     List<GymEntranceHistory> findAllByUserIdOrderByScanDateDesc(Long userId);
     List<GymEntranceHistory> findByGymIdAndScanDateBetweenOrderByScanDateDesc(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
     void deleteByGymId(Long gymId);
+    void deleteByUserId(Long userId);
     boolean existsByGymId(Long gymId);
 
     long countByStatusInAndScanDateBetween(java.util.List<String> statuses, java.time.LocalDateTime start, java.time.LocalDateTime end);

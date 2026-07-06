@@ -20,6 +20,8 @@ public interface SavedGymRepository extends JpaRepository<SavedGym, Long> {
 
     void deleteByGymId(Long gymId);
 
+    void deleteByUserId(Long userId);
+
     boolean existsByGymId(Long gymId);
 
     @Query("SELECT s.gym.id FROM SavedGym s WHERE s.userId = :userId AND s.gym.id IN :gymIds")

@@ -27,6 +27,8 @@ public interface SavedStoreRepository
 
     public void deleteByUserIdAndStoreId(Long var1, Long var2);
 
+    public void deleteByUserId(Long userId);
+
     @Modifying
     @Query(value = "delete from SavedStore ss where ss.store.id = :storeId")
     public void deleteByStoreId(@Param(value = "storeId") Long var1);

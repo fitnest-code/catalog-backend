@@ -91,4 +91,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @org.springframework.data.repository.query.Param("userId") Long userId,
             @org.springframework.data.repository.query.Param("dates") java.util.Collection<java.time.LocalDate> dates,
             @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
+    void deleteByUserId(Long userId);
 }

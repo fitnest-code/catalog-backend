@@ -38,4 +38,6 @@ public interface ReviewRepository
     @Modifying
     @Query("UPDATE Review r SET r.status = :status WHERE r.id = :reviewId")
     public void updateStatus(@Param("reviewId") Long reviewId, @Param("status") az.fitnest.catalog.model.enums.ReviewStatus status);
+
+    void deleteByUserId(Long userId);
 }
