@@ -292,7 +292,7 @@ public class GymAdminController {
             @PathVariable("id") Long gymId,
             @RequestParam("name") String name,
             @RequestParam("surname") String surname,
-            @RequestParam("professionId") Long professionId,
+            @RequestParam(value = "professionId", required = false) Long professionId,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "email", required = false) String email,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
@@ -519,7 +519,7 @@ public class GymAdminController {
     public ResponseEntity<Void> validateStep2(
             @RequestParam("names") List<String> names,
             @RequestParam("surnames") List<String> surnames,
-            @RequestParam("professionIds") List<Long> professionIds,
+            @RequestParam(value = "professionIds", required = false) List<Long> professionIds,
             @RequestParam("emails") List<String> emails,
             @RequestParam("phones") List<String> phones,
             @RequestParam(value = "photos", required = false) List<MultipartFile> photos,
