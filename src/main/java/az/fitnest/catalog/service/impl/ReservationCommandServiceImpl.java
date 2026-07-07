@@ -65,7 +65,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
             throw new BadRequestException("LESSON_SESSION_MISMATCH", "error.lesson_session_mismatch");
         }
 
-        if (lessonId != null && reservationRepository.existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(userId, lessonId, session.getDate(),
+        if (!az.fitnest.catalog.util.UserContext.isTestUser() && lessonId != null && reservationRepository.existsByUserIdAndClassTypeIdAndReservationDateDateAndStatusIn(userId, lessonId, session.getDate(),
                 List.of(ReservationStatus.PENDING, ReservationStatus.APPROVED))) {
             throw new BadRequestException("DUPLICATE_DAILY_RESERVATION", "error.duplicate_daily_reservation");
         }

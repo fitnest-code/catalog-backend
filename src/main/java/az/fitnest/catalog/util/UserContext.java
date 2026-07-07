@@ -23,6 +23,15 @@ public class UserContext {
         return null;
     }
 
+    public static boolean isTestUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_TEST".equals(a.getAuthority()) || "TEST".equals(a.getAuthority()));
+    }
+
     public static Long extractUserId(Object principal) {
         if (principal instanceof Long) {
             return (Long) principal;

@@ -326,8 +326,13 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         Double amount = 0.0;
         Long packageId = null;
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
-        try {
-            subResp = orderServiceGrpcClient.getActiveSubscription(userId);
+        boolean isTestUser = UserContext.isTestUser();
+        if (isTestUser) {
+            allowed = true;
+            status = "ELIGIBLE";
+        } else {
+            try {
+                subResp = orderServiceGrpcClient.getActiveSubscription(userId);
             String subStatus = subResp.getSubscriptionStatus();
             if (subStatus == null || subStatus.isEmpty() || subStatus.equalsIgnoreCase("none")
                     || !subStatus.equalsIgnoreCase("active")) {
@@ -430,9 +435,10 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         } catch (Exception e) {
             allowed = false;
             reason = "NO_ACTIVE_SUBSCRIPTION";
+            }
         }
 
-        if (allowed) {
+        if (allowed && !isTestUser) {
             Address address = gym.getAddress();
             if (address != null && address.getLatitude() != null && address.getLongitude() != null && lat != null
                     && lng != null) {
@@ -444,7 +450,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
             }
         }
 
-        if (allowed) {
+        if (allowed && !isTestUser) {
             try {
                 // Check if there is an active reservation at this gym today
                 List<Reservation> activeReservations = reservationRepository.findActiveReservationsForCheckIn(
@@ -566,6 +572,12 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             throw new IllegalArgumentException("error.unauthorized");
+        }
+        if (UserContext.isTestUser()) {
+            return GymEntranceEligibilityResponse.builder()
+                    .allowed(true)
+                    .status("ELIGIBLE")
+                    .build();
         }
         az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         try {
