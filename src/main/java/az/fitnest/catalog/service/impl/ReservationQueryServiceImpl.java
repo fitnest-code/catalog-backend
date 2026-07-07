@@ -162,10 +162,10 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     if (categoryId != null && (session.getClassType() == null || session.getClassType().getCategory() == null || !session.getClassType().getCategory().getId().equals(categoryId))) {
                         return false;
                     }
-                    // Past sessions (earlier dates or today's already-started times) are hidden
+                    // Past sessions and sessions starting within 2 hours are hidden
                     // entirely instead of being returned with registerAcceptable=false
                     if (session.getDate() == null || session.getStartTime() == null
-                            || LocalDateTime.of(session.getDate(), session.getStartTime()).isBefore(now)) {
+                            || LocalDateTime.of(session.getDate(), session.getStartTime()).isBefore(cutoff)) {
                         return false;
                     }
                     return true;
