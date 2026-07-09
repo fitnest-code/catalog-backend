@@ -94,5 +94,5 @@ public class Trainer extends BaseAuditableEntity {
         inverseJoinColumns = @JoinColumn(name = "lesson_type_id")
     )
     @Builder.Default
-    private java.util.Set<GymLessonType> enabledLessonTypes = new java.util.HashSet<>();
+    private java.util.Set<LessonType> enabledLessonTypes = new java.util.HashSet<>();
 }

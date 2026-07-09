@@ -14,10 +14,9 @@ import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ProfessionRepository;
 import az.fitnest.catalog.repository.TrainerRepository;
-import az.fitnest.catalog.repository.GymLessonTypeRepository;
 import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.service.FileStorageService;
-import az.fitnest.catalog.model.entity.GymLessonType;
+import az.fitnest.catalog.model.entity.LessonType;
 import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.util.UserContext;
 import az.fitnest.catalog.client.CachedUser;
@@ -45,7 +44,6 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
     private final TranslationService translationService;
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final TrainerReservationDateRepository trainerReservationDateRepository;
-    private final GymLessonTypeRepository gymLessonTypeRepository;
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
     private final java.util.concurrent.Executor imageUploadExecutor;
 
@@ -171,18 +169,15 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         if (request.lessonTypeIds() != null) {
             trainer.getEnabledLessonTypes().clear();
-            trainer.getEnabledLessonTypes().addAll(resolveGymLessonTypes(gymId, request.lessonTypeIds()));
+            trainer.getEnabledLessonTypes().addAll(resolveLessonTypes(gymId, request.lessonTypeIds()));
         }
     }
 
     /**
-     * Lesson types selected in the UI come from the gym's category catalog (global LessonType ids),
-     * not from previously-saved GymLessonType rows, which may not exist yet for this gym. Reuse an
-     * existing GymLessonType by name if one is already saved for this gym (also accepts a raw
-     * GymLessonType id for backward compatibility), otherwise create one from the matching category's
-     * LessonType so the trainer can be linked to it.
+     * Lesson types belong to categories: a lesson type is available for a gym when
+     * one of the gym's categories contains it.
      */
-    private List<GymLessonType> resolveGymLessonTypes(Long gymId, List<Long> lessonTypeIds) {
+    private List<LessonType> resolveLessonTypes(Long gymId, List<Long> lessonTypeIds) {
         if (lessonTypeIds.isEmpty()) {
             return List.of();
         }
@@ -190,55 +185,16 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        List<GymLessonType> existingGymLessons = gymLessonTypeRepository.findByGymId(gymId);
-        java.util.Map<Long, GymLessonType> byId = existingGymLessons.stream()
-                .collect(Collectors.toMap(GymLessonType::getId, gl -> gl));
-        java.util.Map<String, GymLessonType> byName = existingGymLessons.stream()
-                .collect(Collectors.toMap(gl -> gl.getName().toLowerCase(), gl -> gl, (a, b) -> a));
+        java.util.Map<Long, LessonType> availableById = gym.getAvailableLessonTypes().stream()
+                .collect(Collectors.toMap(LessonType::getId, lt -> lt));
 
-        java.util.Set<az.fitnest.catalog.model.entity.Category> gymCategories = new java.util.HashSet<>();
-        if (gym.getMainCategories() != null) {
-            gymCategories.addAll(gym.getMainCategories());
-        }
-        if (gym.getSubCategories() != null) {
-            gymCategories.addAll(gym.getSubCategories());
-        }
-
-        java.util.Map<Long, az.fitnest.catalog.model.entity.LessonType> globalById = lessonTypeRepository.findAllById(lessonTypeIds).stream()
-                .collect(Collectors.toMap(az.fitnest.catalog.model.entity.LessonType::getId, lt -> lt));
-
-        List<GymLessonType> resolved = new java.util.ArrayList<>();
+        List<LessonType> resolved = new java.util.ArrayList<>();
         for (Long id : lessonTypeIds) {
-            GymLessonType existing = byId.get(id);
-            if (existing != null) {
-                resolved.add(existing);
-                continue;
+            LessonType lessonType = availableById.get(id);
+            if (lessonType == null) {
+                throw new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found");
             }
-
-            az.fitnest.catalog.model.entity.LessonType global = globalById.get(id);
-            if (global == null) {
-                continue;
-            }
-
-            GymLessonType byNameMatch = byName.get(global.getName().toLowerCase());
-            if (byNameMatch != null) {
-                resolved.add(byNameMatch);
-                continue;
-            }
-
-            az.fitnest.catalog.model.entity.Category owningCategory = gymCategories.stream()
-                    .filter(c -> c.getLessonTypes() != null && c.getLessonTypes().contains(global))
-                    .findFirst()
-                    .orElse(null);
-            GymLessonType created = gymLessonTypeRepository.save(GymLessonType.builder()
-                    .gym(gym)
-                    .name(global.getName())
-                    .category(owningCategory)
-                    .status("ACTIVE")
-                    .sortOrder(0)
-                    .build());
-            byName.put(created.getName().toLowerCase(), created);
-            resolved.add(created);
+            resolved.add(lessonType);
         }
         return resolved;
     }
@@ -279,15 +235,8 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         java.util.List<Long> lessonTypeIds = new java.util.ArrayList<>();
         if (t.getEnabledLessonTypes() != null) {
-            java.util.List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAll();
-            for (az.fitnest.catalog.model.entity.GymLessonType gl : t.getEnabledLessonTypes()) {
-                globalLessons.stream()
-                    .filter(glt -> glt.getName().equalsIgnoreCase(gl.getName()))
-                    .findFirst()
-                    .ifPresentOrElse(
-                        glt -> lessonTypeIds.add(glt.getId()),
-                        () -> lessonTypeIds.add(gl.getId())
-                    );
+            for (LessonType lt : t.getEnabledLessonTypes()) {
+                lessonTypeIds.add(lt.getId());
             }
         }
 
@@ -328,17 +277,12 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         java.util.List<Long> lessonTypeIds = new java.util.ArrayList<>();
         java.util.List<Long> categoryIds = new java.util.ArrayList<>();
         if (t.getEnabledLessonTypes() != null) {
-            java.util.List<az.fitnest.catalog.model.entity.LessonType> globalLessons = lessonTypeRepository.findAll();
-            for (az.fitnest.catalog.model.entity.GymLessonType gl : t.getEnabledLessonTypes()) {
-                globalLessons.stream()
-                    .filter(glt -> glt.getName().equalsIgnoreCase(gl.getName()))
-                    .findFirst()
-                    .ifPresentOrElse(
-                        glt -> lessonTypeIds.add(glt.getId()),
-                        () -> lessonTypeIds.add(gl.getId())
-                    );
-                if (gl.getCategory() != null) {
-                    categoryIds.add(gl.getCategory().getId());
+            for (LessonType lt : t.getEnabledLessonTypes()) {
+                lessonTypeIds.add(lt.getId());
+                if (lt.getCategories() != null) {
+                    for (az.fitnest.catalog.model.entity.Category category : lt.getCategories()) {
+                        categoryIds.add(category.getId());
+                    }
                 }
             }
         }
@@ -391,8 +335,8 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         }
 
         if (lessonId != null) {
-            GymLessonType lesson = gymLessonTypeRepository.findById(lessonId)
-                    .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+            List<LessonType> resolved = resolveLessonTypes(gymId, List.of(lessonId));
+            LessonType lesson = resolved.get(0);
             if (enabled) {
                 trainer.getEnabledLessonTypes().add(lesson);
             } else {
@@ -412,8 +356,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             throw new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found");
         }
 
-        GymLessonType lessonType = gymLessonTypeRepository.findById(lessonId)
-                .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
+        LessonType lessonType = resolveLessonTypes(gymId, List.of(lessonId)).get(0);
 
         if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
             throw new az.fitnest.catalog.exception.BadRequestException("INVALID_TIME_RANGE", "error.invalid_time_range");
@@ -468,7 +411,7 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         az.fitnest.catalog.model.entity.Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        List<GymLessonType> gymLessons = gymLessonTypeRepository.findByGymId(gymId);
+        List<LessonType> gymLessons = new java.util.ArrayList<>(gym.getAvailableLessonTypes());
 
         for (int i = 0; i < names.size(); i++) {
             Trainer trainer = new Trainer();

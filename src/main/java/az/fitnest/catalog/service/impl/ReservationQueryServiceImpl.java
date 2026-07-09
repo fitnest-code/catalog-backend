@@ -11,14 +11,13 @@ import az.fitnest.catalog.util.UserContext;
 import az.fitnest.catalog.client.CachedUser;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
-import az.fitnest.catalog.model.entity.GymLessonType;
+import az.fitnest.catalog.model.entity.LessonType;
 import az.fitnest.catalog.model.entity.Reservation;
 import az.fitnest.catalog.model.entity.ReservationRule;
 import az.fitnest.catalog.model.entity.Trainer;
 import az.fitnest.catalog.model.entity.TrainerReservationDate;
 import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.repository.CategoryRepository;
-import az.fitnest.catalog.repository.GymLessonTypeRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
 import az.fitnest.catalog.repository.ReservationRuleRepository;
@@ -49,7 +48,6 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReservationQueryServiceImpl.class);
 
     private final CategoryRepository categoryRepository;
-    private final GymLessonTypeRepository gymLessonTypeRepository;
     private final TrainerReservationDateRepository sessionRepository;
     private final ReservationRuleRepository ruleRepository;
     private final ReservationRepository reservationRepository;
@@ -63,20 +61,29 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public List<ReservationLessonResponse> getLessonsForReservation(Long gymId, Long categoryId) {
-        List<GymLessonType> lessonTypes;
-        if (categoryId != null) {
-            lessonTypes = gymLessonTypeRepository.findByGymIdAndCategoryIdAndStatus(gymId, categoryId, "ACTIVE");
-        } else {
-            lessonTypes = gymLessonTypeRepository.findByGymIdAndStatus(gymId, "ACTIVE");
-        }
-        return lessonTypes.stream()
-                .map(lt -> ReservationLessonResponse.builder()
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        // Every lesson type of the gym's categories is available for reservation.
+        List<Category> categories = gym.getCategories().stream()
+                .filter(c -> categoryId == null || c.getId().equals(categoryId))
+                .toList();
+
+        List<ReservationLessonResponse> lessons = new ArrayList<>();
+        java.util.Set<Long> seenLessonIds = new java.util.HashSet<>();
+        for (Category category : categories) {
+            if (category.getLessonTypes() == null) continue;
+            for (LessonType lt : category.getLessonTypes()) {
+                if (!seenLessonIds.add(lt.getId())) continue;
+                lessons.add(ReservationLessonResponse.builder()
                         .gymId(gymId)
-                        .categoryId(lt.getCategory() != null ? lt.getCategory().getId() : null)
+                        .categoryId(category.getId())
                         .lessonId(lt.getId())
                         .lessonName(lt.getName())
-                        .build())
-                .collect(Collectors.toList());
+                        .build());
+            }
+        }
+        return lessons;
     }
 
     @Transactional(readOnly = true)
@@ -87,7 +94,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                         return t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getId().equals(lessonTypeId));
                     }
                     if (categoryId != null) {
-                        return t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getCategory() != null && lt.getCategory().getId().equals(categoryId));
+                        return t.getEnabledLessonTypes().stream().anyMatch(lt -> lt.getCategories() != null
+                                && lt.getCategories().stream().anyMatch(c -> c.getId().equals(categoryId)));
                     }
                     return true;
                 })
@@ -159,7 +167,9 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     if (lessonTypeId != null && (session.getClassType() == null || !session.getClassType().getId().equals(lessonTypeId))) {
                         return false;
                     }
-                    if (categoryId != null && (session.getClassType() == null || session.getClassType().getCategory() == null || !session.getClassType().getCategory().getId().equals(categoryId))) {
+                    if (categoryId != null && (session.getClassType() == null
+                            || session.getClassType().getCategories() == null
+                            || session.getClassType().getCategories().stream().noneMatch(c -> c.getId().equals(categoryId)))) {
                         return false;
                     }
                     // Past sessions and sessions starting within 2 hours are hidden
@@ -376,28 +386,23 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         TrainerReservationDate session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("SESSION_NOT_FOUND", "error.session_not_found"));
 
-        Long categoryId = session.getClassType() != null && session.getClassType().getCategory() != null
-                ? session.getClassType().getCategory().getId() : null;
         Long classTypeId = session.getClassType() != null ? session.getClassType().getId() : null;
 
         List<ReservationRule> rules = new ArrayList<>();
-        if (categoryId != null && classTypeId != null) {
-            rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), categoryId, classTypeId, "ACTIVE");
+        if (classTypeId != null && session.getClassType().getCategories() != null) {
+            // A lesson type may belong to several categories; use the first one with rules.
+            for (Category category : session.getClassType().getCategories()) {
+                rules = ruleRepository.findByGymIdAndCategoryIdAndLessonTypeIdAndStatus(session.getGymId(), category.getId(), classTypeId, "ACTIVE");
+                if (!rules.isEmpty()) break;
+            }
         }
         if (rules.isEmpty()) {
             rules = ruleRepository.findByGymIdAndCategoryIdIsNullAndLessonTypeIsNullAndStatus(session.getGymId(), "ACTIVE");
         }
-        if (rules.isEmpty()) {
-            rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(session.getGymId(), "ACTIVE");
-            if (classTypeId != null) {
-                rules = rules.stream()
-                        .filter(r -> r.getLessonType() != null && r.getLessonType().getId().equals(classTypeId))
-                        .collect(Collectors.toList());
-            } else if (categoryId != null) {
-                rules = rules.stream()
-                        .filter(r -> r.getCategory() != null && r.getCategory().getId().equals(categoryId))
-                        .collect(Collectors.toList());
-            }
+        if (rules.isEmpty() && classTypeId != null) {
+            rules = ruleRepository.findByGymIdAndStatusOrderBySortOrderAsc(session.getGymId(), "ACTIVE").stream()
+                    .filter(r -> r.getLessonType() != null && r.getLessonType().getId().equals(classTypeId))
+                    .collect(Collectors.toList());
         }
 
         String userLanguage = resolveUserLanguage();
@@ -475,8 +480,8 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
 
-        List<String> lessonTypes = gymLessonTypeRepository.findByGymId(gymId).stream()
-                .map(GymLessonType::getName)
+        List<String> lessonTypes = gym.getAvailableLessonTypes().stream()
+                .map(LessonType::getName)
                 .collect(Collectors.toList());
 
         List<Trainer> trainers = gym.getTrainers() != null ? new ArrayList<>(gym.getTrainers()) : List.of();

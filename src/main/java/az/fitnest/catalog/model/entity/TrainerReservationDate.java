@@ -34,7 +34,7 @@ public class TrainerReservationDate extends BaseAuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_type_id")
-    private GymLessonType classType;
+    private LessonType classType;
 
     @Column(name = "reservation_date", nullable = false)
     private LocalDate date;

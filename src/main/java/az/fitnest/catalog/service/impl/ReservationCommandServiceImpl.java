@@ -37,7 +37,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
     private final ReservationRepository reservationRepository;
     private final GymRepository gymRepository;
     private final TrainerRepository trainerRepository;
-    private final GymLessonTypeRepository gymLessonTypeRepository;
+    private final LessonTypeRepository lessonTypeRepository;
     private final CategoryRepository categoryRepository;
     private final TrainerReservationDateRepository sessionRepository;
     private final ReservationPolicyService policyService;
@@ -83,19 +83,24 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
             category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
 
-            if (gym.getCategory() == null || !gym.getCategory().getId().equals(category.getId())) {
+            final Long requestedCategoryId = category.getId();
+            boolean gymHasCategory = gym.getCategories().stream()
+                    .anyMatch(c -> c.getId().equals(requestedCategoryId));
+            if (!gymHasCategory) {
                 throw new BadRequestException("CATEGORY_NOT_ASSIGNED_TO_GYM", "error.category_not_assigned_to_gym");
             }
-        } else if (session.getClassType() != null && session.getClassType().getCategory() != null) {
-            category = session.getClassType().getCategory();
         }
 
-        GymLessonType classType = null;
+        LessonType classType = null;
         if (lessonId != null) {
-            classType = gymLessonTypeRepository.findById(lessonId)
+            classType = lessonTypeRepository.findById(lessonId)
                     .orElseThrow(() -> new ResourceNotFoundException("CLASS_TYPE_NOT_FOUND", "error.class_type_not_found"));
         } else if (session.getClassType() != null) {
             classType = session.getClassType();
+        }
+
+        if (category == null && classType != null) {
+            category = resolveCategoryForLessonType(gym, classType);
         }
 
         Trainer trainer = null;
@@ -364,9 +369,9 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                     .orElseThrow(() -> new ResourceNotFoundException("CATEGORY_NOT_FOUND", "error.category_not_found"));
         }
         
-        GymLessonType lessonType = null;
+        LessonType lessonType = null;
         if (lessonId != null) {
-            lessonType = gymLessonTypeRepository.findById(lessonId)
+            lessonType = lessonTypeRepository.findById(lessonId)
                     .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.class_type_not_found"));
         }
 
@@ -441,6 +446,20 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                 // Ignore to avoid breaking execution
             }
         });
+    }
+
+    /**
+     * A lesson type may belong to several categories; prefer the one that is
+     * actually assigned to the gym.
+     */
+    private Category resolveCategoryForLessonType(Gym gym, LessonType lessonType) {
+        if (lessonType.getCategories() == null || lessonType.getCategories().isEmpty()) {
+            return null;
+        }
+        return gym.getCategories().stream()
+                .filter(c -> lessonType.getCategories().stream().anyMatch(lc -> lc.getId().equals(c.getId())))
+                .findFirst()
+                .orElse(lessonType.getCategories().iterator().next());
     }
 
     private void verifyReservationGymAccess(Long gymId) {

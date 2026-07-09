@@ -181,6 +181,17 @@ public class Gym
         }
         return cats;
     }
+
+    public Set<LessonType> getAvailableLessonTypes() {
+        Set<LessonType> lessonTypes = new java.util.LinkedHashSet<>();
+        for (Category category : getCategories()) {
+            if (category.getLessonTypes() != null) {
+                lessonTypes.addAll(category.getLessonTypes());
+            }
+        }
+        return lessonTypes;
+    }
+
     @Column(name = "rating")
     @Builder.Default
     private Double rating = 0.0;

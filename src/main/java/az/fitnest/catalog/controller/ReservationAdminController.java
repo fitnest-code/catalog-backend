@@ -106,42 +106,12 @@ public class ReservationAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "İdman zalına dərs növü əlavə edin")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/gyms/{id}/lesson-types")
-    public ResponseEntity<GymLessonTypeResponse> addLessonType(
-            @PathVariable("id") Long gymId,
-            @RequestParam(required = false) Long categoryId,
-            @Valid @RequestBody GymLessonTypeRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gymLessonTypeService.addLessonType(gymId, categoryId, request));
-    }
-
-    @Operation(summary = "İdman zalının bütün dərs növlərini əldə edin")
+    @Operation(summary = "İdman zalının bütün dərs növlərini əldə edin",
+            description = "Zalın kateqoriyalarına aid bütün dərs növlərini qaytarır. Dərs növləri kateqoriya səviyyəsində idarə olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/gyms/{id}/lesson-types")
     public ResponseEntity<List<GymLessonTypeResponse>> getLessonTypes(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymLessonTypeService.getLessonTypes(gymId));
-    }
-
-    @Operation(summary = "Dərs növünü yeniləyin")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/gyms/{id}/lesson-types/{lessonTypeId}")
-    public ResponseEntity<GymLessonTypeResponse> updateLessonType(
-            @PathVariable("id") Long gymId,
-            @PathVariable Long lessonTypeId,
-            @RequestParam(required = false) Long categoryId,
-            @Valid @RequestBody GymLessonTypeRequest request) {
-        return ResponseEntity.ok(gymLessonTypeService.updateLessonType(gymId, lessonTypeId, categoryId, request));
-    }
-
-    @Operation(summary = "Dərs növünü silin")
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/gyms/{id}/lesson-types/{lessonTypeId}")
-    public ResponseEntity<Void> deleteLessonType(
-            @PathVariable("id") Long gymId,
-            @PathVariable Long lessonTypeId) {
-        gymLessonTypeService.deleteLessonType(gymId, lessonTypeId);
-        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Rezervasiya qaydalarını yadda saxlayın")

@@ -20,7 +20,6 @@ public class TranslationEntityResolver {
             case "ROOM": return az.fitnest.catalog.model.entity.Room.class;
             case "GYMADMIN": return az.fitnest.catalog.model.entity.GymAdmin.class;
             case "LESSONTYPE": return az.fitnest.catalog.model.entity.LessonType.class;
-            case "GYMLESSONTYPE": return az.fitnest.catalog.model.entity.GymLessonType.class;
             case "GYMSUBSCRIPTION": return az.fitnest.catalog.model.entity.GymSubscription.class;
             case "SUPPORTEDSERVICE":
             case "SUPPORTED_SERVICE":

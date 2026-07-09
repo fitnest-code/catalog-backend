@@ -154,7 +154,7 @@ public class TranslationServiceImpl implements TranslationService {
                 || entityType.equalsIgnoreCase("GYM") || entityType.equalsIgnoreCase("ROOM")
                 || entityType.equalsIgnoreCase("SUPPORTED_SERVICE") || entityType.equalsIgnoreCase("SUPPORTEDSERVICE")
                 || entityType.equalsIgnoreCase("RESERVATION_RULE") || entityType.equalsIgnoreCase("RESERVATIONRULE")
-                || entityType.equalsIgnoreCase("GYMLESSONTYPE") || entityType.equalsIgnoreCase("GYMSUBSCRIPTION")
+                || entityType.equalsIgnoreCase("GYMSUBSCRIPTION")
                 || entityType.equalsIgnoreCase("TRAINER") || entityType.equalsIgnoreCase("PROFESSION"))) {
             return null;
         }

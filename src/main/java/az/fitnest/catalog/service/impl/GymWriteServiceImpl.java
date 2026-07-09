@@ -32,7 +32,6 @@ import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymImage;
-import az.fitnest.catalog.model.entity.GymLessonType;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.model.entity.Reservation;
@@ -51,7 +50,6 @@ import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymImageRepository;
-import az.fitnest.catalog.repository.GymLessonTypeRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.ReservationRepository;
 import az.fitnest.catalog.repository.SavedGymRepository;
@@ -104,7 +102,6 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final SupportedServiceRepository supportedServiceRepository;
     private final IdentityServiceGrpcClient identityServiceGrpcClient;
     private final TrainerRepository trainerRepository;
-    private final GymLessonTypeRepository gymLessonTypeRepository;
     private final az.fitnest.catalog.repository.LessonTypeRepository lessonTypeRepository;
     private final TrainerReservationDateRepository trainerReservationDateRepository;
     private final GymAdminRepository gymAdminRepository;
@@ -318,7 +315,6 @@ public class GymWriteServiceImpl implements GymWriteService {
             throw new az.fitnest.catalog.exception.GymDependencyException(dependencies);
         }
 
-        gymLessonTypeRepository.deleteByGymId(gymId);
         gymEntranceHistoryRepository.deleteByGymId(gymId);
         supportedServiceRepository.deleteSubscriptionAssociationsByGymId(gymId);
         supportedServiceRepository.deleteAllByGymId(gymId);
@@ -653,21 +649,6 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
-
-        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
-            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
-            int order = 1;
-            for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
-                az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
-                        .gym(gym)
-                        .name(glt.getName())
-                        .category(category)
-                        .status("ACTIVE")
-                        .sortOrder(order++)
-                        .build();
-                gymLessonTypeRepository.save(gymLessonType);
-            }
-        }
 
         return new GymCreateStep1Response(gym.getId());
     }
@@ -1202,22 +1183,6 @@ public class GymWriteServiceImpl implements GymWriteService {
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
             }
 
-            // Step 1: Lesson types
-            if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
-                List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
-                int order = 1;
-                for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
-                    az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
-                            .gym(savedGym)
-                            .name(glt.getName())
-                            .category(category)
-                            .status("ACTIVE")
-                            .sortOrder(order++)
-                            .build();
-                    gymLessonTypeRepository.save(gymLessonType);
-                }
-            }
-
             // Step 2: Trainers
             if (request.trainers() != null && !request.trainers().isEmpty()) {
                 List<String> names = request.trainers().stream().map(GymCreateCompleteRequest.TrainerCreateData::name).toList();
@@ -1515,9 +1480,9 @@ public class GymWriteServiceImpl implements GymWriteService {
                     .orElseThrow(() -> new ResourceNotFoundException("TRAINER_NOT_FOUND", "error.trainer_not_found"));
         }
 
-        GymLessonType lessonType = null;
+        az.fitnest.catalog.model.entity.LessonType lessonType = null;
         if (request.lessonTypeId() != null) {
-            lessonType = gymLessonTypeRepository.findById(request.lessonTypeId())
+            lessonType = lessonTypeRepository.findById(request.lessonTypeId())
                     .orElseThrow(() -> new ResourceNotFoundException("LESSON_TYPE_NOT_FOUND", "error.lesson_type_not_found"));
         }
 
@@ -1869,21 +1834,6 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
         translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
-
-        if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
-            List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
-            int order = 1;
-            for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
-                az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
-                        .gym(gym)
-                        .name(glt.getName())
-                        .category(mainCategories.isEmpty() ? null : mainCategories.get(0))
-                        .status("ACTIVE")
-                        .sortOrder(order++)
-                        .build();
-                gymLessonTypeRepository.save(gymLessonType);
-            }
-        }
 
         return new GymCreateStep1Response(gym.getId());
     }
@@ -2457,21 +2407,6 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (savedGym.getAddress() != null) {
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
-            }
-
-            if (request.lessonTypeIds() != null && !request.lessonTypeIds().isEmpty()) {
-                List<az.fitnest.catalog.model.entity.LessonType> globalLessonTypes = lessonTypeRepository.findAllById(request.lessonTypeIds());
-                int order = 1;
-                for (az.fitnest.catalog.model.entity.LessonType glt : globalLessonTypes) {
-                    az.fitnest.catalog.model.entity.GymLessonType gymLessonType = az.fitnest.catalog.model.entity.GymLessonType.builder()
-                            .gym(savedGym)
-                            .name(glt.getName())
-                            .category(mainCategory)
-                            .status("ACTIVE")
-                            .sortOrder(order++)
-                            .build();
-                    gymLessonTypeRepository.save(gymLessonType);
-                }
             }
 
             if (request.trainers() != null && !request.trainers().isEmpty()) {

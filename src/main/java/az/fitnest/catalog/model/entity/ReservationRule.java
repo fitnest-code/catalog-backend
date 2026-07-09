@@ -31,7 +31,7 @@ public class ReservationRule extends BaseAuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_type_id")
-    private GymLessonType lessonType;
+    private LessonType lessonType;
 
     @Column(name = "title", nullable = false)
     private String title;
