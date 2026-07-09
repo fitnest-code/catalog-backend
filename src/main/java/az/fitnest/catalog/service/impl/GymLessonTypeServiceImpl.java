@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,12 +54,37 @@ public class GymLessonTypeServiceImpl implements az.fitnest.catalog.service.GymL
         return mapToResponse(lessonType);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<GymLessonTypeResponse> getLessonTypes(Long gymId) {
-        if (!gymRepository.existsById(gymId)) {
-            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        // Auto-sync: create GymLessonType entries for any category lesson types not yet in gym_lesson_types
+        Set<Category> allCategories = new java.util.HashSet<>();
+        if (gym.getMainCategories() != null) allCategories.addAll(gym.getMainCategories());
+        if (gym.getSubCategories() != null) allCategories.addAll(gym.getSubCategories());
+
+        List<GymLessonType> existingGymLessonTypes = gymLessonTypeRepository.findByGymId(gymId);
+        Set<String> existingNames = existingGymLessonTypes.stream()
+                .map(GymLessonType::getName)
+                .collect(java.util.stream.Collectors.toSet());
+
+        for (Category category : allCategories) {
+            if (category.getLessonTypes() == null) continue;
+            for (az.fitnest.catalog.model.entity.LessonType lt : category.getLessonTypes()) {
+                if (!existingNames.contains(lt.getName())) {
+                    GymLessonType newGlt = GymLessonType.builder()
+                            .gym(gym)
+                            .category(category)
+                            .name(lt.getName())
+                            .build();
+                    existingGymLessonTypes.add(gymLessonTypeRepository.save(newGlt));
+                    existingNames.add(lt.getName());
+                }
+            }
         }
-        return gymLessonTypeRepository.findByGymId(gymId).stream()
+
+        return existingGymLessonTypes.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
