@@ -376,6 +376,13 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
                 .emptySpaces(request.getEmptySpaces())
                 .build();
         trainerReservationDateRepository.save(availability);
+
+        gymRepository.findById(gymId).ifPresent(gym -> {
+            if (!Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
+                gym.setIsReservationEnabled(true);
+                gymRepository.save(gym);
+            }
+        });
     }
 
     public void addTrainers(Long gymId, List<String> names, List<String> surnames, List<Long> professionIds,

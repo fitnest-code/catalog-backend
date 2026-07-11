@@ -99,7 +99,6 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                     }
                     return true;
                 })
-                .filter(t -> Boolean.TRUE.equals(t.getIsReservationEnabled()))
                 .map(t -> ReservationTeacherResponse.builder()
                         .teacherId(t.getId())
                         .teacherName(t.getFirstName() + " " + t.getLastName())
@@ -492,7 +491,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
                         .trainerName(trainer.getName())
                         .trainerSurname(trainer.getSurname())
                         .profileImageUrl(trainer.getProfileImageUrl())
-                        .reservationEnabled(Boolean.TRUE.equals(trainer.getIsReservationEnabled()))
+                        .reservationEnabled(true)
                         .build())
                 .collect(Collectors.toList());
 
