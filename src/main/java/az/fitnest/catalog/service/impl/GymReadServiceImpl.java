@@ -1602,9 +1602,30 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 ? trainerReservationDateRepository.findByGymIdAndDateBetween(gymId, effectiveStart, endDate)
                 : trainerReservationDateRepository.findByGymIdAndDateGreaterThanEqual(gymId, effectiveStart);
 
-        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = source.stream()
+        List<az.fitnest.catalog.model.entity.TrainerReservationDate> filteredSource = source.stream()
                 .filter(trd -> trd.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
-                .map(this::toLessonHourResponse)
+                .collect(Collectors.toList());
+
+        List<Long> sessionIds = filteredSource.stream().map(az.fitnest.catalog.model.entity.TrainerReservationDate::getId).collect(Collectors.toList());
+        java.util.Map<Long, Long> pendingMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> approvedMap = new java.util.HashMap<>();
+
+        if (!sessionIds.isEmpty()) {
+            List<Object[]> pendingCounts = reservationRepository.countActiveReservationsForSessions(
+                    sessionIds, List.of(az.fitnest.catalog.model.enums.ReservationStatus.PENDING));
+            for (Object[] row : pendingCounts) {
+                pendingMap.put((Long) row[0], ((Number) row[1]).longValue());
+            }
+
+            List<Object[]> approvedCounts = reservationRepository.countActiveReservationsForSessions(
+                    sessionIds, List.of(az.fitnest.catalog.model.enums.ReservationStatus.APPROVED));
+            for (Object[] row : approvedCounts) {
+                approvedMap.put((Long) row[0], ((Number) row[1]).longValue());
+            }
+        }
+
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = filteredSource.stream()
+                .map(trd -> toLessonHourResponse(trd, pendingMap, approvedMap))
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
                 .collect(Collectors.toList());
@@ -1619,10 +1640,31 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
 
-        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository
+        List<az.fitnest.catalog.model.entity.TrainerReservationDate> source = trainerReservationDateRepository
                 .findByGymIdAndDateBefore(gymId, today).stream()
                 .filter(trd -> trd.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
-                .map(this::toLessonHourResponse)
+                .collect(Collectors.toList());
+
+        List<Long> sessionIds = source.stream().map(az.fitnest.catalog.model.entity.TrainerReservationDate::getId).collect(Collectors.toList());
+        java.util.Map<Long, Long> pendingMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> approvedMap = new java.util.HashMap<>();
+
+        if (!sessionIds.isEmpty()) {
+            List<Object[]> pendingCounts = reservationRepository.countActiveReservationsForSessions(
+                    sessionIds, List.of(az.fitnest.catalog.model.enums.ReservationStatus.PENDING));
+            for (Object[] row : pendingCounts) {
+                pendingMap.put((Long) row[0], ((Number) row[1]).longValue());
+            }
+
+            List<Object[]> approvedCounts = reservationRepository.countActiveReservationsForSessions(
+                    sessionIds, List.of(az.fitnest.catalog.model.enums.ReservationStatus.APPROVED));
+            for (Object[] row : approvedCounts) {
+                approvedMap.put((Long) row[0], ((Number) row[1]).longValue());
+            }
+        }
+
+        List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = source.stream()
+                .map(trd -> toLessonHourResponse(trd, pendingMap, approvedMap))
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date).reversed()
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange, Comparator.reverseOrder()))
                 .collect(Collectors.toList());
@@ -1646,7 +1688,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return new az.fitnest.catalog.dto.response.LessonHourReservationCountsResponse(pending, approved);
     }
 
-    private az.fitnest.catalog.dto.response.LessonHourResponse toLessonHourResponse(az.fitnest.catalog.model.entity.TrainerReservationDate trd) {
+    private az.fitnest.catalog.dto.response.LessonHourResponse toLessonHourResponse(
+            az.fitnest.catalog.model.entity.TrainerReservationDate trd,
+            java.util.Map<Long, Long> pendingMap,
+            java.util.Map<Long, Long> approvedMap) {
+        long pending = pendingMap.getOrDefault(trd.getId(), 0L);
+        long approved = approvedMap.getOrDefault(trd.getId(), 0L);
         return new az.fitnest.catalog.dto.response.LessonHourResponse(
                 trd.getId(),
                 trd.getTrainer() != null ? trd.getTrainer().getName() + " " + trd.getTrainer().getSurname() : "N/A",
@@ -1654,7 +1701,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 trd.getDate(),
                 trd.getStartTime() + " - " + trd.getEndTime(),
                 trd.getEmptySpaces(),
-                trd.getStatus()
+                trd.getStatus(),
+                (int) pending,
+                (int) approved
         );
     }
 

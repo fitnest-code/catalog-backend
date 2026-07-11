@@ -11,5 +11,7 @@ public record LessonHourResponse(
     LocalDate date,
     String timeRange,
     Integer emptySpaces,
-    SessionStatus status
+    SessionStatus status,
+    Integer pendingReservations,
+    Integer approvedReservations
 ) {}
