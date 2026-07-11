@@ -344,7 +344,6 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
             }
         }
 
-        trainer.setIsReservationEnabled(enabled);
         trainerRepository.save(trainer);
     }
 
