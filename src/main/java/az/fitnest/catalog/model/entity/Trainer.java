@@ -85,7 +85,7 @@ public class Trainer extends BaseAuditableEntity {
 
     @Column(name = "is_reservation_enabled")
     @Builder.Default
-    private Boolean isReservationEnabled = false;
+    private Boolean isReservationEnabled = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
