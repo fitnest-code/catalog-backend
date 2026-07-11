@@ -28,7 +28,7 @@ public interface TrainerReservationDateRepository extends JpaRepository<TrainerR
     List<TrainerReservationDate> findByGymIdAndClassTypeIdAndTrainerIdAndDate(Long gymId, Long classTypeId, Long trainerId, LocalDate date);
 
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(trd) > 0 FROM TrainerReservationDate trd WHERE trd.trainer.id = :trainerId AND trd.date = :date " +
-            "AND trd.startTime < :endTime AND trd.endTime > :startTime")
+            "AND trd.startTime < :endTime AND trd.endTime > :startTime AND trd.status <> 'CANCELLED'")
     boolean existsOverlappingAvailability(
             @org.springframework.data.repository.query.Param("trainerId") Long trainerId,
             @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,

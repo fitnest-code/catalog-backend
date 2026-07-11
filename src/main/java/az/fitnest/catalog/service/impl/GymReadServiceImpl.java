@@ -1603,6 +1603,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 : trainerReservationDateRepository.findByGymIdAndDateGreaterThanEqual(gymId, effectiveStart);
 
         List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = source.stream()
+                .filter(trd -> trd.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
                 .map(this::toLessonHourResponse)
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date)
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange))
@@ -1620,12 +1621,29 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<az.fitnest.catalog.dto.response.LessonHourResponse> allHours = trainerReservationDateRepository
                 .findByGymIdAndDateBefore(gymId, today).stream()
+                .filter(trd -> trd.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
                 .map(this::toLessonHourResponse)
                 .sorted(Comparator.comparing(az.fitnest.catalog.dto.response.LessonHourResponse::date).reversed()
                         .thenComparing(az.fitnest.catalog.dto.response.LessonHourResponse::timeRange, Comparator.reverseOrder()))
                 .collect(Collectors.toList());
 
         return paginateLessonHours(allHours, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public az.fitnest.catalog.dto.response.LessonHourReservationCountsResponse getLessonHourReservationCounts(Long lessonHourId) {
+        trainerReservationDateRepository.findById(lessonHourId).ifPresent(session -> {
+            Long gymId = session.getGymId();
+            if (gymId != null) {
+                verifyGymOwnership(gymId);
+            }
+        });
+
+        long pending = reservationRepository.countByReservationDateIdAndStatus(lessonHourId, az.fitnest.catalog.model.enums.ReservationStatus.PENDING);
+        long approved = reservationRepository.countByReservationDateIdAndStatus(lessonHourId, az.fitnest.catalog.model.enums.ReservationStatus.APPROVED);
+
+        return new az.fitnest.catalog.dto.response.LessonHourReservationCountsResponse(pending, approved);
     }
 
     private az.fitnest.catalog.dto.response.LessonHourResponse toLessonHourResponse(az.fitnest.catalog.model.entity.TrainerReservationDate trd) {

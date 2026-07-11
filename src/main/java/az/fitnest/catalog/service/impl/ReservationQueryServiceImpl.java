@@ -163,6 +163,9 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
         List<TrainerReservationDate> filteredSessions = sessions.stream()
                 .filter(session -> {
+                    if (session.getStatus() == az.fitnest.catalog.model.enums.SessionStatus.CANCELLED) {
+                        return false;
+                    }
                     if (lessonTypeId != null && (session.getClassType() == null || !session.getClassType().getId().equals(lessonTypeId))) {
                         return false;
                     }
@@ -277,6 +280,7 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         List<TrainerReservationDate> sessions = sessionRepository.findByGymIdAndClassTypeIdAndDate(gymId, classTypeId, date);
 
         return sessions.stream()
+                .filter(s -> s.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
                 .map(TrainerReservationDate::getTrainer)
                 .distinct()
                 .collect(Collectors.toList());
@@ -284,7 +288,9 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
 
     @Transactional(readOnly = true)
     public List<TrainerReservationDate> getSessions(Long gymId, Long classTypeId, Long trainerId, LocalDate date) {
-        return sessionRepository.findByGymIdAndClassTypeIdAndTrainerIdAndDate(gymId, classTypeId, trainerId, date);
+        return sessionRepository.findByGymIdAndClassTypeIdAndTrainerIdAndDate(gymId, classTypeId, trainerId, date).stream()
+                .filter(s -> s.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -446,7 +452,9 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
             throw new BadRequestException("TRAINER_NOT_IN_GYM", "error.trainer_not_in_gym");
         }
 
-        List<TrainerReservationDate> slots = sessionRepository.findByTrainerIdAndDate(trainerId, date);
+        List<TrainerReservationDate> slots = sessionRepository.findByTrainerIdAndDate(trainerId, date).stream()
+                .filter(slot -> slot.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED)
+                .collect(Collectors.toList());
 
         LocalDateTime now = LocalDateTime.now(clock);
 

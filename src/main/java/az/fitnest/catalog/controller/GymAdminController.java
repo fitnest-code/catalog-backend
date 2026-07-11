@@ -734,6 +734,13 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Dərs saatına aid rezervasiya saylarını alın", description = "Dərs saatına aid təsdiq olunmuş və gözləmədə olan rezervasiya saylarını qaytarır.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
+    @GetMapping("/v1/admin/gyms/lesson-hours/{lessonHourId}/reservation-counts")
+    public ResponseEntity<az.fitnest.catalog.dto.response.LessonHourReservationCountsResponse> getLessonHourReservationCounts(@PathVariable Long lessonHourId) {
+        return ResponseEntity.ok(gymReadService.getLessonHourReservationCounts(lessonHourId));
+    }
+
     // --- V2 Endpoints ---
 
 @Operation(summary = "Tam idman zalı yaradın (V2, Birdəfəlik)", description = "Bütün 7 addımı birləşdirərək idman zalını V2 ilə bir dəfəyə yaradır.")

@@ -1515,8 +1515,35 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (gymId != null) {
                 verifyGymOwnership(gymId);
             }
-            trainerReservationDateRepository.deleteById(lessonHourId);
-            if (gymId != null && trainerReservationDateRepository.findByGymId(gymId).isEmpty()) {
+
+            List<az.fitnest.catalog.model.entity.Reservation> reservations = reservationRepository.findByReservationDateId(lessonHourId);
+            List<az.fitnest.catalog.model.entity.Reservation> activeReservations = reservations.stream()
+                    .filter(r -> r.getStatus() == az.fitnest.catalog.model.enums.ReservationStatus.APPROVED
+                            || r.getStatus() == az.fitnest.catalog.model.enums.ReservationStatus.PENDING)
+                    .collect(Collectors.toList());
+
+            if (!activeReservations.isEmpty()) {
+                for (az.fitnest.catalog.model.entity.Reservation r : activeReservations) {
+                    r.setStatus(az.fitnest.catalog.model.enums.ReservationStatus.CANCELLED);
+                    r.setCancelledAt(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku")));
+                    reservationRepository.save(r);
+                    sendLessonHourCancellationNotification(r, session);
+                }
+                session.setStatus(az.fitnest.catalog.model.enums.SessionStatus.CANCELLED);
+                trainerReservationDateRepository.save(session);
+            } else {
+                if (!reservations.isEmpty()) {
+                    session.setStatus(az.fitnest.catalog.model.enums.SessionStatus.CANCELLED);
+                    trainerReservationDateRepository.save(session);
+                } else {
+                    trainerReservationDateRepository.deleteById(lessonHourId);
+                }
+            }
+
+            boolean hasActiveSessions = gymId != null && trainerReservationDateRepository.findByGymId(gymId).stream()
+                    .anyMatch(s -> s.getStatus() != az.fitnest.catalog.model.enums.SessionStatus.CANCELLED);
+
+            if (gymId != null && !hasActiveSessions) {
                 gymRepository.findById(gymId).ifPresent(gym -> {
                     if (Boolean.TRUE.equals(gym.getIsReservationEnabled())) {
                         gym.setIsReservationEnabled(false);
@@ -1525,6 +1552,75 @@ public class GymWriteServiceImpl implements GymWriteService {
                 });
             }
         });
+    }
+
+    private void sendLessonHourCancellationNotification(az.fitnest.catalog.model.entity.Reservation r, az.fitnest.catalog.model.entity.TrainerReservationDate session) {
+        if (r == null || r.getUserId() == null) {
+            return;
+        }
+        final Long userId = r.getUserId();
+        final String gymName = r.getGym() != null ? r.getGym().getName() : "";
+        
+        String userLang = "AZ";
+        try {
+            az.fitnest.catalog.client.CachedUser user = userServiceGrpcClient.getUserById(userId);
+            if (user != null && user.getLanguage() != null && !user.getLanguage().isEmpty()) {
+                userLang = user.getLanguage().toUpperCase();
+            }
+        } catch (Exception e) {
+            // Ignored
+        }
+
+        java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        
+        String dateStr = session.getDate() != null ? session.getDate().format(dateFormatter) : "";
+        String startTimeStr = session.getStartTime() != null ? session.getStartTime().format(timeFormatter) : "";
+        String endTimeStr = session.getEndTime() != null ? session.getEndTime().format(timeFormatter) : "";
+
+        final String title;
+        final String body;
+
+        switch (userLang) {
+            case "EN":
+                title = "Lesson hour cancelled";
+                body = String.format("The lesson hour at %s on %s between %s-%s has been cancelled, please sign up for another hour", gymName, dateStr, startTimeStr, endTimeStr);
+                break;
+            case "RU":
+                title = "Занятие отменено";
+                body = String.format("Занятие в %s %s с %s по %s отменено, пожалуйста, запишитесь на другое время", gymName, dateStr, startTimeStr, endTimeStr);
+                break;
+            case "AZ":
+            default:
+                title = "Dərs saatı ləğv edildi";
+                body = String.format("%s -da %s tarixində %s-%s arası dərs saatı ləğv edilmişdir,xahiş edirik digər saatlardan biri üçün məşqə yazılasınız", gymName, dateStr, startTimeStr, endTimeStr);
+                break;
+        }
+
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        java.util.concurrent.CompletableFuture.runAsync(() -> {
+                            try {
+                                notificationsServiceClient.sendPushNotification(userId, title, body);
+                            } catch (Exception e) {
+                                // Ignore
+                            }
+                        });
+                    }
+                }
+            );
+        } else {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    notificationsServiceClient.sendPushNotification(userId, title, body);
+                } catch (Exception e) {
+                    // Ignore
+                }
+            });
+        }
     }
 
     @Override
