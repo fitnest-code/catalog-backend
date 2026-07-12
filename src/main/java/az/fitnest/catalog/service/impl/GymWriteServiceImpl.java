@@ -1474,6 +1474,9 @@ public class GymWriteServiceImpl implements GymWriteService {
     @Transactional
     public void addLessonHourAdmin(Long gymId, az.fitnest.catalog.dto.request.LessonHourRequest request) {
         verifyGymOwnership(gymId);
+        if (request.lessonTypeId() == null) {
+            throw new BadRequestException("LESSON_TYPE_REQUIRED", "error.lesson_type_required");
+        }
         Trainer trainer = null;
         if (request.trainerId() != null) {
             trainer = trainerRepository.findById(request.trainerId())

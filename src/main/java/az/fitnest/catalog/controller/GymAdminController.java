@@ -721,7 +721,7 @@ public class GymAdminController {
     @Operation(summary = "Yeni dərs saatı əlavə edin", description = "İdman zalına yeni dərs saatı əlavə edir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @PostMapping("/v1/admin/gyms/{id}/lesson-hours")
-    public ResponseEntity<Void> addLessonHour(@PathVariable Long id, @RequestBody az.fitnest.catalog.dto.request.LessonHourRequest request) {
+    public ResponseEntity<Void> addLessonHour(@PathVariable Long id, @jakarta.validation.Valid @RequestBody az.fitnest.catalog.dto.request.LessonHourRequest request) {
         gymWriteService.addLessonHourAdmin(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

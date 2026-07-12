@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 public record LessonHourRequest(
     Long trainerId,
-    Long lessonTypeId,
+    @NotNull Long lessonTypeId,
     @NotNull LocalDate date,
     @NotNull LocalTime startTime,
     @NotNull LocalTime endTime,
