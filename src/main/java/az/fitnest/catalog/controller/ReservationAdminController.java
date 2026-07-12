@@ -108,7 +108,7 @@ public class ReservationAdminController {
 
     @Operation(summary = "İdman zalının bütün dərs növlərini əldə edin",
             description = "Zalın kateqoriyalarına aid bütün dərs növlərini qaytarır. Dərs növləri kateqoriya səviyyəsində idarə olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/gyms/{id}/lesson-types")
     public ResponseEntity<List<GymLessonTypeResponse>> getLessonTypes(@PathVariable("id") Long gymId) {
         return ResponseEntity.ok(gymLessonTypeService.getLessonTypes(gymId));

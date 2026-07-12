@@ -274,7 +274,7 @@ public class GymAdminController {
     }
 
     @Operation(summary = "İdman zalı məşqçilərini əldə edin", description = "İdman zalında çalışan məşqçilərin səhifələnmiş siyahısını qaytarır. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/v1/admin/gyms/{id}/trainers")
     public ResponseEntity<PaginatedResponse<GymTrainerResponse>> getTrainers(
             @PathVariable("id") Long gymId,
@@ -854,7 +854,7 @@ public class GymAdminController {
     }
 
     @Operation(summary = "İdman zalı məşqçilərini əldə edin (V2)", description = "İdman zalında çalışan məşqçilərin siyahısını kateqoriya ID-ləri ilə birlikdə qaytarır. ADMIN rolu tələb olunur.")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/v2/admin/gyms/{id}/trainers")
     public ResponseEntity<PaginatedResponse<GymTrainerResponseV2>> getTrainersV2(
             @PathVariable("id") Long gymId,
