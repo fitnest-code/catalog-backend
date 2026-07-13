@@ -14,6 +14,8 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
     void deleteByGymId(Long gymId);
     void deleteByUserId(Long userId);
     boolean existsByGymId(Long gymId);
+    boolean existsByUserIdAndGymIdAndStatusInAndScanDateBetween(
+            Long userId, Long gymId, List<String> statuses, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     long countByStatusInAndScanDateBetween(java.util.List<String> statuses, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
