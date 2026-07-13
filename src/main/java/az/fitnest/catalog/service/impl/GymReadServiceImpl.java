@@ -86,8 +86,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @org.springframework.context.annotation.Lazy
     private GymReadServiceImpl self;
 
-    private final java.util.Map<Long, List<Long>> eligibleSubscriptionIdsCache = new java.util.concurrent.ConcurrentHashMap<>();
-    private final java.util.Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final com.github.benmanes.caffeine.cache.Cache<Long, List<Long>> eligibleSubscriptionIdsCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(java.time.Duration.ofMinutes(30))
+            .build();
+    private final com.github.benmanes.caffeine.cache.Cache<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+            .maximumSize(10000)
+            .expireAfterWrite(java.time.Duration.ofHours(2))
+            .build();
 
     private String resolveUserLanguage() {
         Long userId = UserContext.getCurrentUserId();
@@ -560,24 +566,21 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .toList();
 
         List<Long> uncachedPackageIds = allPackageIds.stream()
-                .filter(id -> !packageInfoCache.containsKey(id))
+                .filter(id -> !packageInfoCache.asMap().containsKey(id))
                 .toList();
         if (!uncachedPackageIds.isEmpty()) {
             try {
-                if (packageInfoCache.size() >= 10000) {
-                    packageInfoCache.clear();
-                }
                 List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
                 for (var info : newInfos) {
-                    packageInfoCache.put(info.getPackageId(), info);
+                    packageInfoCache.asMap().put(info.getPackageId(), info);
                 }
             } catch (Exception e) {
             }
         }
 
         Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = allPackageIds.stream()
-                .filter(packageInfoCache::containsKey)
-                .collect(Collectors.toMap(id -> id, packageInfoCache::get));
+                .filter(packageInfoCache.asMap()::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
         final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
 
         Map<String, String> translationLookup = fetchTranslationsInBulk(gymPage.getContent(), userLanguage);
@@ -771,24 +774,21 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .toList();
 
         List<Long> uncachedPackageIds = pagePackageIds.stream()
-                .filter(id -> !packageInfoCache.containsKey(id))
+                .filter(id -> !packageInfoCache.asMap().containsKey(id))
                 .toList();
         if (!uncachedPackageIds.isEmpty()) {
             try {
-                if (packageInfoCache.size() >= 10000) {
-                    packageInfoCache.clear();
-                }
                 List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
                 for (var info : newInfos) {
-                    packageInfoCache.put(info.getPackageId(), info);
+                    packageInfoCache.asMap().put(info.getPackageId(), info);
                 }
             } catch (Exception e) {
             }
         }
 
         Map<Long, az.fitnest.order.grpc.PackageNameInfo> manualPackageMap = pagePackageIds.stream()
-                .filter(packageInfoCache::containsKey)
-                .collect(Collectors.toMap(id -> id, packageInfoCache::get));
+                .filter(packageInfoCache.asMap()::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
 
         Map<String, String> translationLookup = fetchTranslationsInBulk(pageGyms, userLanguage);
 
@@ -1015,16 +1015,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .toList();
 
         List<Long> uncachedPackageIds = packageIds.stream()
-                .filter(id -> !packageInfoCache.containsKey(id))
+                .filter(id -> !packageInfoCache.asMap().containsKey(id))
                 .toList();
         if (!uncachedPackageIds.isEmpty()) {
             try {
-                if (packageInfoCache.size() >= 10000) {
-                    packageInfoCache.clear();
-                }
                 List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
                 for (var info : newInfos) {
-                    packageInfoCache.put(info.getPackageId(), info);
+                    packageInfoCache.asMap().put(info.getPackageId(), info);
                 }
             } catch (Exception e) {
             }
@@ -1035,8 +1032,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     Long packageId = (Long) row[0];
                     Long count = (Long) row[1];
                     String packageName = "UNKNOWN";
-                    if (packageId != null && packageInfoCache.containsKey(packageId)) {
-                        packageName = packageInfoCache.get(packageId).getName();
+                    if (packageId != null && packageInfoCache.asMap().containsKey(packageId)) {
+                        packageName = packageInfoCache.asMap().get(packageId).getName();
                     }
                     return new GymSubscriptionCountResponse(
                             packageId,
@@ -1767,10 +1764,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (subscriptionId == null) {
             return java.util.Collections.emptyList();
         }
-        if (eligibleSubscriptionIdsCache.size() >= 10000) {
-            eligibleSubscriptionIdsCache.clear();
-        }
-        return eligibleSubscriptionIdsCache.computeIfAbsent(subscriptionId, id -> {
+        return eligibleSubscriptionIdsCache.get(subscriptionId, id -> {
             try {
                 List<az.fitnest.order.grpc.SubscriptionPackageInfo> allPlans = orderServiceGrpcClient.getGymPlans();
                 String userPackageName = null;
@@ -2147,24 +2141,21 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .toList();
 
         List<Long> uncachedPackageIds = allPackageIds.stream()
-                .filter(id -> !packageInfoCache.containsKey(id))
+                .filter(id -> !packageInfoCache.asMap().containsKey(id))
                 .toList();
         if (!uncachedPackageIds.isEmpty()) {
             try {
-                if (packageInfoCache.size() >= 10000) {
-                    packageInfoCache.clear();
-                }
                 List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
                 for (var info : newInfos) {
-                    packageInfoCache.put(info.getPackageId(), info);
+                    packageInfoCache.asMap().put(info.getPackageId(), info);
                 }
             } catch (Exception e) {
             }
         }
 
         Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = allPackageIds.stream()
-                .filter(packageInfoCache::containsKey)
-                .collect(Collectors.toMap(id -> id, packageInfoCache::get));
+                .filter(packageInfoCache.asMap()::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
         final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
 
         Map<String, String> translationLookup = fetchTranslationsInBulk(gymPage.getContent(), userLanguage);
