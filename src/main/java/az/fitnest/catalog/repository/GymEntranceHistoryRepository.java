@@ -24,4 +24,7 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
             "WHERE h.status IN ('ELIGIBLE', 'Uğurlu') AND h.scanDate BETWEEN :start AND :end " +
             "GROUP BY h.gymId, h.packageId")
     List<Object[]> getGymPaymentsReport(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start, @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
+
+    void deleteByGymIdAndPackageId(Long gymId, Long packageId);
+    void deleteByGymIdAndPackageIdIsNull(Long gymId);
 }

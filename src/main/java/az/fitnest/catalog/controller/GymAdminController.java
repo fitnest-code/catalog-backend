@@ -348,6 +348,16 @@ public class GymAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Konkret idman zalı və paketin giriş tarixçəsini silin", description = "Konkret idman zalı və paket üzrə giriş tarixçəsini silir. ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/v1/admin/gyms/{id}/packages/{packageId}/history")
+    public ResponseEntity<Void> deleteGymEntranceHistory(
+            @PathVariable("id") Long gymId,
+            @PathVariable("packageId") Long packageId) {
+        gymWriteService.deleteGymEntranceHistory(gymId, packageId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "İdman zalı giriş tarixçəsini alın", description = "İdman zalı üçün bütün giriş cəhdlərinin (uğurlu/uğursuz) siyahısını gətirir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/v1/admin/gyms/{id}/history")

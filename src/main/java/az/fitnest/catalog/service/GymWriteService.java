@@ -51,6 +51,8 @@ public interface GymWriteService {
 
     void deleteGymEntranceHistory();
 
+    void deleteGymEntranceHistory(Long gymId, Long packageId);
+
     void deleteAllGymSubscriptions(Long gymId);
 
     void deleteGymSubscriptionById(Long gymId, Long subscriptionId);

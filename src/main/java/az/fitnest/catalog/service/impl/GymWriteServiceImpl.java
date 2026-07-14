@@ -599,6 +599,16 @@ public class GymWriteServiceImpl implements GymWriteService {
         gymEntranceHistoryRepository.deleteAllInBatch();
     }
 
+    @Override
+    @Transactional
+    public void deleteGymEntranceHistory(Long gymId, Long packageId) {
+        if (packageId == null || packageId == 0) {
+            gymEntranceHistoryRepository.deleteByGymIdAndPackageIdIsNull(gymId);
+        } else {
+            gymEntranceHistoryRepository.deleteByGymIdAndPackageId(gymId, packageId);
+        }
+    }
+
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteAllGymSubscriptions(Long gymId) {

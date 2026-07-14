@@ -146,7 +146,7 @@ public class GymReportController {
                 }
             }
 
-            responseList.add(new GymPaymentReportItem(idCounter++, gymName, count, subscriptionName, sumAmount, sumAmount));
+            responseList.add(new GymPaymentReportItem(idCounter++, gymId, packageId, gymName, count, subscriptionName, sumAmount, sumAmount));
         }
 
         return ResponseEntity.ok(responseList);
