@@ -439,11 +439,10 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         }
 
         if (allowed && !isTestUser) {
-            java.time.LocalDate todayBaku = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
-            java.time.LocalDateTime startOfDay = todayBaku.atStartOfDay();
-            java.time.LocalDateTime endOfDay = todayBaku.atTime(java.time.LocalTime.MAX);
+            java.time.LocalDateTime nowBaku = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Baku"));
+            java.time.LocalDateTime twoHoursAgo = nowBaku.minusHours(2);
             boolean alreadyScanned = gymEntranceHistoryRepository.existsByUserIdAndGymIdAndStatusInAndScanDateBetween(
-                    userId, gymId, java.util.List.of("ELIGIBLE", "Uğurlu"), startOfDay, endOfDay);
+                    userId, gymId, java.util.List.of("ELIGIBLE", "Uğurlu"), twoHoursAgo, nowBaku);
             if (alreadyScanned) {
                 allowed = false;
                 reason = "ALREADY_SCANNED_TODAY";
