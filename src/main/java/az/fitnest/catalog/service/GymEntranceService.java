@@ -21,4 +21,6 @@ public interface GymEntranceService {
     List<AdminQrScanHistoryResponse> getUserQrScanHistoryAdmin(Long userId, String query, String sort);
     
     GymAnalyticsResponse getGymAnalytics(Long gymId, LocalDateTime startDate, LocalDateTime endDate, String status, String sort, int page, int pageSize);
+
+    void updateGymAnalyticsOverrides(Long gymId, az.fitnest.catalog.dto.request.UpdateGymAnalyticsRequest request);
 }

@@ -58,6 +58,7 @@ public class GymAdminController {
     private final GymReviewService gymReviewService;
     private final GymTrainerService gymTrainerService;
     private final GymReadService gymReadService;
+    private final az.fitnest.catalog.service.GymEntranceService gymEntranceService;
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -377,6 +378,16 @@ public class GymAdminController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
         return ResponseEntity.ok(gymReadService.getGymAnalytics(gymId, startDate, endDate, status, sort, page, pageSize));
+    }
+
+    @Operation(summary = "İdman zalı analitika xülasəsini əl ilə yeniləyin", description = "İdman zalının ümumi gəlir, uğurlu və uğursuz giriş göstəricilərini əl ilə təyin edir (override). ADMIN rolu tələb olunur.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/v1/admin/gyms/{id}/analytics")
+    public ResponseEntity<az.fitnest.catalog.dto.response.GymAnalyticsResponse> updateGymAnalytics(
+            @PathVariable("id") Long gymId,
+            @org.springframework.web.bind.annotation.RequestBody @jakarta.validation.Valid az.fitnest.catalog.dto.request.UpdateGymAnalyticsRequest request) {
+        gymEntranceService.updateGymAnalyticsOverrides(gymId, request);
+        return ResponseEntity.ok(gymReadService.getGymAnalytics(gymId, null, null, null, "date_desc", 1, 10));
     }
 
     @Operation(summary = "İdman zallarını siyahısını alın", description = "İdman zallarının adını, ünvanını, sahibini və statusunu qaytarır. Axtarış və sıralama dəstəklənir.")

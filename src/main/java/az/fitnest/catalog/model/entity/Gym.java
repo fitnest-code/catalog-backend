@@ -31,6 +31,15 @@ public class Gym
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    // Admin manual overrides for the analytics summary cards. When non-null, the value
+    // replaces the figure computed from gym entrance history.
+    @Column(name = "analytics_profit_override")
+    private Double analyticsProfitOverride;
+    @Column(name = "analytics_successful_override")
+    private Long analyticsSuccessfulScansOverride;
+    @Column(name = "analytics_failed_override")
+    private Long analyticsFailedScansOverride;
+
     @Column(name = "cover_image_url")
     private String coverImageUrl;
     @Column(name = "qr_code_url")

@@ -819,11 +819,48 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .pageSize(pageSize)
                 .build();
 
+        // Apply admin manual overrides for the summary cards when present.
+        Gym gym = gymRepository.findById(gymId).orElse(null);
+        double effectiveProfit = totalProfit;
+        long effectiveSuccessful = successfulScans;
+        long effectiveFailed = failedScans;
+        if (gym != null) {
+            if (gym.getAnalyticsProfitOverride() != null) {
+                effectiveProfit = gym.getAnalyticsProfitOverride();
+            }
+            if (gym.getAnalyticsSuccessfulScansOverride() != null) {
+                effectiveSuccessful = gym.getAnalyticsSuccessfulScansOverride();
+            }
+            if (gym.getAnalyticsFailedScansOverride() != null) {
+                effectiveFailed = gym.getAnalyticsFailedScansOverride();
+            }
+        }
+
         return GymAnalyticsResponse.builder()
-                .totalProfit(totalProfit)
-                .successfulScans(successfulScans)
-                .failedScans(failedScans)
+                .totalProfit(effectiveProfit)
+                .successfulScans(effectiveSuccessful)
+                .failedScans(effectiveFailed)
                 .history(paginatedResponse)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void updateGymAnalyticsOverrides(Long gymId, az.fitnest.catalog.dto.request.UpdateGymAnalyticsRequest request) {
+        verifyGymOwnership(gymId);
+        Gym gym = gymRepository.findById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+
+        if (request.totalProfit() != null) {
+            gym.setAnalyticsProfitOverride(request.totalProfit());
+        }
+        if (request.successfulScans() != null) {
+            gym.setAnalyticsSuccessfulScansOverride(request.successfulScans());
+        }
+        if (request.failedScans() != null) {
+            gym.setAnalyticsFailedScansOverride(request.failedScans());
+        }
+
+        gymRepository.save(gym);
     }
 }
