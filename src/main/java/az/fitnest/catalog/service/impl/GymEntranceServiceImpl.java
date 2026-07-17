@@ -399,11 +399,11 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                         checkHierarchySuccess = true;
                     } else {
                         GymSubscription bestSub = null;
-                        int bestRank = -1;
+                        int bestRank = Integer.MAX_VALUE;
                         for (var sub : eligibleSubscriptions) {
                             String name = packageNamesMap.get(sub.getPackageId());
                             int rank = getPackageRank(name);
-                            if (rank > bestRank) {
+                            if (rank < bestRank) {
                                 bestRank = rank;
                                 bestSub = sub;
                             }
