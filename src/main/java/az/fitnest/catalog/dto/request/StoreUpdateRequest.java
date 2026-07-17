@@ -16,7 +16,6 @@ import java.util.Optional;
 public class StoreUpdateRequest {
 
     @Schema(description = "Mağazanın adı", example = "FitLife Market")
-    @Size(min = 2, max = 100, message = "Mağaza adı 2-100 simvol arasında olmalıdır")
     private Optional<String> name = Optional.empty();
 
     @Schema(description = "Mağazanın coğrafi enliyi", example = "40.4093")
@@ -28,7 +27,6 @@ public class StoreUpdateRequest {
     @Schema(description = "Mağazanın əlaqə nömrəsi", example = "+994501234567")
     private Optional<String> phone = Optional.empty();
 
-    @Email(message = "Düzgün email formatı daxil edin")
     @Schema(description = "Mağazanın email ünvanı", example = "market@example.com")
     private Optional<String> email = Optional.empty();
 
@@ -56,7 +54,7 @@ public class StoreUpdateRequest {
     private Optional<List<DiscountItemRequest>> discounts = Optional.empty();
 
     @JsonSetter("name")
-    public void setName(String name) {
+    public void setName(@Size(min = 2, max = 100, message = "Mağaza adı 2-100 simvol arasında olmalıdır") String name) {
         this.name = Optional.ofNullable(name);
     }
 
@@ -76,7 +74,7 @@ public class StoreUpdateRequest {
     }
 
     @JsonSetter("email")
-    public void setEmail(String email) {
+    public void setEmail(@Email(message = "Düzgün email formatı daxil edin") String email) {
         this.email = Optional.ofNullable(email);
     }
 
