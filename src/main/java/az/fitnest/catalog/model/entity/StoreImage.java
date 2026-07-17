@@ -48,4 +48,25 @@ public class StoreImage
     public void setUrl(String url) {
         this.url = url;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StoreImage)) return false;
+        StoreImage that = (StoreImage) o;
+        if (this.getId() != null && that.getId() != null) {
+            return java.util.Objects.equals(this.getId(), that.getId());
+        }
+        return java.util.Objects.equals(type, that.type) &&
+               java.util.Objects.equals(title, that.title) &&
+               java.util.Objects.equals(url, that.url);
+    }
+
+    @Override
+    public int hashCode() {
+        if (this.getId() != null) {
+            return java.util.Objects.hashCode(this.getId());
+        }
+        return java.util.Objects.hash(type, title, url);
+    }
 }

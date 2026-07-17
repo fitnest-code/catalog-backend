@@ -48,4 +48,25 @@ public class StoreDiscount extends BaseEntity {
     public void setAppliesTo(String a) {
         this.appliesTo = a;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof StoreDiscount)) return false;
+        StoreDiscount that = (StoreDiscount) o;
+        if (this.getId() != null && that.getId() != null) {
+            return java.util.Objects.equals(this.getId(), that.getId());
+        }
+        return java.util.Objects.equals(packageId, that.packageId) &&
+               java.util.Objects.equals(percent, that.percent) &&
+               java.util.Objects.equals(appliesTo, that.appliesTo);
+    }
+
+    @Override
+    public int hashCode() {
+        if (this.getId() != null) {
+            return java.util.Objects.hashCode(this.getId());
+        }
+        return java.util.Objects.hash(packageId, percent, appliesTo);
+    }
 }
