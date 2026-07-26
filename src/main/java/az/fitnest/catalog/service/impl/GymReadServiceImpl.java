@@ -504,10 +504,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
 
         boolean hasSubscriptionFilter = (subscriptionId != null);
-        List<Long> subscriptionIds = getEligibleSubscriptionIds(subscriptionId);
-        if (subscriptionIds.isEmpty()) {
-            subscriptionIds = java.util.Collections.singletonList(-1L);
-        }
+        List<Long> subscriptionIds = hasSubscriptionFilter ? java.util.Collections.singletonList(subscriptionId) : java.util.Collections.singletonList(-1L);
 
         if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
             Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
@@ -2083,7 +2080,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
 
             boolean hasSubscriptionFilter = (subscriptionId != null);
-            List<Long> subscriptionIds = getEligibleSubscriptionIds(subscriptionId);
+            List<Long> subscriptionIds = hasSubscriptionFilter ? java.util.Collections.singletonList(subscriptionId) : java.util.Collections.singletonList(-1L);
 
             if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type) || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
                 Pageable distancePageable = PageRequest.of(Math.max(0, page - 1), pageSize);
