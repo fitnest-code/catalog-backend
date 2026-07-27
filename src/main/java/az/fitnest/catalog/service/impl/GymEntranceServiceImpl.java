@@ -247,6 +247,18 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .build();
     }
 
+    /**
+     * Check if a subscription status from the order-backend gRPC service represents an active subscription.
+     * The gRPC response may contain translated status values (e.g. "Aktiv" in AZ, "Активный" in RU)
+     * or special statuses like "last_7_days" or "changed", all of which mean the subscription IS active.
+     * Only "none", "cancelled", "expired" (case-insensitive) mean NOT active.
+     */
+    private boolean isSubscriptionStatusActive(String status) {
+        if (status == null || status.isEmpty()) return false;
+        String lower = status.toLowerCase().trim();
+        return !lower.equals("none") && !lower.equals("cancelled") && !lower.equals("expired");
+    }
+
     @Override
     @Transactional(readOnly = true)
     public boolean checkGymEntranceEligibilitySimple(Object principal) {
@@ -261,10 +273,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
             throw new IllegalStateException("error.subscription_fetch_failed");
         }
         String status = subResp.getSubscriptionStatus();
-        if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")) {
-            return false;
-        }
-        if (!status.equalsIgnoreCase("active")) {
+        if (!isSubscriptionStatusActive(status)) {
             return false;
         }
         int visitLimitRemaining = subResp.getRemainingLimit();
@@ -334,8 +343,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
             try {
                 subResp = orderServiceGrpcClient.getActiveSubscription(userId);
             String subStatus = subResp.getSubscriptionStatus();
-            if (subStatus == null || subStatus.isEmpty() || subStatus.equalsIgnoreCase("none")
-                    || !subStatus.equalsIgnoreCase("active")) {
+            if (!isSubscriptionStatusActive(subStatus)) {
                 allowed = false;
                 reason = "NO_ACTIVE_SUBSCRIPTION";
             } else if (subResp.getRemainingLimit() <= 0) {
@@ -594,8 +602,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
             String status = subResp.getSubscriptionStatus();
-            if (status == null || status.isEmpty() || status.equalsIgnoreCase("none")
-                    || !status.equalsIgnoreCase("active")) {
+            if (!isSubscriptionStatusActive(status)) {
                 return GymEntranceEligibilityResponse.builder()
                         .allowed(false)
                         .status("INELIGIBLE")
