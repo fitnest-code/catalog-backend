@@ -1,9 +1,11 @@
 package az.fitnest.catalog.controller;
 
+import az.fitnest.catalog.dto.response.AppQrReportResponse;
 import az.fitnest.catalog.dto.response.GymPaymentReportItem;
 import az.fitnest.catalog.dto.response.QrScansReportResponse;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.service.AppQrCodeService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,6 +39,14 @@ public class GymReportController {
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymRepository gymRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    private final AppQrCodeService appQrCodeService;
+
+    @Operation(summary = "Tətbiq yükləmə QR kodlarının skan hesabatını gətir (Light & Dark)")
+    @GetMapping("/app-qr-scans")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AppQrReportResponse> getAppQrScansReport() {
+        return ResponseEntity.ok(appQrCodeService.getAppQrReport());
+    }
 
     @Operation(summary = "Ümumi QR giriş sayını gətir")
     @GetMapping("/qr-scans")
