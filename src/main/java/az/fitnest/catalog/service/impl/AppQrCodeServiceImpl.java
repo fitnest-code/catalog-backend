@@ -32,7 +32,7 @@ public class AppQrCodeServiceImpl implements AppQrCodeService {
 
     private final AppQrCodeRepository appQrCodeRepository;
 
-    @Value("${app.public-base-url:https://api.fitnest.az}")
+    @Value("${app.public-base-url:https://api-dev.fitnest.az}")
     private String publicBaseUrl;
 
     @Override

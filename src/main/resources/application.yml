@@ -144,6 +144,7 @@ media:
     url: ${STORAGE_BACKEND_URL:http://storage-backend:8080}
 
 app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:https://api-dev.fitnest.az}
   security:
     internal-token: ${APP_SECURITY_INTERNAL_TOKEN:fitnest-internal-token-2024-secure-v1}
 
