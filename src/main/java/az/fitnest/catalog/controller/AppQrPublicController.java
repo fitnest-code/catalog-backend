@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +14,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/v1/public/app-qr")
 @RequiredArgsConstructor
-@Tag(name = "App QR Public", description = "Public endpoints for mobile app download QR code scanning and image fetching")
+@Tag(name = "App QR Public", description = "Public endpoints for mobile app download QR code scanning")
 public class AppQrPublicController {
 
     private final AppQrCodeService appQrCodeService;
@@ -32,14 +31,5 @@ public class AppQrPublicController {
                 .status(HttpStatus.FOUND)
                 .location(URI.create(targetUrl))
                 .build();
-    }
-
-    @Operation(summary = "App QR koda uyğun PNG şəkli qaytarır")
-    @GetMapping(value = "/image/{mode}", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> getAppQrCodeImage(@PathVariable String mode) {
-        byte[] imageBytes = appQrCodeService.getQrCodeImageBytes(mode);
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_PNG)
-                .body(imageBytes);
     }
 }
