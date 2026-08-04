@@ -4,19 +4,17 @@ import az.fitnest.catalog.dto.response.AppQrReportResponse;
 import az.fitnest.catalog.model.entity.AppQrCode;
 import az.fitnest.catalog.repository.AppQrCodeRepository;
 import az.fitnest.catalog.service.AppQrCodeService;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.client.j2se.MatrixToImageConfig;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +23,12 @@ public class AppQrCodeServiceImpl implements AppQrCodeService {
 
     public static final String APPLE_STORE_URL = "https://apps.apple.com/az/app/fitnest-gym-health/id6768059768";
     public static final String GOOGLE_PLAY_URL = "https://play.google.com/store/apps/details?id=az.fitnest&hl=en&pli=1";
+
+    private static final String LIGHT_QR_RESOURCE = "static/qr/app_qr_light.png";
+    private static final String DARK_QR_RESOURCE = "static/qr/app_qr_dark.png";
+
+    /** Cache the static QR bytes in memory so the file is read only once. */
+    private final Map<String, byte[]> qrImageCache = new ConcurrentHashMap<>();
 
     private final AppQrCodeRepository appQrCodeRepository;
 
@@ -66,28 +70,17 @@ public class AppQrCodeServiceImpl implements AppQrCodeService {
     @Override
     public byte[] getQrCodeImageBytes(String mode) {
         String normalizedMode = normalizeMode(mode);
-        String redirectUrl = publicBaseUrl + "/api/v1/public/app-qr/scan/" + normalizedMode.toLowerCase(Locale.ROOT);
+        String resourcePath = "DARK".equals(normalizedMode) ? DARK_QR_RESOURCE : LIGHT_QR_RESOURCE;
 
-        try {
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(redirectUrl, BarcodeFormat.QR_CODE, 500, 500);
-
-            // Light mode: dark blue on white; Dark mode: cyan (#00DBDB) on dark navy (#14234B)
-            MatrixToImageConfig config;
-            if ("DARK".equals(normalizedMode)) {
-                config = new MatrixToImageConfig(0xFF00DBDB, 0xFF14234B);
-            } else {
-                config = new MatrixToImageConfig(0xFF14234B, 0xFFFFFFFF);
+        return qrImageCache.computeIfAbsent(normalizedMode, k -> {
+            try {
+                ClassPathResource resource = new ClassPathResource(resourcePath);
+                return resource.getInputStream().readAllBytes();
+            } catch (IOException e) {
+                log.error("Failed to load static QR code image from classpath: {}", resourcePath, e);
+                throw new RuntimeException("Could not load QR code image for mode: " + normalizedMode, e);
             }
-
-            try (ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream()) {
-                MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream, config);
-                return pngOutputStream.toByteArray();
-            }
-        } catch (Exception e) {
-            log.error("Failed to generate QR code image for mode: {}", normalizedMode, e);
-            throw new RuntimeException("Could not generate QR code image", e);
-        }
+        });
     }
 
     private String normalizeMode(String mode) {
@@ -102,7 +95,7 @@ public class AppQrCodeServiceImpl implements AppQrCodeService {
         }
 
         String uaLower = userAgent.toLowerCase(Locale.ROOT);
-        if (uaLower.contains("iphone") || uaLower.contains("ipad") || uaLower.contains("ipod") 
+        if (uaLower.contains("iphone") || uaLower.contains("ipad") || uaLower.contains("ipod")
                 || uaLower.contains("macintosh") || uaLower.contains("os x") || uaLower.contains("ios")) {
             return APPLE_STORE_URL;
         }
