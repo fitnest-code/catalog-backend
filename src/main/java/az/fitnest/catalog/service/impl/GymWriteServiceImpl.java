@@ -183,6 +183,9 @@ public class GymWriteServiceImpl implements GymWriteService {
                     @Override
                     public void afterCommit() {
                         gymQrCodeService.generateAndSaveQrCode(saved.getId());
+                        if (saved.getStatus() == GymStatus.ACTIVE) {
+                            notifyUsersAboutNewActiveGym(saved.getId(), saved.getName());
+                        }
                     }
                 }
         );
@@ -1243,6 +1246,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         // Phase 4: Post-commit actions
         gymQrCodeService.generateAndSaveQrCode(gymId);
+        notifyUsersAboutNewActiveGym(gymId, request.name());
 
         return gymId;
     }
@@ -1321,6 +1325,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setCreationStep(7);
         gymRepository.save(gym);
         gymQrCodeService.generateAndSaveQrCode(gym.getId());
+        notifyUsersAboutNewActiveGym(gym.getId(), gym.getName());
     }
 
     private void validateStep(Gym gym, int requiredStep) {
@@ -1633,6 +1638,66 @@ public class GymWriteServiceImpl implements GymWriteService {
                     // Ignore
                 }
             });
+        }
+    }
+
+    /**
+     * FR-27 / BR-17: After a new gym becomes ACTIVE, notify all active app users
+     * with title/body localized to each user's language preference.
+     */
+    private void notifyUsersAboutNewActiveGym(Long gymId, String gymName) {
+        if (gymId == null) {
+            return;
+        }
+        final String safeGymName = gymName != null ? gymName : "";
+        final String gymIdStr = gymId.toString();
+
+        final String azName = safeGymName;
+        String enName = translationService.getTranslatedValue("GYM", gymIdStr, "name", "EN");
+        String ruName = translationService.getTranslatedValue("GYM", gymIdStr, "name", "RU");
+        if (enName == null || enName.isBlank()) {
+            enName = safeGymName;
+        }
+        if (ruName == null || ruName.isBlank()) {
+            ruName = safeGymName;
+        }
+
+        final Map<String, NotificationsServiceGrpcClient.TitleBody> contents = Map.of(
+                "AZ", new NotificationsServiceGrpcClient.TitleBody(
+                        "Yeni idman zalı əlavə edildi",
+                        String.format("Yeni tərəfdaşımız %s artıq FitNest-dədir. Ətraflı məlumat üçün toxunun.", azName)),
+                "EN", new NotificationsServiceGrpcClient.TitleBody(
+                        "New gym added",
+                        String.format("Our new partner %s is now on FitNest. Tap to learn more.", enName)),
+                "RU", new NotificationsServiceGrpcClient.TitleBody(
+                        "Добавлен новый зал",
+                        String.format("Наш новый партнёр %s теперь в FitNest. Нажмите, чтобы узнать больше.", ruName))
+        );
+
+        final Map<String, String> data = Map.of(
+                "type", "NEW_GYM",
+                "gymId", gymIdStr
+        );
+
+        Runnable send = () -> {
+            try {
+                notificationsServiceClient.broadcastLocalizedPushNotification(contents, data);
+            } catch (Exception e) {
+                // Ignore — notification failures must not affect gym creation
+            }
+        };
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            CompletableFuture.runAsync(send);
+                        }
+                    }
+            );
+        } else {
+            CompletableFuture.runAsync(send);
         }
     }
 
@@ -2566,6 +2631,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         });
 
         gymQrCodeService.generateAndSaveQrCode(gymId);
+        notifyUsersAboutNewActiveGym(gymId, request.name());
 
         return gymId;
     }
