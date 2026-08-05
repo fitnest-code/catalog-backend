@@ -1,15 +1,13 @@
 package az.fitnest.catalog.client;
 
-import az.fitnest.notifications.grpc.BroadcastLocalizedPushRequest;
-import az.fitnest.notifications.grpc.LocalizedPushContent;
 import az.fitnest.notifications.grpc.NotificationsServiceGrpc;
+import az.fitnest.notifications.grpc.NotifyNewGymRequest;
 import az.fitnest.notifications.grpc.SendPushNotificationRequest;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,36 +33,22 @@ public class NotificationsServiceGrpcClient {
         }
     }
 
-    /**
-     * Broadcasts localized new-gym (or similar) notifications to all ROLE_USER users.
-     * Title/body variants are selected per user language on the notifications service.
-     */
+    /** Triggers new-gym notification fan-out; templates/localization live in notifications-backend. */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "notificationsService")
-    public void broadcastLocalizedPushNotification(Map<String, TitleBody> contentsByLanguage,
-                                                   Map<String, String> data) {
+    public void notifyNewGym(Long gymId, String gymName) {
         try {
-            BroadcastLocalizedPushRequest.Builder builder = BroadcastLocalizedPushRequest.newBuilder()
-                    .addRoleNames("ROLE_USER");
-
-            if (data != null && !data.isEmpty()) {
-                builder.putAllData(data);
+            NotifyNewGymRequest.Builder builder = NotifyNewGymRequest.newBuilder();
+            if (gymId != null) {
+                builder.setGymId(gymId);
             }
-
-            contentsByLanguage.forEach((language, content) ->
-                    builder.addContents(LocalizedPushContent.newBuilder()
-                            .setLanguage(language)
-                            .setTitle(content.title())
-                            .setBody(content.body())
-                            .build()));
-
+            if (gymName != null) {
+                builder.setGymName(gymName);
+            }
             notificationsServiceBlockingStub
                     .withDeadlineAfter(60, java.util.concurrent.TimeUnit.SECONDS)
-                    .broadcastLocalizedPushNotification(builder.build());
+                    .notifyNewGym(builder.build());
         } catch (Exception e) {
             // Ignored — gym creation must not fail because of notification delivery
         }
-    }
-
-    public record TitleBody(String title, String body) {
     }
 }
