@@ -113,6 +113,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final Executor imageUploadExecutor;
     private final NotificationsServiceGrpcClient notificationsServiceClient;
     private final UserServiceGrpcClient userServiceGrpcClient;
+    private final az.fitnest.catalog.service.GymActivationNotifier gymActivationNotifier;
 
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
@@ -184,7 +185,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                     public void afterCommit() {
                         gymQrCodeService.generateAndSaveQrCode(saved.getId());
                         if (saved.getStatus() == GymStatus.ACTIVE) {
-                            notifyUsersAboutNewActiveGym(saved.getId(), saved.getName());
+                            gymActivationNotifier.notifyNewActiveGym(saved.getId(), saved.getName());
                         }
                     }
                 }
@@ -1246,7 +1247,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         // Phase 4: Post-commit actions
         gymQrCodeService.generateAndSaveQrCode(gymId);
-        notifyUsersAboutNewActiveGym(gymId, request.name());
+        gymActivationNotifier.notifyNewActiveGym(gymId, request.name());
 
         return gymId;
     }
@@ -1325,7 +1326,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setCreationStep(7);
         gymRepository.save(gym);
         gymQrCodeService.generateAndSaveQrCode(gym.getId());
-        notifyUsersAboutNewActiveGym(gym.getId(), gym.getName());
+        gymActivationNotifier.notifyNewActiveGym(gym.getId(), gym.getName());
     }
 
     private void validateStep(Gym gym, int requiredStep) {
@@ -1638,36 +1639,6 @@ public class GymWriteServiceImpl implements GymWriteService {
                     // Ignore
                 }
             });
-        }
-    }
-
-    /** After a new gym becomes ACTIVE, ask notifications-backend to fan out to users. */
-    private void notifyUsersAboutNewActiveGym(Long gymId, String gymName) {
-        if (gymId == null) {
-            return;
-        }
-        final Long id = gymId;
-        final String name = gymName != null ? gymName : "";
-
-        Runnable send = () -> {
-            try {
-                notificationsServiceClient.notifyNewGym(id, name);
-            } catch (Exception e) {
-                // Ignore — notification failures must not affect gym creation
-            }
-        };
-
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            TransactionSynchronizationManager.registerSynchronization(
-                    new org.springframework.transaction.support.TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            CompletableFuture.runAsync(send);
-                        }
-                    }
-            );
-        } else {
-            CompletableFuture.runAsync(send);
         }
     }
 
@@ -2601,7 +2572,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         });
 
         gymQrCodeService.generateAndSaveQrCode(gymId);
-        notifyUsersAboutNewActiveGym(gymId, request.name());
+        gymActivationNotifier.notifyNewActiveGym(gymId, request.name());
 
         return gymId;
     }
