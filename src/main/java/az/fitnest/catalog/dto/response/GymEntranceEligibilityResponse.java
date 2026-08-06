@@ -14,6 +14,6 @@ public record GymEntranceEligibilityResponse(
     boolean allowed,
     @Schema(description = "Status of the eligibility (e.g., ELIGIBLE, INELIGIBLE)", example = "ELIGIBLE")
     String status,
-    @Schema(description = "Reason for failure if not allowed (e.g., NO_ACTIVE_SUBSCRIPTION, VISIT_LIMIT_EXCEEDED)", example = "VISIT_LIMIT_EXCEEDED")
+    @Schema(description = "Localized reason for failure if not allowed", example = "Aktiv abunəliyiniz yoxdur")
     String reason
 ) {}

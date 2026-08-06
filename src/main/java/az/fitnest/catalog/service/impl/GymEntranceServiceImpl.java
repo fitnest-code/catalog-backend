@@ -606,7 +606,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 return GymEntranceEligibilityResponse.builder()
                         .allowed(false)
                         .status("INELIGIBLE")
-                        .reason("NO_ACTIVE_SUBSCRIPTION")
+                        .reason(localizeEligibilityReason("NO_ACTIVE_SUBSCRIPTION"))
                         .build();
             }
             int visitLimitRemaining = subResp.getRemainingLimit();
@@ -614,7 +614,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 return GymEntranceEligibilityResponse.builder()
                         .allowed(false)
                         .status("INELIGIBLE")
-                        .reason("VISIT_LIMIT_EXCEEDED")
+                        .reason(localizeEligibilityReason("VISIT_LIMIT_EXCEEDED"))
                         .build();
             }
             return GymEntranceEligibilityResponse.builder()
@@ -625,8 +625,24 @@ public class GymEntranceServiceImpl implements GymEntranceService {
             return GymEntranceEligibilityResponse.builder()
                     .allowed(false)
                     .status("INELIGIBLE")
-                    .reason("NO_ACTIVE_SUBSCRIPTION")
+                    .reason(localizeEligibilityReason("NO_ACTIVE_SUBSCRIPTION"))
                     .build();
+        }
+    }
+
+    private String localizeEligibilityReason(String reasonCode) {
+        String messageKey = switch (reasonCode) {
+            case "NO_ACTIVE_SUBSCRIPTION" -> "error.no_active_subscription";
+            case "VISIT_LIMIT_EXCEEDED" -> "error.visit_limit_exceeded";
+            default -> null;
+        };
+        if (messageKey == null) {
+            return reasonCode;
+        }
+        try {
+            return messageSource.getMessage(messageKey, null, reasonCode, LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            return reasonCode;
         }
     }
 
