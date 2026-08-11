@@ -27,4 +27,6 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
 
     void deleteByGymIdAndPackageId(Long gymId, Long packageId);
     void deleteByGymIdAndPackageIdIsNull(Long gymId);
+
+    void deleteByIdInAndGymId(List<Long> ids, Long gymId);
 }

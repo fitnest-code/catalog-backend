@@ -53,6 +53,8 @@ public interface GymWriteService {
 
     void deleteGymEntranceHistory(Long gymId, Long packageId);
 
+    void deleteGymEntranceHistoryByIds(Long gymId, java.util.List<Long> ids);
+
     void deleteAllGymSubscriptions(Long gymId);
 
     void deleteGymSubscriptionById(Long gymId, Long subscriptionId);

@@ -366,6 +366,16 @@ public class GymAdminController {
         return ResponseEntity.ok(gymReadService.getGymEntranceHistory(gymId));
     }
 
+    @Operation(summary = "Seçilmiş müştəri girişlərini silin", description = "İdman zalı üzrə seçilmiş giriş tarixçəsi qeydlərini silir. Yalnız ADMIN rolu icazəlidir.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/v1/admin/gyms/{id}/history")
+    public ResponseEntity<Void> deleteGymEntranceHistoryByIds(
+            @PathVariable("id") Long gymId,
+            @RequestBody @Valid az.fitnest.catalog.dto.request.DeleteGymEntranceHistoryRequest request) {
+        gymWriteService.deleteGymEntranceHistoryByIds(gymId, request.ids());
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "İdman zalı analitikasını alın", description = "İdman zalı üçün ümumi gəlir, uğurlu/uğursuz girişlər və tarixçə siyahısını gətirir.")
     @PreAuthorize("hasAnyRole('ADMIN', 'GYM_SUPER_ADMIN', 'GYM_ADMIN')")
     @GetMapping("/v1/admin/gyms/{id}/analytics")

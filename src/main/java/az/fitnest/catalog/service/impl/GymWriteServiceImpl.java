@@ -613,6 +613,18 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteGymEntranceHistoryByIds(Long gymId, List<Long> ids) {
+        if (!gymRepository.existsById(gymId)) {
+            throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
+        }
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        gymEntranceHistoryRepository.deleteByIdInAndGymId(ids, gymId);
+    }
+
     @Transactional
     @CacheEvict(cacheNames = "gym-detail", key = "#gymId")
     public void deleteAllGymSubscriptions(Long gymId) {
