@@ -207,3 +207,11 @@ grpc:
 reservation:
   booking:
     min-hours-before-start: 2
+
+logging:
+  level:
+    root: WARN
+    az.fitnest: WARN
+    az.fitnest.catalog: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
