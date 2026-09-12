@@ -16,6 +16,7 @@ import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.exception.UnauthorizedException;
 import az.fitnest.catalog.model.entity.Address;
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.SavedGym;
 import az.fitnest.catalog.model.entity.GymEntranceHistory;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
@@ -148,7 +149,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
+    @Cacheable(value = "gym-detail", key = "#userId + '_' + #gymId + '_' + T(az.fitnest.catalog.util.UserContext).getUserLanguage() + '_uniq'")
     public GymDetailResponse getGymDetail(Long userId, Long gymId) {
         final String userLang = getUserLanguage(userId);
         Gym gym = gymRepository.findWithDetailsById(gymId)
@@ -289,7 +290,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         try {
             if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                List<Long> packageIds = gym.getSubscriptions().stream()
+                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .map(sub -> sub.getPackageId())
                         .filter(java.util.Objects::nonNull)
                         .toList();
@@ -299,7 +300,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .collect(java.util.stream.Collectors.toMap(
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
-                supportedSubscriptions = gym.getSubscriptions().stream()
+                supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -557,7 +558,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         final List<Long> finalSavedIds = savedGymIds;
 
         List<Long> allPackageIds = gymPage.getContent().stream()
-                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
@@ -765,7 +766,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 ));
 
         List<Long> pagePackageIds = pageGyms.stream()
-                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
@@ -859,7 +860,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-            supportedSubscriptions = gym.getSubscriptions().stream()
+            supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                     .filter(sub -> sub.getPackageId() != null)
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
@@ -1167,14 +1168,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .distinct()
                 .toList();
         List<String> subscriptionIds = gyms.stream()
-                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                 .filter(java.util.Objects::nonNull)
                 .map(Object::toString)
                 .distinct()
                 .toList();
         List<String> serviceIds = gyms.stream()
-                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .flatMap(sub -> sub.getSupportedServices() != null ? sub.getSupportedServices().stream() : java.util.stream.Stream.empty())
                 .map(b -> b.getId().toString())
                 .distinct()
@@ -1351,7 +1352,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
             try {
-                List<Long> packageIds = gym.getSubscriptions().stream()
+                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .map(sub -> sub.getPackageId())
                         .filter(java.util.Objects::nonNull)
                         .toList();
@@ -1363,7 +1364,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
 
-                subscriptions = gym.getSubscriptions().stream()
+                subscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -1957,7 +1958,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
         try {
             if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                List<Long> packageIds = gym.getSubscriptions().stream()
+                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .map(sub -> sub.getPackageId())
                         .filter(java.util.Objects::nonNull)
                         .toList();
@@ -1967,7 +1968,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .collect(java.util.stream.Collectors.toMap(
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
-                supportedSubscriptions = gym.getSubscriptions().stream()
+                supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -2138,7 +2139,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         final List<Long> finalSavedIds = savedGymIds;
 
         List<Long> allPackageIds = gymPage.getContent().stream()
-                .flatMap(g -> g.getSubscriptions() != null ? g.getSubscriptions().stream() : java.util.stream.Stream.empty())
+                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
@@ -2262,7 +2263,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-            supportedSubscriptions = gym.getSubscriptions().stream()
+            supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                     .filter(sub -> sub.getPackageId() != null)
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
@@ -2501,7 +2502,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
             try {
-                List<Long> packageIds = gym.getSubscriptions().stream()
+                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .map(sub -> sub.getPackageId())
                         .filter(java.util.Objects::nonNull)
                         .toList();
@@ -2513,7 +2514,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
 
-                subscriptions = gym.getSubscriptions().stream()
+                subscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -2550,6 +2551,24 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .gymId(gymId)
                 .subscriptions(subscriptions)
                 .build();
+    }
+
+    private List<GymSubscription> uniqueSubscriptions(java.util.Collection<GymSubscription> subscriptions) {
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            return java.util.List.of();
+        }
+        java.util.Map<String, GymSubscription> unique = new java.util.LinkedHashMap<>();
+        for (GymSubscription sub : subscriptions) {
+            if (sub == null) {
+                continue;
+            }
+            String key = sub.getId() != null
+                    ? "id:" + sub.getId()
+                    : "pkg:" + sub.getPackageId() + ":"
+                            + (sub.getCategory() != null ? sub.getCategory().getId() : "");
+            unique.putIfAbsent(key, sub);
+        }
+        return new ArrayList<>(unique.values());
     }
 }
 

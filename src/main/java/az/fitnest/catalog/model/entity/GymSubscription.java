@@ -38,4 +38,20 @@ public class GymSubscription extends BaseAuditableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof GymSubscription that)) {
+            return false;
+        }
+        return getId() != null && getId().equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
