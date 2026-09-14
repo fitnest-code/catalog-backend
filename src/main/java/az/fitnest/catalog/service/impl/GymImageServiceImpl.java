@@ -62,7 +62,9 @@ public class GymImageServiceImpl implements az.fitnest.catalog.service.GymImageS
     @Transactional
     @CacheEvict(cacheNames = {"gyms", "gymImages"}, key = "#gymId")
     public GymImageDto uploadRoomImage(Long gymId, String roomName, MultipartFile file) {
-        validateImageFile(file);
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("FILE_EMPTY", "error.file_empty");
+        }
 
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -99,21 +101,6 @@ public class GymImageServiceImpl implements az.fitnest.catalog.service.GymImageS
             fileStorageService.deleteFile(url);
         } catch (Exception e) {
         }
-    }
-
-    private void validateImageFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new BadRequestException("FILE_EMPTY", "error.file_empty");
-        }
-        long maxSize = 5 * 1024 * 1024;
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new BadRequestException("FILE_TOO_LARGE", "error.file_too_large");
-        }
-        String contentType = file.getContentType();
-        if (contentType == null || (!contentType.equalsIgnoreCase("image/jpeg") && !contentType.equalsIgnoreCase("image/jpg") && !contentType.equalsIgnoreCase("image/png") && !contentType.equalsIgnoreCase("image/webp"))) {
-            throw new BadRequestException("INVALID_FILE_TYPE", "error.invalid_file_type");
-        }
-
     }
 
     private String sanitizeFilename(String filename) {

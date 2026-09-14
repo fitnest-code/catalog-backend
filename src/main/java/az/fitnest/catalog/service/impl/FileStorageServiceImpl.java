@@ -1,14 +1,11 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.client.StorageGrpcClient;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.dto.response.StorageFileData;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.service.FileStorageService;
+import io.grpc.StatusRuntimeException;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -17,18 +14,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.apache.tika.Tika;
 import java.io.OutputStream;
 
 @Service
 public class FileStorageServiceImpl
         implements FileStorageService {
-    private static final long MAX_FILE_SIZE = 0x500000L;
-    private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png", "image/webp", "image/svg+xml", "image/svg"
-    );
     private final StorageGrpcClient storageGrpcClient;
-    private final Tika tika = new Tika();
 
     public FileStorageServiceImpl(StorageGrpcClient storageGrpcClient) {
         this.storageGrpcClient = storageGrpcClient;
@@ -49,7 +40,6 @@ public class FileStorageServiceImpl
         if (file == null || file.isEmpty()) {
             return null;
         }
-        this.validateFile(file);
         try {
             String extension = "";
             String originalName = file.getOriginalFilename();
@@ -68,18 +58,10 @@ public class FileStorageServiceImpl
             String extractedOldPath = this.extractIdFromUrl(oldPath);
             StorageFileData data = this.storageGrpcClient.uploadFile(randomizedFile, directory, extractedOldPath);
             return this.storageGrpcClient.getDownloadUrl(String.valueOf(data.fsId()));
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
-            throw new BadRequestException("error.file_upload_failed");
-        }
-    }
-
-    private void validateFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
-            throw new BadRequestException("error.invalid_file_type");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BadRequestException("error.file_too_large");
+            throw mapUploadError(e);
         }
     }
 
@@ -164,19 +146,9 @@ public class FileStorageServiceImpl
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("error.file_empty");
         }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BadRequestException("error.file_too_large");
-        }
         try {
-            byte[] bytes = file.getBytes();
-            try (java.io.InputStream is = new java.io.ByteArrayInputStream(bytes)) {
-                String mimeType = tika.detect(is);
-                if (mimeType == null || !ALLOWED_CONTENT_TYPES.contains(mimeType.toLowerCase())) {
-                    throw new BadRequestException("error.invalid_file_type");
-                }
-            }
             return new az.fitnest.catalog.util.ByteArrayMultipartFile(
-                    bytes,
+                    file.getBytes(),
                     file.getName(),
                     file.getOriginalFilename(),
                     file.getContentType()
@@ -184,5 +156,17 @@ public class FileStorageServiceImpl
         } catch (java.io.IOException e) {
             throw new BadRequestException("error.file_validation_failed");
         }
+    }
+
+    private static BadRequestException mapUploadError(Exception e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof StatusRuntimeException sre) {
+                String desc = sre.getStatus().getDescription();
+                if ("error.file_too_large".equals(desc) || "error.invalid_file_type".equals(desc) || "error.file_empty".equals(desc)) {
+                    return new BadRequestException(desc);
+                }
+            }
+        }
+        return new BadRequestException("error.file_upload_failed");
     }
 }
