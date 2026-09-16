@@ -33,6 +33,9 @@ public interface StoreRepository
     @Query(value = "SELECT s FROM Store s")
     public Page<Store> findAllWithAssociations(Pageable var1);
 
+    @EntityGraph(attributePaths = {"discounts", "images"})
+    Page<Store> findByStatusIgnoreCase(String status, Pageable pageable);
+
     @Query(value = "SELECT s FROM Store s WHERE EXISTS (SELECT 1 FROM s.discounts d)")
     public Page<Store> findDiscountedStores(Pageable var1);
 
@@ -61,4 +64,17 @@ public interface StoreRepository
     @Modifying
     @Query(value = "DELETE FROM store_images WHERE store_id = :storeId", nativeQuery = true)
     void deleteStoreImagesByStoreId(@Param("storeId") Long storeId);
+
+    @Query(value = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM stores s
+                WHERE UPPER(s.status) = 'ACTIVE'
+                  AND s.cover_image_url IS NOT NULL
+                  AND (
+                      s.cover_image_url = :fileId
+                      OR RIGHT(s.cover_image_url, LENGTH(:fileId) + 1) = CONCAT('/', :fileId)
+                  )
+            ) THEN TRUE ELSE FALSE END
+            """, nativeQuery = true)
+    boolean existsActivePublicCoverFile(@Param("fileId") String fileId);
 }

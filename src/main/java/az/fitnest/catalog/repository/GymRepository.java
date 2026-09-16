@@ -1,6 +1,7 @@
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.enums.GymStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -49,6 +50,21 @@ public interface GymRepository
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "mainCategories", "subCategories", "subscriptions", "subscriptions.supportedServices", "rooms", "rooms.images", "generalWorkHours", "workHoursWoman", "workHoursMan", "restDays"})
     public Optional<Gym> findWithDetailsById(Long id);
+
+    long countByStatus(GymStatus status);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+            "address",
+            "mainCategories",
+            "subCategories",
+            "subscriptions",
+            "subscriptions.supportedServices",
+            "generalWorkHours",
+            "workHoursWoman",
+            "workHoursMan",
+            "restDays"
+    })
+    Optional<Gym> findAboutDetailById(Long id);
 
     @org.springframework.data.jpa.repository.Query("SELECT g FROM Gym g WHERE (LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))")
     public org.springframework.data.domain.Page<Gym> findByNameOrDescriptionContainingIgnoreCase(
@@ -216,6 +232,9 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.Query("SELECT s.packageId, COUNT(DISTINCT s.gym.id) FROM GymSubscription s WHERE s.gym.status = az.fitnest.catalog.model.enums.GymStatus.ACTIVE GROUP BY s.packageId")
     List<Object[]> countGymsBySubscriptionPackageId();
 
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT s.gym.id) FROM GymSubscription s WHERE s.packageId = :packageId AND s.gym.status = az.fitnest.catalog.model.enums.GymStatus.ACTIVE")
+    long countActiveGymsByPackageId(@org.springframework.data.repository.query.Param("packageId") Long packageId);
+
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(g) FROM Gym g WHERE " +
             "(:categoryId IS NULL OR EXISTS (SELECT mc FROM g.mainCategories mc WHERE mc.id = :categoryId) OR EXISTS (SELECT sc FROM g.subCategories sc WHERE sc.id = :categoryId)) AND " +
             "(:subscriptionId IS NULL OR EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId = :subscriptionId)) AND " +
@@ -276,4 +295,36 @@ public interface GymRepository
             @org.springframework.data.repository.query.Param("userLat") Double userLat,
             @org.springframework.data.repository.query.Param("userLng") Double userLng,
             org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM gyms g
+                WHERE g.status = 'ACTIVE'
+                  AND g.cover_image_url IS NOT NULL
+                  AND (
+                      g.cover_image_url = :fileId
+                      OR RIGHT(g.cover_image_url, LENGTH(:fileId) + 1) = CONCAT('/', :fileId)
+                  )
+                UNION ALL
+                SELECT 1 FROM gym_images gi
+                JOIN gyms g ON g.id = gi.gym_id
+                WHERE g.status = 'ACTIVE'
+                  AND gi.url IS NOT NULL
+                  AND (
+                      gi.url = :fileId
+                      OR RIGHT(gi.url, LENGTH(:fileId) + 1) = CONCAT('/', :fileId)
+                  )
+                UNION ALL
+                SELECT 1 FROM room_images ri
+                JOIN gym_rooms r ON r.id = ri.room_id
+                JOIN gyms g ON g.id = r.gym_id
+                WHERE g.status = 'ACTIVE'
+                  AND ri.picture_url IS NOT NULL
+                  AND (
+                      ri.picture_url = :fileId
+                      OR RIGHT(ri.picture_url, LENGTH(:fileId) + 1) = CONCAT('/', :fileId)
+                  )
+            ) THEN TRUE ELSE FALSE END
+            """, nativeQuery = true)
+    boolean existsActivePublicCoverFile(@org.springframework.data.repository.query.Param("fileId") String fileId);
 }

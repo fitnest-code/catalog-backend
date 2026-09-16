@@ -4,6 +4,7 @@ import az.fitnest.catalog.model.entity.GymAdmin;
 import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.repository.GymAnalyticsRepository;
 import az.fitnest.catalog.repository.GymAnalyticsRepository.PartnersKpiProjection;
+import az.fitnest.catalog.repository.GymRepository;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
 
     private final GymAnalyticsRepository gymAnalyticsRepository;
     private final GymAdminRepository gymAdminRepository;
+    private final GymRepository gymRepository;
 
     @Override
     public void getActivePartnersKpi(
@@ -67,6 +69,49 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
                         .addAllAdmins(details)
                         .build()
         );
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void countGymsByPackage(
+            CountGymsByPackageRequest request,
+            StreamObserver<CountGymsByPackageResponse> responseObserver
+    ) {
+        long count = request.getPackageId() == 0
+                ? 0
+                : gymRepository.countActiveGymsByPackageId(request.getPackageId());
+        responseObserver.onNext(
+                CountGymsByPackageResponse.newBuilder()
+                        .setGymCount(count)
+                        .build()
+        );
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void countGymsByPackages(
+            CountGymsByPackagesRequest request,
+            StreamObserver<CountGymsByPackagesResponse> responseObserver
+    ) {
+        java.util.Map<Long, Long> byPackageId = new java.util.HashMap<>();
+        for (Object[] row : gymRepository.countGymsBySubscriptionPackageId()) {
+            if (row == null || row[0] == null || row[1] == null) {
+                continue;
+            }
+            long packageId = ((Number) row[0]).longValue();
+            long gymCount = ((Number) row[1]).longValue();
+            byPackageId.put(packageId, gymCount);
+        }
+
+        CountGymsByPackagesResponse.Builder response = CountGymsByPackagesResponse.newBuilder();
+        if (request.getPackageIdsCount() == 0) {
+            byPackageId.forEach(response::putGymCounts);
+        } else {
+            for (long packageId : request.getPackageIdsList()) {
+                response.putGymCounts(packageId, byPackageId.getOrDefault(packageId, 0L));
+            }
+        }
+        responseObserver.onNext(response.build());
         responseObserver.onCompleted();
     }
 }

@@ -996,7 +996,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-stats", "landing-media-public"}, allEntries = true)
     })
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -1036,7 +1036,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-stats", "landing-media-public"}, allEntries = true)
     })
     public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
                                   List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
@@ -1399,6 +1399,39 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Transactional
     @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms"}, allEntries = true)
+    public SupportedServiceResponse updateSupportedService(Long id, SupportedServiceRequest request, MultipartFile icon) {
+        SupportedService service = supportedServiceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("SERVICE_NOT_FOUND", "error.service_not_found"));
+
+        if (request != null && request.name() != null && !request.name().isBlank()) {
+            String trimmedName = request.name().trim();
+            supportedServiceRepository.findByNameIgnoreCaseAndGymId(trimmedName, service.getGymId())
+                    .filter(existing -> !existing.getId().equals(id))
+                    .ifPresent(existing -> {
+                        throw new BadRequestException("SERVICE_ALREADY_EXISTS", "error.service_already_exists");
+                    });
+            if (!trimmedName.equals(service.getName())) {
+                service.setName(trimmedName);
+                translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", trimmedName);
+            }
+        }
+
+        if (icon != null && !icon.isEmpty()) {
+            MultipartFile validated = fileStorageService.validateAndWrapImage(icon);
+            String iconUrl = fileStorageService.saveFile(validated, "/gyms/service-icons");
+            String previousIconUrl = service.getIconUrl();
+            service.setIconUrl(iconUrl);
+            if (previousIconUrl != null && !previousIconUrl.isBlank()) {
+                fileStorageService.deleteFilesAfterCommit(List.of(previousIconUrl));
+            }
+        }
+
+        service = supportedServiceRepository.save(service);
+        return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId(), service.getIconUrl());
+    }
+
+    @Transactional
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = {"gymDetails", "admin-gyms"}, allEntries = true)
     public void deleteSupportedService(Long id) {
         supportedServiceRepository.deleteSubscriptionAssociations(id);
         supportedServiceRepository.deleteById(id);
@@ -1415,7 +1448,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription"}, allEntries = true)
+    @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-stats", "landing-media-public"}, allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
