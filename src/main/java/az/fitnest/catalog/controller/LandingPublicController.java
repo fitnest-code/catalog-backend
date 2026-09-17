@@ -3,6 +3,7 @@ package az.fitnest.catalog.controller;
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.response.LandingGymCardResponse;
 import az.fitnest.catalog.dto.response.LandingGymDetailResponse;
+import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
 import az.fitnest.catalog.dto.response.LandingStatsResponse;
 import az.fitnest.catalog.dto.response.LandingStoreCardResponse;
 import az.fitnest.catalog.dto.response.LandingStoreDetailResponse;
@@ -52,12 +53,28 @@ public class LandingPublicController {
         return cachedJson(landingPublicService.getHomeGyms());
     }
 
+    @Operation(summary = "Gym listing filters", description = "Distinct cities, categories, and memberships for active gyms.")
+    @GetMapping("/gyms/filters")
+    public ResponseEntity<LandingGymFiltersResponse> getGymFilters() {
+        return cachedJson(landingPublicService.getGymFilters());
+    }
+
     @Operation(summary = "Gym listing cards", description = "Paginated gym cards for the fitness-centers page. page_size is capped.")
     @GetMapping("/gyms")
     public ResponseEntity<PaginatedResponse<LandingGymCardResponse>> getGyms(
             @Parameter(description = "Page index, starting at 1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize) {
-        return cachedJson(landingPublicService.getGyms(sanitizePage(page), sanitizePageSize(pageSize)));
+            @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize,
+            @Parameter(description = "Search name, city, or address") @RequestParam(required = false) String q,
+            @Parameter(description = "Exact city name") @RequestParam(required = false) String city,
+            @Parameter(description = "Exact category name") @RequestParam(required = false) String category,
+            @Parameter(description = "bronze, silver, gold, or platinum") @RequestParam(required = false) String membership) {
+        return cachedJson(landingPublicService.getGyms(
+                sanitizePage(page),
+                sanitizePageSize(pageSize),
+                q,
+                city,
+                category,
+                membership));
     }
 
     @Operation(summary = "Gym detail", description = "Public gym profile: gallery, amenities, hours, map. No email, QR, or staff.")

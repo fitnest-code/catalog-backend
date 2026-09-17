@@ -19,6 +19,7 @@ public record LandingGymDetailResponse(
         String phone,
         List<String> workHours,
         String category,
+        List<String> categories,
         String membership,
         List<String> accessMemberships,
         String description,
