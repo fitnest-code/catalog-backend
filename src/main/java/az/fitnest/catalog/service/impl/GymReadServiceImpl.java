@@ -1167,13 +1167,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .map(c -> c.getCategoryId().toString())
                 .distinct()
                 .toList();
-        List<String> subscriptionIds = gyms.stream()
-                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
-                .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
-                .filter(java.util.Objects::nonNull)
-                .map(Object::toString)
-                .distinct()
-                .toList();
         List<String> serviceIds = gyms.stream()
                 .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
                 .flatMap(sub -> sub.getSupportedServices() != null ? sub.getSupportedServices().stream() : java.util.stream.Stream.empty())
@@ -1189,10 +1182,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
         if (!categoryIds.isEmpty()) {
             translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("CATEGORY", categoryIds, userLanguage.toUpperCase())
-                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
-        }
-        if (!subscriptionIds.isEmpty()) {
-            translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("GYMSUBSCRIPTION", subscriptionIds, userLanguage.toUpperCase())
                     .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
         }
         if (!serviceIds.isEmpty()) {
@@ -2267,13 +2256,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
                         String planId = sub.getPackageId().toString();
-                        String localizedPackageName = getTranslatedValueCached(translationLookup,
-                                "GYMSUBSCRIPTION", planId, "name", userLanguage);
-                        String packageName = cleanPackageName(
-                                (localizedPackageName != null && !localizedPackageName.isEmpty())
-                                        ? localizedPackageName
-                                        : (info != null ? info.getName() : null)
-                        );
+                        // Package names live in order-backend (Bronze/Silver/Gold/Platinum).
+                        // Do not look up catalog GYMSUBSCRIPTION translations by packageId:
+                        // those ids collide with gym_subscription rows and amenity names
+                        // (e.g. Gold → "Bathroom", Platinum → "Ottoman bath").
+                        String packageName = cleanPackageName(info != null ? info.getName() : null);
                         List<GymPlanBenefitResponse> benefitsList = sub.getSupportedServices().stream()
                                 .map(b -> {
                                     String localizedBenefit = getTranslatedValueCached(translationLookup,
