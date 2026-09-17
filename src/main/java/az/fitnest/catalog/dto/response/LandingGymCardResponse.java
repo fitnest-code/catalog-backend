@@ -3,6 +3,8 @@ package az.fitnest.catalog.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
+import java.util.List;
+
 @Builder
 @Schema(description = "Public gym card for homepage and gym listing. No gallery, coordinates, or contact extras.")
 public record LandingGymCardResponse(
@@ -13,6 +15,7 @@ public record LandingGymCardResponse(
         String city,
         String phone,
         String category,
+        List<String> categories,
         String membership
 ) {
 }

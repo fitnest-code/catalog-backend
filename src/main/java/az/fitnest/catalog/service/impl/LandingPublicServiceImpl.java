@@ -7,12 +7,15 @@ import az.fitnest.catalog.dto.response.GymPlanItemResponse;
 import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
 import az.fitnest.catalog.dto.response.LandingGymCardResponse;
 import az.fitnest.catalog.dto.response.LandingGymDetailResponse;
+import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
 import az.fitnest.catalog.dto.response.LandingStatsResponse;
 import az.fitnest.catalog.dto.response.LandingStoreCardResponse;
 import az.fitnest.catalog.dto.response.LandingStoreDetailResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.GymMapper;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymDescription;
 import az.fitnest.catalog.model.entity.GymImage;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.Room;
@@ -118,31 +121,72 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Transactional(readOnly = true)
     @Cacheable(
             value = "landing-gyms",
-            key = "{#page, #pageSize, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
+            key = "{#page, #pageSize, #q, #city, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
     )
-    public PaginatedResponse<LandingGymCardResponse> getGyms(int page, int pageSize) {
-        return loadGymCards(page, pageSize);
+    public PaginatedResponse<LandingGymCardResponse> getGyms(
+            int page, int pageSize, String q, String city, String category, String membership) {
+        return loadGymCards(page, pageSize, q, city, category, membership);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "landing-gym-filters", key = "T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
+    public LandingGymFiltersResponse getGymFilters() {
+        String language = UserContext.getUserLanguage();
+        LinkedHashSet<String> categories = new LinkedHashSet<>();
+        for (Category category : gymRepository.findDistinctMainCategoriesByStatus(GymStatus.ACTIVE)) {
+            addLocalizedCategory(categories, category, language);
+        }
+        for (Category category : gymRepository.findDistinctSubCategoriesByStatus(GymStatus.ACTIVE)) {
+            addLocalizedCategory(categories, category, language);
+        }
+        List<String> cities = gymRepository.findDistinctCitiesByStatus(GymStatus.ACTIVE).stream()
+                .map(value -> publicText(value, 80))
+                .filter(Objects::nonNull)
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+        return LandingGymFiltersResponse.builder()
+                .cities(cities)
+                .categories(categories.stream().sorted(String.CASE_INSENSITIVE_ORDER).toList())
+                .memberships(List.of("bronze", "silver", "gold", "platinum"))
+                .build();
     }
 
     private PaginatedResponse<LandingGymCardResponse> loadGymCards(int page, int pageSize) {
+        return loadGymCards(page, pageSize, null, null, null, null);
+    }
+
+    private PaginatedResponse<LandingGymCardResponse> loadGymCards(
+            int page, int pageSize, String q, String city, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
         PaginatedResponse<GymMainPageResponse> gyms = gymReadService.getGyms(
-                null, null, "ALL", null, null, safePage, safePageSize, null, null, "desc");
+                null, blankToNull(q), "ALL", null, null, safePage, safePageSize, null, null, "desc");
 
         List<Long> ids = gyms.items().stream()
                 .map(item -> parseGymId(item.gymId()))
                 .filter(Objects::nonNull)
                 .toList();
-        Map<Long, String> phoneById = ids.isEmpty()
+        String language = UserContext.getUserLanguage();
+        Map<Long, Gym> gymById = ids.isEmpty()
                 ? Map.of()
-                : gymRepository.findAllById(ids).stream()
-                .filter(gym -> gym.getStatus() == GymStatus.ACTIVE)
-                .collect(Collectors.toMap(Gym::getId, gym -> gym.getPhone() == null ? "" : gym.getPhone(), (left, right) -> left));
+                : gymRepository.findActiveWithCategoriesByIdIn(ids, GymStatus.ACTIVE).stream()
+                .collect(Collectors.toMap(Gym::getId, gym -> gym, (left, right) -> left));
+
+        String cityFilter = blankToNull(city);
+        String categoryFilter = blankToNull(category);
+        String membershipFilter = normalizeMembership(membership);
 
         List<LandingGymCardResponse> items = gyms.items().stream()
-                .filter(item -> phoneById.containsKey(parseGymId(item.gymId())))
-                .map(item -> toGymCard(item, phoneById.get(parseGymId(item.gymId()))))
+                .map(item -> {
+                    Long gymId = parseGymId(item.gymId());
+                    Gym gym = gymId == null ? null : gymById.get(gymId);
+                    return gym == null ? null : toGymCard(item, gym, language);
+                })
+                .filter(Objects::nonNull)
+                .filter(item -> cityFilter == null || cityFilter.equalsIgnoreCase(item.city()))
+                .filter(item -> categoryFilter == null || matchesCategory(item, categoryFilter))
+                .filter(item -> membershipFilter == null || membershipFilter.equals(item.membership()))
                 .toList();
 
         return PaginatedResponse.<LandingGymCardResponse>builder()
@@ -173,22 +217,15 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String localizedName = firstNonBlank(translationService.getTranslatedValue(
                 "GYM", gym.getId().toString(), "name", language), gym.getName());
 
-        String categoryName = null;
-        if (gym.getCategory() != null) {
-            categoryName = firstNonBlank(translationService.getTranslatedValue(
-                    "CATEGORY", String.valueOf(gym.getCategory().getCategoryId()), "name", language),
-                    gym.getCategory().getName());
-        }
-
         String location = gym.getAddress() != null ? publicText(gym.getAddress().getAddressText(), 200) : null;
         String city = gym.getAddress() != null ? publicText(gym.getAddress().getCity(), 80) : null;
         Double latitude = publicLatitude(gym.getAddress() != null ? gym.getAddress().getLatitude() : null);
         Double longitude = publicLongitude(gym.getAddress() != null ? gym.getAddress().getLongitude() : null);
 
-        String localizedDescription = firstNonBlank(translationService.getTranslatedValue(
-                "GYM", gym.getId().toString(), "description", language), gym.getDescription());
+        List<String> categories = resolveCategories(gym, language);
+        String categoryName = categories.isEmpty() ? null : String.join(" & ", categories);
 
-        List<String> workHours = GymMapper.toWorkHoursLines(gym.getGeneralWorkHours(), language);
+        List<String> workHours = resolveWorkHours(gym, language);
         List<GymImage> galleryImages = gymImageRepository.findByGymId(gymId);
         List<String> accessMemberships = resolveAccessMemberships(gym);
 
@@ -203,12 +240,13 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .longitude(longitude)
                 .phone(publicText(gym.getPhone(), 32))
                 .workHours(workHours.isEmpty() ? List.of() : workHours)
-                .category(publicText(categoryName, 80))
+                .category(publicText(categoryName, 160))
+                .categories(categories)
                 .membership(accessMemberships.stream()
                         .max(Comparator.comparingInt(this::membershipRank))
                         .orElse("bronze"))
                 .accessMemberships(accessMemberships)
-                .description(publicText(localizedDescription, MAX_DESCRIPTION_CHARS))
+                .description(resolveDescription(gym, language))
                 .amenities(toAmenities(gym, language))
                 .build();
     }
@@ -292,18 +330,45 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         }
     }
 
-    private LandingGymCardResponse toGymCard(GymMainPageResponse item, String phone) {
-        String categoryName = item.category() != null ? item.category().name() : null;
+    private LandingGymCardResponse toGymCard(GymMainPageResponse item, Gym gym, String language) {
+        List<String> categories = resolveCategories(gym, language);
+        String categoryName = categories.isEmpty()
+                ? (item.category() != null ? item.category().name() : null)
+                : String.join(" & ", categories);
         return LandingGymCardResponse.builder()
                 .gymId(item.gymId())
                 .name(publicText(item.name(), 120))
                 .coverImageUrl(PublicLandingMedia.toPublicUrl(item.coverImageUrl()))
                 .location(publicText(item.location(), 200))
                 .city(publicText(item.city(), 80))
-                .phone(publicText(phone, 32))
-                .category(publicText(categoryName, 80))
+                .phone(publicText(gym.getPhone(), 32))
+                .category(publicText(categoryName, 160))
+                .categories(categories)
                 .membership(resolveMembership(item.supportedSubscriptions()))
                 .build();
+    }
+
+    private boolean matchesCategory(LandingGymCardResponse item, String categoryFilter) {
+        String needle = categoryFilter.toLowerCase(Locale.ROOT);
+        if (item.categories() != null) {
+            for (String name : item.categories()) {
+                if (name != null && name.toLowerCase(Locale.ROOT).equals(needle)) {
+                    return true;
+                }
+            }
+        }
+        return item.category() != null && item.category().toLowerCase(Locale.ROOT).contains(needle);
+    }
+
+    private List<String> resolveWorkHours(Gym gym, String language) {
+        List<String> general = GymMapper.toWorkHoursLines(gym.getGeneralWorkHours(), language);
+        if (!general.isEmpty()) {
+            return general;
+        }
+        LinkedHashSet<String> hours = new LinkedHashSet<>();
+        hours.addAll(GymMapper.toWorkHoursLines(gym.getWorkHoursWoman(), language));
+        hours.addAll(GymMapper.toWorkHoursLines(gym.getWorkHoursMan(), language));
+        return List.copyOf(hours);
     }
 
     private LandingStoreCardResponse toStoreCard(Store store, String language) {
@@ -442,7 +507,89 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 }
             }
         }
+        if (gym.getRooms() != null) {
+            for (Room room : gym.getRooms()) {
+                if (room == null) {
+                    continue;
+                }
+                addNamedAmenity(names, room.getName());
+                if (room.getCategory() != null) {
+                    String localizedRoomCategory = translationService.getTranslatedValue(
+                            "CATEGORY",
+                            String.valueOf(room.getCategory().getCategoryId()),
+                            "name",
+                            language);
+                    addNamedAmenity(names, firstNonBlank(localizedRoomCategory, room.getCategory().getName()));
+                }
+            }
+        }
         return names.stream().limit(MAX_AMENITIES).toList();
+    }
+
+    private void addNamedAmenity(LinkedHashSet<String> names, String value) {
+        if (value != null && !value.isBlank()) {
+            names.add(value.trim());
+        }
+    }
+
+    private List<String> resolveCategories(Gym gym, String language) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (gym.getMainCategories() != null) {
+            gym.getMainCategories().forEach(category -> addLocalizedCategory(names, category, language));
+        }
+        if (gym.getSubCategories() != null) {
+            gym.getSubCategories().forEach(category -> addLocalizedCategory(names, category, language));
+        }
+        return names.stream().limit(8).toList();
+    }
+
+    private void addLocalizedCategory(LinkedHashSet<String> names, Category category, String language) {
+        if (category == null) {
+            return;
+        }
+        String localized = translationService.getTranslatedValue(
+                "CATEGORY", String.valueOf(category.getCategoryId()), "name", language);
+        String name = firstNonBlank(localized, category.getName());
+        if (name != null && !name.isBlank()) {
+            names.add(name.trim());
+        }
+    }
+
+    private String resolveDescription(Gym gym, String language) {
+        String localized = firstNonBlank(translationService.getTranslatedValue(
+                "GYM", gym.getId().toString(), "description", language), gym.getDescription());
+        if (localized != null && !localized.isBlank()) {
+            return publicText(localized, MAX_DESCRIPTION_CHARS);
+        }
+        if (gym.getDescriptions() == null) {
+            return null;
+        }
+        for (GymDescription extra : gym.getDescriptions()) {
+            if (extra != null && extra.getDescription() != null && !extra.getDescription().isBlank()) {
+                return publicText(extra.getDescription(), MAX_DESCRIPTION_CHARS);
+            }
+        }
+        return null;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeMembership(String membership) {
+        String value = blankToNull(membership);
+        if (value == null) {
+            return null;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        return switch (lower) {
+            case "bronze", "silver", "gold", "platinum" -> lower;
+            default -> null;
+        };
     }
 
     private List<String> toGalleryUrls(Gym gym, List<GymImage> images) {

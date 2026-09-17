@@ -1,11 +1,13 @@
 package az.fitnest.catalog.repository;
 
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.enums.GymStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +50,7 @@ public interface GymRepository
     public List<az.fitnest.catalog.model.entity.GymWorkHour> findGeneralWorkHoursByGymId(
             @org.springframework.data.repository.query.Param("gymId") Long gymId);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "mainCategories", "subCategories", "subscriptions", "subscriptions.supportedServices", "rooms", "rooms.images", "generalWorkHours", "workHoursWoman", "workHoursMan", "restDays"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "mainCategories", "subCategories", "subscriptions", "subscriptions.supportedServices", "rooms", "rooms.images", "rooms.category", "descriptions", "generalWorkHours", "workHoursWoman", "workHoursMan", "restDays"})
     public Optional<Gym> findWithDetailsById(Long id);
 
     long countByStatus(GymStatus status);
@@ -327,4 +329,27 @@ public interface GymRepository
             ) THEN TRUE ELSE FALSE END
             """, nativeQuery = true)
     boolean existsActivePublicCoverFile(@org.springframework.data.repository.query.Param("fileId") String fileId);
+
+    @Query("SELECT DISTINCT g.address.city FROM Gym g WHERE g.status = :status AND g.address.city IS NOT NULL AND TRIM(g.address.city) <> '' ORDER BY g.address.city")
+    java.util.List<String> findDistinctCitiesByStatus(@org.springframework.data.repository.query.Param("status") GymStatus status);
+
+    @Query("""
+            SELECT DISTINCT c FROM Gym g
+            JOIN g.mainCategories c
+            WHERE g.status = :status AND c.name IS NOT NULL AND TRIM(c.name) <> ''
+            """)
+    java.util.List<Category> findDistinctMainCategoriesByStatus(@org.springframework.data.repository.query.Param("status") GymStatus status);
+
+    @Query("""
+            SELECT DISTINCT c FROM Gym g
+            JOIN g.subCategories c
+            WHERE g.status = :status AND c.name IS NOT NULL AND TRIM(c.name) <> ''
+            """)
+    java.util.List<Category> findDistinctSubCategoriesByStatus(@org.springframework.data.repository.query.Param("status") GymStatus status);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"mainCategories", "subCategories"})
+    @Query("SELECT g FROM Gym g WHERE g.status = :status AND g.id IN :ids")
+    List<Gym> findActiveWithCategoriesByIdIn(
+            @org.springframework.data.repository.query.Param("ids") Collection<Long> ids,
+            @org.springframework.data.repository.query.Param("status") GymStatus status);
 }
