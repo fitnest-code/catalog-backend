@@ -12,6 +12,7 @@ import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
 import az.fitnest.catalog.dto.response.LandingStatsResponse;
 import az.fitnest.catalog.dto.response.LandingStoreCardResponse;
 import az.fitnest.catalog.dto.response.LandingStoreDetailResponse;
+import az.fitnest.catalog.dto.response.LandingStoreFiltersResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.mapper.GymMapper;
 import az.fitnest.catalog.model.entity.Category;
@@ -45,6 +46,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -290,17 +292,54 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Transactional(readOnly = true)
     @Cacheable(
             value = "landing-stores",
-            key = "{#page, #pageSize, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
+            key = "{#page, #pageSize, #q, #city, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
     )
-    public PaginatedResponse<LandingStoreCardResponse> getStores(int page, int pageSize) {
-        return loadStoreCards(page, pageSize);
+    public PaginatedResponse<LandingStoreCardResponse> getStores(
+            int page, int pageSize, String q, String city, String category, String membership) {
+        return loadStoreCards(page, pageSize, q, city, category, membership);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "landing-store-filters", key = "T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
+    public LandingStoreFiltersResponse getStoreFilters() {
+        Collator az = Collator.getInstance(Locale.forLanguageTag("az-AZ"));
+        LinkedHashSet<String> cities = new LinkedHashSet<>();
+        for (String raw : storeRepository.findDistinctActiveCities()) {
+            String city = firstNonBlank(AzerbaijanLocations.canonical(raw), raw == null ? null : raw.trim());
+            if (city != null && !city.isBlank()) {
+                cities.add(city);
+            }
+        }
+        List<String> categories = storeRepository.findDistinctActiveCategories().stream()
+                .map(value -> value == null ? null : value.trim())
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .sorted(az)
+                .toList();
+        List<String> memberships = storeRepository.findDistinctActiveDiscountPercents().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .map(percent -> percent + "%")
+                .toList();
+        return LandingStoreFiltersResponse.builder()
+                .cities(cities.stream().sorted(az).toList())
+                .categories(categories)
+                .memberships(memberships)
+                .build();
     }
 
     private PaginatedResponse<LandingStoreCardResponse> loadStoreCards(int page, int pageSize) {
+        return loadStoreCards(page, pageSize, null, null, null, null);
+    }
+
+    private PaginatedResponse<LandingStoreCardResponse> loadStoreCards(
+            int page, int pageSize, String q, String city, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
-        Page<Store> storePage = storeRepository.findByStatusIgnoreCase(
-                StoreStatus.ACTIVE.name(),
+        Page<Store> storePage = storeRepository.findAll(
+                activeStoreSpec(q, city, category, membership),
                 PageRequest.of(safePage - 1, safePageSize, Sort.by(Sort.Direction.DESC, "createdDate")));
 
         String language = UserContext.getUserLanguage();
@@ -314,6 +353,58 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .page(safePage)
                 .pageSize(safePageSize)
                 .build();
+    }
+
+    private Specification<Store> activeStoreSpec(String q, String city, String category, String membership) {
+        return (root, query, cb) -> {
+            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            predicates.add(cb.equal(cb.upper(root.get("status")), StoreStatus.ACTIVE.name()));
+            String queryText = blankToNull(q);
+            if (queryText != null) {
+                String pattern = "%" + queryText.toLowerCase(Locale.ROOT) + "%";
+                var address = root.get("address");
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(cb.coalesce(address.get("addressText"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(address.get("city"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.get("phone"), "")), pattern)
+                ));
+            }
+            String cityFilter = blankToNull(city);
+            if (cityFilter != null) {
+                predicates.add(cb.like(
+                        cb.lower(cb.coalesce(root.get("address").get("city"), "")),
+                        "%" + cityFilter.toLowerCase(Locale.ROOT) + "%"));
+            }
+            String categoryFilter = blankToNull(category);
+            if (categoryFilter != null) {
+                predicates.add(cb.equal(root.get("category"), categoryFilter));
+            }
+            Integer percent = parseDiscountPercent(membership);
+            if (percent != null) {
+                if (query != null) {
+                    query.distinct(true);
+                }
+                predicates.add(cb.equal(root.join("discounts").get("percent"), percent));
+            }
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+    }
+
+    private Integer parseDiscountPercent(String value) {
+        String raw = blankToNull(value);
+        if (raw == null) {
+            return null;
+        }
+        String digits = raw.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(digits);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     @Override
