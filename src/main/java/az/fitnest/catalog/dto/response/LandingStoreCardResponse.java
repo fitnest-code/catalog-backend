@@ -17,6 +17,7 @@ public record LandingStoreCardResponse(
         String phone,
         String workHoursText,
         List<String> discounts,
-        Boolean isNew
+        Boolean isNew,
+        String socialUrl
 ) {
 }

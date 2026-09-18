@@ -178,33 +178,18 @@ public class StoreServiceImpl implements StoreService {
             distance = calculateDistance(lat, lng, store.getAddress().getLatitude(), store.getAddress().getLongitude());
         }
 
-        String localizedName = null;
-        if (!"AZ".equalsIgnoreCase(userLanguage)) {
-            localizedName = translationMap.get(store.getId() + "_name");
-        }
-        if (localizedName == null) {
-            localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
-        }
-        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
+        String localizedName = store.getName();
 
         String localizedCity = null;
         if (store.getAddress() != null) {
-            if (!"AZ".equalsIgnoreCase(userLanguage)) {
-                localizedCity = translationMap.get(store.getId() + "_city");
-            }
-            if (localizedCity == null) {
-                localizedCity = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage);
-            }
+            localizedCity = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage);
+            String canonical = az.fitnest.catalog.util.AzerbaijanLocations.canonical(localizedCity);
+            if (canonical != null) localizedCity = canonical;
         }
 
         String localizedAddressText = null;
         if (store.getAddress() != null) {
-            if (!"AZ".equalsIgnoreCase(userLanguage)) {
-                localizedAddressText = translationMap.get(store.getId() + "_addresstext");
-            }
-            if (localizedAddressText == null) {
-                localizedAddressText = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage);
-            }
+            localizedAddressText = getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage);
         }
 
         return StoreMainPageResponse.builder()
@@ -257,8 +242,7 @@ public class StoreServiceImpl implements StoreService {
     @Transactional(readOnly = true)
     public StoreDetailResponse getStoreDetailBase(Long storeId, String userLanguage) {
         Store store = storeRepository.findByIdWithAssociations(storeId).orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "error.store_not_found"));
-        String localizedName = translationService.getTranslatedValue("STORE", store.getId().toString(), "name", userLanguage);
-        if (localizedName == null || localizedName.isEmpty()) localizedName = store.getName();
+        String localizedName = store.getName();
         return StoreDetailResponse.builder()
                 .storeId(store.getId())
                 .name(localizedName)
@@ -530,17 +514,15 @@ public class StoreServiceImpl implements StoreService {
 
     private String getLocalizedAddressField(Long entityId, String entityType, az.fitnest.catalog.model.entity.Address address, String fieldName, String userLanguage) {
         if (address == null) return null;
-        String localized = translationService.getTranslatedValue(entityType, entityId.toString(), fieldName, userLanguage);
-        if (localized == null || localized.isEmpty()) {
-            try {
-                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
-                f.setAccessible(true);
-                Object v = f.get(address);
-                if (v != null) return v.toString();
-            } catch (Exception ignored) {
+        try {
+            java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
+            f.setAccessible(true);
+            Object v = f.get(address);
+            if (v != null) {
+                return az.fitnest.catalog.util.AzerbaijanLocations.repairMojibake(v.toString());
             }
-            return null;
+        } catch (Exception ignored) {
         }
-        return localized;
+        return null;
     }
 }

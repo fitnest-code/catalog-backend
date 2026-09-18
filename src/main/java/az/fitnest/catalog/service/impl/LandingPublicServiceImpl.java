@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.response.GymMainPageResponse;
 import az.fitnest.catalog.dto.response.GymPlanItemResponse;
 import az.fitnest.catalog.dto.response.GymSubscriptionCountResponse;
+import az.fitnest.catalog.dto.response.LandingCategoryItem;
 import az.fitnest.catalog.dto.response.LandingGymCardResponse;
 import az.fitnest.catalog.dto.response.LandingGymDetailResponse;
 import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
@@ -26,6 +27,7 @@ import az.fitnest.catalog.model.entity.StoreWorkHours;
 import az.fitnest.catalog.model.entity.SupportedService;
 import az.fitnest.catalog.model.enums.GymStatus;
 import az.fitnest.catalog.model.enums.StoreStatus;
+import az.fitnest.catalog.repository.CategoryRepository;
 import az.fitnest.catalog.repository.GymImageRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.StoreRepository;
@@ -33,6 +35,7 @@ import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.LandingPublicService;
 import az.fitnest.catalog.service.TranslationService;
+import az.fitnest.catalog.util.AzerbaijanLocations;
 import az.fitnest.catalog.util.PublicLandingMedia;
 import az.fitnest.catalog.util.UserContext;
 import az.fitnest.order.grpc.SubscriptionPackageInfo;
@@ -72,6 +75,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     private final GymRepository gymRepository;
     private final GymImageRepository gymImageRepository;
     private final StoreRepository storeRepository;
+    private final CategoryRepository categoryRepository;
     private final TranslationService translationService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final FileStorageService fileStorageService;
@@ -140,11 +144,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         for (Category category : gymRepository.findDistinctSubCategoriesByStatus(GymStatus.ACTIVE)) {
             addLocalizedCategory(categories, category, language);
         }
-        List<String> cities = gymRepository.findDistinctCitiesByStatus(GymStatus.ACTIVE).stream()
-                .map(value -> publicText(value, 80))
-                .filter(Objects::nonNull)
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .toList();
+        List<String> cities = AzerbaijanLocations.CITIES;
         return LandingGymFiltersResponse.builder()
                 .cities(cities)
                 .categories(categories.stream().sorted(String.CASE_INSENSITIVE_ORDER).toList())
@@ -184,7 +184,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                     return gym == null ? null : toGymCard(item, gym, language);
                 })
                 .filter(Objects::nonNull)
-                .filter(item -> cityFilter == null || cityFilter.equalsIgnoreCase(item.city()))
+                .filter(item -> cityFilter == null || AzerbaijanLocations.matches(item.city(), cityFilter))
                 .filter(item -> categoryFilter == null || matchesCategory(item, categoryFilter))
                 .filter(item -> membershipFilter == null || membershipFilter.equals(item.membership()))
                 .toList();
@@ -214,40 +214,47 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         }
 
         String language = UserContext.getUserLanguage();
-        String localizedName = firstNonBlank(translationService.getTranslatedValue(
-                "GYM", gym.getId().toString(), "name", language), gym.getName());
-
-        String location = gym.getAddress() != null ? publicText(gym.getAddress().getAddressText(), 200) : null;
-        String city = gym.getAddress() != null ? publicText(gym.getAddress().getCity(), 80) : null;
+        String location = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.repairMojibake(gym.getAddress().getAddressText()), 200)
+                : null;
+        String city = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.canonical(gym.getAddress().getCity()), 80)
+                : null;
         Double latitude = publicLatitude(gym.getAddress() != null ? gym.getAddress().getLatitude() : null);
         Double longitude = publicLongitude(gym.getAddress() != null ? gym.getAddress().getLongitude() : null);
 
-        List<String> categories = resolveCategories(gym, language);
+        List<LandingCategoryItem> categoryItems = resolveCategoryItems(gym, language);
+        List<String> categories = categoryItems.stream().map(LandingCategoryItem::name).toList();
         String categoryName = categories.isEmpty() ? null : String.join(" & ", categories);
 
         List<String> workHours = resolveWorkHours(gym, language);
         List<GymImage> galleryImages = gymImageRepository.findByGymId(gymId);
         List<String> accessMemberships = resolveAccessMemberships(gym);
+        String description = resolveDescription(gym, language);
+        List<String> amenities = toAmenities(gym, language);
+        NoteSplit notes = splitNote(description, amenities);
 
         return LandingGymDetailResponse.builder()
                 .gymId(gym.getId().toString())
-                .name(publicText(localizedName, 120))
+                .name(publicText(gym.getName(), 120))
                 .coverImageUrl(PublicLandingMedia.toPublicUrl(gym.getCoverImageUrl()))
                 .galleryImageUrls(toGalleryUrls(gym, galleryImages))
                 .location(location)
                 .city(city)
                 .latitude(latitude)
                 .longitude(longitude)
-                .phone(publicText(gym.getPhone(), 32))
+                .phone(publicText(resolvePhone(gym), 32))
                 .workHours(workHours.isEmpty() ? List.of() : workHours)
                 .category(publicText(categoryName, 160))
                 .categories(categories)
+                .categoryItems(categoryItems)
                 .membership(accessMemberships.stream()
                         .max(Comparator.comparingInt(this::membershipRank))
                         .orElse("bronze"))
                 .accessMemberships(accessMemberships)
-                .description(resolveDescription(gym, language))
-                .amenities(toAmenities(gym, language))
+                .description(notes.description())
+                .amenities(notes.amenities())
+                .note(notes.note())
                 .build();
     }
 
@@ -314,7 +321,8 @@ public class LandingPublicServiceImpl implements LandingPublicService {
             return false;
         }
         return gymRepository.existsActivePublicCoverFile(fileId)
-                || storeRepository.existsActivePublicCoverFile(fileId);
+                || storeRepository.existsActivePublicCoverFile(fileId)
+                || categoryRepository.existsPublicIconFile(fileId);
     }
 
     @Override
@@ -331,19 +339,27 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     }
 
     private LandingGymCardResponse toGymCard(GymMainPageResponse item, Gym gym, String language) {
-        List<String> categories = resolveCategories(gym, language);
+        List<LandingCategoryItem> categoryItems = resolveCategoryItems(gym, language);
+        List<String> categories = categoryItems.stream().map(LandingCategoryItem::name).toList();
         String categoryName = categories.isEmpty()
                 ? (item.category() != null ? item.category().name() : null)
                 : String.join(" & ", categories);
+        String city = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.canonical(gym.getAddress().getCity()), 80)
+                : publicText(item.city(), 80);
+        String location = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.repairMojibake(gym.getAddress().getAddressText()), 200)
+                : publicText(item.location(), 200);
         return LandingGymCardResponse.builder()
                 .gymId(item.gymId())
-                .name(publicText(item.name(), 120))
+                .name(publicText(gym.getName(), 120))
                 .coverImageUrl(PublicLandingMedia.toPublicUrl(item.coverImageUrl()))
-                .location(publicText(item.location(), 200))
-                .city(publicText(item.city(), 80))
-                .phone(publicText(gym.getPhone(), 32))
+                .location(location)
+                .city(city)
+                .phone(publicText(resolvePhone(gym), 32))
                 .category(publicText(categoryName, 160))
                 .categories(categories)
+                .categoryItems(categoryItems)
                 .membership(resolveMembership(item.supportedSubscriptions()))
                 .build();
     }
@@ -372,26 +388,14 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     }
 
     private LandingStoreCardResponse toStoreCard(Store store, String language) {
-        String localizedName = translationService.getTranslatedValue(
-                "STORE", store.getId().toString(), "name", language);
-        if (localizedName == null || localizedName.isBlank()) {
-            localizedName = store.getName();
-        }
+        String localizedName = store.getName();
 
-        String city = store.getAddress() != null ? store.getAddress().getCity() : null;
-        String addressText = store.getAddress() != null ? store.getAddress().getAddressText() : null;
-        if (!"AZ".equalsIgnoreCase(language)) {
-            String translatedCity = translationService.getTranslatedValue(
-                    "STORE", store.getId().toString(), "city", language);
-            String translatedAddress = translationService.getTranslatedValue(
-                    "STORE", store.getId().toString(), "addressText", language);
-            if (translatedCity != null && !translatedCity.isBlank()) {
-                city = translatedCity;
-            }
-            if (translatedAddress != null && !translatedAddress.isBlank()) {
-                addressText = translatedAddress;
-            }
-        }
+        String city = store.getAddress() != null
+                ? AzerbaijanLocations.canonical(store.getAddress().getCity())
+                : null;
+        String addressText = store.getAddress() != null
+                ? AzerbaijanLocations.repairMojibake(store.getAddress().getAddressText())
+                : null;
 
         List<String> discounts = store.getDiscounts() == null
                 ? List.of()
@@ -417,6 +421,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .isNew(isNew)
                 .phone(publicText(store.getPhone(), 32))
                 .workHoursText(toWorkHoursText(store.getWorkHours()))
+                .socialUrl(publicUrl(store.getSocialLink() != null ? store.getSocialLink().getUrl() : null))
                 .build();
     }
 
@@ -434,6 +439,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .workHoursText(card.workHoursText())
                 .discounts(card.discounts())
                 .isNew(card.isNew())
+                .socialUrl(card.socialUrl())
                 .build();
     }
 
@@ -531,6 +537,105 @@ public class LandingPublicServiceImpl implements LandingPublicService {
             names.add(value.trim());
         }
     }
+
+    private List<LandingCategoryItem> resolveCategoryItems(Gym gym, String language) {
+        java.util.LinkedHashMap<String, LandingCategoryItem> items = new java.util.LinkedHashMap<>();
+        if (gym.getMainCategories() != null) {
+            gym.getMainCategories().forEach(category -> addCategoryItem(items, category, language));
+        }
+        if (gym.getSubCategories() != null) {
+            gym.getSubCategories().forEach(category -> addCategoryItem(items, category, language));
+        }
+        return items.values().stream().limit(8).toList();
+    }
+
+    private void addCategoryItem(
+            java.util.LinkedHashMap<String, LandingCategoryItem> items,
+            Category category,
+            String language
+    ) {
+        if (category == null) {
+            return;
+        }
+        String localized = translationService.getTranslatedValue(
+                "CATEGORY", String.valueOf(category.getCategoryId()), "name", language);
+        String name = firstNonBlank(localized, category.getName());
+        if (name == null || name.isBlank()) {
+            return;
+        }
+        String trimmed = name.trim();
+        items.putIfAbsent(trimmed, LandingCategoryItem.builder()
+                .name(trimmed)
+                .iconUrl(PublicLandingMedia.toPublicUrl(category.getIconUrl()))
+                .build());
+    }
+
+    private String resolvePhone(Gym gym) {
+        String topLevel = publicText(gym.getPhone(), 32);
+        if (topLevel != null) {
+            return topLevel;
+        }
+        if (gym.getDescriptions() == null) {
+            return null;
+        }
+        for (GymDescription extra : gym.getDescriptions()) {
+            if (extra != null && extra.getPhone() != null && !extra.getPhone().isBlank()) {
+                return publicText(extra.getPhone(), 32);
+            }
+        }
+        return null;
+    }
+
+    private NoteSplit splitNote(String description, List<String> amenities) {
+        java.util.ArrayList<String> kept = new java.util.ArrayList<>();
+        String note = null;
+        if (amenities != null) {
+            for (String amenity : amenities) {
+                String extracted = extractPrefixedNote(amenity);
+                if (extracted != null) {
+                    note = firstNonBlank(note, extracted);
+                } else {
+                    kept.add(amenity);
+                }
+            }
+        }
+        String body = description;
+        if (body != null) {
+            java.util.regex.Matcher matcher = NOTE_IN_TEXT.matcher(body);
+            if (matcher.find()) {
+                note = firstNonBlank(note, matcher.group(3).trim());
+                body = publicText(matcher.group(1).trim(), MAX_DESCRIPTION_CHARS);
+            }
+        }
+        return new NoteSplit(body, List.copyOf(kept), publicText(note, 500));
+    }
+
+    private String extractPrefixedNote(String value) {
+        if (value == null) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = NOTE_PREFIX.matcher(value.trim());
+        return matcher.matches() ? matcher.group(2).trim() : null;
+    }
+
+    private String publicUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed.length() > 300 ? trimmed.substring(0, 300) : trimmed;
+        }
+        return null;
+    }
+
+    private record NoteSplit(String description, List<String> amenities, String note) {
+    }
+
+    private static final java.util.regex.Pattern NOTE_PREFIX = java.util.regex.Pattern.compile(
+            "(?i)^(qeyd|note|примечание)\\s*[:\\-–]\\s*(.+)$");
+    private static final java.util.regex.Pattern NOTE_IN_TEXT = java.util.regex.Pattern.compile(
+            "(?is)^(.*)(?:^|\\n)\\s*(qeyd|note|примечание)\\s*[:\\-–]\\s*(.+)$");
 
     private List<String> resolveCategories(Gym gym, String language) {
         LinkedHashSet<String> names = new LinkedHashSet<>();
