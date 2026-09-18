@@ -1,7 +1,7 @@
 # -----------------------------
 # Stage 1: Build JAR
 # -----------------------------
-FROM gradle:9.3-jdk25 AS builder
+FROM public.ecr.aws/docker/library/gradle:9.3-jdk25 AS builder
 WORKDIR /app
 
 # Cache dependencies
@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/home/gradle/.gradle ./gradlew bootJar --no-daemon
 # -----------------------------
 # Stage 2: Runtime image
 # -----------------------------
-FROM eclipse-temurin:25-jre
+FROM public.ecr.aws/docker/library/eclipse-temurin:25-jre
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
