@@ -48,9 +48,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Collator;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -137,17 +139,36 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Cacheable(value = "landing-gym-filters", key = "T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
     public LandingGymFiltersResponse getGymFilters() {
         String language = UserContext.getUserLanguage();
-        LinkedHashSet<String> categories = new LinkedHashSet<>();
-        for (Category category : gymRepository.findDistinctMainCategoriesByStatus(GymStatus.ACTIVE)) {
-            addLocalizedCategory(categories, category, language);
+        Map<String, Long> categoryCounts = new HashMap<>();
+        addCategoryCounts(categoryCounts, gymRepository.countGymsByMainCategory(GymStatus.ACTIVE), language);
+        addCategoryCounts(categoryCounts, gymRepository.countGymsBySubCategory(GymStatus.ACTIVE), language);
+        List<String> categories = categoryCounts.entrySet().stream()
+                .sorted((left, right) -> {
+                    boolean leftOther = isOtherCategory(left.getKey());
+                    boolean rightOther = isOtherCategory(right.getKey());
+                    if (leftOther != rightOther) {
+                        return leftOther ? 1 : -1;
+                    }
+                    int byCount = Long.compare(right.getValue(), left.getValue());
+                    if (byCount != 0) {
+                        return byCount;
+                    }
+                    return left.getKey().compareToIgnoreCase(right.getKey());
+                })
+                .map(Map.Entry::getKey)
+                .toList();
+
+        Collator az = Collator.getInstance(Locale.forLanguageTag("az-AZ"));
+        LinkedHashSet<String> cities = new LinkedHashSet<>();
+        for (String raw : gymRepository.findDistinctCitiesByStatus(GymStatus.ACTIVE)) {
+            String city = firstNonBlank(AzerbaijanLocations.canonical(raw), raw == null ? null : raw.trim());
+            if (city != null && !city.isBlank()) {
+                cities.add(city);
+            }
         }
-        for (Category category : gymRepository.findDistinctSubCategoriesByStatus(GymStatus.ACTIVE)) {
-            addLocalizedCategory(categories, category, language);
-        }
-        List<String> cities = AzerbaijanLocations.CITIES;
         return LandingGymFiltersResponse.builder()
-                .cities(cities)
-                .categories(categories.stream().sorted(String.CASE_INSENSITIVE_ORDER).toList())
+                .cities(cities.stream().sorted(az).toList())
+                .categories(categories)
                 .memberships(List.of("bronze", "silver", "gold", "platinum"))
                 .build();
     }
@@ -646,6 +667,31 @@ public class LandingPublicServiceImpl implements LandingPublicService {
             gym.getSubCategories().forEach(category -> addLocalizedCategory(names, category, language));
         }
         return names.stream().limit(8).toList();
+    }
+
+    private void addCategoryCounts(Map<String, Long> counts, List<Object[]> rows, String language) {
+        if (rows == null) {
+            return;
+        }
+        for (Object[] row : rows) {
+            if (row == null || row.length < 2 || !(row[0] instanceof Category category)) {
+                continue;
+            }
+            long gymCount = row[1] instanceof Number number ? number.longValue() : 0L;
+            LinkedHashSet<String> names = new LinkedHashSet<>();
+            addLocalizedCategory(names, category, language);
+            for (String name : names) {
+                counts.merge(name, gymCount, Long::sum);
+            }
+        }
+    }
+
+    private static boolean isOtherCategory(String name) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        String normalized = name.trim().toLowerCase(Locale.forLanguageTag("az")).replace('ə', 'e');
+        return "diger".equals(normalized) || "other".equals(normalized) || "другое".equals(normalized);
     }
 
     private void addLocalizedCategory(LinkedHashSet<String> names, Category category, String language) {

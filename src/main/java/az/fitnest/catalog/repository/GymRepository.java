@@ -347,6 +347,22 @@ public interface GymRepository
             """)
     java.util.List<Category> findDistinctSubCategoriesByStatus(@org.springframework.data.repository.query.Param("status") GymStatus status);
 
+    @Query("""
+            SELECT c, COUNT(DISTINCT g.id) FROM Gym g
+            JOIN g.mainCategories c
+            WHERE g.status = :status AND c.name IS NOT NULL AND TRIM(c.name) <> ''
+            GROUP BY c
+            """)
+    java.util.List<Object[]> countGymsByMainCategory(@org.springframework.data.repository.query.Param("status") GymStatus status);
+
+    @Query("""
+            SELECT c, COUNT(DISTINCT g.id) FROM Gym g
+            JOIN g.subCategories c
+            WHERE g.status = :status AND c.name IS NOT NULL AND TRIM(c.name) <> ''
+            GROUP BY c
+            """)
+    java.util.List<Object[]> countGymsBySubCategory(@org.springframework.data.repository.query.Param("status") GymStatus status);
+
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"mainCategories", "subCategories"})
     @Query("SELECT g FROM Gym g WHERE g.status = :status AND g.id IN :ids")
     List<Gym> findActiveWithCategoriesByIdIn(
