@@ -7,6 +7,7 @@ import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
 import az.fitnest.catalog.dto.response.LandingStatsResponse;
 import az.fitnest.catalog.dto.response.LandingStoreCardResponse;
 import az.fitnest.catalog.dto.response.LandingStoreDetailResponse;
+import az.fitnest.catalog.dto.response.LandingStoreFiltersResponse;
 import az.fitnest.catalog.service.LandingPublicService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -89,12 +90,28 @@ public class LandingPublicController {
         return cachedJson(landingPublicService.getHomeStores());
     }
 
-    @Operation(summary = "Store listing cards", description = "Paginated FitStore cards. Email is omitted.")
+    @Operation(summary = "FitStore listing filters", description = "Distinct cities, categories, and discount percents for active stores.")
+    @GetMapping("/stores/filters")
+    public ResponseEntity<LandingStoreFiltersResponse> getStoreFilters() {
+        return cachedJson(landingPublicService.getStoreFilters());
+    }
+
+    @Operation(summary = "Store listing cards", description = "Paginated FitStore cards. page_size is capped. Email is omitted.")
     @GetMapping("/stores")
     public ResponseEntity<PaginatedResponse<LandingStoreCardResponse>> getStores(
             @Parameter(description = "Page index, starting at 1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize) {
-        return cachedJson(landingPublicService.getStores(sanitizePage(page), sanitizePageSize(pageSize)));
+            @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize,
+            @Parameter(description = "Search name, city, address, or phone") @RequestParam(required = false) String q,
+            @Parameter(description = "City name") @RequestParam(required = false) String city,
+            @Parameter(description = "Exact category name") @RequestParam(required = false) String category,
+            @Parameter(description = "Discount percent such as 20%") @RequestParam(required = false) String membership) {
+        return cachedJson(landingPublicService.getStores(
+                sanitizePage(page),
+                sanitizePageSize(pageSize),
+                q,
+                city,
+                category,
+                membership));
     }
 
     @Operation(summary = "Store detail", description = "Public FitStore profile.")

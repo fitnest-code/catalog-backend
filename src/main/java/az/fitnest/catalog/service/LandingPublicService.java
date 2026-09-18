@@ -7,6 +7,7 @@ import az.fitnest.catalog.dto.response.LandingGymFiltersResponse;
 import az.fitnest.catalog.dto.response.LandingStatsResponse;
 import az.fitnest.catalog.dto.response.LandingStoreCardResponse;
 import az.fitnest.catalog.dto.response.LandingStoreDetailResponse;
+import az.fitnest.catalog.dto.response.LandingStoreFiltersResponse;
 
 public interface LandingPublicService {
     LandingStatsResponse getStats();
@@ -21,7 +22,10 @@ public interface LandingPublicService {
 
     PaginatedResponse<LandingStoreCardResponse> getHomeStores();
 
-    PaginatedResponse<LandingStoreCardResponse> getStores(int page, int pageSize);
+    PaginatedResponse<LandingStoreCardResponse> getStores(
+            int page, int pageSize, String q, String city, String category, String membership);
+
+    LandingStoreFiltersResponse getStoreFilters();
 
     LandingStoreDetailResponse getStore(Long storeId);
 

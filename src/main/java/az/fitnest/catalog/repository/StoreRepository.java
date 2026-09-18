@@ -53,6 +53,15 @@ public interface StoreRepository
     @Query(value = "SELECT s FROM Store s WHERE s.createdDate >= :cutoff AND (LOWER(s.name) LIKE :pattern OR LOWER(s.address.addressText) LIKE :pattern)")
     public Page<Store> findNewStoresByQuery(@Param(value = "cutoff") LocalDateTime var1, @Param(value = "pattern") String var2, Pageable var3);
 
+    @Query("select distinct s.address.city from Store s where upper(s.status) = 'ACTIVE' and s.address.city is not null and s.address.city <> ''")
+    List<String> findDistinctActiveCities();
+
+    @Query("select distinct s.category from Store s where upper(s.status) = 'ACTIVE' and s.category is not null and s.category <> ''")
+    List<String> findDistinctActiveCategories();
+
+    @Query("select distinct d.percent from Store s join s.discounts d where upper(s.status) = 'ACTIVE' and d.percent is not null")
+    List<Integer> findDistinctActiveDiscountPercents();
+
     @Modifying
     @Query(value = "DELETE FROM store_social_links WHERE store_id = :storeId", nativeQuery = true)
     void deleteStoreSocialLinksByStoreId(@Param("storeId") Long storeId);
