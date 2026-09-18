@@ -15,4 +15,16 @@ public interface CategoryRepository
     Page<Category> searchByName(@Param("q") String q, Pageable pageable);
 
     java.util.Optional<Category> findByNameIgnoreCase(String name);
+
+    @Query(value = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM categories c
+                WHERE c.icon_url IS NOT NULL
+                  AND (
+                      c.icon_url = :fileId
+                      OR RIGHT(c.icon_url, LENGTH(:fileId) + 1) = CONCAT('/', :fileId)
+                  )
+            ) THEN TRUE ELSE FALSE END
+            """, nativeQuery = true)
+    boolean existsPublicIconFile(@Param("fileId") String fileId);
 }

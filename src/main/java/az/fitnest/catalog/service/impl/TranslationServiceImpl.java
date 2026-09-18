@@ -45,6 +45,9 @@ public class TranslationServiceImpl implements TranslationService {
         if (languageCode == null || languageCode.equalsIgnoreCase("AZ")) {
             return null;
         }
+        if (isProperNounField(entityType, fieldName)) {
+            return null;
+        }
 
         if (entityType != null) {
             String normType = entityType.toUpperCase();
@@ -236,6 +239,11 @@ public class TranslationServiceImpl implements TranslationService {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
             return;
         }
+        if (isProperNounField(entityType, fieldName)) {
+            saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, originalValueAz);
+            saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, originalValueAz);
+            return;
+        }
 
         // Translate to EN
         String enValue = translateText(originalValueAz, "en");
@@ -265,6 +273,26 @@ public class TranslationServiceImpl implements TranslationService {
         } catch (Exception e) {
         }
         return null;
+    }
+
+    private static boolean isProperNounField(String entityType, String fieldName) {
+        if (fieldName == null) {
+            return false;
+        }
+        String field = fieldName.toLowerCase(java.util.Locale.ROOT);
+        boolean addressLike = field.equals("addresstext") || field.equals("city");
+        boolean nameLike = field.equals("name") || field.equals("surname");
+        if (!addressLike && !nameLike) {
+            return false;
+        }
+        if (entityType == null) {
+            return addressLike;
+        }
+        String type = entityType.toUpperCase(java.util.Locale.ROOT).replace("_", "");
+        if (addressLike) {
+            return type.equals("GYM") || type.equals("STORE");
+        }
+        return type.equals("GYM") || type.equals("STORE") || type.equals("TRAINER") || type.equals("GYMADMIN");
     }
 
     private String sanitizeHtml(String text) {

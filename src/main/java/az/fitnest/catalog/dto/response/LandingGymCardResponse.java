@@ -16,6 +16,7 @@ public record LandingGymCardResponse(
         String phone,
         String category,
         List<String> categories,
+        List<LandingCategoryItem> categoryItems,
         String membership
 ) {
 }

@@ -30,6 +30,12 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
         factory.setConnectTimeout(2000);
         factory.setReadTimeout(3000);
         this.restTemplate = new RestTemplate(factory);
+        this.restTemplate.getMessageConverters().add(0,
+                new org.springframework.http.converter.StringHttpMessageConverter(java.nio.charset.StandardCharsets.UTF_8));
+        this.restTemplate.getMessageConverters().stream()
+                .filter(org.springframework.http.converter.json.MappingJackson2HttpMessageConverter.class::isInstance)
+                .map(org.springframework.http.converter.json.MappingJackson2HttpMessageConverter.class::cast)
+                .forEach(converter -> converter.setDefaultCharset(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private GeocodingResponse reverseGeocodePhoton(Double latitude, Double longitude) {

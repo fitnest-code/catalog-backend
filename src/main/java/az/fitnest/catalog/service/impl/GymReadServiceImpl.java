@@ -1139,20 +1139,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Map<String, String> lookup, String userLanguage) {
         if (address == null)
             return null;
-        String localized = getTranslatedValueCached(lookup, entityType, entityId.toString(), fieldName,
-                userLanguage);
-        if (localized == null || localized.isEmpty()) {
-            try {
-                java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
-                f.setAccessible(true);
-                Object v = f.get(address);
-                if (v != null)
-                    return v.toString();
-            } catch (Exception ignored) {
+        try {
+            java.lang.reflect.Field f = address.getClass().getDeclaredField(fieldName);
+            f.setAccessible(true);
+            Object v = f.get(address);
+            if (v != null) {
+                return az.fitnest.catalog.util.AzerbaijanLocations.repairMojibake(v.toString());
             }
-            return null;
+        } catch (Exception ignored) {
         }
-        return localized;
+        return null;
     }
 
     private Map<String, String> fetchTranslationsInBulk(List<Gym> gyms, String userLanguage) {
@@ -1178,7 +1174,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         if (!gymIds.isEmpty()) {
             translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("GYM", gymIds, userLanguage.toUpperCase())
-                    .forEach(t -> lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + t.getFieldName().toLowerCase(), t.getFieldValue()));
+                    .forEach(t -> {
+                        String field = t.getFieldName() == null ? "" : t.getFieldName().toLowerCase();
+                        if (field.equals("name") || field.equals("city") || field.equals("addresstext")) {
+                            return;
+                        }
+                        lookup.put(t.getEntityType() + "_" + t.getEntityId() + "_" + field, t.getFieldValue());
+                    });
         }
         if (!categoryIds.isEmpty()) {
             translationRepository.findByEntityTypeAndEntityIdInAndLanguageCode("CATEGORY", categoryIds, userLanguage.toUpperCase())
@@ -2292,10 +2294,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String city = null;
         String location = null;
         if (address != null) {
-            city = getTranslatedValueCached(translationLookup, "GYM", gym.getId().toString(), "city", userLanguage);
+            city = az.fitnest.catalog.util.AzerbaijanLocations.canonical(address.getCity());
             if (city == null || city.isEmpty()) city = address.getCity();
-            location = getTranslatedValueCached(translationLookup, "GYM", gym.getId().toString(), "addressText", userLanguage);
-            if (location == null || location.isEmpty()) location = address.getAddressText();
+            location = az.fitnest.catalog.util.AzerbaijanLocations.repairMojibake(address.getAddressText());
         }
 
         return GymMainPageResponseV2.builder()

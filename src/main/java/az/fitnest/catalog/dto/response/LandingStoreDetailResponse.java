@@ -18,6 +18,7 @@ public record LandingStoreDetailResponse(
         String email,
         String workHoursText,
         List<String> discounts,
-        Boolean isNew
+        Boolean isNew,
+        String socialUrl
 ) {
 }

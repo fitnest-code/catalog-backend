@@ -20,9 +20,11 @@ public record LandingGymDetailResponse(
         List<String> workHours,
         String category,
         List<String> categories,
+        List<LandingCategoryItem> categoryItems,
         String membership,
         List<String> accessMemberships,
         String description,
-        List<String> amenities
+        List<String> amenities,
+        String note
 ) {
 }

@@ -1474,7 +1474,10 @@ public class GymWriteServiceImpl implements GymWriteService {
             gym.setAddress(new Address());
         }
 
-        if (request.city() != null) gym.getAddress().setCity(request.city());
+        if (request.city() != null) {
+            String canonicalCity = az.fitnest.catalog.util.AzerbaijanLocations.canonical(request.city());
+            gym.getAddress().setCity(canonicalCity != null ? canonicalCity : request.city());
+        }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
@@ -2308,7 +2311,10 @@ public class GymWriteServiceImpl implements GymWriteService {
             gym.setAddress(new Address());
         }
 
-        if (request.city() != null) gym.getAddress().setCity(request.city());
+        if (request.city() != null) {
+            String canonicalCity = az.fitnest.catalog.util.AzerbaijanLocations.canonical(request.city());
+            gym.getAddress().setCity(canonicalCity != null ? canonicalCity : request.city());
+        }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
         if (request.longitude() != null) gym.getAddress().setLongitude(request.longitude());
