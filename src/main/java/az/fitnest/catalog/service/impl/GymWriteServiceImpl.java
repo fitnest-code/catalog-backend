@@ -152,6 +152,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
+            address.setRayon(geocoding.rayon());
         }
         gym.setAddress(address);
 
@@ -225,6 +226,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
+            address.setRayon(geocoding.rayon());
         }
 
         gym.setPhone(PhoneUtil.normalize(request.phone()));
@@ -257,6 +259,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (gym.getAddress() != null) {
             translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
             translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
         }
     }
 
@@ -778,12 +781,14 @@ public class GymWriteServiceImpl implements GymWriteService {
         if (geocoding != null) {
             address.setAddressText(geocoding.addressText());
             address.setCity(geocoding.city());
+            address.setRayon(geocoding.rayon());
         }
         gym.setAddress(address);
 
         if (address != null) {
             translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", address.getAddressText());
             translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", address.getCity());
+            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", address.getRayon());
         }
 
         updateStep(gym, 3);
@@ -1186,6 +1191,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (geocoding != null) {
                 address.setAddressText(geocoding.addressText());
                 address.setCity(geocoding.city());
+                address.setRayon(geocoding.rayon());
             }
             gym.setAddress(address);
 
@@ -1207,6 +1213,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (savedGym.getAddress() != null) {
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
             }
 
             // Step 2: Trainers
@@ -1474,9 +1481,16 @@ public class GymWriteServiceImpl implements GymWriteService {
             gym.setAddress(new Address());
         }
 
-        if (request.city() != null) {
-            String canonicalCity = az.fitnest.catalog.util.AzerbaijanLocations.canonical(request.city());
-            gym.getAddress().setCity(canonicalCity != null ? canonicalCity : request.city());
+        if (request.city() != null || request.rayon() != null) {
+            String cityRaw = request.city() != null ? request.city() : gym.getAddress().getCity();
+            String rayonRaw = request.rayon();
+            String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
+            if (request.city() != null) {
+                gym.getAddress().setCity(normalized[0] != null ? normalized[0] : request.city());
+            }
+            if (request.rayon() != null || request.city() != null) {
+                gym.getAddress().setRayon(normalized[1]);
+            }
         }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
@@ -1497,6 +1511,9 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
             if (request.city() != null) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            }
+            if (request.rayon() != null || request.city() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
     }
@@ -2311,9 +2328,16 @@ public class GymWriteServiceImpl implements GymWriteService {
             gym.setAddress(new Address());
         }
 
-        if (request.city() != null) {
-            String canonicalCity = az.fitnest.catalog.util.AzerbaijanLocations.canonical(request.city());
-            gym.getAddress().setCity(canonicalCity != null ? canonicalCity : request.city());
+        if (request.city() != null || request.rayon() != null) {
+            String cityRaw = request.city() != null ? request.city() : gym.getAddress().getCity();
+            String rayonRaw = request.rayon();
+            String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
+            if (request.city() != null) {
+                gym.getAddress().setCity(normalized[0] != null ? normalized[0] : request.city());
+            }
+            if (request.rayon() != null || request.city() != null) {
+                gym.getAddress().setRayon(normalized[1]);
+            }
         }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
         if (request.latitude() != null) gym.getAddress().setLatitude(request.latitude());
@@ -2334,6 +2358,9 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
             if (request.city() != null) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            }
+            if (request.rayon() != null || request.city() != null) {
+                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
     }
@@ -2555,6 +2582,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (geocoding != null) {
                 address.setAddressText(geocoding.addressText());
                 address.setCity(geocoding.city());
+                address.setRayon(geocoding.rayon());
             }
             gym.setAddress(address);
 
@@ -2573,6 +2601,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (savedGym.getAddress() != null) {
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
                 translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
             }
 
             if (request.trainers() != null && !request.trainers().isEmpty()) {

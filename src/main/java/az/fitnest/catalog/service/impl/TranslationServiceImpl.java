@@ -280,7 +280,7 @@ public class TranslationServiceImpl implements TranslationService {
             return false;
         }
         String field = fieldName.toLowerCase(java.util.Locale.ROOT);
-        boolean addressLike = field.equals("addresstext") || field.equals("city");
+        boolean addressLike = field.equals("addresstext") || field.equals("city") || field.equals("rayon");
         boolean nameLike = field.equals("name") || field.equals("surname");
         if (!addressLike && !nameLike) {
             return false;

@@ -691,14 +691,18 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         String ownerName = ownerNames.get(gym.getId());
 
             String city = null;
+            String rayon = null;
             String addressText = null;
             if (gym.getAddress() != null) {
                 city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
+                rayon = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "rayon", userLanguage);
                 addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
             }
-            String fullAddress = (city != null || addressText != null)
-                    ? ((city != null ? city : "") + ", " + (addressText != null ? addressText : ""))
-                    : "N/A";
+            java.util.List<String> addrParts = new java.util.ArrayList<>();
+            if (city != null && !city.isBlank()) addrParts.add(city);
+            if (rayon != null && !rayon.isBlank()) addrParts.add(rayon);
+            if (addressText != null && !addressText.isBlank()) addrParts.add(addressText);
+            String fullAddress = addrParts.isEmpty() ? "N/A" : String.join(", ", addrParts);
 
             return AdminGymResponse.builder()
                     .id(gym.getId())
@@ -927,8 +931,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
         return LocationResponse.builder()
                 .addressText(addr.getAddressText())
+                .city(addr.getCity())
+                .rayon(addr.getRayon())
                 .latitude(addr.getLatitude())
                 .longitude(addr.getLongitude())
+                .altitude(addr.getAltitude())
                 .build();
     }
 
@@ -2377,12 +2384,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         String city = null;
+        String rayon = null;
         String addressText = null;
         Double lat = null;
         Double lng = null;
         Double altitude = null;
         if (gym.getAddress() != null) {
             city = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "city", userLanguage);
+            rayon = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "rayon", userLanguage);
             addressText = getLocalizedAddressField(gym.getId(), "GYM", gym.getAddress(), "addressText", userLanguage);
             lat = gym.getAddress().getLatitude();
             lng = gym.getAddress().getLongitude();
@@ -2456,6 +2465,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .phone(gym.getPhone())
                 .email(gym.getEmail())
                 .city(city)
+                .rayon(rayon)
                 .address(addressText)
                 .latitude(lat)
                 .longitude(lng)

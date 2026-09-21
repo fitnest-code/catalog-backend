@@ -11,6 +11,7 @@ import lombok.*;
 public class Address {
     private String addressText;
     private String city;
+    private String rayon;
     private Double latitude;
     private Double longitude;
     private Double altitude;
@@ -18,6 +19,16 @@ public class Address {
     public Address(String addressText, String city, Double latitude, Double longitude) {
         this.addressText = addressText;
         this.city = city;
+        this.rayon = null;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.altitude = null;
+    }
+
+    public Address(String addressText, String city, String rayon, Double latitude, Double longitude) {
+        this.addressText = addressText;
+        this.city = city;
+        this.rayon = rayon;
         this.latitude = latitude;
         this.longitude = longitude;
         this.altitude = null;

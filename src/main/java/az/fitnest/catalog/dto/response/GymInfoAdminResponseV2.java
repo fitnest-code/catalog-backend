@@ -35,6 +35,8 @@ public record GymInfoAdminResponseV2(
     String email,
     @Schema(description = "Şəhər")
     String city,
+    @Schema(description = "Rayon (Bakı üçün)")
+    String rayon,
     @Schema(description = "Ünvan")
     String address,
     @Schema(description = "Enlik")

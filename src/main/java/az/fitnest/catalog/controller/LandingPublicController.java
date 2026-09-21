@@ -67,6 +67,7 @@ public class LandingPublicController {
             @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize,
             @Parameter(description = "Search name, city, or address") @RequestParam(required = false) String q,
             @Parameter(description = "Exact city name") @RequestParam(required = false) String city,
+            @Parameter(description = "Bakı rayon name") @RequestParam(required = false) String rayon,
             @Parameter(description = "Exact category name") @RequestParam(required = false) String category,
             @Parameter(description = "bronze, silver, gold, or platinum") @RequestParam(required = false) String membership) {
         return cachedJson(landingPublicService.getGyms(
@@ -74,6 +75,7 @@ public class LandingPublicController {
                 sanitizePageSize(pageSize),
                 q,
                 city,
+                rayon,
                 category,
                 membership));
     }
@@ -103,6 +105,7 @@ public class LandingPublicController {
             @Parameter(description = "Items per page, max 50") @RequestParam(value = "page_size", defaultValue = "10") int pageSize,
             @Parameter(description = "Search name, city, address, or phone") @RequestParam(required = false) String q,
             @Parameter(description = "City name") @RequestParam(required = false) String city,
+            @Parameter(description = "Bakı rayon name") @RequestParam(required = false) String rayon,
             @Parameter(description = "Exact category name") @RequestParam(required = false) String category,
             @Parameter(description = "Discount percent such as 20%") @RequestParam(required = false) String membership) {
         return cachedJson(landingPublicService.getStores(
@@ -110,6 +113,7 @@ public class LandingPublicController {
                 sanitizePageSize(pageSize),
                 q,
                 city,
+                rayon,
                 category,
                 membership));
     }

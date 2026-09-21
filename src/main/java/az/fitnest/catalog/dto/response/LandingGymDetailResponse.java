@@ -14,6 +14,7 @@ public record LandingGymDetailResponse(
         List<String> galleryImageUrls,
         String location,
         String city,
+        String rayon,
         Double latitude,
         Double longitude,
         String phone,

@@ -38,6 +38,7 @@ public class Store
     @AttributeOverrides(value = {
         @AttributeOverride(name = "addressText", column = @Column(name = "address_text")),
         @AttributeOverride(name = "city", column = @Column(name = "city")),
+        @AttributeOverride(name = "rayon", column = @Column(name = "rayon")),
         @AttributeOverride(name = "latitude", column = @Column(name = "address_lat")),
         @AttributeOverride(name = "longitude", column = @Column(name = "address_lng"))
     })

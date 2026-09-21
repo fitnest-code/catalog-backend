@@ -12,12 +12,16 @@ import lombok.Builder;
 @JsonDeserialize(using = AddressResponseDeserializer.class)
 public record AddressResponse(
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    @Schema(description = "Resolved address text", example = "Baku, 28 May str. 12", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "Resolved address text", example = "28 May küç. 12", accessMode = Schema.AccessMode.READ_ONLY)
     String addressText,
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    @Schema(description = "City", example = "Baku", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "City", example = "Bakı", accessMode = Schema.AccessMode.READ_ONLY)
     String city,
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "Rayon (Bakı only)", example = "Nəsimi", accessMode = Schema.AccessMode.READ_ONLY)
+    String rayon,
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "Latitude", example = "40.4093")
@@ -32,4 +36,8 @@ public record AddressResponse(
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "Altitude", example = "12.3")
     Double altitude
-) {}
+) {
+    public AddressResponse(String addressText, String city, Double latitude, Double longitude, Double altitude) {
+        this(addressText, city, null, latitude, longitude, altitude);
+    }
+}

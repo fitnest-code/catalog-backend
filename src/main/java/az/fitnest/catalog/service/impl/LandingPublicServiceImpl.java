@@ -129,11 +129,11 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Transactional(readOnly = true)
     @Cacheable(
             value = "landing-gyms",
-            key = "{#page, #pageSize, #q, #city, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
+            key = "{#page, #pageSize, #q, #city, #rayon, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
     )
     public PaginatedResponse<LandingGymCardResponse> getGyms(
-            int page, int pageSize, String q, String city, String category, String membership) {
-        return loadGymCards(page, pageSize, q, city, category, membership);
+            int page, int pageSize, String q, String city, String rayon, String category, String membership) {
+        return loadGymCards(page, pageSize, q, city, rayon, category, membership);
     }
 
     @Override
@@ -168,19 +168,24 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 cities.add(city);
             }
         }
+        Map<String, List<String>> rayonsByCity = new HashMap<>();
+        if (cities.stream().anyMatch(AzerbaijanLocations::isBaki)) {
+            rayonsByCity.put(AzerbaijanLocations.BAKI, List.copyOf(AzerbaijanLocations.BAKI_RAYONS));
+        }
         return LandingGymFiltersResponse.builder()
                 .cities(cities.stream().sorted(az).toList())
+                .rayonsByCity(rayonsByCity)
                 .categories(categories)
                 .memberships(List.of("bronze", "silver", "gold", "platinum"))
                 .build();
     }
 
     private PaginatedResponse<LandingGymCardResponse> loadGymCards(int page, int pageSize) {
-        return loadGymCards(page, pageSize, null, null, null, null);
+        return loadGymCards(page, pageSize, null, null, null, null, null);
     }
 
     private PaginatedResponse<LandingGymCardResponse> loadGymCards(
-            int page, int pageSize, String q, String city, String category, String membership) {
+            int page, int pageSize, String q, String city, String rayon, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
         PaginatedResponse<GymMainPageResponse> gyms = gymReadService.getGyms(
@@ -197,6 +202,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .collect(Collectors.toMap(Gym::getId, gym -> gym, (left, right) -> left));
 
         String cityFilter = blankToNull(city);
+        String rayonFilter = blankToNull(rayon);
         String categoryFilter = blankToNull(category);
         String membershipFilter = normalizeMembership(membership);
 
@@ -208,6 +214,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 })
                 .filter(Objects::nonNull)
                 .filter(item -> cityFilter == null || AzerbaijanLocations.matches(item.city(), cityFilter))
+                .filter(item -> rayonFilter == null || AzerbaijanLocations.matchesRayon(item.rayon(), rayonFilter))
                 .filter(item -> categoryFilter == null || matchesCategory(item, categoryFilter))
                 .filter(item -> membershipFilter == null || membershipFilter.equals(item.membership()))
                 .toList();
@@ -243,6 +250,9 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String city = gym.getAddress() != null
                 ? publicText(AzerbaijanLocations.canonical(gym.getAddress().getCity()), 80)
                 : null;
+        String rayon = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.canonicalRayon(gym.getAddress().getRayon()), 80)
+                : null;
         Double latitude = publicLatitude(gym.getAddress() != null ? gym.getAddress().getLatitude() : null);
         Double longitude = publicLongitude(gym.getAddress() != null ? gym.getAddress().getLongitude() : null);
 
@@ -264,6 +274,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .galleryImageUrls(toGalleryUrls(gym, galleryImages))
                 .location(location)
                 .city(city)
+                .rayon(rayon)
                 .latitude(latitude)
                 .longitude(longitude)
                 .phone(publicText(resolvePhone(gym), 32))
@@ -292,11 +303,11 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Transactional(readOnly = true)
     @Cacheable(
             value = "landing-stores",
-            key = "{#page, #pageSize, #q, #city, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
+            key = "{#page, #pageSize, #q, #city, #rayon, #category, #membership, T(az.fitnest.catalog.util.UserContext).getUserLanguage()}"
     )
     public PaginatedResponse<LandingStoreCardResponse> getStores(
-            int page, int pageSize, String q, String city, String category, String membership) {
-        return loadStoreCards(page, pageSize, q, city, category, membership);
+            int page, int pageSize, String q, String city, String rayon, String category, String membership) {
+        return loadStoreCards(page, pageSize, q, city, rayon, category, membership);
     }
 
     @Override
@@ -323,23 +334,28 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .sorted()
                 .map(percent -> percent + "%")
                 .toList();
+        Map<String, List<String>> rayonsByCity = new HashMap<>();
+        if (cities.stream().anyMatch(AzerbaijanLocations::isBaki)) {
+            rayonsByCity.put(AzerbaijanLocations.BAKI, List.copyOf(AzerbaijanLocations.BAKI_RAYONS));
+        }
         return LandingStoreFiltersResponse.builder()
                 .cities(cities.stream().sorted(az).toList())
+                .rayonsByCity(rayonsByCity)
                 .categories(categories)
                 .memberships(memberships)
                 .build();
     }
 
     private PaginatedResponse<LandingStoreCardResponse> loadStoreCards(int page, int pageSize) {
-        return loadStoreCards(page, pageSize, null, null, null, null);
+        return loadStoreCards(page, pageSize, null, null, null, null, null);
     }
 
     private PaginatedResponse<LandingStoreCardResponse> loadStoreCards(
-            int page, int pageSize, String q, String city, String category, String membership) {
+            int page, int pageSize, String q, String city, String rayon, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
         Page<Store> storePage = storeRepository.findAll(
-                activeStoreSpec(q, city, category, membership),
+                activeStoreSpec(q, city, rayon, category, membership),
                 PageRequest.of(safePage - 1, safePageSize, Sort.by(Sort.Direction.DESC, "createdDate")));
 
         String language = UserContext.getUserLanguage();
@@ -355,7 +371,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .build();
     }
 
-    private Specification<Store> activeStoreSpec(String q, String city, String category, String membership) {
+    private Specification<Store> activeStoreSpec(String q, String city, String rayon, String category, String membership) {
         return (root, query, cb) -> {
             var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
             predicates.add(cb.equal(cb.upper(root.get("status")), StoreStatus.ACTIVE.name()));
@@ -367,6 +383,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                         cb.like(cb.lower(root.get("name")), pattern),
                         cb.like(cb.lower(cb.coalesce(address.get("addressText"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(address.get("city"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(address.get("rayon"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("phone"), "")), pattern)
                 ));
             }
@@ -375,6 +392,12 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 predicates.add(cb.like(
                         cb.lower(cb.coalesce(root.get("address").get("city"), "")),
                         "%" + cityFilter.toLowerCase(Locale.ROOT) + "%"));
+            }
+            String rayonFilter = blankToNull(rayon);
+            if (rayonFilter != null) {
+                predicates.add(cb.like(
+                        cb.lower(cb.coalesce(root.get("address").get("rayon"), "")),
+                        "%" + rayonFilter.toLowerCase(Locale.ROOT) + "%"));
             }
             String categoryFilter = blankToNull(category);
             if (categoryFilter != null) {
@@ -459,6 +482,9 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String city = gym.getAddress() != null
                 ? publicText(AzerbaijanLocations.canonical(gym.getAddress().getCity()), 80)
                 : publicText(item.city(), 80);
+        String rayon = gym.getAddress() != null
+                ? publicText(AzerbaijanLocations.canonicalRayon(gym.getAddress().getRayon()), 80)
+                : null;
         String location = gym.getAddress() != null
                 ? publicText(AzerbaijanLocations.repairMojibake(gym.getAddress().getAddressText()), 200)
                 : publicText(item.location(), 200);
@@ -468,6 +494,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .coverImageUrl(PublicLandingMedia.toPublicUrl(item.coverImageUrl()))
                 .location(location)
                 .city(city)
+                .rayon(rayon)
                 .phone(publicText(resolvePhone(gym), 32))
                 .category(publicText(categoryName, 160))
                 .categories(categories)
@@ -505,6 +532,9 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String city = store.getAddress() != null
                 ? AzerbaijanLocations.canonical(store.getAddress().getCity())
                 : null;
+        String rayon = store.getAddress() != null
+                ? AzerbaijanLocations.canonicalRayon(store.getAddress().getRayon())
+                : null;
         String addressText = store.getAddress() != null
                 ? AzerbaijanLocations.repairMojibake(store.getAddress().getAddressText())
                 : null;
@@ -527,6 +557,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .name(publicText(localizedName, 120))
                 .coverImageUrl(PublicLandingMedia.toPublicUrl(store.getCoverImageUrl()))
                 .city(publicText(city, 80))
+                .rayon(publicText(rayon, 80))
                 .addressText(publicText(addressText, 200))
                 .category(publicText(store.getCategory(), 80))
                 .discounts(discounts)
@@ -544,6 +575,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .name(card.name())
                 .coverImageUrl(card.coverImageUrl())
                 .city(card.city())
+                .rayon(card.rayon())
                 .addressText(card.addressText())
                 .category(card.category())
                 .phone(card.phone())

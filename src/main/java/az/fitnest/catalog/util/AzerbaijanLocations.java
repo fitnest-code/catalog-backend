@@ -8,6 +8,8 @@ import java.util.Map;
 
 public final class AzerbaijanLocations {
 
+    public static final String BAKI = "Bakı";
+
     public static final List<String> CITIES = List.of(
             "Bakı",
             "Abşeron",
@@ -85,6 +87,21 @@ public final class AzerbaijanLocations {
             "Zərdab"
     );
 
+    public static final List<String> BAKI_RAYONS = List.of(
+            "Binəqədi",
+            "Xətai",
+            "Xəzər",
+            "Qaradağ",
+            "Nərimanov",
+            "Nəsimi",
+            "Nizami",
+            "Pirallahı",
+            "Sabunçu",
+            "Səbail",
+            "Suraxanı",
+            "Yasamal"
+    );
+
     private static final Map<String, String> ALIASES = Map.ofEntries(
             Map.entry("baku", "Bakı"),
             Map.entry("baki", "Bakı"),
@@ -103,7 +120,40 @@ public final class AzerbaijanLocations {
             Map.entry("lankaran", "Lənkəran")
     );
 
+    private static final Map<String, String> RAYON_ALIASES = Map.ofEntries(
+            Map.entry("bineqedi", "Binəqədi"),
+            Map.entry("binagadi", "Binəqədi"),
+            Map.entry("binagady", "Binəqədi"),
+            Map.entry("khatai", "Xətai"),
+            Map.entry("xetai", "Xətai"),
+            Map.entry("hetey", "Xətai"),
+            Map.entry("khazar", "Xəzər"),
+            Map.entry("xezer", "Xəzər"),
+            Map.entry("garadagh", "Qaradağ"),
+            Map.entry("qaradag", "Qaradağ"),
+            Map.entry("karadag", "Qaradağ"),
+            Map.entry("narimanov", "Nərimanov"),
+            Map.entry("nerimanov", "Nərimanov"),
+            Map.entry("nasimi", "Nəsimi"),
+            Map.entry("nesimi", "Nəsimi"),
+            Map.entry("nizami", "Nizami"),
+            Map.entry("pirallahi", "Pirallahı"),
+            Map.entry("pirallahy", "Pirallahı"),
+            Map.entry("sabunchu", "Sabunçu"),
+            Map.entry("sabuncu", "Sabunçu"),
+            Map.entry("sabail", "Səbail"),
+            Map.entry("sebail", "Səbail"),
+            Map.entry("surakhani", "Suraxanı"),
+            Map.entry("suraxani", "Suraxanı"),
+            Map.entry("yasamal", "Yasamal")
+    );
+
     private AzerbaijanLocations() {
+    }
+
+    public static boolean isBaki(String city) {
+        String canonical = canonical(city);
+        return BAKI.equals(canonical);
     }
 
     public static boolean matches(String storedCity, String selectedCity) {
@@ -126,23 +176,80 @@ public final class AzerbaijanLocations {
         return stored.startsWith(selected) || stored.contains(" " + selected) || stored.contains("," + selected);
     }
 
+    public static boolean matchesRayon(String storedRayon, String selectedRayon) {
+        if (selectedRayon == null || selectedRayon.isBlank()) {
+            return true;
+        }
+        if (storedRayon == null || storedRayon.isBlank()) {
+            return false;
+        }
+        String selected = normalize(selectedRayon);
+        String stored = normalize(storedRayon);
+        if (stored.equals(selected)) {
+            return true;
+        }
+        String canonicalSelected = canonicalRayon(selectedRayon);
+        String canonicalStored = canonicalRayon(storedRayon);
+        return canonicalSelected != null && canonicalSelected.equalsIgnoreCase(canonicalStored);
+    }
+
     public static String canonical(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         String repaired = repairMojibake(raw).trim();
-        String alias = ALIASES.get(normalize(repaired.split("[,/]")[0].trim()));
+        String firstPart = repaired.split("[,/]")[0].trim()
+                .replaceAll("(?iu)\\s*(şəhəri|sehəri|sheheri|city|города?)\\s*$", "")
+                .trim();
+        String alias = ALIASES.get(normalize(firstPart));
         if (alias != null) {
             return alias;
         }
         for (String city : CITIES) {
             String cityNorm = normalize(city);
-            String valueNorm = normalize(repaired);
-            if (valueNorm.equals(cityNorm) || valueNorm.startsWith(cityNorm + " ") || valueNorm.startsWith(cityNorm + ",")) {
+            String valueNorm = normalize(firstPart);
+            if (valueNorm.equals(cityNorm) || valueNorm.startsWith(cityNorm)) {
                 return city;
             }
         }
         return repaired;
+    }
+
+    /**
+     * Canonicalize a Bakı rayon name. Returns null if not a known Bakı rayon.
+     */
+    public static String canonicalRayon(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String repaired = repairMojibake(raw).trim();
+        String cleaned = repaired
+                .replaceAll("(?iu)\\s*(rayonu|rayon|district|районе?|р\\.?|r\\.?)\\s*$", "")
+                .trim();
+        String alias = RAYON_ALIASES.get(normalize(cleaned));
+        if (alias != null) {
+            return alias;
+        }
+        for (String rayon : BAKI_RAYONS) {
+            String rayonNorm = normalize(rayon);
+            String valueNorm = normalize(cleaned);
+            if (valueNorm.equals(rayonNorm) || valueNorm.startsWith(rayonNorm)) {
+                return rayon;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Apply city+rayon rules: canonicalize city; keep rayon only for Bakı.
+     */
+    public static String[] normalizeCityAndRayon(String cityRaw, String rayonRaw) {
+        String city = canonical(cityRaw);
+        String rayon = null;
+        if (isBaki(city)) {
+            rayon = canonicalRayon(rayonRaw);
+        }
+        return new String[]{city, rayon};
     }
 
     public static String repairMojibake(String value) {

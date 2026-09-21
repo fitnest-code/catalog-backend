@@ -23,6 +23,7 @@ import az.fitnest.catalog.service.GymReadService;
 import az.fitnest.catalog.service.GymReviewService;
 import az.fitnest.catalog.service.GymTrainerService;
 import az.fitnest.catalog.service.GymWriteService;
+import az.fitnest.catalog.service.AddressMigrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -59,6 +60,7 @@ public class GymAdminController {
     private final GymTrainerService gymTrainerService;
     private final GymReadService gymReadService;
     private final az.fitnest.catalog.service.GymEntranceService gymEntranceService;
+    private final AddressMigrationService addressMigrationService;
 
     @Operation(summary = "Yeni idman zalı yaradın", description = "Sistemə yeni idman zalı əlavə edir. ADMIN rolu tələb olunur.")
     @PreAuthorize("hasRole('ADMIN')")
@@ -904,5 +906,13 @@ public class GymAdminController {
             @RequestParam(value = "sort_dir", defaultValue = "DESC") az.fitnest.catalog.dto.SortDirection sortDir) {
         int safePageSize = Math.min(pageSize, 100);
         return ResponseEntity.ok(gymTrainerService.getTrainersV2(gymId, page, safePageSize, sortDir.name().toLowerCase()));
+    }
+
+    @Operation(summary = "Legacy ünvanları şəhər/rayon/küçəyə böl", description = "Mövcud gym və store ünvan mətnlərini strukturlaşdırır. dryRun=true yalnız sayır.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/v1/admin/addresses/migrate-split")
+    public ResponseEntity<AddressMigrationService.MigrationResult> migrateAddresses(
+            @RequestParam(defaultValue = "true") boolean dryRun) {
+        return ResponseEntity.ok(addressMigrationService.migrateLegacyAddresses(dryRun));
     }
 }
