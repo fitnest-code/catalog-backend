@@ -13,6 +13,7 @@ public record LandingGymCardResponse(
         String coverImageUrl,
         String location,
         String city,
+        String rayon,
         String phone,
         String category,
         List<String> categories,

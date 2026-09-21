@@ -14,7 +14,7 @@ public interface LandingPublicService {
 
     PaginatedResponse<LandingGymCardResponse> getHomeGyms();
 
-    PaginatedResponse<LandingGymCardResponse> getGyms(int page, int pageSize, String q, String city, String category, String membership);
+    PaginatedResponse<LandingGymCardResponse> getGyms(int page, int pageSize, String q, String city, String rayon, String category, String membership);
 
     LandingGymFiltersResponse getGymFilters();
 
@@ -23,7 +23,7 @@ public interface LandingPublicService {
     PaginatedResponse<LandingStoreCardResponse> getHomeStores();
 
     PaginatedResponse<LandingStoreCardResponse> getStores(
-            int page, int pageSize, String q, String city, String category, String membership);
+            int page, int pageSize, String q, String city, String rayon, String category, String membership);
 
     LandingStoreFiltersResponse getStoreFilters();
 

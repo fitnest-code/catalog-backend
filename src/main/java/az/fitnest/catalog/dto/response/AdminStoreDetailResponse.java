@@ -71,11 +71,14 @@ public record AdminStoreDetailResponse(
     @Builder
     @Schema(description = "Ünvan məlumatları")
     public record AddressDto(
-            @Schema(description = "Ünvan mətni", example = "Nəriman Nərimanov rayonu")
+            @Schema(description = "Ünvan mətni", example = "Heydər Əliyev pr. 101")
             String addressText,
 
             @Schema(description = "Şəhər", example = "Bakı")
             String city,
+
+            @Schema(description = "Rayon (Bakı üçün)", example = "Nərimanov")
+            String rayon,
 
             @Schema(description = "Coğrafi enlik", example = "40.4093")
             Double latitude,

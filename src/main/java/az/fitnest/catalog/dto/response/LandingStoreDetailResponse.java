@@ -12,6 +12,7 @@ public record LandingStoreDetailResponse(
         String name,
         String coverImageUrl,
         String city,
+        String rayon,
         String addressText,
         String category,
         String phone,

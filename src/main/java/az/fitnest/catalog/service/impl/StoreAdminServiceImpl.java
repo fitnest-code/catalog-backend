@@ -22,6 +22,7 @@ import az.fitnest.catalog.repository.StoreRepository;
 import az.fitnest.catalog.repository.TranslationRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.StoreAdminService;
+import az.fitnest.catalog.util.AzerbaijanLocations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -87,9 +88,12 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         if (request.getAddress() != null && !request.getAddress().isBlank()) {
             address.setAddressText(request.getAddress());
         }
-        if (address.getCity() == null || address.getCity().isBlank()) {
-            address.setCity("Bakı");
-        }
+        String cityRaw = request.getCity() != null && !request.getCity().isBlank()
+                ? request.getCity()
+                : (address.getCity() != null && !address.getCity().isBlank() ? address.getCity() : "Bakı");
+        String[] normalized = AzerbaijanLocations.normalizeCityAndRayon(cityRaw, request.getRayon());
+        address.setCity(normalized[0] != null ? normalized[0] : cityRaw);
+        address.setRayon(normalized[1]);
         store.setAddress(address);
 
         store.setPhone(request.getPhone());
@@ -229,12 +233,23 @@ public class StoreAdminServiceImpl implements StoreAdminService {
             store.setCoverImageUrl(uploadAndGetUrl(photo));
         }
 
-        if (request.getLatitude().isPresent() || request.getLongitude().isPresent()) {
+        if (request.getLatitude().isPresent() || request.getLongitude().isPresent()
+                || request.getCity().isPresent() || request.getRayon().isPresent() || request.getAddress().isPresent()) {
             Address address = store.getAddress() != null
                     ? store.getAddress()
                     : new Address();
-            request.getLatitude() .ifPresent(address::setLatitude);
+            request.getLatitude().ifPresent(address::setLatitude);
             request.getLongitude().ifPresent(address::setLongitude);
+            request.getAddress().ifPresent(address::setAddressText);
+            String cityRaw = request.getCity().orElse(address.getCity());
+            String rayonRaw = request.getRayon().orElse(address.getRayon());
+            if (request.getCity().isPresent() || request.getRayon().isPresent()) {
+                String[] normalized = AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
+                if (request.getCity().isPresent()) {
+                    address.setCity(normalized[0] != null ? normalized[0] : cityRaw);
+                }
+                address.setRayon(normalized[1]);
+            }
             store.setAddress(address);
         }
 
@@ -365,6 +380,7 @@ public class StoreAdminServiceImpl implements StoreAdminService {
         return AdminStoreDetailResponse.AddressDto.builder()
                 .addressText(address.getAddressText())
                 .city(address.getCity())
+                .rayon(address.getRayon())
                 .latitude(address.getLatitude())
                 .longitude(address.getLongitude())
                 .build();

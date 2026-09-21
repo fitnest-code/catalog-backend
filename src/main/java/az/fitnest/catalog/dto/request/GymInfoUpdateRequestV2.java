@@ -38,6 +38,9 @@ public record GymInfoUpdateRequestV2(
     @Schema(description = "Şəhər")
     String city,
 
+    @Schema(description = "Rayon (Bakı üçün)")
+    String rayon,
+
     @NotBlank(message = "Ünvan boş ola bilməz")
     @Schema(description = "Ünvan")
     String address,

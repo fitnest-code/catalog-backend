@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.*;
 import az.fitnest.catalog.dto.request.*;
 import az.fitnest.catalog.dto.response.*;
 import az.fitnest.catalog.service.ReverseGeocodingService;
+import az.fitnest.catalog.util.AzerbaijanLocations;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -58,42 +59,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                         Map<String, Object> feature = features.get(0);
                         Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
                         if (properties != null) {
-                            String name = (String) properties.get("name");
-                            String street = (String) properties.get("street");
-                            String houseNumber = (String) properties.get("housenumber");
-                            String city = (String) properties.get("city");
-                            String state = (String) properties.get("state");
-                            String country = (String) properties.get("country");
-
-                            StringBuilder addressBuilder = new StringBuilder();
-                            if (name != null) addressBuilder.append(name);
-                            if (street != null) {
-                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                                if (houseNumber != null) addressBuilder.append(houseNumber).append(" ");
-                                addressBuilder.append(street);
-                            }
-                            if (city != null) {
-                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                                addressBuilder.append(city);
-                            }
-                            if (state != null) {
-                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                                addressBuilder.append(state);
-                            }
-                            if (country != null) {
-                                if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                                addressBuilder.append(country);
-                            }
-
-                            String addressText = addressBuilder.toString();
-                            if (!addressText.isBlank()) {
-                                return GeocodingResponse.builder()
-                                        .addressText(addressText)
-                                        .city(city)
-                                        .latitude(latitude)
-                                        .longitude(longitude)
-                                        .build();
-                            }
+                            return buildFromPhotonProperties(properties, latitude, longitude);
                         }
                     }
                 }
@@ -126,20 +92,15 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
             ResponseEntity<Map> response = this.restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
             Map<String, Object> body = response.getBody();
             if (body != null) {
-                String displayName = (String) body.get("display_name");
-                String city = null;
                 Object addressObj = body.get("address");
-                if (addressObj instanceof Map) {
-                    Map<String, String> address = (Map<String, String>) addressObj;
-                    city = address.get("city");
-                    if (city == null) city = address.get("town");
-                    if (city == null) city = address.get("village");
-                    if (city == null) city = address.get("hamlet");
-                    if (city == null) city = address.get("suburb");
-                }
+                String street = buildStreetAddress(addressObj, (String) body.get("display_name"));
+                String city = extractCity(addressObj);
+                String rayon = extractRayon(addressObj, city);
+                String[] normalized = AzerbaijanLocations.normalizeCityAndRayon(city, rayon);
                 return GeocodingResponse.builder()
-                        .addressText(displayName)
-                        .city(city)
+                        .addressText(street)
+                        .city(normalized[0])
+                        .rayon(normalized[1])
                         .latitude(latitude)
                         .longitude(longitude)
                         .build();
@@ -148,7 +109,6 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
             // Fall through to Photon
         }
 
-        // Try Photon as fallback
         GeocodingResponse photonFallback = reverseGeocodePhoton(latitude, longitude);
         if (photonFallback != null) {
             return photonFallback;
@@ -288,16 +248,9 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
             if (list != null) {
                 List<GeocodingResponse> results = new ArrayList<>();
                 for (Map<String, Object> item : list) {
-                    String displayName = (String) item.get("display_name");
                     Double lat = parseDouble(item.get("lat"));
                     Double lon = parseDouble(item.get("lon"));
-                    String resultCity = extractCity(item.get("address"));
-                    results.add(GeocodingResponse.builder()
-                            .addressText(displayName)
-                            .city(resultCity)
-                            .latitude(lat)
-                            .longitude(lon)
-                            .build());
+                    results.add(fromNominatimItem(item, lat, lon));
                 }
                 return results;
             }
@@ -488,6 +441,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
                         augmentedResults.add(GeocodingResponse.builder()
                                 .addressText(newAddressText)
                                 .city(r.city())
+                                .rayon(r.rayon())
                                 .latitude(r.latitude())
                                 .longitude(r.longitude())
                                 .build());
@@ -541,16 +495,9 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
             if (list != null) {
                 List<GeocodingResponse> results = new ArrayList<>();
                 for (Map<String, Object> item : list) {
-                    String displayName = (String) item.get("display_name");
                     Double lat = parseDouble(item.get("lat"));
                     Double lon = parseDouble(item.get("lon"));
-                    String city = extractCity(item.get("address"));
-                    results.add(GeocodingResponse.builder()
-                            .addressText(displayName)
-                            .city(city)
-                            .latitude(lat)
-                            .longitude(lon)
-                            .build());
+                    results.add(fromNominatimItem(item, lat, lon));
                 }
                 return results;
             }
@@ -588,36 +535,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
 
                 if (properties == null || geometry == null) continue;
 
-                String name = (String) properties.get("name");
-                String street = (String) properties.get("street");
-                String houseNumber = (String) properties.get("housenumber");
-                String city = (String) properties.get("city");
-                String state = (String) properties.get("state");
                 String country = (String) properties.get("country");
-
-                StringBuilder addressBuilder = new StringBuilder();
-                if (name != null) addressBuilder.append(name);
-                if (street != null) {
-                    if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                    if (houseNumber != null) addressBuilder.append(houseNumber).append(" ");
-                    addressBuilder.append(street);
-                }
-                if (city != null) {
-                    if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                    addressBuilder.append(city);
-                }
-                if (state != null) {
-                    if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                    addressBuilder.append(state);
-                }
-                if (country != null) {
-                    if (addressBuilder.length() > 0) addressBuilder.append(", ");
-                    addressBuilder.append(country);
-                }
-
-                String addressText = addressBuilder.toString();
-                if (addressText.isBlank()) continue;
-
                 Double lat = null, lon = null;
                 Object coordsObj = geometry.get("coordinates");
                 if (coordsObj instanceof List) {
@@ -630,12 +548,10 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
 
                 if ("Azerbaijan".equalsIgnoreCase(country) || "Azərbaycan".equalsIgnoreCase(country)
                         || country == null) {
-                    results.add(GeocodingResponse.builder()
-                            .addressText(addressText)
-                            .city(city)
-                            .latitude(lat)
-                            .longitude(lon)
-                            .build());
+                    GeocodingResponse built = buildFromPhotonProperties(properties, lat, lon);
+                    if (built != null) {
+                        results.add(built);
+                    }
                 }
             }
             return results;
@@ -653,14 +569,124 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
         }
     }
 
+    private GeocodingResponse fromNominatimItem(Map<String, Object> item, Double lat, Double lon) {
+        Object addressObj = item.get("address");
+        String street = buildStreetAddress(addressObj, (String) item.get("display_name"));
+        String city = extractCity(addressObj);
+        String rayon = extractRayon(addressObj, city);
+        String[] normalized = AzerbaijanLocations.normalizeCityAndRayon(city, rayon);
+        return GeocodingResponse.builder()
+                .addressText(street)
+                .city(normalized[0])
+                .rayon(normalized[1])
+                .latitude(lat)
+                .longitude(lon)
+                .build();
+    }
+
+    private GeocodingResponse buildFromPhotonProperties(Map<String, Object> properties, Double lat, Double lon) {
+        String name = (String) properties.get("name");
+        String street = (String) properties.get("street");
+        String houseNumber = (String) properties.get("housenumber");
+        String cityRaw = (String) properties.get("city");
+        String district = (String) properties.get("district");
+        if (district == null) district = (String) properties.get("suburb");
+        if (district == null) district = (String) properties.get("county");
+
+        StringBuilder streetBuilder = new StringBuilder();
+        if (street != null && !street.isBlank()) {
+            if (houseNumber != null && !houseNumber.isBlank()) {
+                streetBuilder.append(street.trim()).append(" ").append(houseNumber.trim());
+            } else {
+                streetBuilder.append(street.trim());
+            }
+        } else if (name != null && !name.isBlank()) {
+            streetBuilder.append(name.trim());
+            if (houseNumber != null && !houseNumber.isBlank()) {
+                streetBuilder.append(" ").append(houseNumber.trim());
+            }
+        }
+
+        String addressText = streetBuilder.toString();
+        if (addressText.isBlank()) {
+            return null;
+        }
+
+        String[] normalized = AzerbaijanLocations.normalizeCityAndRayon(cityRaw, district);
+        return GeocodingResponse.builder()
+                .addressText(addressText)
+                .city(normalized[0])
+                .rayon(normalized[1])
+                .latitude(lat)
+                .longitude(lon)
+                .build();
+    }
+
+    private String buildStreetAddress(Object addressObj, String displayNameFallback) {
+        if (addressObj instanceof Map) {
+            Map<?, ?> address = (Map<?, ?>) addressObj;
+            String road = stringVal(address, "road");
+            if (road == null) road = stringVal(address, "pedestrian");
+            if (road == null) road = stringVal(address, "path");
+            if (road == null) road = stringVal(address, "footway");
+            if (road == null) road = stringVal(address, "residential");
+            String houseNumber = stringVal(address, "house_number");
+            if (road != null && !road.isBlank()) {
+                if (houseNumber != null && !houseNumber.isBlank()) {
+                    return road.trim() + " " + houseNumber.trim();
+                }
+                return road.trim();
+            }
+            String amenity = stringVal(address, "amenity");
+            if (amenity == null) amenity = stringVal(address, "building");
+            if (amenity != null && !amenity.isBlank()) {
+                return amenity.trim();
+            }
+        }
+        return stripCityRayonFromDisplay(displayNameFallback);
+    }
+
+    private String stripCityRayonFromDisplay(String displayName) {
+        if (displayName == null || displayName.isBlank()) {
+            return displayName;
+        }
+        String[] parts = displayName.split(",");
+        if (parts.length == 0) {
+            return displayName.trim();
+        }
+        // Keep first segment as street-ish; drop trailing city/country noise
+        return parts[0].trim();
+    }
+
+    private String stringVal(Map<?, ?> map, String key) {
+        Object val = map.get(key);
+        return val == null ? null : val.toString();
+    }
+
     private String extractCity(Object addressObj) {
         if (!(addressObj instanceof Map)) return null;
-        Map<String, String> address = (Map<String, String>) addressObj;
-        String city = address.get("city");
-        if (city == null) city = address.get("town");
-        if (city == null) city = address.get("village");
-        if (city == null) city = address.get("hamlet");
-        if (city == null) city = address.get("suburb");
+        Map<?, ?> address = (Map<?, ?>) addressObj;
+        String city = stringVal(address, "city");
+        if (city == null) city = stringVal(address, "town");
+        if (city == null) city = stringVal(address, "municipality");
+        if (city == null) city = stringVal(address, "village");
+        if (city == null) city = stringVal(address, "hamlet");
         return city;
+    }
+
+    private String extractRayon(Object addressObj, String city) {
+        if (!(addressObj instanceof Map)) return null;
+        Map<?, ?> address = (Map<?, ?>) addressObj;
+        String rayon = stringVal(address, "city_district");
+        if (rayon == null) rayon = stringVal(address, "suburb");
+        if (rayon == null) rayon = stringVal(address, "district");
+        if (rayon == null) rayon = stringVal(address, "borough");
+        if (rayon == null) rayon = stringVal(address, "quarter");
+        // Only keep if it maps to a Bakı rayon (or city is Bakı)
+        String canonicalCity = AzerbaijanLocations.canonical(city);
+        if (!AzerbaijanLocations.BAKI.equals(canonicalCity) && AzerbaijanLocations.canonicalRayon(rayon) == null) {
+            return null;
+        }
+        return rayon;
     }
 }

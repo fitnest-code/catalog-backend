@@ -20,6 +20,12 @@ public class StoreStep2Request {
     @Schema(description = "Mağazanın coğrafi uzunluğu", example = "49.8671")
     private Double longitude;
 
+    @Schema(description = "Mağazanın şəhəri", example = "Bakı")
+    private String city;
+
+    @Schema(description = "Mağazanın rayonu (Bakı üçün)", example = "Nəsimi")
+    private String rayon;
+
     @Schema(description = "Mağazanın ünvan mətni", example = "Heydər Əliyev pr. 101")
     private String address;
 

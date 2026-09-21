@@ -8,6 +8,11 @@ import lombok.Builder;
 public record GeocodingResponse(
     String addressText,
     String city,
+    String rayon,
     Double latitude,
     Double longitude
-) {}
+) {
+    public GeocodingResponse(String addressText, String city, Double latitude, Double longitude) {
+        this(addressText, city, null, latitude, longitude);
+    }
+}

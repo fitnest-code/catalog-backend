@@ -249,6 +249,7 @@ public class StoreServiceImpl implements StoreService {
                 .address(store.getAddress() != null ? AddressResponse.builder()
                         .addressText(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "addressText", userLanguage))
                         .city(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "city", userLanguage))
+                        .rayon(getLocalizedAddressField(store.getId(), "STORE", store.getAddress(), "rayon", userLanguage))
                         .latitude(store.getAddress().getLatitude())
                         .longitude(store.getAddress().getLongitude())
                         .build() : null)
@@ -326,6 +327,7 @@ public class StoreServiceImpl implements StoreService {
         if (saved.getAddress() != null) {
             translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
             translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
         }
         
         return getStoreDetail(null, saved.getId());
@@ -343,6 +345,7 @@ public class StoreServiceImpl implements StoreService {
         if (saved.getAddress() != null) {
             translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
             translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
         }
         
         return getStoreDetail(null, saved.getId());
@@ -393,10 +396,26 @@ public class StoreServiceImpl implements StoreService {
         boolean coordsChanged = store.getAddress() == null || !Objects.equals(store.getAddress().getLatitude(), reqLat) || !Objects.equals(store.getAddress().getLongitude(), reqLng);
 
         GeocodingResponse geocoding = (store.getAddress() != null && !coordsChanged)
-                ? GeocodingResponse.builder().addressText(store.getAddress().getAddressText()).city(store.getAddress().getCity()).build()
+                ? GeocodingResponse.builder()
+                    .addressText(store.getAddress().getAddressText())
+                    .city(store.getAddress().getCity())
+                    .rayon(store.getAddress().getRayon())
+                    .build()
                 : resolveGeocoding(reqLat, reqLng);
 
-        store.setAddress(request.address() != null ? new Address(geocoding.addressText(), geocoding.city(), reqLat, reqLng) : null);
+        if (request.address() != null) {
+            String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(
+                    geocoding != null ? geocoding.city() : null,
+                    geocoding != null ? geocoding.rayon() : null);
+            store.setAddress(new Address(
+                    geocoding != null ? geocoding.addressText() : null,
+                    normalized[0],
+                    normalized[1],
+                    reqLat,
+                    reqLng));
+        } else {
+            store.setAddress(null);
+        }
 
         store.setPhone(request.phone());
         store.setCategory(request.category());

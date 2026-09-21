@@ -24,6 +24,15 @@ public class StoreUpdateRequest {
     @Schema(description = "Mağazanın coğrafi uzunluğu", example = "49.8671")
     private Optional<Double> longitude = Optional.empty();
 
+    @Schema(description = "Şəhər", example = "Bakı")
+    private Optional<String> city = Optional.empty();
+
+    @Schema(description = "Rayon (Bakı üçün)", example = "Nəsimi")
+    private Optional<String> rayon = Optional.empty();
+
+    @Schema(description = "Küçə ünvanı", example = "Heydər Əliyev pr. 101")
+    private Optional<String> address = Optional.empty();
+
     @Schema(description = "Mağazanın əlaqə nömrəsi", example = "+994501234567")
     private Optional<String> phone = Optional.empty();
 
@@ -66,6 +75,21 @@ public class StoreUpdateRequest {
     @JsonSetter("longitude")
     public void setLongitude(Double longitude) {
         this.longitude = Optional.ofNullable(longitude);
+    }
+
+    @JsonSetter("city")
+    public void setCity(String city) {
+        this.city = Optional.ofNullable(city);
+    }
+
+    @JsonSetter("rayon")
+    public void setRayon(String rayon) {
+        this.rayon = Optional.ofNullable(rayon);
+    }
+
+    @JsonSetter("address")
+    public void setAddress(String address) {
+        this.address = Optional.ofNullable(address);
     }
 
     @JsonSetter("phone")
