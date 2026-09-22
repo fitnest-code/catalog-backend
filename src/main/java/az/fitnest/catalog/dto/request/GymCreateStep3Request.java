@@ -9,5 +9,8 @@ import lombok.Builder;
 public record GymCreateStep3Request(
     @NotNull Double latitude,
     @NotNull Double longitude,
-    Double altitude
+    Double altitude,
+    String city,
+    String rayon,
+    String addressText
 ) {}

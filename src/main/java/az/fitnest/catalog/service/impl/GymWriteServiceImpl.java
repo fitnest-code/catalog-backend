@@ -778,11 +778,7 @@ public class GymWriteServiceImpl implements GymWriteService {
         address.setLatitude(request.latitude());
         address.setLongitude(request.longitude());
         address.setAltitude(request.altitude());
-        if (geocoding != null) {
-            address.setAddressText(geocoding.addressText());
-            address.setCity(geocoding.city());
-            address.setRayon(geocoding.rayon());
-        }
+        applyResolvedAddress(address, request.city(), request.rayon(), request.addressText(), geocoding);
         gym.setAddress(address);
 
         if (address != null) {
@@ -1493,13 +1489,15 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         if (request.city() != null || request.rayon() != null) {
             String cityRaw = request.city() != null ? request.city() : gym.getAddress().getCity();
-            String rayonRaw = request.rayon();
+            String rayonRaw = request.rayon() != null ? request.rayon() : gym.getAddress().getRayon();
             String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
             if (request.city() != null) {
                 gym.getAddress().setCity(normalized[0] != null ? normalized[0] : request.city());
             }
-            if (request.rayon() != null || request.city() != null) {
+            if (request.rayon() != null) {
                 gym.getAddress().setRayon(normalized[1]);
+            } else if (request.city() != null && !az.fitnest.catalog.util.AzerbaijanLocations.isBaki(normalized[0])) {
+                gym.getAddress().setRayon(null);
             }
         }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
@@ -1522,7 +1520,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (request.city() != null) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
             }
-            if (request.rayon() != null || request.city() != null) {
+            if (request.rayon() != null || (request.city() != null && gym.getAddress().getRayon() == null)) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
@@ -2350,13 +2348,15 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         if (request.city() != null || request.rayon() != null) {
             String cityRaw = request.city() != null ? request.city() : gym.getAddress().getCity();
-            String rayonRaw = request.rayon();
+            String rayonRaw = request.rayon() != null ? request.rayon() : gym.getAddress().getRayon();
             String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
             if (request.city() != null) {
                 gym.getAddress().setCity(normalized[0] != null ? normalized[0] : request.city());
             }
-            if (request.rayon() != null || request.city() != null) {
+            if (request.rayon() != null) {
                 gym.getAddress().setRayon(normalized[1]);
+            } else if (request.city() != null && !az.fitnest.catalog.util.AzerbaijanLocations.isBaki(normalized[0])) {
+                gym.getAddress().setRayon(null);
             }
         }
         if (request.address() != null) gym.getAddress().setAddressText(request.address());
@@ -2379,7 +2379,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             if (request.city() != null) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
             }
-            if (request.rayon() != null || request.city() != null) {
+            if (request.rayon() != null || (request.city() != null && gym.getAddress().getRayon() == null)) {
                 translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
@@ -2599,11 +2599,7 @@ public class GymWriteServiceImpl implements GymWriteService {
             address.setLatitude(request.latitude());
             address.setLongitude(request.longitude());
             address.setAltitude(request.altitude());
-            if (geocoding != null) {
-                address.setAddressText(geocoding.addressText());
-                address.setCity(geocoding.city());
-                address.setRayon(geocoding.rayon());
-            }
+            applyResolvedAddress(address, request.city(), request.rayon(), request.addressText(), geocoding);
             gym.setAddress(address);
 
             if (finalCoverUrl != null) {
@@ -2766,6 +2762,27 @@ public class GymWriteServiceImpl implements GymWriteService {
         }
 
         gymRepository.save(gym);
+    }
+
+    private void applyResolvedAddress(
+            Address address,
+            String cityOverride,
+            String rayonOverride,
+            String addressTextOverride,
+            GeocodingResponse geocoding) {
+        String cityRaw = (cityOverride != null && !cityOverride.isBlank())
+                ? cityOverride
+                : (geocoding != null ? geocoding.city() : null);
+        String rayonRaw = (rayonOverride != null && !rayonOverride.isBlank())
+                ? rayonOverride
+                : (geocoding != null ? geocoding.rayon() : null);
+        String text = (addressTextOverride != null && !addressTextOverride.isBlank())
+                ? addressTextOverride
+                : (geocoding != null ? geocoding.addressText() : null);
+        String[] normalized = az.fitnest.catalog.util.AzerbaijanLocations.normalizeCityAndRayon(cityRaw, rayonRaw);
+        address.setCity(normalized[0] != null ? normalized[0] : cityRaw);
+        address.setRayon(normalized[1]);
+        address.setAddressText(text);
     }
 
     private void verifyGymOwnership(Long gymId) {
