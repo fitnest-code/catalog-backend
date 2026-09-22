@@ -88,7 +88,8 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     @Transactional(readOnly = true)
     @Cacheable(value = "landing-stats", key = "T(az.fitnest.catalog.util.UserContext).getUserLanguage()")
     public LandingStatsResponse getStats() {
-        long gymCount = gymRepository.countByStatus(GymStatus.ACTIVE);
+        // Marketing count = full partner network (ACTIVE + INACTIVE + DRAFT), not only ACTIVE.
+        long gymCount = gymRepository.count();
         long platinumGymCount = gymReadService.getGymCountBySubscription().stream()
                 .filter(item -> isPlatinum(item.subscriptionName()))
                 .mapToLong(GymSubscriptionCountResponse::count)
