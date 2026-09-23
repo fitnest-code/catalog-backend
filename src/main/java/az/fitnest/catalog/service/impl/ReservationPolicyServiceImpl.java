@@ -36,7 +36,11 @@ public class ReservationPolicyServiceImpl implements az.fitnest.catalog.service.
         }
 
         ActiveSubscriptionResponse subscription = orderServiceClient.getActiveSubscription(userId);
-        if (!"ACTIVE".equalsIgnoreCase(subscription.getSubscriptionStatus())) {
+        String subStatus = subscription.getSubscriptionStatus();
+        if (subStatus != null && (subStatus.equalsIgnoreCase("FROZEN") || subStatus.equalsIgnoreCase("dondurulub") || subStatus.equalsIgnoreCase("■■■■■■■■■") || subStatus.equalsIgnoreCase("заморожен") || subStatus.equalsIgnoreCase("donmuş"))) {
+            throw new BadRequestException("SUBSCRIPTION_FROZEN", "error.reservation.subscription_frozen");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(subStatus)) {
             throw new BadRequestException("SUBSCRIPTION_NOT_ELIGIBLE", "error.subscription_not_eligible");
         }
 

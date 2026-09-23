@@ -256,6 +256,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private boolean isSubscriptionStatusActive(String status) {
         if (status == null || status.isEmpty()) return false;
         String lower = status.toLowerCase().trim();
+        java.util.Set<String> frozenVariants = java.util.Set.of("frozen", "dondurulub", "■■■■■■■■■", "заморожен", "donmuş");
+        if (frozenVariants.contains(lower)) return false;
         return !lower.equals("none") && !lower.equals("cancelled") && !lower.equals("expired");
     }
 
