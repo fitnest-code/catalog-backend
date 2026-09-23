@@ -189,8 +189,11 @@ public class LandingPublicServiceImpl implements LandingPublicService {
             int page, int pageSize, String q, String city, String rayon, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+        // Pull the full ACTIVE candidate set (q-narrowed), then apply city/rayon/category/membership
+        // before slicing — filtering a single page made totals and "load more" wrong.
+        int fetchSize = Math.min(MAX_PAGE * MAX_PAGE_SIZE, 500);
         PaginatedResponse<GymMainPageResponse> gyms = gymReadService.getGyms(
-                null, blankToNull(q), "ALL", null, null, safePage, safePageSize, null, null, "desc");
+                null, blankToNull(q), "ALL", null, null, 1, fetchSize, null, null, "desc");
 
         List<Long> ids = gyms.items().stream()
                 .map(item -> parseGymId(item.gymId()))
@@ -206,8 +209,9 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String rayonFilter = blankToNull(rayon);
         String categoryFilter = blankToNull(category);
         String membershipFilter = normalizeMembership(membership);
+        int membershipFilterRank = membershipFilter == null ? -1 : membershipRank(membershipFilter);
 
-        List<LandingGymCardResponse> items = gyms.items().stream()
+        List<LandingGymCardResponse> filtered = gyms.items().stream()
                 .map(item -> {
                     Long gymId = parseGymId(item.gymId());
                     Gym gym = gymId == null ? null : gymById.get(gymId);
@@ -217,14 +221,20 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .filter(item -> cityFilter == null || AzerbaijanLocations.matches(item.city(), cityFilter))
                 .filter(item -> rayonFilter == null || AzerbaijanLocations.matchesRayon(item.rayon(), rayonFilter))
                 .filter(item -> categoryFilter == null || matchesCategory(item, categoryFilter))
-                .filter(item -> membershipFilter == null || membershipFilter.equals(item.membership()))
+                // Plan filter: show gyms the selected plan can enter (required tier <= selected).
+                .filter(item -> membershipFilter == null
+                        || membershipRank(item.membership()) <= membershipFilterRank)
                 .toList();
 
+        int from = Math.min((safePage - 1) * safePageSize, filtered.size());
+        int to = Math.min(from + safePageSize, filtered.size());
+        List<LandingGymCardResponse> pageItems = from >= to ? List.of() : filtered.subList(from, to);
+
         return PaginatedResponse.<LandingGymCardResponse>builder()
-                .items(items)
-                .total(gyms.total())
-                .page(gyms.page())
-                .pageSize(gyms.pageSize())
+                .items(pageItems)
+                .total(filtered.size())
+                .page(safePage)
+                .pageSize(safePageSize)
                 .build();
     }
 
