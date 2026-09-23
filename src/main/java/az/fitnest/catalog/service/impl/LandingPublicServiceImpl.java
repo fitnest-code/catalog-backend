@@ -189,13 +189,28 @@ public class LandingPublicServiceImpl implements LandingPublicService {
             int page, int pageSize, String q, String city, String rayon, String category, String membership) {
         int safePage = Math.min(Math.max(page, 1), MAX_PAGE);
         int safePageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
-        // Pull the full ACTIVE candidate set (q-narrowed), then apply city/rayon/category/membership
-        // before slicing — filtering a single page made totals and "load more" wrong.
-        int fetchSize = Math.min(MAX_PAGE * MAX_PAGE_SIZE, 500);
-        PaginatedResponse<GymMainPageResponse> gyms = gymReadService.getGyms(
-                null, blankToNull(q), "ALL", null, null, 1, fetchSize, null, null, "desc");
 
-        List<Long> ids = gyms.items().stream()
+        // gymReadService caps page_size at 100 — page through so filters see every ACTIVE gym.
+        String search = blankToNull(q);
+        List<GymMainPageResponse> allGymItems = new java.util.ArrayList<>();
+        int fetchPage = 1;
+        long reportedTotal = Long.MAX_VALUE;
+        final int chunkSize = 100;
+        while (allGymItems.size() < reportedTotal && fetchPage <= MAX_PAGE) {
+            PaginatedResponse<GymMainPageResponse> chunk = gymReadService.getGyms(
+                    null, search, "ALL", null, null, fetchPage, chunkSize, null, null, "desc");
+            reportedTotal = chunk.total();
+            if (chunk.items() == null || chunk.items().isEmpty()) {
+                break;
+            }
+            allGymItems.addAll(chunk.items());
+            if (chunk.items().size() < chunkSize) {
+                break;
+            }
+            fetchPage++;
+        }
+
+        List<Long> ids = allGymItems.stream()
                 .map(item -> parseGymId(item.gymId()))
                 .filter(Objects::nonNull)
                 .toList();
@@ -209,9 +224,8 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         String rayonFilter = blankToNull(rayon);
         String categoryFilter = blankToNull(category);
         String membershipFilter = normalizeMembership(membership);
-        int membershipFilterRank = membershipFilter == null ? -1 : membershipRank(membershipFilter);
 
-        List<LandingGymCardResponse> filtered = gyms.items().stream()
+        List<LandingGymCardResponse> filtered = allGymItems.stream()
                 .map(item -> {
                     Long gymId = parseGymId(item.gymId());
                     Gym gym = gymId == null ? null : gymById.get(gymId);
@@ -221,9 +235,8 @@ public class LandingPublicServiceImpl implements LandingPublicService {
                 .filter(item -> cityFilter == null || AzerbaijanLocations.matches(item.city(), cityFilter))
                 .filter(item -> rayonFilter == null || AzerbaijanLocations.matchesRayon(item.rayon(), rayonFilter))
                 .filter(item -> categoryFilter == null || matchesCategory(item, categoryFilter))
-                // Plan filter: show gyms the selected plan can enter (required tier <= selected).
-                .filter(item -> membershipFilter == null
-                        || membershipRank(item.membership()) <= membershipFilterRank)
+                // Abunəlik filter matches the badge on the card (exact tier).
+                .filter(item -> membershipFilter == null || membershipFilter.equals(item.membership()))
                 .toList();
 
         int from = Math.min((safePage - 1) * safePageSize, filtered.size());
