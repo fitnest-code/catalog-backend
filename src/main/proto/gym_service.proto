@@ -23,6 +23,7 @@ service GymService {
   rpc GymSupportsPlan(catalog.GymSupportsPlanRequest) returns (catalog.GymSupportsPlanResponse);
   rpc CountGymsByPackage(catalog.CountGymsByPackageRequest) returns (catalog.CountGymsByPackageResponse);
   rpc CountGymsByPackages(catalog.CountGymsByPackagesRequest) returns (catalog.CountGymsByPackagesResponse);
+  rpc HasActiveReservations(catalog.HasActiveReservationsRequest) returns (catalog.HasActiveReservationsResponse);
   rpc GetActivePartnersKpi(GetActivePartnersKpiRequest) returns (ActivePartnersKpiResponse); // ← əlavə et
   rpc GetGymAdminsByUsers(GetGymAdminsByUsersRequest) returns (GetGymAdminsByUsersResponse);
 }

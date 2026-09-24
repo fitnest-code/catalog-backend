@@ -22,6 +22,7 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
     private final GymAnalyticsRepository gymAnalyticsRepository;
     private final GymAdminRepository gymAdminRepository;
     private final GymRepository gymRepository;
+    private final az.fitnest.catalog.repository.ReservationRepository reservationRepository;
 
     @Override
     public void getActivePartnersKpi(
@@ -112,6 +113,39 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
             }
         }
         responseObserver.onNext(response.build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void hasActiveReservations(
+            HasActiveReservationsRequest request,
+            StreamObserver<HasActiveReservationsResponse> responseObserver
+    ) {
+        boolean hasActive = false;
+        try {
+            Long userId = request.getUserId();
+            java.time.LocalDate fromDate = java.time.LocalDate.now();
+            java.time.LocalTime fromTime = java.time.LocalTime.now();
+            java.time.LocalDate toDate = fromDate.plusDays(30);
+            if (!request.getEndTime().isEmpty()) {
+                try {
+                    toDate = java.time.LocalDateTime.parse(request.getEndTime()).toLocalDate();
+                } catch (Exception ignored) {}
+            }
+            java.util.List<az.fitnest.catalog.model.enums.ReservationStatus> activeStatuses = java.util.List.of(
+                    az.fitnest.catalog.model.enums.ReservationStatus.APPROVED,
+                    az.fitnest.catalog.model.enums.ReservationStatus.PENDING
+            );
+            hasActive = reservationRepository.hasUpcomingActiveReservations(userId, fromDate, fromTime, toDate, activeStatuses);
+        } catch (Exception e) {
+            hasActive = false;
+        }
+
+        responseObserver.onNext(
+                HasActiveReservationsResponse.newBuilder()
+                        .setHasActiveReservations(hasActive)
+                        .build()
+        );
         responseObserver.onCompleted();
     }
 }

@@ -39,6 +39,17 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @org.springframework.data.repository.query.Param("endTime") java.time.LocalTime endTime,
             @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
 
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.userId = :userId " +
+            "AND r.status IN :statuses " +
+            "AND (r.reservationDate.date > :fromDate OR (r.reservationDate.date = :fromDate AND r.reservationDate.endTime >= :fromTime)) " +
+            "AND r.reservationDate.date <= :toDate")
+    boolean hasUpcomingActiveReservations(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("fromDate") java.time.LocalDate fromDate,
+            @org.springframework.data.repository.query.Param("fromTime") java.time.LocalTime fromTime,
+            @org.springframework.data.repository.query.Param("toDate") java.time.LocalDate toDate,
+            @org.springframework.data.repository.query.Param("statuses") java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
+
     int countByReservationDateId(Long reservationDateId);
 
     int countByReservationDateIdAndStatusIn(Long reservationDateId, java.util.Collection<az.fitnest.catalog.model.enums.ReservationStatus> statuses);
