@@ -124,21 +124,40 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
         boolean hasActive = false;
         try {
             Long userId = request.getUserId();
-            java.time.LocalDate fromDate = java.time.LocalDate.now();
-            java.time.LocalTime fromTime = java.time.LocalTime.now();
-            java.time.LocalDate toDate = fromDate.plusDays(30);
+            java.time.LocalDateTime windowStart = java.time.LocalDateTime.now();
+            java.time.LocalDateTime windowEnd = windowStart.plusDays(30);
+
+            if (!request.getStartTime().isEmpty()) {
+                try {
+                    windowStart = java.time.LocalDateTime.parse(request.getStartTime());
+                } catch (Exception ignored) {
+                    // keep default now
+                }
+            }
             if (!request.getEndTime().isEmpty()) {
                 try {
-                    toDate = java.time.LocalDateTime.parse(request.getEndTime()).toLocalDate();
-                } catch (Exception ignored) {}
+                    windowEnd = java.time.LocalDateTime.parse(request.getEndTime());
+                } catch (Exception ignored) {
+                    // keep default +30d
+                }
             }
+            if (windowEnd.isBefore(windowStart)) {
+                windowEnd = windowStart.plusDays(30);
+            }
+
+            java.time.LocalDate fromDate = windowStart.toLocalDate();
+            java.time.LocalTime fromTime = windowStart.toLocalTime();
+            java.time.LocalDate toDate = windowEnd.toLocalDate();
+
+            // Confirmed bookings block freeze; PENDING included until BA says otherwise
             java.util.List<az.fitnest.catalog.model.enums.ReservationStatus> activeStatuses = java.util.List.of(
                     az.fitnest.catalog.model.enums.ReservationStatus.APPROVED,
                     az.fitnest.catalog.model.enums.ReservationStatus.PENDING
             );
             hasActive = reservationRepository.hasUpcomingActiveReservations(userId, fromDate, fromTime, toDate, activeStatuses);
         } catch (Exception e) {
-            hasActive = false;
+            // Fail closed toward order: report conflict when check cannot run
+            hasActive = true;
         }
 
         responseObserver.onNext(
