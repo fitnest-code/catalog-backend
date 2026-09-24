@@ -273,6 +273,29 @@ public class StoreServiceImpl implements StoreService {
           if (userId != null) {
               isSaved = !savedStoreRepository.findStoreIdsByUserIdAndStoreIdIn(userId, List.of(storeId)).isEmpty();
           }
+
+          // FIX-17: Gate subscription-linked FitMarket discounts — FROZEN users cannot use them.
+          // Hide discount list so mobile does not present a claimable discount while subscription is frozen.
+          // Fail-open on gRPC error (discount shown but QR-scan gate remains the enforcement point).
+          java.util.List<StoreDiscountResponse> visibleDiscounts = base.discounts();
+          if (userId != null && visibleDiscounts != null && !visibleDiscounts.isEmpty()) {
+              try {
+                  az.fitnest.order.grpc.ActiveSubscriptionResponse subResp =
+                          orderServiceGrpcClient.getActiveSubscription(userId);
+                  String subStatus = subResp != null ? subResp.getSubscriptionStatus() : "";
+                  if (subStatus != null) {
+                      String lower = subStatus.toLowerCase().trim();
+                      java.util.Set<String> frozenVariants = java.util.Set.of(
+                              "frozen", "dondurulub", "zamorjen", "donmuş");
+                      if (frozenVariants.contains(lower)) {
+                          visibleDiscounts = Collections.emptyList();
+                      }
+                  }
+              } catch (Exception ignored) {
+                  // Fail-open: if order-backend is unreachable, show discounts normally
+              }
+          }
+
           return StoreDetailResponse.builder()
                   .storeId(base.storeId())
                   .name(base.name())
@@ -280,7 +303,7 @@ public class StoreServiceImpl implements StoreService {
                   .phone(base.phone())
                   .category(base.category())
                   .status(base.status())
-                  .discounts(base.discounts())
+                  .discounts(visibleDiscounts)
                   .social(base.social())
                   .images(base.images())
                   .isSaved(isSaved)
