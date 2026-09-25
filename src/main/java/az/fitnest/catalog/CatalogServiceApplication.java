@@ -11,6 +11,9 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import jakarta.annotation.PostConstruct;
+import java.util.TimeZone;
+
 @SpringBootApplication
 @EnableAsync
 @EnableJpaAuditing
@@ -20,6 +23,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @EnableRedisRepositories(basePackages = {})
 @EnableConfigurationProperties(ReservationBookingProperties.class)
 public class CatalogServiceApplication {
+
+    @PostConstruct
+    public void init() {
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Baku"));
+    }
     public static void main(String[] args) {
         try {
             SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);

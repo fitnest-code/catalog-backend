@@ -76,7 +76,7 @@ spring:
           provider_disables_autocommit: true
   jackson:
     default-property-inclusion: NON_NULL
-    time-zone: UTC
+    time-zone: Asia/Baku
 
   data:
     redis:
