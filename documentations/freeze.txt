@@ -1,0 +1,476 @@
+FitNest Freeze — Backend Edit Guide (class-level)                                                             v1.1 · production
+
+
+
+
+                                         FitNest Subscription Freeze
+                                                    Backend-only implementation guide
+                                 Where to edit · which class/method · how to change existing code
+
+                     Source BRD: FitNest_Freeze_BRD_v1.1 · Target branch: production · 23 Sep 2026
+
+
+        Service                          Role in freeze                                         Effort
+
+        order-backend                    Owner — rewrite stub freeze lifecycle                  P0 large
+
+        catalog-backend                  Gate QR / booking / FitMarket while FROZEN             P0 medium
+
+        gateway-backend                  Route new freeze HTTP paths                            P0 small
+
+        notifications-backend            Push on freeze start/end                               P1 small
+
+        payment-backend                  Terminate freeze on refund/cancel handoff              P1 small
+
+
+ Critical: Do not confuse plan freeze (status=FROZEN) with reservation visit hold (freezeSession / frozenSessions). Leave
+ visit-hold paths untouched.
+
+
+ 0. Recommended approach (how to structure the rewrite)
+ Do not keep growing UserSubscriptionService with all BRD logic. Extract a new freeze package and leave thin legacy
+ wrappers on the old endpoints until mobile cutover.
+
+ Create under order-backend (match existing package style):
+ az.fitnest.order.service.freeze.* az.fitnest.order.model.entity.SubscriptionFreeze*
+ az.fitnest.order.model.enums.FreezeStatus az.fitnest.order.controller.SubscriptionFreezeController
+ az.fitnest.order.dto.freeze.* az.fitnest.order.repository.SubscriptionFreeze* az.fitnest.order.event.FreezeOutbox*
+
+
+ Copy patterns from:
+ • Idempotent durable outbox: payment-backend PaymentOutboxService + OutboxRelay (copy structure into order, do not call
+     payment).
+ •   Scheduled jobs: existing @Scheduled methods already on UserSubscriptionService — move freeze finalize into its own
+     worker class.
+ •   gRPC status: UserSubscriptionGrpcServiceImpl — today it forwards translated UI status; catalog gates need canonical
+     raw status.
+ •   Migrations: folder exists src/main/resources/db/migration/ (V4 present) but Flyway is NOT enabled; either enable
+     Flyway like identity-backend OR keep using ddl-auto: update + checked-in SQL for ops. Prefer enabling Flyway +
+     V5__subscription_freeze_brd.sql.
+
+
+
+
+                                                                        Page 1
+FitNest Freeze — Backend Edit Guide (class-level)                                                                      v1.1 · production
+
+
+
+
+ 1. order-backend — tasks
+ Branch checked: production. Freeze is stubbed (allowedFreezeDays hardcoded 0).
+
+ BE-ORD-1 — Schema + entities (source of truth for freeze)
+ Repo: order-backend · branch target: production
+ NEW: src/main/resources/db/migration/V5__subscription_freeze_brd.sql
+ NEW: model/entity/SubscriptionFreezeEntitlement.java
+ NEW: model/entity/SubscriptionFreeze.java
+ NEW: model/entity/FreezePreview.java (or Redis — DB preferred for multi-instance)
+ NEW: model/entity/FreezeIdempotencyRecord.java
+ NEW: model/entity/FreezeAuditEvent.java + FreezeOutboxEvent.java
+ EDIT: model/entity/Subscription.java — keep frozenAt/unfreezesAt/frozenDaysUsed/allowedFreezeDays for
+ backward sync OR mark deprecated in comments
+ EDIT: repository/SubscriptionRepository.java — keep findExpiredFrozen; add queries only if still used by
+ legacy path
+ EDIT: build.gradle + application.yml — enable Flyway if adopting V5 (today ddl-auto: update only)
+ How to edit (pattern, not full implementation):
+
+ • Create tables matching BRD §10: entitlement (total/consumed/reserved/version), freeze row (requestedDays, startAt, planEndAt,
+     actualEndAt, status, used/returned, expiryBefore/After, endedBy, version).
+ •   Add UNIQUE partial index: one row with status=ACTIVE per subscription_id.
+ •   Statuses enum: ACTIVE | COMPLETED | ENDED_EARLY | TERMINATED (new Java enum FreezeStatus).
+ •   Idempotency table: (userId, endpoint, key) → requestHash + response payload; TTL ≥ 24h.
+ •   Do not put freeze limit columns on PackageOption — PackageOption.java has no freezeDays column today; BRD limit is tier
+     policy, not option column.
+ Do NOT:
+
+ • Do not add freeze_days to PackageOption and hope catalog fills it — PackageCatalogService /
+     SubscriptionPackageGrpcServiceImpl already hardcode freezeDays(0).
+ •   Do not drop Subscription.frozen* columns in the same release as mobile still reads them from active subscription DTO.
+
+ BE-ORD-2 — Tier policy + create entitlement on assign/renew
+ Repo: order-backend · branch target: production
+ NEW: service/freeze/FreezeTierPolicyProvider.java — map Bronze→2, Silver→3, Gold→5, Platinum→7 +
+ policyVersion
+ NEW: service/freeze/FreezeEntitlementService.java — create/get/adjust balances
+ EDIT: service/impl/UserSubscriptionService.java → assignSubscriptionToUser(...)
+ EDIT: same file → renewSubscription(...)
+ EDIT: PackageCatalogService.java — stop inventing freezeDays=0 as the entitlement source (leave DTO field 0 or
+ derive from tier for display only)
+ EDIT: grpc/SubscriptionPackageGrpcServiceImpl.java setFreezeDays(0) — either leave 0 or set from tier policy
+ for marketing display; entitlement is authoritative
+ How to edit (pattern, not full implementation):
+
+ • Inside assignSubscriptionToUser (today sets allowedFreezeDays=0 around lines ~646–662): after saving Subscription ACTIVE,
+     call FreezeEntitlementService.createForSubscription(sub, tier, policyVersion).
+ •   Resolve tier from SubscriptionPackage name/type already used elsewhere — do not invent a new package field unless BA
+     provides one.
+ •   Trial/free/admin-gift: skip entitlement unless BA says otherwise.
+ •   Backfill job: NEW FreezeEntitlementBackfillJob (@Scheduled once / admin trigger) — find ACTIVE paid without entitlement,
+     create idempotently (FR-09).
+ •   On renewSubscription: create NEW entitlement for new subscriptionId; do not copy unused days (BR-06).
+ •   When assign finishes prior FROZEN sub → also TERMINATE any ACTIVE SubscriptionFreeze row (call
+     FreezeFinalizeService.terminate).
+
+
+
+
+                                                                Page 2
+FitNest Freeze — Backend Edit Guide (class-level)                                                                      v1.1 · production
+
+
+
+ BE-ORD-3 — Replace stub freeze/unfreeze with preview+commit+resume services
+ Repo: order-backend · branch target: production
+ EDIT: service/impl/UserSubscriptionService.java → freezeSubscription(Long) / unfreezeSubscription(Long)
+ NEW: service/freeze/SubscriptionFreezeService.java (orchestrator)
+ NEW: service/freeze/FreezePreviewService.java
+ NEW: service/freeze/FreezeIdempotencyService.java
+ NEW: controller/SubscriptionFreezeController.java
+ NEW: dto/freeze/*Request.java + *Response.java
+ EDIT: controller/UserSubscriptionController.java — keep old POST /freeze and /activate as thin wrappers during
+ cutover
+ EDIT: messages_en.properties / messages_az.properties / messages_ru.properties
+ EDIT: exception handlers if you introduce ConflictException codes (see existing ConflictException usage in
+ UpgradeService)
+ How to edit (pattern, not full implementation):
+
+ • DELETE/replace the hardcode in freezeSubscription:
+ Do NOT:
+
+ • Do not keep freezing ALL remaining days (current dead-code path daysToFreeze = availableFreezeDays).
+ • Do not open UX success without commit returning freezeId/startAt/planEndAt.
+ Stub to remove (production today):
+ Integer allowedFreezeDays = 0; if (allowedFreezeDays == 0) { throw new
+ BadRequestException("error.freeze_not_allowed_for_plan"); }
+
+ How to rewrite those methods:
+ • freezeSubscription(userId) (legacy): either reject with deprecation message OR map to commit with days=available
+     (temporary). Prefer mobile switches to new API.
+ •   New flow in SubscriptionFreezeService: getEligibility → preview(days) → commit(previewId, idempotencyKey).
+ •   Eligibility reads entitlement balances + subscription status ACTIVE + endAt>now + no ACTIVE freeze + catalog booking conflict
+     check.
+ •   Preview: validate integer days 1..available; compute planEndAt=now+D*86400; projectedExpiry=endAt+D*86400; store preview
+     with expectedVersion + TTL; return previewId. Preview must NOT write financial/limit commits.
+ •   Commit: lock subscription row (pessimistic or version check); re-validate; insert SubscriptionFreeze ACTIVE; reservedDays+=D;
+     subscription.status=FROZEN; sync legacy frozenAt/unfreezesAt/frozenDaysUsed for old clients; write audit+outbox; return 201.
+ •   Resume-preview: compute elapsedSeconds, usedDays=ceil(elapsed/86400) min 1, returnedDays, expiryAfter; quote
+     TTL=min(60s, next 24h boundary).
+ •   Resume: if planEndAt reached → route to finalize COMPLETED; if usedDays changed → 409 PREVIEW_CHANGED; else
+     ENDED_EARLY, status ACTIVE, adjust entitlement consumed/reserved, extend endAt by actual elapsed seconds (not full
+     requested days).
+ •   Legacy unfreezeSubscription: replace calendar-day refund math with call into
+     SubscriptionFreezeService.resumeImmediate(userId) using same BR-08 formula.
+ •   Error keys to add in messages_*: error.freeze.invalid_days, limit_exceeded, already_frozen, booking_conflict, preview_changed,
+     not_frozen (map to HTTP 422/409).
+ •   Also add missing keys already thrown today: error.freeze_not_allowed_for_plan, error.freeze_days_exhausted.
+
+ New controller endpoints (add; do not only edit old ones):
+ GET /api/v1/subscriptions/{id}/freeze POST /api/v1/subscriptions/{id}/freeze/preview POST
+ /api/v1/subscriptions/{id}/freezes // Idempotency-Key header POST /api/v1/freezes/{id}/resume-preview POST
+ /api/v1/freezes/{id}/resume // Idempotency-Key header GET /api/v1/me/freezes GET /api/v1/freezes/{id}
+
+ Auth pattern: copy UserContext.getCurrentUserId() from UserSubscriptionController; verify subscription.userId ownership
+ before any write.
+
+
+
+
+                                                               Page 3
+FitNest Freeze — Backend Edit Guide (class-level)                                                                 v1.1 · production
+
+
+
+ BE-ORD-4 — Worker + lazy finalize (replace hourly autoUnfreeze)
+ Repo: order-backend · branch target: production
+ EDIT: UserSubscriptionService.autoUnfreezeExpiredSubscriptions() — @Scheduled(cron="0 0 * * * *") today
+ EDIT: UserSubscriptionService.autoFinishExpiredSubscriptions() — currently expires FROZEN by endAt too
+ EDIT: repository/SubscriptionRepository.findExpiredFrozen
+ NEW: service/freeze/FreezeFinalizeService.java — single idempotent finalize(freezeId)
+ NEW: service/freeze/SubscriptionFreezeFinalizeWorker.java — @Scheduled fixedDelay ~60s
+ How to edit (pattern, not full implementation):
+
+ • Move auto-unfreeze OUT of UserSubscriptionService into FreezeFinalizeService.completeIfDue(freeze).
+ • Worker selects SubscriptionFreeze where status=ACTIVE AND planEndAt <= now (not only Subscription.unfreezesAt).
+ • On COMPLETED: usedDays=requestedDays, returnedDays=0, actualEndAt=planEndAt, endAt = expiryBefore +
+     requestedDays*86400, subscription ACTIVE, clear legacy freeze fields, outbox notify. Worker delay must NOT add extra
+     seconds.
+ •   Lazy path: any rights check that sees ACTIVE freeze with planEndAt<=now must call the SAME finalize method (QR/booking
+     path will trigger via catalog→order).
+ •   Fix autoFinishExpiredSubscriptions: do NOT mark FROZEN as EXPIRED while freeze ACTIVE and planEndAt in future —
+     freeze extends endAt; if endAt passed mid-freeze, finalize first or extend consistently with BRD.
+ •   Race: SELECT FOR UPDATE / @Version on SubscriptionFreeze; if already terminal, return existing result (AC-09).
+
+
+
+
+                                                             Page 4
+FitNest Freeze — Backend Edit Guide (class-level)                                                                      v1.1 · production
+
+
+
+ BE-ORD-5 — Enrich active-subscription reads (stop lying with 0 freeze days)
+ Repo: order-backend · branch target: production
+ EDIT: UserSubscriptionService.getActiveSubscription(Long) — hardcodes allowedFreezeDays=0 (~lines 204–243)
+ EDIT: dto/SubscriptionDetailsDto.java — fields allowed_freeze_days / remaining_freeze_days / frozen*
+ EDIT: ActiveSubscriptionResponse / V2 / V3 builders
+ EDIT: grpc/UserSubscriptionGrpcServiceImpl.java → toGrpc / getActiveSubscription
+ EDIT: proto user_subscription.proto — add optional fields if needed: freeze_status_raw,
+ total/consumed/reserved/available_days, can_freeze
+ How to edit (pattern, not full implementation):
+
+ • In getActiveSubscription: replace allowedFreezeDays=0 with entitlement lookup (totalDays, consumedDays, reservedDays,
+     availableDays).
+ • CRITICAL for catalog: today status returned is TRANSLATED ("Frozen" / "■■■■■■■■■") via
+     translationService.getTranslatedValue("SUBSCRIPTION_STATUS", rawStatus, ...). gRPC forwards that translated string.
+     Catalog isSubscriptionStatusActive treats anything except none/cancelled/expired as active — so FROZEN passes QR.
+ •   Fix: add rawStatus field to ActiveSubscriptionResponse (or always send canonical ACTIVE/FROZEN on gRPC). Keep translated
+     status for mobile UI only.
+ •   In UserSubscriptionGrpcServiceImpl mapping (~setSubscriptionStatus(dto.status())): set canonical raw status for catalog;
+     optionally add display_status.
+ •   If ACTIVE freeze past planEndAt when reading: call FreezeFinalizeService before building response (lazy finalize).
+ Do NOT:
+
+ • Do not break mobile that expects translated status on HTTP active endpoint — add a new field rather than silently switching
+     HTTP to raw enums without mobile change.
+
+ BE-ORD-6 — Upgrade / revoke / cancel coordination
+ Repo: order-backend · branch target: production
+ EDIT: service/impl/UpgradeService.java → getUpgradeOptions / checkout
+ EDIT: UserSubscriptionService.revokeSubscription / removeAllSubscriptionsOfUser / assignSubscriptionToUser
+ EDIT: controller/AdminProfileController.java freezeUserSubscription — do not expand admin write in v1
+ EDIT: controller/SubscriptionAdminController.java assign/remove paths
+ How to edit (pattern, not full implementation):
+
+ • UpgradeService.getUpgradeOptions: already loads ACTIVE only — also if user has FROZEN, return clear ALREADY_FROZEN
+     / conflict (today frozen users simply look like NO_ACTIVE_SUBSCRIPTION).
+ •   UpgradeService.checkout: after status check ACTIVE, if FROZEN present throw ConflictException("ALREADY_FROZEN"). On
+     successful upgrade: FreezeEntitlementService.onUpgrade(sub, newTier) → totalDays=new policy, keep consumedDays
+     (BR-12).
+ •   revoke / removeAll / refund handoff: before setting CANCELLED, call FreezeFinalizeService.terminateActive(subscriptionId) →
+     freeze TERMINATED, do not set subscription back to ACTIVE.
+ •   Queued subscriptions: wherever startAt of next sub is computed from predecessor endAt, recompute after freeze end (search
+     assign/renew/queue code using endAt).
+ •   AdminProfileController.POST /admin/subscription/{userId}/freeze: leave calling legacy stub OR disable until support read API
+     exists; BRD v1 = read-only admin.
+
+ BE-ORD-7 — Outbox events (do not rely on fire-and-forget Kafka alone)
+ Repo: order-backend · branch target: production
+ EDIT: event/SubscriptionEventPublisher.java — today publishSubscriptionEvent(userId, action, subscriptionId)
+ → topic subscription-events
+ EDIT: event/SubscriptionEvent.java
+ NEW: event/FreezeOutboxService.java + FreezeOutboxRelay.java (copy payment OutboxRelay pattern)
+ NEW: model/entity/FreezeOutboxEvent.java + repository
+ OPTIONAL: client NotificationGrpcClient usage (order already uses push for auto-renew) — or publish to
+ notification-events
+ How to edit (pattern, not full implementation):
+
+ • After successful DB commit of start/end: insert outbox row with eventId (UUID), eventType
+     freeze_started|freeze_ended_early|freeze_completed|freeze_blocked.
+ •   Relay publishes to Kafka notification-events (notifications already listens) OR calls NotificationGrpcClient. Prefer
+     notification-events so notifications-backend needs only template routing.
+ •   Keep SubscriptionEventPublisher FREEZE/UNFREEZE for backward compatibility OR map to new event types — but
+     notifications currently does NOT consume subscription-events.
+ •   Push failure must not roll back freeze transaction (write outbox in same TX as freeze; relay async).
+
+
+
+
+                                                                Page 5
+FitNest Freeze — Backend Edit Guide (class-level)                                                                      v1.1 · production
+
+
+
+
+ 2. catalog-backend — tasks
+ Branch often on development — merge/rebase to production before release. Must ship with order gRPC status fix.
+
+ BE-CAT-1 — Block QR / eligibility when FROZEN
+ Repo: catalog-backend · branch target: production
+ EDIT: service/impl/GymEntranceServiceImpl.java → private isSubscriptionStatusActive(String)
+ EDIT: same class → checkGymEntranceEligibilitySimple / scanGymQrEntrance / checkGymEntranceEligibility
+ EDIT: client/OrderServiceGrpcClient.java — if proto adds raw status / finalize helpers
+ How to edit (pattern, not full implementation):
+
+ • Current isSubscriptionStatusActive (~line 256) returns true for everything except none/cancelled/expired. Because order sends
+     translated "Frozen", FROZEN users are treated as eligible.
+ • Change logic to: require canonical status ACTIVE (or last_7_days/changed if those remain UI overlays). Explicitly reject
+     FROZEN, Frozen, ■■■■■■■■■, CANCELLED, EXPIRED, None.
+ •   Better: after order gRPC fix, compare equalsIgnoreCase("ACTIVE") OR allowlist. Prefer depending on new raw_status field.
+ •   On scan: if order returns FROZEN with planEndAt past, either call new RPC finalizeFreeze or rely on getActiveSubscription
+     lazy-finalize — then re-check.
+ •   Do not change consumeFrozen boolean meaning — that flag is reservation visit hold for checkIn, not plan freeze.
+ Do NOT:
+
+ • Do not "fix" by only hiding QR in the app.
+ • Do not treat translated status as the long-term contract — push order to send raw enum.
+ BE-CAT-2 — Reservation create gate + conflict list for freeze preview
+ Repo: catalog-backend · branch target: production
+ EDIT: service/impl/ReservationPolicyServiceImpl.java → validateReservationAllowed
+ EDIT: service/impl/ReservationCommandServiceImpl.java — create path already calls validate then freezeSession
+ NEW: controller or service method e.g. listConfirmedOverlapping(userId, from, to) for order preview
+ EDIT: OrderServiceGrpcClient only if order will call catalog via HTTP/gRPC for conflicts
+ How to edit (pattern, not full implementation):
+
+ • validateReservationAllowed today: if (!"ACTIVE".equalsIgnoreCase(subscription.getSubscriptionStatus())) reject. Translated
+     "Frozen" already fails this check (accidentally OK for FROZEN). After order sends raw FROZEN, keep rejecting non-ACTIVE.
+ • Add explicit reason code SUBSCRIPTION_FROZEN for clearer mobile errors.
+ • For freeze preview (order needs BOOKING_CONFLICT details): add query on Reservation repository — status APPROVED
+     (and decide PENDING with BA) overlapping [now, now+days]. Expose internal endpoint or gRPC that order-backend can call.
+ •   Leave freezeSession/restoreSession calls as-is (visit escrow).
+
+ BE-CAT-3 — FitMarket discount use while FROZEN
+ Repo: catalog-backend · branch target: production
+ FIND redeem/issue path for StoreDiscount / partner codes (StoreServiceImpl, partner controllers — today
+ listing has no subscription gate)
+ EDIT that redeem path + OrderServiceGrpcClient.getActiveSubscription check
+ How to edit (pattern, not full implementation):
+
+ • There is no runtime "use discount" gate today — only catalog metadata (packageId + percent).
+ • Wherever a code is issued or validated for a member, add: getActiveSubscription → reject if FROZEN.
+ • Revoking already-issued partner codes: only if partner API exists (BA #8). Otherwise document as out of scope.
+
+ 3. gateway-backend — tasks
+ BE-GW-1 — Authorize new freeze routes to order-backend
+ Repo: gateway-backend · branch target: production
+ EDIT: src/main/java/az/fitnest/gateway/ApiGatewayApplication.java
+ How to edit (pattern, not full implementation):
+
+ • Existing block already routes /api/v1|v2|v3/me/subscriptions/** and /admin/subscription/** to http://order-backend:8080 — legacy
+     freeze/activate already covered.
+ • ADD path predicates next to those lines (~426–448):
+ /api/v1/subscriptions/*/freeze/** /api/v1/subscriptions/*/freezes /api/v1/freezes/** /api/v1/me/freezes
+
+ • Copy the same auth filter / token requirements used by /api/v1/me/subscriptions/**.
+ • No business logic in gateway — routing only.
+
+ 4. notifications-backend — tasks
+
+                                                                  Page 6
+FitNest Freeze — Backend Edit Guide (class-level)                                                                       v1.1 · production
+
+
+
+ BE-NOTIF-1 — Handle freeze push events
+ Repo: notifications-backend · branch target: production
+ EDIT: messaging/NotificationConsumer.java — today listens user-events + notification-events only (NOT
+ subscription-events)
+ NEW: template keys / localization for freeze_started, freeze_ended_early, freeze_completed
+ EDIT: whatever PushNotificationService / template resolver the consumer already calls for other events
+ How to edit (pattern, not full implementation):
+
+ • Preferred: order writes to topic notification-events with eventType + userId + payload (same shape other producers use). Then
+     extend NotificationConsumer handler switch/if-chain.
+ •   Alternative: add @KafkaListener(topics="subscription-events") — only if you keep publishing there; today nothing consumes it.
+ •   Deduplicate by eventId if payload includes it (store processed ids or rely on outbox publish-once).
+ •   Do not call order-backend from notifications to mutate subscription state.
+
+
+ 5. payment-backend — tasks
+ BE-PAY-1 — Terminate freeze when subscription is refunded/cancelled
+ Repo: payment-backend · branch target: production
+ EDIT: client/UserSubscriptionGrpcClient.java — today assignSubscriptionToUser only
+ EDIT: order proto + regenerate stubs after order adds TerminateActiveFreeze RPC
+ EDIT: refund paths (Epoint / Bob / ABB / CoinPaymentProcessor / onPaymentRefund style handlers)
+ EDIT: event/OutboxRelay.java only if refund→cancel is outbox-driven
+ How to edit (pattern, not full implementation):
+
+ • Payment today assigns subscriptions via outbox; coin/bank refund restores wallet and does NOT cancel order subscription or
+     terminate freeze.
+ •   When product refund implies membership cancel: before/after revoke, call new order gRPC
+     TerminateActiveFreeze(subscriptionId|userId).
+ •   If cancel already lives only in order admin revoke — ensure that path (BE-ORD-6) is enough and payment only calls it when
+     payment initiates cancel.
+ •   Do not change coin expiry / campaign rules because of freeze (BR-06).
+ Do NOT:
+
+ • Do not implement freeze day sales or billing pauses in payment v1.
+
+
+
+
+                                                                Page 7
+FitNest Freeze — Backend Edit Guide (class-level)                                                                                   v1.1 · production
+
+
+
+
+ 6. Cheat sheet — existing methods to touch
+       Class                                Method                                 Action
+
+       UserSubscriptionService              freezeSubscription(Long)               Replace stub; delegate to SubscriptionFreezeService or
+                                                                                   deprecate
+
+       UserSubscriptionService              unfreezeSubscription(Long)             Replace day-refund math with resume finalize (BR-08)
+
+       UserSubscriptionService              autoUnfreezeExpiredSubscriptions()     Move to FreezeFinalizeService worker (~1 min)
+
+       UserSubscriptionService              autoFinishExpiredSubscriptions()       Stop blindly EXPIRE-ing FROZEN mid-freeze
+
+       UserSubscriptionService              getActiveSubscription(Long)            Stop allowedFreezeDays=0; add raw status; entitlement
+                                                                                   balances
+
+       UserSubscriptionService              assignSubscriptionToUser(...)          Create entitlement; terminate prior freeze
+
+       UserSubscriptionService              renewSubscription(...)                 New entitlement; no carry-over days
+
+       UserSubscriptionService              checkIn(...)                           Keep excluding FROZEN; serialize with freeze locks
+
+       UserSubscriptionService              freezeSession/restoreSession           LEAVE ALONE (reservation visit hold)
+
+       UserSubscriptionController           POST .../freeze|activate               Thin legacy wrapper during cutover
+
+       SubscriptionFreezeController         (new)                                  BRD REST API surface
+
+       UserSubscriptionGrpcServiceImp       getActiveSubscription                  Emit canonical FROZEN/ACTIVE for catalog
+       l
+
+       UpgradeService                       getUpgradeOptions / checkout           Block when FROZEN; adjust entitlement on upgrade
+
+       SubscriptionEventPublisher           publishSubscriptionEvent               Keep or bridge; prefer freeze outbox →
+                                                                                   notification-events
+
+       GymEntranceServiceImpl               isSubscriptionStatusActive             Reject FROZEN (translated + raw)
+
+       ReservationPolicyServiceImpl         validateReservationAllowed             Explicit FROZEN reason; keep non-ACTIVE block
+
+       ApiGatewayApplication                route predicates                       Add /freezes/** and /subscriptions/*/freeze/**
+
+       NotificationConsumer                 on notification-events                 Handle freeze_* event types
+
+       UserSubscriptionGrpcClient           assign only today                      Add terminateFreeze for refund/cancel
+       (payment)
+
+
+
+ 7. Suggested PR order (backend only)
+ • PR1 order: V5 schema + entities + FreezeTierPolicy + entitlement on assign (BE-ORD-1/2).
+ • PR2 order: Freeze services + new controller + legacy wrappers + messages (BE-ORD-3/5).
+ • PR3 order: finalize worker + autoFinish fix + outbox (BE-ORD-4/7).
+ • PR4 order: upgrade/revoke terminate (BE-ORD-6) + proto raw status.
+ • PR5 catalog: GymEntrance + Reservation + optional conflict API (BE-CAT-1/2) — depends on PR4 gRPC.
+ • PR6 gateway routes (BE-GW-1) — can land with PR2.
+ • PR7 notifications templates (BE-NOTIF-1) — after outbox shape stable.
+ • PR8 payment terminate on refund (BE-PAY-1) — after order RPC exists.
+
+ 8. What NOT to rewrite
+ • Reservation freezeSession / restoreSession / frozenSessions / consumeFrozenSession — visit escrow.
+ • PackageOption DB schema for freeze_days — not the BRD source of truth.
+ • landing-frontend / admin write toggles — out of this backend pack (admin read later).
+ • Mobile apps — separate tickets; backend must keep legacy /freeze+/activate until cutover flag.
+
+ 9. BA blockers that change these edits
+ • Backfill existing ACTIVE paid → whether BE-ORD-2 job runs at all.
+ • Trial exclusion → assignSubscriptionToUser skip condition.
+ • Booking conflict = APPROVED only vs PENDING too → catalog conflict query filter.
+ • FitMarket revoke vs block-new-only → BE-CAT-3 scope.
+ • Refund always cancels membership → whether BE-PAY-1 is required or order-admin-only.
+
+ Companion docs: FitNest_Freeze_BRD_v1.1.docx · FitNest_Freeze_Developer_Tasks_v1.1.pdf (full cross-team). This guide is
+ backend-only and class-oriented for production branch work.
+
+
+
+
+                                                                          Page 8
+
