@@ -1,0 +1,890 @@
+SmartVista E-commerce
+Payment Gateway
+Branding Guide
+
+
+
+
+                 PRODUCT DOCUMENTATION
+
+
+
+                 5 March 2021
+
+
+
+
+                                       www.bpcbt.com
+                    Confidential © 2021 BPC Banking Technologies
+Notice
+All information contained in this documentation, as well as the software described in it, is proprietary to BPC Group and its
+affiliates. BPC Group reserves any and all intellectual property rights in respect of this document.
+The Customer is granted the right to use this document in accordance with the relevant agreement entered into with authorized
+SmartVista distributors within BPC Group. Except as permitted by the relevant license agreement, no part of this documentation
+may be reproduced, stored in a retrieval system, or transmitted in any form or by electronic, mechanical, recording, or any
+other means, without the prior written permission of BPC Group.
+The limited warranties provided in respect of this document are described in the relevant legal agreement entered into with
+BPC Group. BPC Group provides no other warranties, explicit or implied.
+This document is confidential and proprietary and is not intended for use by any person other than a named Customer.
+SmartVista is the registered trademark of BPC Group entities. Other company, product or service names mentioned herein may
+be trademarks or service marks of their respective owners.
+
+
+For information regarding permissions, write to:
+BPC Group HQ
+Neuhofstrasse 5a
+6340 Baar
+Switzerland
+
+
+Phone: +41 43 508 4024
+Email: info@bpcbt.com
+Web: www.bpcbt.com
+
+
+File: sv_epg-1.33_branding-guide__en_core_20210305_DRAFT.pdf
+Applicable to: SmartVista E-commerce Payment Gateway 1.33
+Permitted distribution: Under NDA only
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Contents
+1 Preface ............................................................................................................... 1
+2 Introduction ....................................................................................................... 3
+     2.1 Prerequisites ...................................................................................................................... 3
+3 EPG application settings ..................................................................................... 4
+4 Configuring common settings for pages ............................................................. 5
+5 Customizing the card data entry page ................................................................ 7
+6 Customizing the receipt page ........................................................................... 11
+7 Customizing P2P pages ..................................................................................... 13
+     7.1 Common P2P page settings ............................................................................................. 13
+     7.2 Card data entry page ....................................................................................................... 15
+     7.3 Transaction result page ................................................................................................... 17
+     7.4 Adaptive design ................................................................................................................ 17
+8 Uploading customized pages ............................................................................ 23
+9 References ....................................................................................................... 24
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                                          |       i
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+1 Preface
+ The SmartVista E-commerce Payment Gateway 1.33: Branding Guide describes how to configure the
+ appearance of the SmartVista E-commerce Payment Gateway 1.33 pages that are displayed to
+ customers when making online purchases.
+
+ Audience
+ This guide is intended for merchants who use SmartVista E-commerce Payment Gateway 1.33 (EPG) to
+ process online payments and who want to customize pages for their sites by themselves.
+
+ Related documents
+ The following related documents are available:
+
+  Document title                                              Audience
+  SmartVista E-commerce Payment Gateway:                      Business and system professionals requiring an
+  Solution Description                                        overview of the functionality provided by
+                                                              SmartVista E-commerce Payment Gateway.
+
+  SmartVista SmartVista E-commerce Payment          Implementation personnel responsible for
+  Gateway 1.33 Installation and Configuration Guide performing the initial installation of the product,
+                                                              or tasked with performing an update.
+
+  SmartVista SmartVista E-commerce Payment                    System administrators, security administrators
+  Gateway 1.33 User Guide                                     and database administrators responsible for
+                                                              administering, maintaining, and troubleshooting
+                                                              the system.
+                                                              Operators and customer service representatives
+                                                              who regularly use the product’s user interface to
+                                                              deliver customer service or perform some other
+                                                              job function.
+  SmartVista SmartVista E-commerce Payment                    Users of merchants, and acquirers that work with
+  Gateway 1.33 API Specification                              the system remotely through API calls.
+
+  SmartVista SmartVista E-commerce Payment                    Merchants requiring to customize pages that are
+  Gateway 1.33 Branding Guide                                 displayed to customers when making online
+                                                              purchases.
+
+  SmartVista E-commerce Payment Gateway                       Implementation personnel responsible for
+  Integration with External Systems Specification             integrating external systems with SmartVista E-
+                                                              commerce Payment Gateway.
+
+  SmartVista Access Control Server: Solution                  Business and system professionals requiring an
+  Description                                                 overview of the functionality provided by
+                                                              SmartVista Access Control Server.
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                              |      1
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Document title                                                Audience
+SmartVista Access Control Server Installation and             Implementation personnel responsible for
+Configuration Guide                                           performing the initial installation of the product,
+                                                              or tasked with performing an update.
+
+SmartVista Access Control Server User Guide                   System administrators, security administrators
+                                                              and database administrators responsible for
+                                                              administering, maintaining, and troubleshooting
+                                                              the system.
+                                                              Operators and customer service representatives
+                                                              who regularly use the product’s user interface to
+                                                              deliver customer service or perform some other
+                                                              job function.
+SmartVista Access Control Server API Specification            Users of merchants, and acquirers that work with
+                                                              the system remotely through API calls.
+
+EMV 3-D Secure Functional Requirements Access                 System architects, developers and other specialist
+Control Server v 1.0.2                                        involved into the implementation of the 3-D
+                                                              Secure 1 standard.
+
+EMV 3-D Secure Protocol Specification Core                    System architects, developers and other specialist
+Functions v 1.0.2                                             involved into the implementation of the 3-D
+                                                              Secure 1 standard.
+
+EMV 3-D Secure Protocol and Core Functions                    System architects, developers and other specialist
+Specification v 2.1.0                                         involved into the implementation of the 3-D
+                                                              Secure 2 standard.
+
+
+Text conventions
+The following text conventions are used in this document:
+
+Convention                               Description
+Boldface                                 Graphical user interface elements such as buttons, menu items, links
+                                         and titles.
+
+Monospaced boldface                      Commands, functions, processes, and parameter names.
+
+Monospaced                               Parameter values, file names and paths, system output, and user input.
+
+Dark red italicized text                 Placeholder variables to be replaced by a suitable value.
+
+ Monospaced on a                         Code examples.
+ gray background
+
+                                         Page reference.
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                 |      2
+  SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+2 Introduction
+  The payment pages that can be customized are contained in the statics.zip archive.
+
+
+2.1 Prerequisites
+  EPG uses Sass extensions for the customization of the CSS files. The use of these extensions requires the
+  Sass preprocessor (version 3.5.3 or higher) to be installed. More information is available at the following
+  URL: https://sass-lang.com/documentation/file.SASS_REFERENCE.html
+  More information about CSS is available at the following URL: https://www.w3schools.com/css/
+
+
+
+
+  Confidential © 2021 BPC Banking Technologies                                                        |    3
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+3 EPG application settings
+ The following application settings must be configured on the Administration > System Settings menu of
+ the EPG administrative portal (see the SmartVista E-commerce Payment Gateway Administration Guide
+ for more information) to enable customizing pages:
+
+  Parameter                                     Description
+  merchantStaticHost                            Host on which to store the static pages.
+
+  merchantStaticHostPort                        Port on the host that stores the static pages. The default value is
+                                                0.
+
+  merchantStaticHostLogin                       Login to connect to the host that stores the static pages.
+  merchantStaticHostPassword                    Password to connect to the host that stores the static pages.
+
+  staticDir                                     Directory on the host that stores the static pages.
+  defaultStaticDir                              Default directory on the host that stores the static pages. The
+                                                default value is /.
+                                                This field is optional. If you need to redefine the default value, add
+                                                it by clicking Create on the System Settings page and specifying
+                                                the new default directory.
+
+  defaultStaticFile                             Name of the default file that contains the static pages. The default
+                                                value is testMerchantStatic.zip.
+                                                This field is optional. If you need to redefine the default value, add
+                                                it by clicking Create on the System Settings page and specifying
+                                                the new default file.
+
+  merchantStaticUploadEnabled                   Flag that enables merchants to upload customized static pages.
+                                                The default value is false.
+                                                This field is optional. If you need to redefine the default value,
+                                                change it by clicking Create on the System Settings page.
+
+ The account must have the CUSTOMIZE_PAYMENT_PAGE permission with the VIEW action.
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                                   |     4
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+4 Configuring common settings for pages
+ You can modify settings that apply to all payment pages at once. All these settings are configured in the
+ bpc.scss file. To configure the common payment page settings:
+ 1. Open the /sass/bpc.scss file.
+ 2. Configure the relevant parameters:
+   Fonts used
+
+    Parameter                                   Description
+    font-family                                 Font on all pages of the site. Configure several font names so
+                                                that if a browser does not support the first font, it can use
+                                                another font specified. To configure the parameter, specify for
+                                                the font-family parameter values separated by commas, for
+                                                example:
+                                                   $font-family: "Custom font", "Helvetica Neue",
+                                                   Helvetica, Arial, sans-serif;
+
+    font-face                                   The font-face rule is used to configure font support for each
+                                                browser and operating system. Custom fonts must be placed in
+                                                the fonts folder.
+                                                For normal font specify font-weight: 400:
+                                                   @font-face {
+                                                   font-family: 'MyWebFont';
+                                                   src: url('../fonts/webfont.eot'); / IE9 Compat
+                                                   Modes /
+                                                   src: url('../fonts/webfont.eot?#iefix')
+                                                   format('embedded-opentype'), / IE6-IE8 /
+                                                   url('../fonts/webfont.woff2') format('woff2'), /
+                                                   Super Modern Browsers /
+                                                   url('../fonts/webfont.woff') format('woff'), /
+                                                   Pretty Modern Browsers /
+                                                   url('../fonts/webfont.ttf') format('truetype'), /
+                                                   Safari, Android, iOS /
+                                                   url('../fonts/webfont.svg#svgFontName')
+                                                   format('svg'); / Legacy iOS /
+                                                   font-weight: 400;
+                                                   font-style: normal;
+                                                   }
+                                                For bold font specify font-weight: 600:
+                                                   @font-face {
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                               |     5
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                                   Description
+                                                  font-family: 'MyWebFont';
+                                                  src: url('../fonts/webfont.eot'); / IE9 Compat
+                                                  Modes /
+                                                  src: url('../fonts/webfont.eot?#iefix')
+                                                  format('embedded-opentype'), / IE6-IE8 /
+                                                  url('../fonts/webfont.woff2') format('woff2'), /
+                                                  Super Modern Browsers /
+                                                  url('../fonts/webfont.woff') format('woff'), /
+                                                  Pretty Modern Browsers /
+                                                  url('../fonts/webfont.ttf') format('truetype'), /
+                                                  Safari, Android, iOS /
+                                                  url('../fonts/webfont.svg#svgFontName')
+                                                  format('svg'); / Legacy iOS /
+                                                  font-weight: 600;
+                                                  font-style: normal;
+                                                  }
+                                               A detailed description on configuring the font-face rule is
+                                               available at the following URL: see
+                                               https://developer.mozilla.org/en-US/docs/Web/CSS/%40font-
+                                               face
+
+  Control elements
+   Parameter                                   Description
+   base-color                                  Base color (branding color) of all interactive elements, such as
+                                               buttons, links, and so on. Example:
+                                                  $base-color: #005CAB;
+
+  Adaptive UI
+  The pages adapt to any type of device screens: desktop PCs and laptops, tablets or mobile device
+  screens.
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                |     6
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+5 Customizing the card data entry page
+ The following elements can be customized on the page where the customer enters the payment card
+ information:
+ · The header, which typically contains a merchant logo ❶ and headings of different levels providing
+   information such as the order number, description, and the remaining session time
+ · Elements of the page body such as the formatting of card expiration fields ❷ and the main control
+   elements (buttons, check boxes) ❸
+ · The footer, which typically contains the logos of the 3-D Secure systems supported by the payment
+   gateway ❹
+
+ Example of a card data entry page:
+
+
+
+
+ To modify the page elements:
+ 1. Specify the relevant parameters:
+   Merchant logo and acquirer logo (optional) ❶
+
+    Parameter                                   Description
+    logo                                        Place a file that contains the required logo in the images folder
+                                                (for example, images/logo.svg).
+                                                File names must be as follows:
+                                                · logo-merchant.svg for the merchant's logo.
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                                |      7
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                                       Description
+                                                   · logo.svg for the acquiring bank logo.
+                                                   For web screens, the image must have a maximum height of 44
+                                                   pixels. For mobile screens, the logo size is adaptable.
+
+  Expiry date fields ❷
+
+   Parameter                            Description
+   expiry-date-*                        To modify the format of the card expiration date fields:
+                                        1. Open the required .html file.
+                                        2. Find the line that contains <label class="title-field">Expiry
+                                               date</label>.
+                                        3. Specify the relevant properties of the Expiration date field:
+                                          o To customize the month format (for example, 01, 01 January, or
+                                            January), edit the <option></option> values of the element that has
+                                                id expiry-date-month.
+                                           o To customize the year format, edit the <option></option> values
+                                                and, if necessary, add more lines to the element that has id
+                                                expiry-date-year.
+                                           For example:
+                                               <div class="form-group">
+                                                   <label class="form-group__label">Expiry date</label>
+                                                   <div class="row">
+                                                       <div class="col-xs-6">
+                                                           <select id="expiry-date-month" class="form-control"
+                                                                   data-placeholder="Month">
+                                                               <option></option>
+                                                               <option>01</option>
+                                                               <option>02</option>
+                                                               <option>03</option>
+                                                               <option>04</option>
+                                                               <option>05</option>
+                                                               <option>06</option>
+                                                               <option>07</option>
+                                                               <option>08</option>
+                                                               <option>09</option>
+                                                               <option>10</option>
+                                                               <option>11</option>
+                                                               <option>12</option>
+                                                           </select>
+                                                       </div>
+                                                       <div class="col-xs-6">
+                                                           <select id="expiry-date-year" class="form-control"
+                                                                   data-placeholder="Year">
+                                                               <option></option>
+                                                               <option>2019</option>
+                                                               <option>2020</option>
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                   |   8
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                            Description
+                                                               <option>2021</option>
+                                                               <option>2022</option>
+                                                               <option>2023</option>
+                                                               <option>2024</option>
+                                                               <option>2025</option>
+                                                               <option>2026</option>
+                                                               <option>2027</option>
+                                                               <option>2028</option>
+                                                               <option>2029</option>
+                                                           </select>
+                                                       </div>
+                                                   </div>
+                                               </div>
+
+
+  Control elements ❸
+
+   Parameter                                       Description
+   base-color                                      Base color (branding color) of all interactive elements, such as
+                                                   buttons, links, and so on. Example:
+                                                     $base-color: #005CAB;
+
+  List of verification system logos ❹
+
+   Parameter                                       Description
+   verif-systems                                   List of logos of the 3-D Secure verification systems displayed in
+                                                   the footers of payment card data entry pages. Three system
+                                                   logos are preconfigured (Verified by Visa, Mastercard
+                                                   SecureCode, and MirAccept) and two slots are reserved for
+                                                   custom verification system logos. Parameters are enabled by
+                                                   adding a double-slash // at the beginning of the corresponding
+                                                   line.
+                                                   The verification system logos block looks as follows:
+                                                   // disable | enable verification systems
+                                                   // .verif-systems__item_1 { display: none !important; } // visa
+                                                   // .verif-systems__item_2 { display: none !important; } // mastercard
+                                                   // .verif-systems__item_3 { display: none !important; } // mir
+                                                   .verif-systems__item_4 { display: none !important; }    // custom verific
+                                                   .verif-systems__item_5 { display: none !important; }    // custom verific
+
+                                                   Slots 4 and 5 are free and reserved for custom verification
+                                                   system logos. To enable displaying these logos:
+                                                   1. Plave the correspondingly named logo images (verif-4.svg
+                                                      or verif-5.svg) in the images folder.
+                                                   2. Enable the logo usage by adding a double-slash // at the
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                     |     9
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                                   Description
+                                                   beginning of the line. For example, if you added verif-
+                                                   4.svg:
+                                                  //.verif-systems__item_4 { display: none
+                                                  !important; }    // custom verification system in
+                                                  images/verif-4.svg
+
+2. Save your changes.
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                 |   10
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+6 Customizing the receipt page
+ On the receipt page, you can customize the following elements:
+ · The header, which typically contains a merchant or acquirer logo ❶
+ · The page background image ❷
+ · Elements of the page body: main control elements (buttons, check boxes) ❸
+ · The page background image color ❹
+
+ Example of a receipt page:
+
+
+
+
+ To modify the page elements, specify the corresponding parameters:
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                  |   11
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+  Acquirer logo ❶
+
+   Parameter                                   Description
+   logo                                        Place a file named logo.svg that contains the required logo in
+                                               the images folder: images/logo.svg.
+                                               For web screens, the image must have a maximum height of 44
+                                               pixels. For mobile screens, the logo size is adaptable.
+
+  Background images for transaction result ❷
+
+   Parameter                                   Description
+   receipt_status                              The transaction status depends on the response received from
+                                               the server. A modifier (.receipt_status-success or
+                                               .receipt_status-error) is added to the .receipt class
+                                               depending on the server response.
+                                               To change the background image of the transaction result page,
+                                               place the relevant images named correspondingly (bg-
+                                               success.svg and bg-error.svg) into the images folder:
+                                               · images/bg-error.svg
+                                               · images/bg-success.svg
+
+                                               The image size must be 420 × 420 pixels.
+
+  Background color ❸
+   Parameter                                   Description
+   bg-color                                    Background color of the page. The background color on which
+                                               receipts are displayed.
+                                                  $bg-color: #F2F2F2;
+
+  Control elements ❹
+   Parameter                                   Description
+   base-color                                  Base color (branding color) of all interactive elements, such as
+                                               buttons, links, and so on.
+                                               To modify the control elements:
+                                               1. In the statics/sass/bpc.scss file, set the value for $base-
+                                                   color, for example:
+                                                  $base-color: #014E90;
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                |     12
+  SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+7 Customizing P2P pages
+ The following files are used for P2P transfer pages:
+ · p2p_payment.html — a page for entering card data.
+ · finish.html — a receipt page that displays the transaction result; it is used both for payments to a
+    merchant and for P2P payments.
+
+ The section below details how to customize P2P pages.
+
+
+7.1 Common P2P page settings
+ You can customize at once settings that are common for both pages. To do so, modify the following
+ groups of settings in the bpc.scss file:
+
+    Logo
+
+     Parameter                                   Description
+     logo                                        Place a file named logo.svg that contains the required logo in
+                                                 the images folder: images/logo.svg.
+                                                 For web screens, the image must have a maximum height of 44
+                                                 pixels. For mobile screens, the logo size is adaptable.
+
+    Fonts used
+
+     Parameter                                   Description
+     font-family                                 Font on all pages of the site. Configure several font names so
+                                                 that if a browser does not support the first font, it can use
+                                                 another font specified. To configure the parameter, specify for
+                                                 the font-family parameter values separated by commas, for
+                                                 example:
+                                                    $font-family: "Custom font", "Helvetica Neue",
+                                                    Helvetica, Arial, sans-serif;
+
+     font-face                                   The font-face rule is used to configure font support for each
+                                                 browser and operating system. Custom fonts must be placed in
+                                                 the fonts folder.
+                                                 For normal font specify font-weight: 400:
+                                                    @font-face {
+                                                    font-family: 'MyWebFont';
+                                                    src: url('../fonts/webfont.eot'); / IE9 Compat
+                                                    Modes /
+                                                    src: url('../fonts/webfont.eot?#iefix')
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                                |     13
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                                   Description
+                                                  format('embedded-opentype'), / IE6-IE8 /
+                                                  url('../fonts/webfont.woff2') format('woff2'), /
+                                                  Super Modern Browsers /
+                                                  url('../fonts/webfont.woff') format('woff'), /
+                                                  Pretty Modern Browsers /
+                                                  url('../fonts/webfont.ttf') format('truetype'), /
+                                                  Safari, Android, iOS /
+                                                  url('../fonts/webfont.svg#svgFontName')
+                                                  format('svg'); / Legacy iOS /
+                                                  font-weight: 400;
+                                                  font-style: normal;
+                                                  }
+                                               For bold font specify font-weight: 600:
+                                                  @font-face {
+                                                  font-family: 'MyWebFont';
+                                                  src: url('../fonts/webfont.eot'); / IE9 Compat
+                                                  Modes /
+                                                  src: url('../fonts/webfont.eot?#iefix')
+                                                  format('embedded-opentype'), / IE6-IE8 /
+                                                  url('../fonts/webfont.woff2') format('woff2'), /
+                                                  Super Modern Browsers /
+                                                  url('../fonts/webfont.woff') format('woff'), /
+                                                  Pretty Modern Browsers /
+                                                  url('../fonts/webfont.ttf') format('truetype'), /
+                                                  Safari, Android, iOS /
+                                                  url('../fonts/webfont.svg#svgFontName')
+                                                  format('svg'); / Legacy iOS /
+                                                  font-weight: 600;
+                                                  font-style: normal;
+                                                  }
+                                               A detailed description on configuring the font-face rule is
+                                               available at the following URL: see
+                                               https://developer.mozilla.org/en-US/docs/Web/CSS/%40font-
+                                               face
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                           |     14
+  SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+    Control elements
+     Parameter                                       Description
+     base-color                                      Base color (branding color) of all interactive elements, such as
+                                                     buttons, links, and so on. Example:
+                                                       $base-color: #005CAB;
+
+
+7.2 Card data entry page
+  You can modify the following settings in p2p_payment.html:
+    Card expiry date
+     Parameter                            Description
+     Expiry date                          To modify the format of the card expiration date fields:
+                                          1. Open the required .html file.
+                                          2. Find the line that contains <label class="title-field">Expiry
+                                                 date</label>.
+                                          3. Specify the relevant properties of the Expiration date field:
+                                            o To customize the month format (for example, 01, 01 January, or
+                                              January), edit the <option></option> values of the element that has
+                                                  id expiry-date-month.
+                                             o To customize the year format, edit the <option></option> values
+                                                  and, if necessary, add more lines to the element that has id
+                                                  expiry-date-year.
+                                             For example:
+                                                 <div class="form-group">
+                                                     <label class="form-group__label">Expiry date</label>
+                                                     <div class="row">
+                                                         <div class="col-xs-6">
+                                                             <select id="expiry-date-month" class="form-control"
+                                                                     data-placeholder="Month">
+                                                                 <option></option>
+                                                                 <option>01</option>
+                                                                 <option>02</option>
+                                                                 <option>03</option>
+                                                                 <option>04</option>
+                                                                 <option>05</option>
+                                                                 <option>06</option>
+                                                                 <option>07</option>
+                                                                 <option>08</option>
+                                                                 <option>09</option>
+                                                                 <option>10</option>
+                                                                 <option>11</option>
+                                                                 <option>12</option>
+                                                             </select>
+
+
+
+
+  Confidential © 2021 BPC Banking Technologies                                                                    |     15
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+   Parameter                            Description
+                                                       </div>
+                                                       <div class="col-xs-6">
+                                                           <select id="expiry-date-year" class="form-control"
+                                                                   data-placeholder="Year">
+                                                               <option></option>
+                                                               <option>2019</option>
+                                                               <option>2020</option>
+                                                               <option>2021</option>
+                                                               <option>2022</option>
+                                                               <option>2023</option>
+                                                               <option>2024</option>
+                                                               <option>2025</option>
+                                                               <option>2026</option>
+                                                               <option>2027</option>
+                                                               <option>2028</option>
+                                                               <option>2029</option>
+                                                           </select>
+                                                       </div>
+                                                   </div>
+                                               </div>
+
+
+  List of 3-D Secure verification system logos
+
+   Parameter                                       Description
+   .verif-systems__item_<n>                        List of logos of the 3-D Secure verification systems displayed in
+                                                   the footers of payment card data entry pages. Three system
+                                                   logos are preconfigured (Verified by Visa, Mastercard
+                                                   SecureCode, and MirAccept) and two slots are reserved for
+                                                   custom verification system logos. Parameters are enabled by
+                                                   adding a double-slash // at the beginning of the corresponding
+                                                   line.
+                                                   The verification system logos block looks as follows:
+                                                   // disable | enable verification systems
+                                                   // .verif-systems__item_1 { display: none !important; } // visa
+                                                   // .verif-systems__item_2 { display: none !important; } // mastercard
+                                                   // .verif-systems__item_3 { display: none !important; } // mir
+                                                   .verif-systems__item_4 { display: none !important; }    // custom verific
+                                                   .verif-systems__item_5 { display: none !important; }    // custom verific
+
+                                                   Slots 4 and 5 are free and reserved for custom verification
+                                                   system logos. To enable displaying these logos:
+                                                   1. Plave the correspondingly named logo images (verif-4.svg
+                                                      or verif-5.svg) in the images folder.
+                                                   2. Enable the logo usage by adding a double-slash // at the
+                                                      beginning of the line. For example, if you added verif-
+                                                      4.svg:
+                                                     //.verif-systems__item_4 { display: none
+                                                     !important; }    // custom verification system in
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                                                                     |     16
+  SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+     Parameter                                   Description
+                                                    images/verif-4.svg
+
+
+7.3 Transaction result page
+  You can modify the settings of the transaction result page in the finish.html file as described in
+  Customizing the receipt page          11
+                                             .
+
+
+7.4 Adaptive design
+  The pages adapt to any type of device screens: desktop PCs and laptops, tablets or mobile device
+  screens. The images below illustrate this adaptation:
+
+  Card data entry page for web
+
+
+
+
+  Confidential © 2021 BPC Banking Technologies                                                         |   17
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Card data entry page for mobile devices
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                 |   18
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Transaction result page (success) for web
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                 |   19
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Transaction result page for web (error)
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                 |   20
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Transaction result page for mobile devices (success)
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                 |   21
+SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+Transaction result page for mobile devices (error)
+
+
+
+
+Confidential © 2021 BPC Banking Technologies                 |   22
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+8 Uploading customized pages
+ Upload the archive with customized pages using the EPG administrative portal:
+ 1. Click Static > Static Upload and Download.
+ 2. In the Upload static section for the ZIP-archive field, click Choose file, and specify the path to the
+     folder that contains the statics archive with the customized pages.
+ 3. Click Upload.
+ EPG deploys the pages from the archive on the server specified in the system settings.
+ For more information, see “Static Content Customization” in the SmartVista E-commerce Payment
+ Gateway User Guide.
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                          |     23
+ SmartVista E-commerce Payment Gateway 1.33: Branding Guide
+
+
+
+
+9 References
+ The resources listed below are useful when configuring the settings described in this guide:
+ · W3Schools CSS tutorial: https://www.w3schools.com/css/
+ · Saas documentation: https://sass-lang.com/documentation/file.SASS_REFERENCE.html
+
+
+
+
+ Confidential © 2021 BPC Banking Technologies                                                   |   24
+
