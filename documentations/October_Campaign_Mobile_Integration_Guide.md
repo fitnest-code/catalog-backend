@@ -250,12 +250,13 @@ Mobil tətbiq paketləri siyahılayarkən kampaniya hədiyyə aylarını göstə
     "totalMonths": 4,
     "nextPaymentDueAt": "2027-01-01",
     "serviceEndAt": "2027-02-01",
-    "campaignConfirmationBanner": {
-      "campaignId": 1,
-      "bonusMonths": 1,
-      "title": "1 ay hədiyyə qazandınız!",
-      "body": "Oktyabr kampaniyasından abunəliyinizə 1 ay hədiyyə əlavə olundu."
-    }
+      "campaignConfirmationBanner": {
+        "campaign_id": 1,
+        "bonus_months": 1,
+        "title": "1 ay hədiyyə qazandınız!",
+        "body": "Oktyabr kampaniyasından abunəliyinizə 1 ay hədiyyə əlavə olundu.",
+        "campaign_status": "ACTIVE"
+      }
   }
 }
 ```
