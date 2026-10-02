@@ -262,28 +262,9 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
         final String body;
 
         if (newStatus == ReservationStatus.REJECTED) {
+            // Manual translations only: gym rejection reasons stay in AZ;
+            // EN/RU push copy comes from admin-provided templates.
             String targetReason = reason;
-            if (reason != null && !reason.trim().isEmpty()) {
-                if ("EN".equals(userLang)) {
-                    try {
-                        String translated = translationService.translateText(reason, "en");
-                        if (translated != null && !translated.trim().isEmpty()) {
-                            targetReason = translated;
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                } else if ("RU".equals(userLang)) {
-                    try {
-                        String translated = translationService.translateText(reason, "ru");
-                        if (translated != null && !translated.trim().isEmpty()) {
-                            targetReason = translated;
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-            }
 
             switch (userLang) {
                 case "EN":
@@ -398,7 +379,7 @@ public class ReservationCommandServiceImpl implements az.fitnest.catalog.service
                     .build();
         }
         rule = ruleRepository.save(rule);
-        translationService.autoTranslateAndSave("RESERVATION_RULE", String.valueOf(rule.getId()), "description", request.getHtmlContent());
+        translationService.copyAzForProperNouns("RESERVATION_RULE", String.valueOf(rule.getId()), "description", request.getHtmlContent());
     }
 
     private void sendReservationNotificationToAdmins(Reservation reservation) {

@@ -346,11 +346,11 @@ public class StoreServiceImpl implements StoreService {
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
         
-        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "name", request.name());
         if (saved.getAddress() != null) {
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
         }
         
         return getStoreDetail(null, saved.getId());
@@ -364,11 +364,11 @@ public class StoreServiceImpl implements StoreService {
         updateStoreFromRequest(store, request);
         Store saved = storeRepository.save(store);
         
-        translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "name", request.name());
+        translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "name", request.name());
         if (saved.getAddress() != null) {
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
-            translationService.autoTranslateAndSave("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "addressText", saved.getAddress().getAddressText());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "city", saved.getAddress().getCity());
+            translationService.copyAzForProperNouns("STORE", saved.getId().toString(), "rayon", saved.getAddress().getRayon());
         }
         
         return getStoreDetail(null, saved.getId());

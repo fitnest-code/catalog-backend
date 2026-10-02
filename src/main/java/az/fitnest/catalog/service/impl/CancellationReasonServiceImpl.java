@@ -52,7 +52,7 @@ public class CancellationReasonServiceImpl implements az.fitnest.catalog.service
                 .requiresComment(request.requiresComment())
                 .build();
         reason = reasonRepository.save(reason);
-        translationService.autoTranslateAndSave("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
+        translationService.copyAzForProperNouns("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
     }
 
     @Transactional
@@ -62,7 +62,7 @@ public class CancellationReasonServiceImpl implements az.fitnest.catalog.service
         reason.setLabel(request.label());
         reason.setRequiresComment(request.requiresComment());
         reasonRepository.save(reason);
-        translationService.autoTranslateAndSave("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
+        translationService.copyAzForProperNouns("CANCELLATION_REASON", reason.getId().toString(), "label", request.label());
     }
 
     @Transactional

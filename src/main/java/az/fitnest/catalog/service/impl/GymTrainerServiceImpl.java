@@ -106,9 +106,9 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
         gymRepository.save(gym);
 
         if (trainer.getId() != null) {
-            translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+            translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "name", trainer.getName());
             if (trainer.getSurname() != null) {
-                translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+                translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
             }
         }
     }
@@ -131,9 +131,9 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         trainerRepository.save(trainer);
 
-        translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+        translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "name", trainer.getName());
         if (trainer.getSurname() != null) {
-            translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+            translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
         }
     }
 
@@ -463,9 +463,9 @@ public class GymTrainerServiceImpl implements az.fitnest.catalog.service.GymTrai
 
         for (Trainer trainer : gym.getTrainers()) {
             if (trainer.getId() != null) {
-                translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "name", trainer.getName());
+                translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "name", trainer.getName());
                 if (trainer.getSurname() != null) {
-                    translationService.autoTranslateAndSave("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
+                    translationService.copyAzForProperNouns("Trainer", trainer.getId().toString(), "surname", trainer.getSurname());
                 }
             }
         }
