@@ -254,12 +254,12 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         gymRepository.save(gym);
 
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "name", request.name());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "description", request.description());
         if (gym.getAddress() != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
         }
     }
 
@@ -676,8 +676,8 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setCreationStep(1);
         gym = gymRepository.save(gym);
 
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "name", request.name());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "description", request.description());
 
         return new GymCreateStep1Response(gym.getId());
     }
@@ -782,9 +782,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         gym.setAddress(address);
 
         if (address != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", address.getAddressText());
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", address.getCity());
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", address.getRayon());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "addressText", address.getAddressText());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "city", address.getCity());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "rayon", address.getRayon());
         }
 
         updateStep(gym, 3);
@@ -972,7 +972,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                                 service.setIconUrl(iconUrl);
                             }
                             service = supportedServiceRepository.save(service);
-                            translationService.autoTranslateAndSave(
+                            translationService.copyAzForProperNouns(
                                     "SupportedService",
                                     service.getId().toString(),
                                     "name",
@@ -1027,8 +1027,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                         az.fitnest.catalog.mapper.GymMapper.toAdminEntity(freshGym, res.req(), res.userId(), role)
                 );
 
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
             }
             finalizeGymStep7Internal(gymId);
             return null;
@@ -1214,12 +1214,12 @@ public class GymWriteServiceImpl implements GymWriteService {
             Long savedGymId = savedGym.getId();
 
             // Translations for gym
-            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "name", request.name());
-            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "description", request.description());
+            translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "name", request.name());
+            translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "description", request.description());
             if (savedGym.getAddress() != null) {
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
             }
 
             // Step 2: Trainers
@@ -1263,8 +1263,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                 az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
                         az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
                 );
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
             }
 
             return savedGymId;
@@ -1287,8 +1287,8 @@ public class GymWriteServiceImpl implements GymWriteService {
         String role = (request.role() != null && !request.role().trim().isEmpty()) ? request.role() : "Admin";
         az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(az.fitnest.catalog.mapper.GymMapper.toAdminEntity(gym, request, userId, role));
 
-        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
-        translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+        translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "name", saved.getName());
+        translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
     }
 
     @Transactional
@@ -1320,8 +1320,8 @@ public class GymWriteServiceImpl implements GymWriteService {
             );
         }
 
-        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "name", admin.getName());
-        translationService.autoTranslateAndSave("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
+        translationService.copyAzForProperNouns("GymAdmin", admin.getId().toString(), "name", admin.getName());
+        translationService.copyAzForProperNouns("GymAdmin", admin.getId().toString(), "surname", admin.getSurname());
     }
 
     @Transactional
@@ -1395,7 +1395,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
         service = supportedServiceRepository.save(service);
 
-        translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", service.getName());
+        translationService.copyAzForProperNouns("SupportedService", service.getId().toString(), "name", service.getName());
 
         return new SupportedServiceResponse(service.getId(), service.getName(), service.getGymId(), service.getIconUrl());
     }
@@ -1415,7 +1415,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                     });
             if (!trimmedName.equals(service.getName())) {
                 service.setName(trimmedName);
-                translationService.autoTranslateAndSave("SupportedService", service.getId().toString(), "name", trimmedName);
+                translationService.copyAzForProperNouns("SupportedService", service.getId().toString(), "name", trimmedName);
             }
         }
 
@@ -1508,20 +1508,20 @@ public class GymWriteServiceImpl implements GymWriteService {
         gymRepository.save(gym);
 
         if (request.name() != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "name", request.name());
         }
         if (request.description() != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "description", request.description());
         }
         if (gym.getAddress() != null) {
             if (request.address() != null) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
             }
             if (request.city() != null) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
             }
             if (request.rayon() != null || (request.city() != null && gym.getAddress().getRayon() == null)) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
     }
@@ -1856,28 +1856,9 @@ public class GymWriteServiceImpl implements GymWriteService {
         final String body;
 
         if (newStatus == az.fitnest.catalog.model.enums.ReservationStatus.REJECTED) {
+            // Manual translations only: gym rejection reasons stay in AZ;
+            // EN/RU push copy comes from admin-provided templates.
             String targetReason = reason;
-            if (reason != null && !reason.trim().isEmpty()) {
-                if ("EN".equals(userLang)) {
-                    try {
-                        String translated = translationService.translateText(reason, "en");
-                        if (translated != null && !translated.trim().isEmpty()) {
-                            targetReason = translated;
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                } else if ("RU".equals(userLang)) {
-                    try {
-                        String translated = translationService.translateText(reason, "ru");
-                        if (translated != null && !translated.trim().isEmpty()) {
-                            targetReason = translated;
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-            }
 
             switch (userLang) {
                 case "EN":
@@ -2020,8 +2001,8 @@ public class GymWriteServiceImpl implements GymWriteService {
             }
         }
 
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
-        translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "name", request.name());
+        translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "description", request.description());
 
         return new GymCreateStep1Response(gym.getId());
     }
@@ -2367,20 +2348,20 @@ public class GymWriteServiceImpl implements GymWriteService {
         gymRepository.save(gym);
 
         if (request.name() != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "name", request.name());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "name", request.name());
         }
         if (request.description() != null) {
-            translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "description", request.description());
+            translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "description", request.description());
         }
         if (gym.getAddress() != null) {
             if (request.address() != null) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "addressText", gym.getAddress().getAddressText());
             }
             if (request.city() != null) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "city", gym.getAddress().getCity());
             }
             if (request.rayon() != null || (request.city() != null && gym.getAddress().getRayon() == null)) {
-                translationService.autoTranslateAndSave("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
+                translationService.copyAzForProperNouns("GYM", gym.getId().toString(), "rayon", gym.getAddress().getRayon());
             }
         }
     }
@@ -2612,12 +2593,12 @@ public class GymWriteServiceImpl implements GymWriteService {
             Gym savedGym = gymRepository.save(gym);
             Long savedGymId = savedGym.getId();
 
-            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "name", request.name());
-            translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "description", request.description());
+            translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "name", request.name());
+            translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "description", request.description());
             if (savedGym.getAddress() != null) {
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
-                translationService.autoTranslateAndSave("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "addressText", savedGym.getAddress().getAddressText());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "city", savedGym.getAddress().getCity());
+                translationService.copyAzForProperNouns("GYM", savedGymId.toString(), "rayon", savedGym.getAddress().getRayon());
             }
 
             if (request.trainers() != null && !request.trainers().isEmpty()) {
@@ -2660,8 +2641,8 @@ public class GymWriteServiceImpl implements GymWriteService {
                 az.fitnest.catalog.model.entity.GymAdmin saved = gymAdminRepository.save(
                         az.fitnest.catalog.mapper.GymMapper.toAdminEntity(savedGym, res.req(), res.userId(), role)
                 );
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "name", saved.getName());
-                translationService.autoTranslateAndSave("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "name", saved.getName());
+                translationService.copyAzForProperNouns("GymAdmin", saved.getId().toString(), "surname", saved.getSurname());
             }
 
             return savedGymId;
@@ -2744,7 +2725,7 @@ public class GymWriteServiceImpl implements GymWriteService {
                                 service.setIconUrl(iconUrl);
                             }
                             service = supportedServiceRepository.save(service);
-                            translationService.autoTranslateAndSave(
+                            translationService.copyAzForProperNouns(
                                     "SupportedService",
                                     service.getId().toString(),
                                     "name",

@@ -1,0 +1,3520 @@
+1 İcmal
+
+Təlimatda proqramçıların ödəniş sisteminin şlüz interfeysi ilə tanışlığı
+və məsuliyyətləri qeyd olunub. Proses satıcı sisteminin e-com sistemi
+vasitəsi ilə kart ödənişlərinin CGI/WWW forms posting method əsaslarında
+icra edilməsini təsvir edir.Bu interfeys kart istifadəçilərinin şəffaf
+şəkildə idendifikasiya protokolları vasitəsi ilə (3D-secure və Secure
+Code SSL) dəstəkləməsinə imkan verir.
+
+1.1 Əməliyyat axını ssenarisi
+
+Aşağıda qeyd olunmuş diaqrammada Müştəri(kart sahibi), Satıcı və
+Prosessing (AZC/Elektron Ödəniş sistemi) arasındaaparılan proseslər
+təsvir edilib.
+
+Şlüz (Gateway) daxil olan mesajların təsdiqlənməsini, qeri qayıtmış
+natamam, başa çatmış tranzaksiyaların Way4 kart sistemindən
+sorğulanmasını təmin edir.
+
+2 E-Ticarət inteqrasiya
+
+Ödənişi həyata keçirtmək üçün satıcı (merchant) aşağıdaki siyahıda qeyd
+olunmuş parametrlər doldurulmalıdır və test məlumatlar aşağıdakı linkə
+göndərilməlidir:
+Avtorizatsiya üçün POST sorğuda TRTYPE=1
+göndərilməlidir.Preavtorizatsiya üçün isə ilk sorğu POST sorğuda
+TRTYPE=0 göndərilməlidir və uğurlu geri dönüş məlumatlarından sonra
+ödənişi təsdiqləmək üçün mütləq olaraq TRTYPE=21 sorğusu
+göndərilməlidir.
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+  --------------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- --------------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli formatda
+                                                  qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit nömrəsi
+                                                  kimi istifadə olunur,
+                                                  terminal id üçün bir gün
+                                                  ərzində unikal olmalıdır
+
+  DESC                    1-50                    Sifarişin açıqlaması
+
+  MERCH_NAME              1-50                    Satıcının (merchan) adı
+                                                  (kart istifadəçisinin
+                                                  anladığı formada
+                                                  olmalıdır)
+
+  MERCH_URL               1-250                   Satıcının web site URL-ı
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant Terminal
+                                                  ID
+
+  EMAIL                   80                      Bildirişlər üçün Email
+                                                  ünvan. Qeyd olunmuş sahə
+                                                  doldurulduğu halda Gateway
+                                                  email ünvanı müəyyən etmək
+                                                  üçün əməliyyat nəticəsi
+                                                  haqqında bildiriş göndərə
+                                                  bilər.
+
+  TRTYPE                  1                       Tranzaksiya növü = 0
+                                                  (Pre-Avtorizasiya
+                                                  əməliyyatı),Tranzaksiya
+                                                  növü = 1 (Avtorizasiya
+                                                  əməliyyatı)
+
+  COUNTRY                 02                      Merchant shop 2 simvollu
+                                                  ölkə kodu. Merchant
+                                                  sistemi Gateway serverin
+                                                  yerləşdiyi ölkədən fərqli
+                                                  ölkədə yerləşirsə qeyd
+                                                  olunmalıdır.
+
+  MERCH_GMT               1-5                     Merchant-ın UTC/GMT vaxt
+                                                  zonası. Merchant sistemi
+                                                  Gateway serverin
+                                                  yerləşdiyi vaxt zonasından
+                                                  fərqli vaxt zonasında
+                                                  yerləşirsə qeyd
+                                                  olunmalıdır.
+
+  BACKREF                 1-250                   Avtorizasiya nəticəsinin
+                                                  yerləşdirilməsində(post)
+                                                  istifadə olunan Merchant
+                                                  URL.
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS. merchant
+                                                  server-lə e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   1-64                    Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda doldurulmalıdır.
+                                                  MAC istifadə olunduğu
+                                                  halda nəzərə alınmalıdır.
+
+  LANG                    2                       Dil seçimi
+
+  P_SIGN                  1-256                   16-lıq formatda Merchant
+                                                  MAC
+
+  NAME                    2-45                    Müştərinin adı (kartda
+                                                  göstərildiyi kimi)
+
+  M_INFO                  35000                   JSON formatlı Base64 kodlu
+                                                  sətir olmalıdır -
+                                                  "parameter": "value data".
+  --------------------------------------------------------------------------
+
+Aşağıda M_INFO sahəsi üçün hazırlanmış məlumat nümunəsi verilmişdir:
+
+"M_INFO"="ewoiYnJvd3NlclNjcmVlbkhlaWdodCI6IjE5MjAiLAoiYnJvd3NlclNjcmVlbldpZHRoIjoiMTA4MCIsCiJicm93c2VyVFoiOiIwIiwKIm1vYmlsZVBob25lIiA6eyAiY2MiOiI5OTQiLCAic3Vic2NyaWJlciI6IjU1Nzc3Nzc3Nzc3IiB9Cn0=",
+
+Deşifrə
+formatı: {"browserScreenHeight":"1920","browserScreenWidth":"1080","browserTZ":"0","mobilePhone":{"cc":"994","subscriber":"5077777777"}}
+
+M_INFO Parametrlərin təsviri:
+
+browserScreenHeight - Kart sahibinin ekranının piksellərlə ümumi
+hündürlüyü.
+
+browserScreenWidth - Kart sahibinin ekranının piksellə ümumi eni.in
+pixels.
+
+browserTZ - UTC vaxtı ilə Kart sahibinin brauzerinin yerli vaxtı
+arasındakı vaxt fərqi, dəqiqələrlə.
+
+mobilePhone - Kart sahibi tərəfindən verilən mobil telefon nömrəsi.
+
+Sorğu aşağıda qeyd olunmuş formada olmalıdır:
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"DESC"="xxxxxxxxxxx xxxx", "MERCH_NAME"="xxxxx.xxx",
+"MERCH_URL"="https://xxxxxxxxxx.xx/xxxx", "MERCH_GMT"="+4",
+"TERMINAL"="xxxxxxxxx", "EMAIL"="xxxxx@xxxxx.xx", "TRTYPE"="x",
+"COUNTRY"="AZ", "TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"BACKREF"="https://xxxxxxxxxxx/xxxxxxxxxxx/xxxxxx", "LANG=xx",
+"NAME"="xxxxxx", "M_INFO"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+Cavab formatı
+
+  -------------------------------------------------------------------------------
+  Sahə        Uzunluq   Açıqlama
+  ----------- --------- ---------------------------------------------------------
+  TERMINAL    8         Sorğudan əks etdirilməsi
+
+  TRTYPE      2         Sorğudan əks etdirilməsi
+
+  ORDER       6-32      Sorğudan əks etdirilməsi
+
+  AMOUNT      12        İcazə verilən məbləğ. Adətən, orijinal məbləğə və
+                        alıcının haqqına bərabər olacaq.
+
+  CURRENCY    3         Sorğudan əks etdirilməsi
+
+  ACTION      1         EGateway fəaliyyət kodu
+
+                        §0 – Tranzaksiya uğurla tamamlandı
+
+                        §1 – Dublikat əməliyyat aşkar edildi
+
+                        §2 – Tranzaksiya rədd edildi
+
+                        §3 – Tranzaksiya emal xətası
+
+                        §6 – İmtina edilmiş əməliyyatın təkrarlanması
+
+                        §7 - Doğrulama xətası ilə əməliyyatın təkrarlanması
+
+                        §8 - Cavab verilmədən dayandırılmış əməliyyatın
+                        təkrarlanması
+
+  RC          02        Əməliyyat cavab kodu (ISO-8583 Sahə 39)
+
+  APPROVAL    06        Müştəri bankının təsdiq kodu (ISO-8583 Sahə 38). Kart
+                        idarəetmə sistemi tərəfindən təmin edilmədikdə boş ola
+                        bilər.
+
+  RRN         12        Müştəri bankının axtarış istinad nömrəsi (ISO-8583 Sahə
+                        37)
+
+  INT_REF     1-128     Elektron ticarət şlüzünün daxili istinad nömrəsi
+
+  TIMESTAMP   14        GMT-də e-ticarət şlüzünün vaxt damğası:: YYYYMMDDHHMMSS
+
+  NONCE       1-64      E-Commerce Gateway qeyri-dəyərlidir. Hexadecimal formatda
+                        8-32 gözlənilməz təsadüfi baytla doldurulacaq. MAC
+                        istifadə edildikdə mövcud olacaq.
+
+  P_SIGN      1-256     Onaltılıq formada E-Commerce Gateway MAC (Message
+                        Authentication Code). MAC istifadə edildikdə mövcud
+                        olacaq.
+  -------------------------------------------------------------------------------
+
+2.1 Ödənişin təsdiqlənməsi və geri qaytarılması
+
+Psign yaradılış qaydalarına riayyət edərək eyni formada callback-dən
+gələn P-sign-i MPİ-dan gələn public key ilə yoxlamaq lazımdır. Yoxlanış
+uğurlu olduğu halda ödəməni tamamlamaq üçün trtype = 21, geri qaytarmaq
+üçün isə trtype = 22 və ya trtype = 24 paraqrafında qeyd olunan sahələri
+aşağıdakı test linkə göndərmək lazımdır: Keçid linki
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+2.1.1 TRTYPE = 21
+
+Qeyd:Ödənişi təsdiq etmək üçün mütləq aşağıdakı datalar post
+olunmalıdır.Sorğunun P_SIGN dəyərinin hesablanması ardıcıllıgı linkdə
+qeyd olunub.Keçid linki
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Sifarişin açıqlaması
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 21
+                                                  (Satışın tamamlanması)
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS.
+                                                  merchant server-lə
+                                                  e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  P_SIGN                  1-256                   16-lıq formatda
+                                                  Merchant MAC
+  -----------------------------------------------------------------------
+
+Sorğu aşağıda qeyd olunmuş formada olmalıdır:
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"RRN"="xxxxxxxxx", "INT_REF"="xxxxxxxxx", "TERMINAL"="xxxxxxxxx",
+"TRTYPE"="x", "TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"LANG=xx", "P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+2.1.2 TRTYPE = 22
+
+Qeyd:Ödənişi geri qaytarmaq üçün mütləq aşağıdakı datalar post
+olunmalıdır.Sorğunun P_SIGN dəyərinin hesablanması ardıcıllıgı linkdə
+qeyd olunub.Keçid linki
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Sifarişin açıqlaması
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 22
+                                                  (Online reversal)
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS.
+                                                  merchant server-lə
+                                                  e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  P_SIGN                  1-256                   16-lıq formatda
+                                                  Merchant MAC
+  -----------------------------------------------------------------------
+
+Sorğu aşağıda qeyd olunmuş formada olmalıdır:
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"RRN"="xxxxxxxxx", "INT_REF"="xxxxxxxxx", "TERMINAL"="xxxxxxxxx",
+"TRTYPE"="x", "TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"LANG=xx", "P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+2.1.3 TRTYPE = 24
+
+Qeyd:Ödənişi geri qaytarmaq üçün mütləq aşağıdakı datalar post
+olunmalıdır.Sorğunun P_SIGN dəyərinin hesablanması ardıcıllıgı linkdə
+qeyd olunub.Keçid linki
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Sifarişin açıqlaması
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 24
+                                                  (Offline reversal)
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS.
+                                                  merchant server-lə
+                                                  e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  P_SIGN                  1-256                   16-lıq formatda
+                                                  Merchant MAC
+  -----------------------------------------------------------------------
+
+Sorğu aşağıda qeyd olunmuş formada olmalıdır:
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"RRN"="xxxxxxxxx", "INT_REF"="xxxxxxxxx", "TERMINAL"="xxxxxxxxx",
+"TRTYPE"="x", "TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"LANG=xx", "P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+2.2 P_SIGN yaradılması
+
+MAC –ın hesablanma qaydası müvafiq format cədvəlində müəyyən edilmiş
+sahələrin (görünən və şifrələnmiş sahələr) generasiyası əsasında müəyyən
+edilir, istisna Mac sahəsi (“P_SIGN”).
+
+Mesajin autentifikasiyası sahəsini yaratmaq və ya yoxlamaq üçün merchant
+sistemi MAC mənbə sətrini yığmalıdır, ASCII-də format cədvəllərindəki
+bütün sahə dəyərlərinə uzunluqları onluq say sistemi şəklində prefiks
+olaraq əlavə edilir və müəyyən edilmiş qaydada birləşdirilir.
+
+The MAC mənbəsi string nümunəsi:
+
+81720078010511.48142003010515302116IT Books. Qty: 2
+
+MAC mənbə sətri yarandıqdan sonra, merchant system kriptoqrafik alqoritm
+əsasında autentifikasiya kodunu generasiya etməlidir.
+
+SHA256 formatda imza yaradılır, mac mənbəsi imzaya əlavə olunur, gizli
+açar vasitəsi ilə 16-lıq formatda şifrələnir
+
+Merchant systemi seçilmiş alqoritmla implementasiyanı texniki və proqram
+təminatı üzrə həyata keçirdir, müvafiq yaddaş qurğularının
+təhlükəsizliyini təmin adib və uyğun kriptoqrafiya açarlarının
+istifadəsini təmin etməlidir. Effektif açar uzunluğu RSA alqoritm üzrə
+2048 bit olmalıdır.
+
+Test terminalında istifadə olunan sahələrin ardıcıllığı (terminal id:
+Terminal test zamanı təqdim ediləcəkdir) aşağıdadır:
+
+2.2.1 TRTYPE = 0, TRTYPE = 1
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  1                       Tranzaksiya növü = 1
+                                                  (Maliyyə sənədi)
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS.
+                                                  merchant server-lə
+                                                  e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   1-64                    Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  MERCH_URL               1-250                   Satıcının web site
+                                                  URL-ı
+  -----------------------------------------------------------------------
+
+2.2.2 TRTYPE = 21
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 21
+                                                  (Satışın tamamlanması)
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+  -----------------------------------------------------------------------
+
+2.2.3 TRTYPE = 22
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 22
+                                                  (Online reversal)
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+  -----------------------------------------------------------------------
+
+2.2.4 TRTYPE = 24
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli
+                                                  formatda qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       Tranzaksiya növü = 24
+                                                  (Offline reversal)
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit
+                                                  nömrəsi kimi istifadə
+                                                  olunur, terminal id
+                                                  üçün bir gün ərzində
+                                                  unikal olmalıdır
+
+  RRN                     1                       Merchant bank üzrə
+                                                  axraş sorğu nömrəsi
+                                                  (ISO-8583 Field 37)
+
+  INT_REF                 1-32                    Daxili
+                                                  E-Commercegateway sorğu
+                                                  nömrə
+  -----------------------------------------------------------------------
+
+2.3 S2S inteqrasiya
+
+Qeyd: Göstərilmiş inteqrasiya növü yalnız etibarlı PCİ DSS sertifkatı
+olan merchantlar üçün keçərlidir.
+Avtorizatsiya üçün POST sorğuda TRTYPE=1
+göndərilməlidir.Preavtorizatsiya üçün isə ilk sorğu POST sorğuda
+TRTYPE=0 göndərilməlidir və uğurlu geri dönüş məlumatlarından sonra
+ödənişi təsdiqləmək üçün mütləq olaraq TRTYPE=21 sorğusu
+göndərilməlidir.
+
+HTTP POST sorğusu Azericard e-ticarət keçidinə URL ünvanına
+göndərilməlidir:
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Sorğu format
+
+  --------------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- --------------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  sürüşkən nöqtəli formatda
+                                                  qeyd olunur
+
+  CURRENCY                03                      Sifariş valyutası: 3
+                                                  simvollu valyuta kodu
+
+  ORDER                   6-32                    Satıcı sifariş ID-si,
+                                                  rəqəmsal. Son 6 rəqəm
+                                                  sistem izi audit nömrəsi
+                                                  kimi istifadə olunur,
+                                                  terminal id üçün bir gün
+                                                  ərzində unikal olmalıdır
+
+  DESC                    1-50                    Sifarişin açıqlaması
+
+  MERCH_NAME              1-50                    Satıcının (merchan) adı
+                                                  (kart istifadəçisinin
+                                                  anladığı formada
+                                                  olmalıdır)
+
+  MERCH_URL               1-250                   Satıcının web site URL-ı
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant Terminal
+                                                  ID
+
+  EMAIL                   80                      Bildirişlər üçün Email
+                                                  ünvan. Qeyd olunmuş sahə
+                                                  doldurulduğu halda Gateway
+                                                  email ünvanı müəyyən etmək
+                                                  üçün əməliyyat nəticəsi
+                                                  haqqında bildiriş göndərə
+                                                  bilər.
+
+  TRTYPE                  1                       Tranzaksiya növü = 0
+                                                  (Pre-Avtorizasiya
+                                                  əməliyyatı),Tranzaksiya
+                                                  növü = 1 (Avtorizasiya
+                                                  əməliyyatı)
+
+  COUNTRY                 02                      Merchant shop 2 simvollu
+                                                  ölkə kodu. Merchant
+                                                  sistemi Gateway serverin
+                                                  yerləşdiyi ölkədən fərqli
+                                                  ölkədə yerləşirsə qeyd
+                                                  olunmalıdır.
+
+  MERCH_GMT               1-5                     Merchant-ın UTC/GMT vaxt
+                                                  zonası. Merchant sistemi
+                                                  Gateway serverin
+                                                  yerləşdiyi vaxt zonasından
+                                                  fərqli vaxt zonasında
+                                                  yerləşirsə qeyd
+                                                  olunmalıdır.
+
+  BACKREF                 1-250                   Avtorizasiya nəticəsinin
+                                                  yerləşdirilməsində(post)
+                                                  istifadə olunan Merchant
+                                                  URL.
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS. merchant
+                                                  server-lə e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   1-64                    Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda doldurulmalıdır.
+                                                  MAC istifadə olunduğu
+                                                  halda nəzərə alınmalıdır.
+
+  LANG                    2                       Dil seçimi
+
+  P_SIGN                  1-256                   16-lıq formatda Merchant
+                                                  MAC
+
+  NAME                    2-45                    Müştərinin adı (kartda
+                                                  göstərildiyi kimi)
+
+  M_INFO                  35000                   JSON formatlı Base64 kodlu
+                                                  sətir olmalıdır -
+                                                  "parameter": "value data".
+
+  MERCH_3D_TERM_URL                               Müştəri ACS-dən Cres
+                                                  cavabını qaytaracaq
+                                                  merchant URL-i.
+
+  CARD                    9-19                    Kart nömrəsi (Əsas hesab
+                                                  nömrəsi).
+
+  EXP                     02                      Kartın son istifadə ayı
+                                                  (Rəqəm 2 rəqəmli dəyər).
+
+  EXP_YEAR                02                      Kartın istifadə müddəti
+                                                  (Rəqəm 2 rəqəmli dəyər:
+                                                  20XX)
+
+  CVC2                    03                      Kartın doğrulama kodu
+                                                  (imza panelindəki son üç
+                                                  rəqəm).
+
+  CVC2_RC                 01                      CVC2 səbəb kodu. dəyərlər:
+                                                  value="1" -CVC2 mövcuddur
+                                                  value="0" -CVC2 təmin
+                                                  edilməyib
+                                                  value="2"-CVC2 oxunmur
+  --------------------------------------------------------------------------
+
+Aşağıda M_INFO sahəsi üçün hazırlanmış məlumat nümunəsi verilmişdir:
+
+"M_INFO"="ewoiYnJvd3NlclNjcmVlbkhlaWdodCI6IjE5MjAiLAoiYnJvd3NlclNjcmVlbldpZHRoIjoiMTA4MCIsCiJicm93c2VyVFoiOiIwIiwKIm1vYmlsZVBob25lIiA6eyAiY2MiOiI5OTQiLCAic3Vic2NyaWJlciI6IjU1Nzc3Nzc3Nzc3IiB9Cn0=",
+
+Deşifrə formatı:
+{"browserIP":"0.0.0.0","browserScreenHeight":"1920","browserScreenWidth":"1080","browserTZ":"0","mobilePhone":{"cc":"994","subscriber":"5077777777"}}
+
+M_INFO Parametrlərin təsviri:
+
+browserScreenHeight - Kart sahibinin ekranının piksellərlə ümumi
+hündürlüyü.
+
+browserScreenWidth - Kart sahibinin ekranının piksellə ümumi eni.in
+pixels.
+
+browserTZ - UTC vaxtı ilə Kart sahibinin brauzerinin yerli vaxtı
+arasındakı vaxt fərqi, dəqiqələrlə.
+
+mobilePhone - Kart sahibi tərəfindən verilən mobil telefon nömrəsi.
+
+Sorğu aşağıda qeyd olunmuş formada olmalıdır:
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"DESC"="xxxxxxxxxxx xxxx", "MERCH_NAME"="xxxxx.xxx",
+"MERCH_URL"="https://xxxxxxxxxx.xx/xxxx", "MERCH_GMT"="+4",
+"TERMINAL"="xxxxxxxxx", "EMAIL"="xxxxx@xxxxx.xx", "TRTYPE"="x",
+"COUNTRY"="AZ", "TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"BACKREF"="https://xxxxxxxxxxx/xxxxxxxxxxx/xxxxxx",
+"M_INFO"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+"MERCH_3D_TERM_URL"="xxxxxxxxxxxxxxxxxxxxxxxx",
+"CARD"="xxxxxxxxxxxxxxxxxxx", "EXP"="xx", "EXP_YEAR"="xx", "CVC2"="xxx",
+"CVC2_RC"="x",
+
+Cavab formatı
+
+  -------------------------------------------------------------------------------
+  Sahə        Uzunluq   Açıqlama
+  ----------- --------- ---------------------------------------------------------
+  TERMINAL    8         Sorğudan əks etdirilməsi
+
+  TRTYPE      2         Sorğudan əks etdirilməsi
+
+  ORDER       6-20      Sorğudan əks etdirilməsi
+
+  AMOUNT      1-12      İcazə verilən məbləğ. Adətən, orijinal məbləğə və
+                        alıcının haqqına bərabər olacaq.
+
+  CURRENCY    3         Sorğudan əks etdirilməsi
+
+  ACTION      1         EGateway fəaliyyət kodu
+
+                        §0 – Tranzaksiya uğurla tamamlandı
+
+                        §1 – Dublikat əməliyyat aşkar edildi
+
+                        §2 – Tranzaksiya rədd edildi
+
+                        §3 – Tranzaksiya emal xətası
+
+  RC          02        Əməliyyat cavab kodu (ISO-8583 Sahə 39)
+
+  APPROVAL    06        Müştəri bankının təsdiq kodu (ISO-8583 Sahə 38). Kart
+                        idarəetmə sistemi tərəfindən təmin edilmədikdə boş ola
+                        bilər.
+
+  RRN         12        Müştəri bankının axtarış istinad nömrəsi (ISO-8583 Sahə
+                        37)
+
+  INT_REF     1-32      Elektron ticarət şlüzünün daxili istinad nömrəsi
+
+  TIMESTAMP   14        GMT-də e-ticarət şlüzünün vaxt damğası:: YYYYMMDDHHMMSS
+
+  NONCE       1-64      E-Commerce Gateway qeyri-dəyərlidir. Hexadecimal formatda
+                        8-32 gözlənilməz təsadüfi baytla doldurulacaq. MAC
+                        istifadə edildikdə mövcud olacaq.
+
+  P_SIGN      1-256     Onaltılıq formada E-Commerce Gateway MAC (Message
+                        Authentication Code). MAC istifadə edildikdə mövcud
+                        olacaq.
+  -------------------------------------------------------------------------------
+
+1. Əgər kart 3DSecure-da qeydiyyatdan keçibsə və kart 3DS metodunu
+dəstəkləyirsə, əlavə kartın autentifikasiyası Avtorizasiya Cavabından
+əvvəl aşağıdakı kimi həyata keçiriləcək.
+
+1.1 Əgər müştəri kartı ThreeDSmethod-u dəstəkləyirsə; Aşağıdakı URL-ə
+yazı sorğusuna cavab olaraq testmpi XML cavabını qaytaracaq.
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Məsələn:
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <action>
+https://testacs.3dsecure.az/way4acs/threeDSMethodURL</action>;
+<threeDSMethodData>
+eyJ0aHJlZURTTWV0aG9kTm90aWZpY2F0aW9uVVJMIjoiaHR0cHM6Ly90ZXN0bXBpLjNkc2VjdXJlLmF6L2NnaS1iaW4vY2dpX2xpbmsiLC
+J0aHJlZURTU2VydmVyVHJhbnNJRCI6IjZkYTllMDk4LWFmZGEtNGY5NC1iMTMxLTAxZGNhZDA4NDgzOCJ9
+</threeDSMethodData> <threeDSMethodState>C</threeDSMethodState>
+<url>https://testmpi.3dsecure.az/cgi-in/cgi_link</url>; </response>
+
+2. Növbəti addımda threeDSmethodData dəyəri aşağıdakı nümunədə olduğu
+kimi yuxarıdakı <action> sahəsində göstərilən url-ə yerləşdirilməlidir.
+
+Qeyd:
+başlıqda "content-type"="application/x-www-form-urlencoded" parametrini
+göndərməlidir.
+
+https://testacs.3dsecure.az/way4acs/threeDSMethodURL
+
+threeDSMethodData:eyJ0aHJlZURTTWV0aG9kTm90aWZpY2F0aW9uVVJMIjoiaHR0cHM6Ly90ZXN0bXBpLjNkc2VjdXJlLmF6L2NnaS1iaW4vY2dpX2xpbmsiLC
+J0aHJlZURTU2VydmVyVHJhbnNJRCI6IjZkYTllMDk4LWFmZGEtNGY5NC1iMTMxLTAxZGNhZDA4NDgzOCJ9
+
+Bu sorğuya cavab verilməməlidir, əgər http=200 (ok)
+
+Postman müraciəti nümunəsi.
+
+[threeDSMethodData]
+
+3. Növbəti addımda threeDSmethodData dəyəri
+və threeDSmethodState=C aşağıdakı nümunədə olduğu kimi aşağıdakı URL-də
+yerləşdirilməlidir
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+başlıqda "content-type"="application/x-www-form-urlencoded" parametrini
+göndərməlidir.
+
+threeDSMethodData:eyJ0aHJlZURTTWV0aG9kTm90aWZpY2F0aW9uVVJMIjoiaHR0cHM6Ly90ZXN
+0bXBpLjNkc2VjdXJlLmF6L2NnaS1iaW4vY2dpX2xpbmsiLCJ0aHJlZURTU2VydmVyVHJhbnNJRCI6Ijc5Yz
+Y3ZWY4LTZhN2ItNDBlOS04ZDdjLWE5N2I5MzcyM2RmMiJ9
+threeDSMethodState:C
+
+Aşağıda Postman nümunəsi
+
+[threeDSMethodState]
+
+“WAITING” cavabı alınarsa, əvvəlki mesaj “CONTINUE” cavabı alınana və ya
+10-a qədər yenidən göndərilməlidir. belə dövrün saniyələri keçdi.
+“CONTINUE” mesajını aldıqdan sonra və ya 10 saniyə vaxt keçib,
+hansıdırsa birincisi, threeDSMethodState=N ilə yuxarıdakı kimi eyni
+mesaj göndərilməlidir URL:https://testmpi.3dsecure.az/cgi-bin/cgi_link
+davam etmək üçün aşağıdakı nümunədə olduğu kimi:
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+başlıqda "content-type"="application/x-www-form-urlencoded" parametrini
+göndərməlidir.
+
+threeDSMethodData:eyJ0aHJlZURTTWV0aG9kTm90aWZpY2F0aW9uVVJMIjoiaHR0cHM6Ly90ZXN
+0bXBpLjNkc
+2VjdXJlLmF6L2NnaS1iaW4vY2dpX2xpbmsiLCJ0aHJlZURTU2VydmVyVHJhbnNJRCI6Ijc5YzY3ZWY4LTZ
+hN2ItNDBlOS04ZDdjLWE5N2I5MzcyM2RmMiJ9
+threeDSMethodState:N
+
+4. Bu mesaja cavab orijinal müştəri sessiyasına cavab verilməli olan
+emitent ACS html səhifəsi olacaq. Merchant qeyd olunan HTML ACS
+səhifəsini müştəriyə açmalıdır və müştəri öz emitentinin ACS sisteminə
+yönləndiriləcəkdir.
+
+5. Müştəri bu səhifədə özünü təsdiqləyir. Müştəri autentifikasiya
+edildikdən sonra emitent ACS url göndərəcək MERCH_3D_TERM_URL sahəsində
+(merchant url) Authorization Request-da göstərilmişdir. Bu postda CRES
+autentifikasiyası cavabı olacaq. Aşağıdakı belə bir yazının nümunəsi.
+
+Məsələn:
+
+"cres":"eyJtZXNzYWdlVHlwZSI6IkNSZXMiLCJtZXNzYWdlVmVyc2lvbiI6IjIuMS4wIiwidGhyZWVEU1Nlc
+nZlclRyYW5zSUQiOiI3YTQ1NzhlNC1kNjk5LTQwN2EtODg2MS0zNDIwNTk0ZTk0MjkiLCJhY3NUcmFuc
+0lEIjoiMGVhNzU3ODUtOTQ5OC00MjQ3LWEzYzctYzViY2FlMDk2NzU5IiwiY2hhbGxlbmdlQ29tcGxld
+GlvbkluZCI6IlkiLCJ0cmFuc1N0YXR1cyI6IlkifQ",
+"threeDSSessionData":"MDdhYTNiNDQtYzY0OC00YThiLThiOTktOTBiNDM3ZDc2MTI5"
+
+1.5. Bu qəbul edilmiş Cres məlumat cavabı "olduğu kimi" MPI-yə
+göndərilməlidir
+
+URL:
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Məsələn:POST-da başlıqda cres
+parametri content-type=x-www-form-urlencoded tələbi olmalıdır
+
+cres:eyJtZXNzYWdlVHlwZSI6IkNSZXMiLCJtZXNzYWdlVmVyc2lvbiI6IjIuMS4wIiwidGhyZWVEU1Nlc
+nZlclRyYW5zSUQiOiI3YTQ1NzhlNC1kNjk5LTQwN2EtODg2MS0zNDIwNTk0ZTk0MjkiLCJhY3NUcmFuc
+0lEIjoiMGVhNzU3ODUtOTQ5OC00MjQ3LWEzYzctYzViY2FlMDk2NzU5IiwiY2hhbGxlbmdlQ29tcGxld
+GlvbkluZCI6IlkiLCJ0cmFuc1N0YXR1cyI6IlkifQ
+threeDSSessionData:MDdhYTNiNDQtYzY0OC00YThiLThiOTktOTBiNDM3ZDc2MTI5
+
+Aşağıda Postman nümunəsi
+
+[threeDSSessionData]
+
+6. Bu MPI cavab olaraq Avtorizasiya Cavabını göndərəcək.
+Cavab nümunəsi aşağıdakı məlumatları ehtiva edəcəkdir
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <desc>Approved</desc>
+<terminal>1111111</terminal> <trtype>1</trtype> (can be 0)
+<order>20230621052514</order> <amount>1.00</amount>
+<currency>944</currency> <action>0</action> <rc>00</rc>
+<approval>111111</approval> <rrn>317276406077</rrn>
+<intref>0A7E21C778330DF2</intref> <timestamp>20230621052514</timestamp>
+<nonce>7fdc0caafb113590</nonce>
+<p_sign>5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd </p_sign>
+</response>
+
+2. Əgər kart 3DSecure-da qeydiyyatdan keçibsə və kart 3DS metodunu
+dəstəkləmirsə, əlavə kartın autentifikasiyası Avtorizasiya Cavabından
+əvvəl aşağıdakı kimi həyata keçiriləcək.
+
+1. Avtorizasiya sorğusuna cavab mesajı emitent olacaq ACS html səhifəsi
+orijinal müştəri sessiyasına cavablandırılmalı, müştəri öz emitent ACS
+sisteminə yönləndiriləcəkdir.
+
+Aşağıdakı emitentin ACS html formasının nümunə cavabı. Satıcı qeyd
+olunan səhifəni müştəriyə açmalıdır.
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"> <HTML>
+<HEAD> </HEAD> <BODY ONLOAD="javascript:OnLoadEvent();"> <FORM
+ACTION="https://testacs1.3dsecure.az/way4acs/brw/challenge?id=67a0c292-2e65-461d-901b-04d72717d294"
+METHOD="post" NAME="ThreeDform" target="_self"> <input name="creq"
+type="hidden"
+value="eyJtZXNzYWdlVHlwZSI6IkNSZXEiLCJtZXNzYWdlVmVyc2lvbiI6IjIuMS4wIiwidGhyZWVEU1NlcnZlclRyYW5zSUQiOiI2N2EwYzI5Mi0yZTY1LTQ2MWQtOTAxYi0wNGQ3MjcxN2QyOTQiLCJhY3NUcmFuc0lEIjoiNTZmNjE4NzEtMTUwZC00NjIyLTk4MjgtZjZlYmY0MWRhNjhhIiwiY2hhbGxlbmdlV2luZG93U2l6ZSI6IjA1In0">
+<input name="threeDSSessionData" type="hidden"
+value="NjdhMGMyOTItMmU2NS00NjFkLTkwMWItMDRkNzI3MTdkMjk0"> </FORM>
+<SCRIPT> function OnLoadEvent () { document.forms[0].submit(); }
+</SCRIPT> </BODY> </HTML>
+
+2. Müştəri bu səhifədə özünü təsdiqləyir.
+
+3. Müştəri autentifikasiya edildikdən sonra emitent ACS
+MERCH_3D_TERM_URL sahəsində Avtorizasiya Sorğusunda göstərilən url-ni
+dərc edəcək. Bu postda CRES autentifikasiyası cavabı olacaq. Aşağıdakı
+belə bir yazının nümunəsi.
+
+Məsələn:
+
+"cres":"eyJtZXNzYWdlVHlwZSI6IkNSZXMiLCJtZXNzYWdlVmVyc2lvbiI6IjIuMS4wIiwidGhyZWVEU1Nlc
+nZlclRyYW5zSUQiOiI3YTQ1NzhlNC1kNjk5LTQwN2EtODg2MS0zNDIwNTk0ZTk0MjkiLCJhY3NUcmFuc
+0lEIjoiMGVhNzU3ODUtOTQ5OC00MjQ3LWEzYzctYzViY2FlMDk2NzU5IiwiY2hhbGxlbmdlQ29tcGxld
+GlvbkluZCI6IlkiLCJ0cmFuc1N0YXR1cyI6IlkifQ",
+"threeDSSessionData":"MDdhYTNiNDQtYzY0OC00YThiLThiOTktOTBiNDM3ZDc2MTI5"
+
+Bu qəbul edilmiş Cres məlumat cavabı "olduğu kimi" MPI-yə
+göndərilməlidir:
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Məsələn:POST-da başlıqda cres
+parametri content-type=x-www-form-urlencoded tələbi olmalıdır
+
+cres:eyJtZXNzYWdlVHlwZSI6IkNSZXMiLCJtZXNzYWdlVmVyc2lvbiI6IjIuMS4wIiwidGhyZWVEU1Nlc
+nZlclRyYW5zSUQiOiI3YTQ1NzhlNC1kNjk5LTQwN2EtODg2MS0zNDIwNTk0ZTk0MjkiLCJhY3NUcmFuc
+0lEIjoiMGVhNzU3ODUtOTQ5OC00MjQ3LWEzYzctYzViY2FlMDk2NzU5IiwiY2hhbGxlbmdlQ29tcGxld
+GlvbkluZCI6IlkiLCJ0cmFuc1N0YXR1cyI6IlkifQ
+threeDSSessionData:MDdhYTNiNDQtYzY0OC00YThiLThiOTktOTBiNDM3ZDc2MTI5
+
+[threeDSSessionData]
+
+4.Bu MPI-yə cavab olaraq Avtorizasiya Cavabını göndərəcək. Cavab
+nümunəsi aşağıdakı məlumatları ehtiva edir.
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <desc>Approved</desc>
+<terminal>1111111</terminal> <trtype>1</trtype> (can be 0)
+<order>20230621052514</order> <amount>1.00</amount>
+<currency>944</currency> <action>0</action> <rc>00</rc>
+<approval>111111</approval> <rrn>317276406077</rrn>
+<intref>0A7E21C778330DF2</intref> <timestamp>20230621052514</timestamp>
+<nonce>7fdc0caafb113590</nonce>
+<p_sign>5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd </p_sign>
+</response>
+
+3. Kart sürtünməsiz autentifikasiyanı dəstəkləyirsə. Avtorizasiya zamanı
+Frictionless Flow uğurlu autentifikasiyaya nail olmaq və 3-D Secure
+autentifikasiya prosesini başa çatdırmaq üçün Kart Sahibinin əlavə
+qarşılıqlı əlaqəsini tələb etmir.
+
+3.1. Bu MPI-yə cavab olaraq Avtorizasiya Cavabını göndərəcək. Cavab
+nümunəsi aşağıdakı məlumatları ehtiva edir.
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <desc>Approved</desc>
+<terminal>1111111</terminal> <trtype>1</trtype> (can be 0)
+<order>20230621052514</order> <amount>1.00</amount>
+<currency>944</currency> <action>0</action> <rc>00</rc>
+<approval>111111</approval> <rrn>317276406077</rrn>
+<intref>0A7E21C778330DF2</intref> <timestamp>20230621052514</timestamp>
+<nonce>7fdc0caafb113590</nonce>
+<p_sign>5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd </p_sign>
+</response>
+
+4. Əgər kart 3DS metodunu dəstəkləyirsə və 3D xidmətində qeydiyyatdan
+keçməyibsə, 1.1, 1.2, 1.3 hərəkətləri yerinə yetirmək lazımdır və
+Avtorizasiya üçün bu MPI-yə cavab olaraq aşağıdakı kimi Doğrulama
+uğursuz mesajı ilə cavab verəcəkdir.
+Cavab nümunəsi aşağıdakı məlumatları ehtiva edəcəkdir
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <desc>Authentication
+failed</desc> <terminal>1111111</terminal> <trtype>1</trtype> (can be 0)
+<order>20230621052514</order> <amount>1.00</amount>
+<currency>944</currency> <action>3</action> <rc>-19</rc>
+<approval></approval> <rrn></rrn> <intref></intref>
+<timestamp>20230621052514</timestamp> <nonce>7fdc0caafb113590</nonce>
+<p_sign>5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd </p_sign>
+</response>
+
+5. Kart 3DS metodunu dəstəkləmirsə və 3D-də qeydiyyatdan keçməyibsə.
+Avtorizasiya zamanı MPI aşağıdakı kimi Autentifikasiya uğursuz mesajı
+kimi Avtorizasiya Cavabını göndərəcək.
+Cavab nümunəsi aşağıdakı məlumatları ehtiva edəcəkdir
+
+<?xml version="1.0" encoding="utf-8" ?> <response> <desc>Authentication
+failed</desc> <terminal>1111111</terminal> <trtype>1</trtype> (can be 0)
+<order>20230621052514</order> <amount>1.00</amount>
+<currency>944</currency> <action>3</action> <rc>-19</rc>
+<approval></approval> <rrn></rrn> <intref></intref>
+<timestamp>20230621052514</timestamp> <nonce>7fdc0caafb113590</nonce>
+<p_sign>5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd </p_sign>
+</response>
+
+Qeyd:Ödənişin təsdiqlənməsi, geri qaytarlması və P_SIGN dəyərinin
+hesablanması E-ticarət inteqrasiya metodunda olduğu kimidir.
+
+3 İnstallment
+
+İnstallment xidməti zamanı yuxardaki (Keçid linki) göstərilmiş
+parametrlərə əlavə olaraq aşağıda qeyd edilən parametr müvafiq url
+adresinə post edilir. Installment emeliyyatlari aparmaq uchun sorguda
+ACQ_INST_PAYIN parameter post edilir ve taksit sayina uygun olaraq
+INST_ALL* (*=3,6,9,12,18,24,27,30) taksit saylari gonderilir.
+
+For installment
+
+  --------------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- --------------------------
+  ACQ_INST_PAYIN          9 - 10                  INST_ALL*
+                                                  (*=3,6,9,12,18,24,27,30)
+
+  --------------------------------------------------------------------------
+
+Non installment
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  ACQ_INST_PAYIN          9-10                    INST_ALL* (*= X)
+
+  -----------------------------------------------------------------------
+
+Cavab formatı
+
+Uğurlu Cavab: <install>INST_ALL*</install>
+
+  -----------------------------------------------------------------------
+  Kod                     Xəta                    Açıqlama
+  ----------------------- ----------------------- -----------------------
+  U1                      Empty instalment        No entries (no rows at
+                          configuration           all) in the
+                                                  BinRangeFile
+
+  U2                      Invalid instalment      Number of fields in the
+                          configuration           BinRangeFile is not
+                                                  equal to 3
+
+  U3                      Card BIN range not      No BIN range matched
+                          found                   the provided PAN
+
+  U4                      No instalments          BIN range matched, but
+                          configured for the BIN  no instalments
+                          range                   configured for the
+                                                  range
+
+  U5                      No instalments          Terminal configuration
+                          configured for the      AcqInstTypeList is
+                          terminal                empty
+
+  U6                      Selected instalment not 
+                          configured for the      
+                          terminal                
+
+  U7                      Selected instalment not 
+                          configured for the BIN  
+                          range                   
+  -----------------------------------------------------------------------
+
+4 Test məlumatları
+
+Burada Siz test mühitdə test əməliyyatlar edib, əməliyyatların
+nəticələrini simulyasiya edə bilərsiniz (təsdiq və imtina nəticəsi).
+Sandbox istifadəsinin əsas məqsədi inteqrasiya prosesinin tətbiqi və
+testləşməsidir. Production məlumatlarının əldə olunması üçün satıcı və
+Bank/AZC arasında müqavilə rəsmiləşdirilməlidir. Test əməliyyatların
+aparılması üçün Siz test mühitdə test açarlardan və test rekvezitlərdən
+istifadə etməlisiniz.
+
+4.1 Test kartı
+
+Test kart vasitəsi ilə əməliyyat etmək üçün aşağıda qeyd olunmuş kart
+məlumatları istifadə olunmalıdır.
+
+  -----------------------------------------------------------------------
+  PAN                                 4127208104942601
+  ----------------------------------- -----------------------------------
+  EXP_MONTH                           05
+
+  EXP_YEAR                            31
+
+  CVV                                 796
+
+  SMS One Time Password               1111
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+  PAN                                 5167513332880780
+  ----------------------------------- -----------------------------------
+  EXP_MONTH                           05
+
+  EXP_YEAR                            31
+
+  CVV                                 609
+
+  SMS One Time Password               1111
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+  PAN                                 4127214121630724
+  ----------------------------------- -----------------------------------
+  EXP_MONTH                           04
+
+  EXP_YEAR                            31
+
+  CVV                                 536
+
+  SMS One Time Password               1111
+
+  Card Name                           Tam Card Visa (ABB müştərilərinə)
+  -----------------------------------------------------------------------
+
+4.2 Test terminalı
+
+Test əməliyyatın aparılması üçün aşağıda qeyd olunmuş test terminal
+istifadə olunmalıdır.
+
+  -----------------------------------------------------------------------
+  Terminal ID                         İnteqrasiya zamanı təqdim olunacaq
+  ----------------------------------- -----------------------------------
+
+  -----------------------------------------------------------------------
+
+4.3 Test açarları
+
+Test mühitində sizə 1 Azericard açıq açar(Public RSA) təqdim olunacaq.
+Açarların yaradılması paraqraf 4-də qeyd olunub. Keçid linki
+
+  -----------------------------------------------------------------------
+  MPI Public Key                      İnteqrasiya zamanı təqdim olunacaq
+  ----------------------------------- -----------------------------------
+
+  -----------------------------------------------------------------------
+
+Callback P_SIGN hesablanması
+
+Callback P_SIGN hesablanması üçün aşağıdakı dəyişənlər istifadə edilir.
+Əlavə olaraq əgər göstərilmiş dəyişənlərdən hər hansı birinin dəyəri boş
+göndərilərsə bu zaman həmin dəyərin əvəzinə “-” (tire) işarəsi əlavə
+edilir və P_SİGN hissədə onun uzunluğu nəzərə alınmır.
+
+  ------------------------------------------------------------------------
+  Sahə              Uzunluq          Açıqlama
+  ----------------- ---------------- -------------------------------------
+  AMOUNT            1-12             Sifarişin ümumi məbləği sürüşkən
+                                     nöqtəli formatda qeyd olunur
+
+  TERMINAL          8                Bank tərəfindən təyin edilmiş
+                                     Merchant Terminal ID
+
+  APPROVAL          6                Müştəri bankının təsdiq kodu
+                                     (ISO-8583 Sahə 38). Kart idarəetmə
+                                     sistemi tərəfindən təmin edilmədikdə
+                                     boş ola bilər.
+
+  RRN               12               Müştəri bankının axtarış istinad
+                                     nömrəsi (ISO-8583 Sahə 37)
+
+  INT_REF           1-32             Daxili E-Commercegateway sorğu nömrə
+  ------------------------------------------------------------------------
+
+5 Açarların yaradılma prosesi
+
+Prod sistem üçün Merchant öz açıq açarını Azericard prosesinq mərkəzinə,
+Azericard isə öz açıq açarını Merchant tərəfə təqdim etməlidir. Hər iki
+tərəfin gizli açarı özündə qalmalıdır. Merchant tərəfindən açıq və gizli
+RSA açarlarının yaradılması prosesi aşağıdakı şəkildə həyata keçməlidir:
+
+Qeyd olunmuş əməliyyatın icrası üçün Windows və ya Linux cihazlarında
+OpenSSL sistemi quraşdırılmalıdır.
+
+Açar yaradın
+
+5.1 Gizli açarın yaradılması(Windows)
+
+1. Command Prompt açın və qeyd olunmuş addımları edin:
+
+Start > Programs > Accessories > Command Prompt.
+
+2. Aşağıdakı qovluğa keçin:
+
+C:\Program Files\ListManager\tclweb\bin\certs
+
+3. Aşağıda qeyd olununları daxil edin:
+
+openssl genrsa -out merchant_name_private_key.pem 2048
+
+4. ENTER düyməsini klikləyin
+
+Gizli açar 'merchant_name_private_key.pem' adlı fayl generasiya olunub,
+yadda saxlanır və eyni folder-də yerləşdirilir.
+
+5.2 Açıq açarın yaradılması(Windows)
+
+1. prompt komandasında aşağıdaki məlumat qeyd olunmalıdır:
+
+openssl rsa -in merchant_name_private_key.pem -pubout -out
+merchant_name_public_key.pem
+
+2. ENTER düyməsini klikləyin.
+
+Açıq açar merchant_name_public_key.pem adlı faylda eyni adlı qovluqda
+saxlanılır.
+
+5.3 Gizli açarın yaradılması(Linux)
+
+1. Terminal-ı açın.
+
+2. Aşağıda qeyd olununları daxil edin:
+
+openssl genrsa -out merchant_name_private_key.pem 2048
+
+4. ENTER düyməsini klikləyin
+
+Gizli açar 'merchant_name_private_key.pem' adlı fayl generasiya olunub,
+yadda saxlanır və eyni folder-də yerləşdirilir.
+
+5.4 Açıq açarın yaradılması(Linux)
+
+1. Terminal-ı açın.
+
+2. Aşağıdakıları qeyd edin:
+
+openssl rsa -in merchant_name_private_key.pem -pubout -out
+merchant_name_public_key.pem
+
+3. ENTER düyməsini klikləyin.
+
+Açıq açar 'merchant_name_public_key.pem' adlı faylda eyni adlı qovluqda
+saxlanılır.
+
+6 Kart saxlama
+
+Kart saxlama xidməti zamanı yuxardaki (Keçid linki) göstərilmiş
+parametrlərə əlavə olaraq aşağıda qeyd edilən parametr müvafiq url
+adresinə post edilir.
+
+https://testmpi.3dsecure.az/token/cgi_link
+
+6.1 Kart saxlama inteqrasiyası
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  TOKEN_ACTION            8                       REGISTER
+                                                  Parametr token
+                                                  saxlayarkən mütləq post
+                                                  edilməlidir
+
+  MERCH_TRAN_STATE        1                       Avtorizasiyanın başlama
+                                                  göstəricisi
+                                                  value = 'S'
+  -----------------------------------------------------------------------
+
+Kartı saxlayarkən merchant mütləq olaraq sorğuda TOKEN_ACTION=REGISTER
+parametrini post etməlidir. Kartın saxlılması üçün merchant minimal
+məbləğ olsa belə uğurlu ödəniş etməlidir. Ödəniş uğula bitdikdən sonra
+merchantın təqdim etdiyi callback addresə aşağıdaki parametrlər
+göndəriləcək.
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"ACTION"="xxxxx", "RC"="xxx", "APPROVAL"="xxx", "RRN"="xxx",
+"INT_REF"="xxxxxxxx", "EMAIL"="xxxxxxxx", "CARD"="xxxxxxxx",
+"TOKEN"="xxxxxxxx", "TERMINAL"="xxxxxxxxx", "TRTYPE"="x",
+"TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+6.2 Saxlanilmiş kart ilə ödəniş
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  TOKEN                   28                      Saxlanmış kartın TOKEN
+                                                  parametri
+
+  -----------------------------------------------------------------------
+
+Saxlanılmış kart ilə ödəniş zamanı merchant mütləq olaraq sorğuda
+callback-də aldığı TOKEN parametrini post etməlidir. Ödəniş uğula
+bitdikdən sonra merchantın təqdim etdiyi callback addresə
+aşağıdakiparametrlər göndəriləcək.
+QEYD:Saxlanılmış kart ödənişləri zamanı TOKEN_ACTION=REGISTER parametri
+post edilməli deyil.
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"ACTION"="xxxxx", "RC"="xxx", "APPROVAL"="xxx", "RRN"="xxx",
+"INT_REF"="xxxxxxxx", "EMAIL"="xxxxxxxx", "CARD"="xxxxxxxx",
+"TOKEN"="xxxxxxxx", "TERMINAL"="xxxxxxxxx", "TRTYPE"="x",
+"TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+6.3 CIT Ödəniş
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  MERCH_TRAN_STATE        1                       Avtorizasiyanın başlama
+                                                  göstəricisi
+                                                  value = 'C'
+
+  TOKEN                   28                      Kart saxlanılma zamanı
+                                                  , merchanta dəyər
+                                                  qaytarılır
+  -----------------------------------------------------------------------
+
+Kartı saxlayarkən merchant mütləq olaraq sorğuda TOKEN_ACTION=REGISTER
+parametrini post etməlidir. Kartın saxlılması üçün merchant minimal
+məbləğ olsa belə uğurlu ödəniş etməlidir. Ödəniş uğula bitdikdən sonra
+merchantın təqdim etdiyi callback addresə aşağıdaki parametrlər
+göndəriləcək.
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"ACTION"="xxxxx", "RC"="xxx", "APPROVAL"="xxx", "RRN"="xxx",
+"INT_REF"="xxxxxxxx", "EMAIL"="xxxxxxxx", "CARD"="xxxxxxxx",
+"TOKEN"="xxxxxxxx", "TERMINAL"="xxxxxxxxx", "TRTYPE"="x",
+"TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+7 Recurring
+
+Kart saxlama xidməti zamanı yuxardaki (Keçid linki) göstərilmiş
+parametrlərə əlavə olaraq aşağıda qeyd edilən parametr müvafiq url
+adresinə post edilir.
+
+https://testmpi.3dsecure.az/token/cgi_link
+
+7.1 MIT unscheduled kart saxlama
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  MERCH_TRAN_STATE        1                       Avtorizasiyanın başlama
+                                                  göstəricisi
+                                                  value = 'S'
+
+  TOKEN_ACTION            8                       REGISTER
+
+  MERCH_RN_ID             16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  MIT_AGREEMENT           1                       Kart sahibinin razılığı
+                                                  ilə ödəniş sazişinin
+                                                  mövcudluğunu göstərən
+                                                  indikator, ticarətçi
+                                                  tərəfindən başladılan
+                                                  tranzaksiya zamanı.
+                                                  value = 'N'
+
+  TRTYPE                  1                       Tranzaksiya növü = 1
+                                                  (Maliyyə sənədi)
+  -----------------------------------------------------------------------
+
+Sorğu göndərildikdən sonra aşağıdaki response qayıdır. Save edildikdən
+sonra EXT_NET_REF parametri qayıdır. Ödəniş zamanı EXT_NET_REF
+göndərilməlidir. Əgər EXT_NET_REF dəyəri kartı saxlama sorğunun
+cavabında qayıtmayıbsa ödəniş zamanı parametri göndərilməsinə ehtiyyac
+yoxdur
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"ACTION"="xxxxx", "RC"="xxx", "APPROVAL"="xxx", "RRN"="xxx",
+"INT_REF"="xxxxxxxx", "EMAIL"="xxxxxxxx", "CARD"="xxxxxxxx",
+"TOKEN"="xxxxxxxx", "TERMINAL"="xxxxxxxxx", "TRTYPE"="x",
+"TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+"EXT_NET_REF"="xxxxxxxxxxxxxxxxxxxxx"
+
+7.2 MIT unscheduled ödəniş
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  MERCH_TRAN_STATE        1                       Avtorizasiyanın başlama
+                                                  göstəricisi
+                                                  value = 'M'
+
+  EXT_NET_REF             6-32                    Kart saxlanılma zamanı
+                                                  , merchanta dəyər
+                                                  qaytarılır
+
+  MERCH_RN_ID             16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  TOKEN                   28                      Kart saxlanılma zamanı
+                                                  , merchanta dəyər
+                                                  qaytarılır
+
+  TRTYPE                  1                       Tranzaksiya növü = 1
+                                                  (Maliyyə sənədi)
+  -----------------------------------------------------------------------
+
+7.3 MIT scheduled kart saxlama
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  MERCH_TRAN_STATE        1                       Avtorizasiyanın başlama
+                                                  göstəricisi
+                                                  value = 'S'
+
+  TOKEN_ACTION            8                       REGISTER
+
+  MERCH_RN_ID             16                      Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  MIT_AGREEMENT           1                       Kart sahibinin razılığı
+                                                  ilə ödəniş sazişinin
+                                                  mövcudluğunu göstərən
+                                                  indikator, ticarətçi
+                                                  tərəfindən başladılan
+                                                  tranzaksiya zamanı.
+                                                  value = 'Y'
+
+  TRTYPE                  1                       Tranzaksiya növü = 1
+                                                  (Maliyyə sənədi)
+
+  RECUR_FREQ              2                       Avtorizasiyalar
+                                                  (silinmə) arasında
+                                                  minimum vaxt aralığı.
+                                                  format rəgəmsal (Nümunə
+                                                  11)
+
+  RECUR_EXP               8                       Format (YYYYMMDD)
+                                                  abunəliyin bitmə tarixi
+                                                  , Abunəlik max kart
+                                                  saxlamadan 1 il
+                                                  müddətində ola bilər
+  -----------------------------------------------------------------------
+
+Sorğu göndərildikdən sonra aşağıdaki response qayıdır. Save edildikdən
+sonra EXT_NET_REF parametri qayıdır. Ödəniş zamanı EXT_NET_REF
+göndərilməlidir. Əgər EXT_NET_REF dəyəri kartı saxlama sorğunun
+cavabında qayıtmayıbsa ödəniş zamanı parametri göndərilməsinə ehtiyyac
+yoxdur
+
+"AMOUNT"="xx", "CURRENCY"="AZN", "ORDER"="xxxxxxxxxxxx",
+"ACTION"="xxxxx", "RC"="xxx", "APPROVAL"="xxx", "RRN"="xxx",
+"INT_REF"="xxxxxxxx", "EMAIL"="xxxxxxxx", "CARD"="xxxxxxxx",
+"TOKEN"="xxxxxxxx", "TERMINAL"="xxxxxxxxx", "TRTYPE"="x",
+"TIMESTAMP"="xxxxxxxxxxxxxx", "NONCE"="xxxxxxxxxxxxxxx",
+"P_SIGN"="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+"EXT_NET_REF"="xxxxxxxxxxxxxxxxxxxxx"
+
+7.4 MIT scheduled ödəniş
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  EXT_NET_REF             6-32                    Kart saxlanılma zamanı
+                                                  , merchanta dəyər
+                                                  qaytarılır
+
+  TOKEN                   28                      Kart saxlanılma zamanı
+                                                  , merchanta dəyər
+                                                  qaytarılır
+
+  TRTYPE                  3                       185
+  -----------------------------------------------------------------------
+
+8. Əməliyyat Statusu
+
+8.1 Əməliyyat vəziyyətinin yoxlanması
+
+Merchant, əməliyyat sorğusu vaxtından etibarən 24 saat ərzində E-ticarət
+keçidinə əməliyyat statusu sorğusu göndərə bilər.
+
+E-ticarət keçidin URL ünvanına HTTP POST sorğusu göndərməlisiniz:
+
+https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Sorğu format
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  TRAN_TRTYPE             1-2                     Sorğu üçün orijinal
+                                                  əməliyyat növü
+                                                  (Məsələn: TRTYPE 0, 1,
+                                                  22, 24 və s.)
+
+  ORDER                   6-20                    Sorğu üçün orijinal
+                                                  əməliyyat sifarişi
+                                                  id-si
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Merchant
+                                                  Terminal ID
+
+  TRTYPE                  2                       "90"-a bərabər
+                                                  olmalıdır (Əməliyyat
+                                                  sorğusu növü).
+
+  TIMESTAMP               14                      Tarix formatı GMT (0):
+                                                  YYYYMMDDHHMMSS.
+                                                  merchant server-lə
+                                                  e-Gateway server
+                                                  arasında zaman fərqi 1
+                                                  saatı aşmamalıdır, əks
+                                                  halda Gateway
+                                                  tranzaksiyaya imtina
+                                                  verəcək.
+
+  NONCE                   1-64                    Merchant nonce. 8-32
+                                                  təsadüfi random baytlar
+                                                  vasitəsi ilə 16-lıq
+                                                  formatda
+                                                  doldurulmalıdır. MAC
+                                                  istifadə olunduğu halda
+                                                  nəzərə alınmalıdır.
+
+  P_SIGN                  1-256                   16-lıq formatda
+                                                  Merchant MAC
+  -----------------------------------------------------------------------
+
+8.2 Response can be in HTML, XML and JSON format according to Merchant
+request.
+
+  -----------------------------------------------------------------------
+  Sahə                                Açıqlama
+  ----------------------------------- -----------------------------------
+  ACTION                              Sorğu üçün orijinal əməliyyat
+
+  Response code                       Sorğu üçün orijinal əməliyyat kodu
+
+  Transaction Status message          Orijinal əməliyyat statusu mesajı
+
+  TERMINAL                            Orijinal əməliyyat Terminal ID
+
+  Card number                         Orijinal əməliyyat maskalı kart
+                                      nömrəsi
+
+  Transaction amount                  Orijinal əməliyyat məbləği
+
+  Transaction currency                Orijinal əməliyyat valyutası
+
+  Transaction date                    Orijinal əməliyyat tarixi
+
+  Transaction state                   Orijinal əməliyyat vəziyyəti
+
+  Merchant order id                   Orijinal əməliyyat ORDER ID-si
+
+  Banks approval code                 Orijinal əməliyyatın təsdiq kodu
+
+  Transaction RRN                     Orijinal əməliyyat RRN
+
+  INT_REF                             Orijinal əməliyyat INT_REF
+
+  Original transaction TRTYPE         Orijinal əməliyyat TRTYPE
+
+  Timestamp                           Sorğunun vaxtı
+
+  Nonce                               Orijinal əməliyyat Nonce
+
+  P_SIGN                              Onaltılıq formada E-Commerce
+                                      Gateway MAC (Message Authentication
+                                      Code). MAC istifadə edilərsə mövcud
+                                      olacaq.
+  -----------------------------------------------------------------------
+
+8.3 Merchant MAC – Mesaj Doğrulama Kodu
+
+Merchant linkinə giriş/çıxış keçidindəki əməliyyat mesajlarının
+autentifikasiyası üçün merchant sistemi ən azı kart sahibinin brauzer
+yönləndirmələri vasitəsilə keçirilən əməliyyatlar üçün mesajın
+autentifikasiya kodlarını hesablaya və yoxlaya bilməlidir. Birbaşa
+e-Commerce Gateway-ə göndərilən mesajlar (“Satışların tamamlanması” və
+“Reversal”) SSL müştəri/server sertifikatları ilə qarşılıqlı təsdiqlənə
+bilər və MAC tələb etmir; əgər onlar qarşılıqlı autentifikasiya
+edilməyibsə, bu mesajlar üçün MAC məcburidir.
+
+MAC, MAC sahəsinin özündən (“P_SIGN”) istisna olmaqla, müvafiq format
+Cədvəllərində (merchant sistemi tərəfindən yaradılan görünən və gizli
+sahələr) müəyyən edildiyi kimi, merchant sistemi tərəfindən yaradılan
+bütün sahələr üzrə hesablanır.
+
+Mesajın autentifikasiyası sahəsini yaratmaq və ya yoxlamaq üçün merchant
+sistemi MAC mənbə sətirini yığmalıdır; format cədvəllərindəki bütün sahə
+dəyərləri ASCII-də onluq sahə uzunluğu ilə prefiks olunur və müəyyən
+edilmiş qaydada birləşdirilir. Sahə yoxdursa, onun yerinə mesaja '-'
+simvolu əlavə olunur.
+
+Avtorizasiya mesajı nümunəsi: MAC mənbə sətri aşağıdakı sahə
+dəyərlərindən ibarət olacaq - ORDER, TERMINAL, TRTYPE, TIMESTAMP və
+NONCE. Tutaq ki, aşağıdakı sahələrlə əməliyyatımız var:
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Value
+  ----------------------- ----------------------- -----------------------
+  ORDER                   14                      20211112075614
+
+  TERMINAL                8                       17202191
+
+  TRTYPE                  2                       90
+
+  TIMESTAMP               14                      20211112075714
+
+  NONCE                   16                      7cfb4c2512eeec72
+  -----------------------------------------------------------------------
+
+14202111120756148172021912901420211112075714167cfb4c2512eeec72
+
+Sətir fasilələri yalnız görünmə üçün daxil edilir. Bu sətir 190 bayt
+uzunluğundadır
+
+MAC mənbə sətri yığıldıqdan sonra tacir sistemi mesajın autentifikasiya
+kodunu yaratmaq üçün kriptoqrafik alqoritm tətbiq etməlidir. Gateway
+müxtəlif kriptoqrafik alqoritmləri dəstəkləyir və sistem inzibatçısı
+konkret ticarət terminalı üçün hansı alqoritmin istifadə olunacağını
+təyin edə bilər.
+
+Satıcı sistemi seçilmiş alqoritmi ya aparat, ya da proqram formasında
+həyata keçirməli və müvafiq kriptoqrafik açarların təhlükəsiz saxlanması
+və istifadəsi üçün tam məsuliyyət daşımalıdır. Effektiv açar uzunluğu
+asimmetrik kriptoqrafik alqoritmlər üçün ən azı 112 bit və SHA256
+alqoritmi ilə RSA üçün 2048 bit olmalıdır.
+
+Standart MAC alqoritmi RSAwithSHA256-dır. Əlavə seçimlər tələb oluna
+bilər. MAC mənbə sətir nümunəmiz və Şəxsi RSA açarı ilə SHA256 alqoritmi
+ilə HMAC RSA üçün nəticə MAC (“P_SIGN”) sahəsi bərabər olmalıdır:
+
+“5dc32febbca757927aa353b526515b30a3ef4bf87a5ce24e4e01ad6292954560e97b3a30283fd034d3e5b6d21
+ec72ce2a37db27a476ff970f7e5ae694b39b637101643f220f701f7918295d06c287c46ec8e6aa7e48e2d560c49
+f76a09ccd0aa4404dd889e98c474f162f7154c95e5bd9c16333c4f0088f8a732c48fc902de9d9b782a7a07cd0aa
+1a1d07852b1306b8185160cdc36d665e65ac9b63ca44700933a1e0bfba9624f08d86a4259fecf3a020d7ff254a0
+7468881e05e3fe08f11624f5d235341965cc272e4360a27a0bbe8ad868952a0b4072b4a4239704712fa033989
+35ab2527517672948c4ef2d4cb5a8e4e2381f7e3ef9d8c6ccb85d154b08fd”
+
+MAC sahəsinin dəyəri böyük hərf və ya kiçik hərf onaltılıq sətir ola
+bilər.
+
+9. GooglePay Ekvayrinq Xidməti İnteqrasiyası
+
+“Azəricard” MMC Azərbaycan Respublikasında ilk prosessinq mərkəzidir və
+Beynəlxalq Ödəniş Sistemləri: MasterCard, Visa, American Express, Diners
+Club, UnionPay və JCB tərəfindən tam sertifikatlaşdırılmışdır. AzeriCard
+Azərbaycanda və xaricdə 15 bank üçün prosessinq həyata keçirir, onların
+hamısı Beynəlxalq Ödəniş Sistemlərinin üzvüdür. Azericard
+telekommunikasiya və kommunal xidmətlər üzrə ödənişlər, gömrük və vergi
+ödənişləri, İnternet və Mobil Bankçılıq, Kartdan karta köçürmələr (Kart
+Transfer, VISA Direct, MasterCard Money Send), VTS, bankomatlar
+vasitəsilə sığorta və depozit ödənişləri, müxtəlif loyallıq proqramları,
+multivalyuta kartları və sair kimi ən müasir texnoloji layihələri fəal
+şəkildə həyata keçirir.
+
+Bu sənəd merchantlar və onların filiallarına Azericard Google Pay
+İnterfeysini inteqrasiya etmək üçün alətlər təqdim edir ki, Azericard
+onların əməliyyat sorğularını emal edə bilsin.
+
+GOOGLE PAY™API VEB İNTEQRASİYA
+
+Kart məlumatlarını daxil etmədən ödənişləri qəbul edin.
+
+Google Pay™ hər bir ödəniş üçün kart məlumatlarını daxil etmədən sadə və
+sürətli kart ödənişlərini həyata keçirməyə imkan verən rəqəmsal pul
+kisəsidir. Kart məlumatları Google tərəfindən təhlükəsiz şəkildə
+saxlanılır. Bu ödəniş üsulu əməliyyat sistemindən və veb brauzerindən
+asılı olmayaraq bütün cihazlar (mobil telefonlar və kompüterlər) üçün
+əlçatandır. Google Pay istifadə etdiyi halda, Akseptor
+aşağıdakı qaydaların müddəalarına əməl etməyə borcludur.
+
+Authentifikasiya üsulu
+
+-   PAN_ONLY: Bu autentifikasiya üsulu istifadəçinin Google Hesabı ilə
+    faylda saxlanılan ödəniş kartları ilə əlaqələndirilir. Qaytarılan
+    ödəniş datasına son istifadə ayı və bitmə ili ilə şəxsi hesab
+    nömrəsi (PAN) daxildir.
+
+-   CRYPTOGRAM_3DS: Bu autentifikasiya metodu Android cihaz tokenləri
+    kimi saxlanılan kartlarla əlaqələndirilir. Qaytarılan ödəniş
+    datasına cihazda yaradılan 3-D Secure(3DS) kriptoqramı daxildir.
+
+GooglePay ™ ilə icazə verilən authentifikasiya üsulları kartla və 3D
+Secure kriptoqramıdır. Səlahiyyətli icazə üsulları haqqında ətraflı
+məlumat üçün rəsmi Google™ sənədlərinə müraciət edin
+
+Qəbul edilmiş kartlar
+
+Bu ödəniş üsulları üçün icazə verilən kartlar bunlardır:
+
+-   VISA
+
+-   MASTERCARD
+
+-   AMEX
+
+-   JCB
+
+-   DCI
+
+İnteqrasiya üçün sənəd bağlantıları:
+
+Android: https://developers.google.com/pay/api/android/overview?hl=en
+
+Web: https://developers.google.com/pay/api/web/overview?hl=en
+
+Design
+Guideline: https://developers.google.com/pay/api/web/guides/brand-guidelines?hl=en
+
+Google Pay and Wallet APIs Acceptable Use
+Policy: https://payments.developers.google.com/terms/aup?hl=en
+
+Google Pay API Terms of
+Service: https://payments.developers.google.com/terms/sellertos
+
+Skriptdəki şlüz parametri aşağıdakı nümunəyə uyğun olaraq Azericard-ın
+sabit dəyərinə malik olmalıdır:
+
+1.  Ödəniş datasını əldə etmək üçün Google Pay Düyməsini əlavə edin.
+
+2.  Satıcı ödəniş datasını Google-dan alır.
+
+3.  Satıcı Azericard gateway-ə ödəniş sorğusu yaradır.
+
+4.  Satıcı ödəniş məlumatlarını Azericard şluzundan alır.
+
+5.  Satıcı istehlakçıya ödəniş statusunu göstərir.
+
+Google Pay düyməsini göstərmək üçün nümunə kodu
+
+<script async src="https://pay.google.com/gp/p/js/pay.js"
+onload="onGooglePayLoaded()"></script>;
+
+<script>
+
+/**
+
+* Define the version of the Google Pay API referenced when creating your
+configuration
+
+*
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#PaymentDataRequest|apiVersion
+in PaymentDataRequest}
+
+*/
+
+const baseRequest = {
+
+apiVersion: 2,
+
+apiVersionMinor: 0
+
+};
+
+/**
+
+* Card networks supported by your site and your gateway
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#CardParameters|CardParameters}
+
+* @todo confirm card networks supported by your site and gateway
+
+*/
+
+const allowedCardNetworks = ["AMEX", "DISCOVER", "INTERAC", "JCB",
+"MASTERCARD", "VISA"];
+
+/**
+
+* Card authentication methods supported by your site and your gateway
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#CardParameters|CardParameters}
+
+* @todo confirm your processor supports Android device tokens for your
+supported card networks
+
+*/
+
+const allowedCardAuthMethods = ["PAN_ONLY", "CRYPTOGRAM_3DS"];
+
+/**
+
+* Identify your gateway and your site's gateway merchant identifier
+
+* @todo check with your gateway on the parameters to pass
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#gateway|PaymentMethodTokenizationSpecification}
+
+*/
+
+const tokenizationSpecification = {
+
+type: 'PAYMENT_GATEWAY',
+
+parameters: {
+
+gateway: 'azericardgpay',
+
+gatewayMerchantId: '123456789' // Provided by Azericard
+
+}
+
+};
+
+/**
+
+* Describe your site's support for the CARD payment method and its
+required fields
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#CardParameters|CardParameters}
+
+*/
+
+const baseCardPaymentMethod = {
+
+type: 'CARD',
+
+parameters: {
+
+allowedAuthMethods: allowedCardAuthMethods,
+
+allowedCardNetworks: allowedCardNetworks
+
+}
+
+};
+
+/**
+
+* Describe your site's support for the CARD payment method including
+optional fields
+
+* @see {@link
+https://developers.google.com/pay/api/web/reference/request-objects#CardParameters|CardParameters}
+
+*/
+
+const cardPaymentMethod = Object.assign({}, baseCardPaymentMethod, {
+
+tokenizationSpecification: tokenizationSpecification
+
+});
+
+/**
+
+* An initialized google.payments.api.PaymentsClient object or null if
+not yet set
+
+* @see {@link getGooglePaymentsClient}
+
+*/
+
+let paymentsClient = null;
+
+/**
+
+* Configure your site's support for payment methods supported by the
+Google Pay API.
+
+* @returns {object} Google Pay API version, payment methods supported by
+the site
+
+*/
+
+function getGoogleIsReadyToPayRequest() {
+
+return Object.assign({}, baseRequest, {
+
+allowedPaymentMethods: [baseCardPaymentMethod]
+
+});
+
+}
+
+/**
+
+* Configure support for the Google Pay API
+
+* @returns {object} PaymentDataRequest fields
+
+*/
+
+function getGooglePaymentDataRequest() {
+
+const paymentDataRequest = Object.assign({}, baseRequest);
+
+paymentDataRequest.allowedPaymentMethods = [cardPaymentMethod];
+
+paymentDataRequest.transactionInfo = getGoogleTransactionInfo();
+
+paymentDataRequest.merchantInfo = {
+
+// @todo a merchant ID is available for a production environment after
+approval by Google
+
+// See
+https://developers.google.com/pay/api/web/guides/test-and-deploy/integration-checklist
+
+merchantId: 'Merchant ID', // Provided by Azericard
+
+merchantName: 'Merchant Name',
+
+merchantOrigin: 'Merchant URL'
+
+};
+
+return paymentDataRequest;
+
+}
+
+/**
+
+* Return an active PaymentsClient or initialize
+
+* @returns {google.payments.api.PaymentsClient} Google Pay API client
+
+*/
+
+function getGooglePaymentsClient() {
+
+if (paymentsClient === null) {
+
+paymentsClient = new google.payments.api.PaymentsClient({
+
+environment: 'TEST' // For production use 'PRODUCTION'
+
+});
+
+}
+
+return paymentsClient;
+
+}
+
+/**
+
+* Initialize Google PaymentsClient after Google-hosted JavaScript has
+loaded
+
+*/
+
+function onGooglePayLoaded() {
+
+const paymentsClient = getGooglePaymentsClient();
+
+paymentsClient.isReadyToPay(getGoogleIsReadyToPayRequest())
+
+.then(function (response) {
+
+if (response.result) {
+
+addGooglePayButton();
+
+// Optionally prefetch payment data
+
+// prefetchGooglePaymentData();
+
+}
+
+})
+
+.catch(function (err) {
+
+console.error(err);
+
+});
+
+}
+
+/**
+
+* Add a Google Pay purchase button alongside an existing checkout button
+
+*/
+
+function addGooglePayButton() {
+
+const paymentsClient = getGooglePaymentsClient();
+
+const button = paymentsClient.createButton({
+
+onClick: onGooglePaymentButtonClicked,
+
+allowedPaymentMethods: [baseCardPaymentMethod]
+
+});
+
+document.getElementById('gpay_container').appendChild(button);
+
+}
+
+// Payment amount and currency elements
+
+const amount = document.getElementsByName("AMOUNT");
+
+const currency = document.getElementsByName("CURRENCY");
+
+/**
+
+* Provide Google Pay API with a payment amount, currency, and amount
+status
+
+* @returns {object} transaction info
+
+*/
+
+function getGoogleTransactionInfo() {
+
+return {
+
+currencyCode: currency[0].value,
+
+totalPriceStatus: 'FINAL',
+
+totalPrice: amount[0].value
+
+};
+
+}
+
+/**
+
+* Prefetch payment data to improve performance
+
+*/
+
+function prefetchGooglePaymentData() {
+
+const amount = document.getElementsByName("AMOUNT");
+
+const currency = document.getElementsByName("CURRENCY");
+
+const paymentDataRequest = getGooglePaymentDataRequest();
+
+paymentDataRequest.transactionInfo = {
+
+totalPriceStatus: 'NOT_CURRENTLY_KNOWN',
+
+currencyCode: currency[0].value
+
+};
+
+const paymentsClient = getGooglePaymentsClient();
+
+paymentsClient.prefetchPaymentData(paymentDataRequest);
+
+}
+
+/**
+
+* Show Google Pay payment sheet when Google Pay payment button is
+clicked
+
+*/
+
+function onGooglePaymentButtonClicked() {
+
+const paymentDataRequest = getGooglePaymentDataRequest();
+
+paymentDataRequest.transactionInfo = getGoogleTransactionInfo();
+
+const paymentsClient = getGooglePaymentsClient();
+
+paymentsClient.loadPaymentData(paymentDataRequest)
+
+.then(function (paymentData) {
+
+processPayment(paymentData);
+
+})
+
+.catch(function (err) {
+
+console.error(err);
+
+});
+
+}
+
+/**
+
+* Process payment data returned by the Google Pay API
+
+* @param {object} paymentData - response from Google Pay API after user
+approves payment
+
+*/
+
+function processPayment(paymentData) {
+
+const paymentToken =
+paymentData.paymentMethodData.tokenizationData.token;
+
+// Function to add token and submit form
+
+if (paymentToken) {
+
+addValue("tform", "GPAYTOKEN", paymentToken);
+
+document.getElementById("tform").submit();
+
+}
+
+}
+
+</script>
+
+allowedAuthMethods - Azericard həm PAN_ONLY, həm də CRYPTOGRAM_3DS
+autentifikasiya üsullarını emal edə bilər.
+
+allowedCardNetworks - icazə vermək istədiyiniz kart şəbəkələrini
+göstərin. Müştərinin cüzdanında “icazə verilənlər” siyahısında olmayan
+kartlar varsa, bu kartlar cüzdanında boz rəngdə olacaq/deaktiv ediləcək.
+
+merchantId - hesabınızın İctimai satıcı profili ayarı altında Google Pay
+Biznes Konsolunda tapıldı. Nəzərə alın ki, bu, yalnız Google Pay
+istehsal mühitində tələb olunur; sınaq zamanı bu sahə dummy dəyərə təyin
+edilə və ya buraxıla bilər.
+
+gateway - Azericard-ı prosessor kimi müəyyən edən unikal xüsusiyyət;
+bütün şifrələmə açarları bu ID ilə əlaqələndirilir. Bu sahə dəyəri
+Azericard tərəfindən təmin edilir.
+
+gatewayMerchantId - merchantı unikal şəkildə müəyyən edən identifikator.
+Bu sahə dəyəri Azericard tərəfindən təmin edilir.
+
+Azericard Ödəniş Gateway-ə Nümunə.
+
+Request URL: https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+CONTENT-TYPE: x-www-form-urlencoded
+
+Sorğu Parametrləri:
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği
+                                                  Tələb olunur Onluq
+                                                  nöqtə ayırıcı ilə float
+
+  CURRENCY                3                       Sifariş valyutası Tələb
+                                                  olunan Əlifba, [A-Z]
+
+  ORDER                   6-20                    Satıcı sifarişinin
+                                                  ID-si Tələb olunan Tam
+                                                  ədəd Son 6 rəqəm sistem
+                                                  izləmə audit nömrəsi
+                                                  kimi istifadə olunur və
+                                                  terminal ID-si üçün bir
+                                                  gün ərzində unikal
+                                                  olmalıdır
+
+  DESC                    2                       Bu sənəd ApplePay &
+                                                  GPay Acquiring
+                                                  xidmətinin
+                                                  təfərrüatlarını və
+                                                  Azericard Apple/GPay
+                                                  xidməti ilə tacirlərin
+                                                  və ya bankların mobil
+                                                  proqramları arasında
+                                                  inteqrasiya prosedurunu
+                                                  təsvir edir.
+
+  MERCH_URL               1-250                   Satıcı əsas veb
+                                                  saytının URL-i Tələb
+                                                  olunur
+
+  TERMINAL                8                       Bank tərəfindən təyin
+                                                  edilmiş Satıcı terminal
+                                                  ID-si Tələb olunur
+
+  TRTYPE                  1                       Əməliyyat növü Tələb
+                                                  olunan tam ədəd Mümkün
+                                                  dəyərlər: 1 – alış
+
+  TIMESTAMP               14                      GMT-də satıcı
+                                                  əməliyyatı vaxt damğası
+                                                  (GMT vaxt zonasının
+                                                  ofset 0) Tələb olunan
+                                                  Tam Ədədi,
+                                                  YYYYMMDDHHMMSS Satıcı
+                                                  və şlüz serverləri
+                                                  arasında uyğunsuzluq 1
+                                                  saatdan çox
+                                                  olmamalıdır, əks halda
+                                                  tranzaksiya rədd
+                                                  ediləcək.
+
+  NONCE                   1-64                    Satıcı olmayan Şərti
+                                                  Hexadecimal, 8-32
+                                                  gözlənilməz təsadüfi
+                                                  bayt MAC istifadə
+                                                  edildikdə tələb olunur
+
+  P_SIGN                  1-256                   Merchant MAC Onaltılıq
+                                                  tələb olunur
+
+  ADDENDUM                2                       Könüllü Mümkün
+                                                  dəyərlər: AD
+
+  AD.ECOM_PAY_DTLS                                Könüllü
+
+  GPAYTOKEN               8-9                     Received paymentToken
+  -----------------------------------------------------------------------
+
+HTTP POST Data:
+
+"AMOUNT"="1.00",
+
+"CURRENCY"="AZN",
+
+"ORDER"="123456",
+
+"DESC"="Some Record",
+
+"TERMINAL"="77777777",
+
+"TRTYPE"="1",
+
+"ADDENDUM"="AD",
+
+"AD.ECOM_PAY_DTLS"=" Some Record",
+
+"MERCH_URL"="https://merchantURL.com",
+
+"NONCE"="3403fcef17df3c1c",
+
+"TIMESTAMP"="20250123044608",
+
+"P_SIGN"="3641aa45289d8801d47de2f2dc5a88830b1dd72136082309cbef4adad75b17cf91da23a1948c
+12e71cd866b8cd6213217e8f68c24f54dfee5826fbd9da4ec18d2b343587db5683f134ac1c5638271c2039
+720701152fa0f28bc72eecda23973d8cb96e0779ad1fab488f1d13a08ebc413991c1913b8e17d8dda11f7c
+699e23f0db90bf2ba832f805bc91ce7886b4e1d6b45181d0d4aca7b10c1a312a4b300c613f80f7fc7b2495c
+2c20f4e8d3e83574abc4e94079575f57a6293d0b438398b7f7c0a63ccd23a180bfda18c99765528c4a55ace
+8fcaa18babed0fb56dbbad0346309f8ff11948285f8ad64f24fd17b8a08fc4f116bae531ba45e346fe5dacec4
+a"
+
+"GPAYTOKEN"="{"signature":"MEYCIQDHIUKOq6QqJPx9dFYaLHBKA9aTUdDXujcg3GKmeSZKXAIhAI50BC
+eNNxKBGu/71RteOqqc+R+iBfRlZMYKftJnXKB+","intermediateSigningKey":{"signedKey":"{\"keyValue\":\
+"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELCtHG9bjtMWCu4Iv4Td6npa/DiKc3Fou5R0bX2dk7tzEp+m
+byu3RJu+6epmmVwkHC5SbTztme9qk/kT65tpGiA\=\=\",\"keyExpiration\":\"1738277361000\"}","signat
+ures":["MEUCIEE+ADhhucm6jrwyn1UxqFLAGI3zHDp/XgpLGSuqPcemAiEAtuLPNLlPfl2uJzvlAYmouI6wT7y
+/akSlL5SEPVW+iXE="]},"protocolVersion":"ECv2","signedMessage":"{\"encryptedMessage\":\"AnnDsgE3
+CaFKzQ2OEBJgg3f/2NnVF4gL6V1EbwLpJW4CCj2gvH7IKJFbHcYtofIT9JiiweTmalniMPpsfQiMgOcLT/Al4a7/
+YNLkZrPYLO5g6G/qfsPfhWmlVHp6s3kistOvWmB8x2tCWaRa5XDQT4xs+PVzdd5Sv6aE0MN99zLw2fRcnYxi
+jqbD7DsVx3cW55LnGc2Hu/s2U/ExQp+/5Nqn2LNJQhMP03DS1kFv0r0dxlKkmYMv5VPVyKkrvPtCdc63W0
+3tdCdJID6bDS6sb60C9n1Md/h92t6WX6T/XlyKmbsGcWb9Yqxx0h0AMBa4KY/jBMeSZc1Hsz/hIWZSLp+jFb
+pgiU4seBTA9cNeHswzb8T/gjffOM2rE/32v6UMKk+3Z8GTLoaYUYEIvv1MfY6fqkrOngqIw0iABi3NDrXBi5om
+v1p/IuRrOHNM/R9rybtAKNJcgSi0u9W90XeQxzWSISl49fUa8DEKjLXZNKFxg9w2J12mUNShfyfYu17+0h8ilik
+JZJPvB4r3CvjxueX6INpiMLixiSW8qSRARWbgh0inzRBpwolbi+pFD6nIAOHgzUDXGdlsGvW15KF/Td93fVsCB
+P9RUtD3dnbWVZWIyvzKGs6A3igtO7PgCxEPGvF02ubZq2awW8APXN2i\",\"ephemeralPublicKey\":\"BINi
+T+HhksaGzpP1Z2uCCWYNTW6dIG2cyDpcdhGh5FMN1da/kD2977KEIbXnJb0L2B5XGq0KpCEEgUPX4FGNY
+GQ\=\",\"tag\":\"5lUVCC+Y+nvT/nsVNi8ZVnm8OCIQib8+z5EvN9z2gjM\=\"}"}",
+
+İcazə Cavabının Nümunəsi:
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  TERMINAL                8                       Echo from the request
+
+  TRTYPE                  2                       Echo from the request
+
+  ORDER                   6-20                    Echo from the request
+
+  AMOUNT                  1-12                    Amount authorized.
+                                                  Usually, will be equal
+                                                  to original amount plus
+                                                  aquirer’s fee.
+
+  CURRENCY                3                       Echo from the request
+
+  ACTION                  1                       Е-Gateway action code:
+                                                  0 – Transaction
+                                                  successfully completed;
+                                                  1 – Duplicate
+                                                  transaction detected;
+                                                  2 – Transaction
+                                                  declined;
+                                                  3 – Transaction
+                                                  processing fault.
+
+  RC                      2                       Transaction response
+                                                  code (ISO-8583 Field
+                                                  39)
+
+  APPROVAL                6                       Client bank’s approval
+                                                  code (ISO-8583 Field
+                                                  38). Can be empty if
+                                                  not provided by card
+                                                  management system.
+
+  RRN                     12                      Merchant bank’s
+                                                  retrieval reference
+                                                  number (ISO-8583 Field
+                                                  37).
+
+  INT_REF                 1-32                    E-Commerce gateway
+                                                  internal reference
+                                                  number
+
+  TIMESTAMP               14                      E-Commerce gateway
+                                                  timestamp in GMT:
+                                                  YYYYMMDDHHMMSS
+
+  NONCE                   1-64                    E-Commerce gateway
+                                                  nonce value. Will be
+                                                  filled with 8-32
+                                                  unpredictable random
+                                                  bytes in hexadecimal
+                                                  format. Will be present
+                                                  if MAC is used.
+
+  P_SIGN                  1-256                   E-Commerce gateway MAC
+                                                  (Message Authentication
+                                                  Code) in hexadecimal
+                                                  form. Will be present
+                                                  if MAC is used.
+  -----------------------------------------------------------------------
+
+Merchant MAC – Mesaj Doğrulama Kodu
+
+Merchant linkinə giriş/çıxış şlüzindəki əməliyyat mesajlarının
+autentifikasiyası üçün tacir sistemi ən azı kart sahibinin brauzer
+yönləndirmələri vasitəsilə keçirilən əməliyyatlar üçün mesajın
+autentifikasiya kodlarını hesablaya və yoxlaya bilməlidir. Birbaşa
+e-Commerce Gateway-ə göndərilən mesajlar (“Satışların tamamlanması” və
+“Reversal”) SSL müştəri/server sertifikatları ilə qarşılıqlı təsdiqlənə
+bilər və MAC tələb etmir; əgər onlar qarşılıqlı autentifikasiya
+edilməyibsə, bu mesajlar üçün MAC məcburidir.
+
+MAC, MAC sahəsinin özündən ("P_SIGN") başqa, müvafiq format
+cədvəllərində (tacir sistemi tərəfindən yaradılan görünən və gizli
+sahələr) müəyyən edildiyi kimi, tacir sistemi tərəfindən yaradılan bütün
+sahələr üzrə hesablanır.
+
+Mesajın autentifikasiyası sahəsini yaratmaq və ya yoxlamaq üçün tacir
+sistemi MAC mənbə sətirini yığmalıdır; format cədvəllərindəki bütün sahə
+dəyərləri ASCII-də onluq sahə uzunluğu ilə prefiks olunur və müəyyən
+edilmiş qaydada birləşdirilir. Sahə yoxdursa, onun yerinə mesaja '-'
+simvolu əlavə olunur.
+
+Avtorizasiya sorğusu mesajı nümunəsi: MAC mənbə sətri aşağıdakı sahə
+dəyərlərindən ibarət olacaq - AMOUNT, CURRENCY, TERMINAL, TRTYPE,
+TIMESTAMP, NONCE, MERCH_URL.
+
+Tutaq ki, aşağıdakı sahələrlə əməliyyatımız var::
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  5                       11.48
+
+  CURRENCY                3                       USD
+
+  TERMINAL                8                       99999999
+
+  TRTYPE                  1                       1
+
+  TIMESTAMP               14                      20030105153021
+
+  NONCE                   16                      F2B2DD7E603A7ADA
+
+  MERCH_URL               22                      www.sample.com
+  -----------------------------------------------------------------------
+
+Aşağıda P_SIGN yaratmaq üçün hesablanmış sahələr. Əvvəlcə
+hex2bin(P_SIGN) funksiyasından istifadə etməli, sonra
+AZERICARDpublic.pem vasitəsilə məlumatları yoxlamalısınız. Sınaq zamanı
+fayl təqdim olunacaq. P_SIGN yoxlaması zamanı hansısa parametr boş
+olarsa, dəyər əvəzinə -(tire) parametri əlavə edilməlidir və parametrin
+uzunluğu nəzərə alınmamalıdır.
+
+511.483USD89999999911142003010515302116F2B2DD7E603A7ADA14www.sample.com
+
+Geri çağırış P_SIGN parametrini yoxlayın:MAC mənbə sətri aşağıdakı sahə
+dəyərlərindən ibarət olacaq - AMOUNT, TERMINAL, APPROVAL, RRN, INT_REF.
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  5                       11.48
+
+  TERMINAL                8                       99999999
+
+  APROVAL                 6                       168975
+
+  RRN                     12                      306276834930
+
+  INT_REF                 16                      4A29E93C607E33DC
+  -----------------------------------------------------------------------
+
+P_SIGN yaratmaq üçün hesablanmış sahələr
+
+511.48899999999616897512306276834930164A29E93C607E33DC
+
+MAC mənbə sətri yığıldıqdan sonra tacir sistemi mesajın autentifikasiya
+kodunu yaratmaq üçün kriptoqrafik alqoritm tətbiq etməlidir. Gateway
+müxtəlif kriptoqrafik alqoritmləri dəstəkləyir və sistem inzibatçısı
+konkret ticarət terminalı üçün hansı alqoritmin istifadə olunacağını
+müəyyən edə bilər. Ticarət sistemi SHA256 işarəsini tətbiq etməli,
+imzalamaq üçün MAC mənbəyi əlavə etməli və onaltılıq sistemdə şəxsi
+açarla kriptlər yaratmalıdır. Merchantsystem müvafiq kriptoqrafik
+açarların təhlükəsiz saxlanması və istifadəsi üçün tam məsuliyyət
+daşıyan xüsusi alqoritmlə həyata keçirilir. Effektiv açar uzunluğu RSA
+alqoritmi üçün ən azı 2048 bit olmalıdır. MAC sahəsinin dəyəri böyük
+hərf və ya kiçik hərf onaltılıq sətir ola bilər. Əlavə seçimlər tələb
+oluna bilər.
+
+10. Applepay/Googlepay direct integration
+
+Google və Apple ilə merchantın birbaşa inteqrasiyası üçün linklər
+aşağıda qeyd edilib.
+
+-   Google Pay: https://developers.google.com/pay/api/
+
+-   Apple
+    Pay: https://developer.apple.com/documentation/passkit/apple-pay or
+    light version
+    https://docs.payengine.co/developer-docs/processing-payments/apple-pay/apple-pay-in-your-native-app
+
+Applepay/Googlepay Authorization Request Format
+
+HTTP POST request should be sent to Azericard e-commerce gateway
+URL: https://testmpi.3dsecure.az/cgi-bin/cgi_link
+
+Authorization Request Example:
+
+  -----------------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------------
+  AMOUNT                  1-12                    Sifarişin ümumi məbləği Tələb
+                                                  olunur Onluq nöqtə ayırıcı
+                                                  ilə float
+
+  CURRENCY                3                       Sifariş valyutası Tələb
+                                                  olunan Əlifba, [A-Z]
+
+  ORDER                   6-20                    Satıcı sifarişinin ID-si
+                                                  Tələb olunan Tam ədəd Son 6
+                                                  rəqəm sistem izləmə audit
+                                                  nömrəsi kimi istifadə olunur
+                                                  və terminal ID-si üçün bir
+                                                  gün ərzində unikal olmalıdır
+
+  DESC                    1-50                    Bu sənəd ApplePay & GPay
+                                                  Acquiring xidmətinin
+                                                  təfərrüatlarını və Azericard
+                                                  Apple/GPay xidməti ilə
+                                                  tacirlərin və ya bankların
+                                                  mobil proqramları arasında
+                                                  inteqrasiya prosedurunu
+                                                  təsvir edir.
+
+  MERCH_NAME              1-50                    Satıcının (merchan) adı (kart
+                                                  istifadəçisinin anladığı
+                                                  formada olmalıdır)
+
+  MERCH_URL               1-250                   Satıcı əsas veb saytının
+                                                  URL-i Tələb olunur
+
+  TERMINAL                8                       Bank tərəfindən təyin edilmiş
+                                                  Satıcı terminal ID-si Tələb
+                                                  olunur
+
+  TRTYPE                  1                       Must be equal to "1"
+                                                  (Authorization).Tranzaksiya
+                                                  növü = 0 (Pre-Avtorizasiya
+                                                  əməliyyatı),Tranzaksiya növü
+                                                  = 1 (Avtorizasiya əməliyyatı)
+
+  COUNTRY                 02                      Satıcı ölkə kodu Şərti Əgər
+                                                  tacir serveri şlüz
+                                                  serverindən çox fərqli saat
+                                                  qurşağında yerləşirsə, tələb
+                                                  olunur.
+
+  MERCHANT_GMT            1-5                     Satıcının UTC/GMT vaxt
+                                                  zonasının ofseti Şərti
+                                                  Nümunə: -4 Tacir şlüz
+                                                  serverində deyil, fərqli saat
+                                                  qurşağında yerləşirsə tələb
+                                                  olunur.
+
+  TIMESTAMP               14                      GMT-də satıcı əməliyyatı vaxt
+                                                  damğası (GMT vaxt zonasının
+                                                  ofset 0) Tələb olunan Tam
+                                                  Ədədi, YYYYMMDDHHMMSS Satıcı
+                                                  və şlüz serverləri arasında
+                                                  uyğunsuzluq 1 saatdan çox
+                                                  olmamalıdır, əks halda
+                                                  tranzaksiya rədd ediləcək.
+
+  NONCE                   1-64                    Satıcı olmayan Şərti
+                                                  Hexadecimal, 8-32 gözlənilməz
+                                                  təsadüfi bayt MAC istifadə
+                                                  edildikdə tələb olunur
+
+  BACKREF                 1-250                   Avtorizasiya nəticəsinin
+                                                  yerləşdirilməsində(post)
+                                                  istifadə olunan Merchant URL.
+
+  P_SIGN                  1-256                   Merchant MAC Onaltılıq tələb
+                                                  olunur
+
+  CARD                    9-19                    Kart nömrəsi (Əsas hesab
+                                                  nömrəsi).
+
+  EXP                     02                      Kartın son istifadə ayı
+                                                  (Rəqəm 2 rəqəmli dəyər).
+
+  EXP_YEAR                02                      Kartın istifadə müddəti
+                                                  (Rəqəm 2 rəqəmli dəyər: 20XX)
+
+  CVC2_RC                 1                       CVC2 səbəb kodu. dəyərlər:
+                                                  value="1" -CVC2 mövcuddur
+                                                  value="0" -CVC2 təmin
+                                                  edilməyib
+                                                  value="2"-CVC2 oxunmur
+
+  EXT_MPI_ECI             02                      Response ECI variable from
+                                                  GooglePay \ApplePay server¹
+
+  TAVV                                            Response CAVV variable from
+                                                  GooglePay \ApplePay server
+  -----------------------------------------------------------------------------
+
+Note¹:For Mastercard card static value ‘02’.
+
+Authorization Response from our system in XML format
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  TERMINAL                8                       Echo from the request
+
+  TRTYPE                  2                       Echo from the request
+
+  ORDER                   6-20                    Echo from the request
+
+  AMOUNT                  1-12                    Amount authorized.
+                                                  Usually, will be equal
+                                                  to original amount plus
+                                                  aquirer’s fee.
+
+  CURRENCY                3                       Echo from the request
+
+  ACTION                  1                       Е-Gateway action code:
+                                                  0 – Transaction
+                                                  successfully completed;
+                                                  1 – Duplicate
+                                                  transaction detected;
+                                                  2 – Transaction
+                                                  declined;
+                                                  3 – Transaction
+                                                  processing fault.
+
+  RC                      2                       Transaction response
+                                                  code (ISO-8583 Field
+                                                  39)
+
+  APPROVAL                6                       Client bank’s approval
+                                                  code (ISO-8583 Field
+                                                  38). Can be empty if
+                                                  not provided by card
+                                                  management system.
+
+  RRN                     12                      Merchant bank’s
+                                                  retrieval reference
+                                                  number (ISO-8583 Field
+                                                  37).
+
+  INT_REF                 1-32                    E-Commerce gateway
+                                                  internal reference
+                                                  number
+
+  TIMESTAMP               14                      E-Commerce gateway
+                                                  timestamp in GMT:
+                                                  YYYYMMDDHHMMSS
+
+  NONCE                   1-64                    E-Commerce gateway
+                                                  nonce value. Will be
+                                                  filled with 8-32
+                                                  unpredictable random
+                                                  bytes in hexadecimal
+                                                  format. Will be present
+                                                  if MAC is used.
+
+  P_SIGN                  1-256                   E-Commerce gateway MAC
+                                                  (Message Authentication
+                                                  Code) in hexadecimal
+                                                  form. Will be present
+                                                  if MAC is used.
+  -----------------------------------------------------------------------
+
+Merchant MAC – Mesaj Doğrulama Kodu
+
+Merchant linkinə giriş/çıxış şlüzindəki əməliyyat mesajlarının
+autentifikasiyası üçün tacir sistemi ən azı kart sahibinin brauzer
+yönləndirmələri vasitəsilə keçirilən əməliyyatlar üçün mesajın
+autentifikasiya kodlarını hesablaya və yoxlaya bilməlidir. Birbaşa
+e-Commerce Gateway-ə göndərilən mesajlar (“Satışların tamamlanması” və
+“Reversal”) SSL müştəri/server sertifikatları ilə qarşılıqlı təsdiqlənə
+bilər və MAC tələb etmir; əgər onlar qarşılıqlı autentifikasiya
+edilməyibsə, bu mesajlar üçün MAC məcburidir.
+
+MAC, MAC sahəsinin özündən ("P_SIGN") başqa, müvafiq format
+cədvəllərində (tacir sistemi tərəfindən yaradılan görünən və gizli
+sahələr) müəyyən edildiyi kimi, tacir sistemi tərəfindən yaradılan bütün
+sahələr üzrə hesablanır.
+
+Mesajın autentifikasiyası sahəsini yaratmaq və ya yoxlamaq üçün tacir
+sistemi MAC mənbə sətirini yığmalıdır; format cədvəllərindəki bütün sahə
+dəyərləri ASCII-də onluq sahə uzunluğu ilə prefiks olunur və müəyyən
+edilmiş qaydada birləşdirilir. Sahə yoxdursa, onun yerinə mesaja '-'
+simvolu əlavə olunur.
+
+Avtorizasiya sorğusu mesajı nümunəsi (for TRTYPE=1 and TRTYPE=0): MAC
+mənbə sətri aşağıdakı sahə dəyərlərindən ibarət olacaq - AMOUNT,
+CURRENCY, TERMINAL, TRTYPE, TIMESTAMP, NONCE, MERCH_URL.
+
+Tutaq ki, aşağıdakı sahələrlə əməliyyatımız var::
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  5                       11.48
+
+  CURRENCY                3                       USD
+
+  TERMINAL                8                       99999999
+
+  TRTYPE                  1                       1
+
+  TIMESTAMP               14                      20030105153021
+
+  NONCE                   16                      F2B2DD7E603A7ADA
+
+  MERCH_URL               22                      www.sample.com
+  -----------------------------------------------------------------------
+
+P_SIGN yaratmaq üçün hesablanmış sahələr
+
+511.483USD89999999911142003010515302116F2B2DD7E603A7ADA14www.sample.com
+
+Geri çağırış P_SIGN parametrini yoxlayın:MAC mənbə sətri aşağıdakı sahə
+dəyərlərindən ibarət olacaq - AMOUNT, TERMINAL, APPROVAL, RRN, INT_REF.
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  AMOUNT                  5                       11.48
+
+  TERMINAL                8                       99999999
+
+  APROVAL                 6                       168975
+
+  RRN                     12                      306276834930
+
+  INT_REF                 16                      4A29E93C607E33DC
+  -----------------------------------------------------------------------
+
+Aşağıda P_SIGN yaratmaq üçün hesablanmış sahələr. Əvvəlcə
+hex2bin(P_SIGN) funksiyasından istifadə etməli, sonra
+AZERICARDpublic.pem vasitəsilə məlumatları yoxlamalısınız. Sınaq zamanı
+fayl təqdim olunacaq. P_SIGN yoxlaması zamanı hansısa parametr boş
+olarsa, dəyər əvəzinə -(tire) parametri əlavə edilməlidir və parametrin
+uzunluğu nəzərə alınmamalıdır.
+
+511.48899999999616897512306276834930164A29E93C607E33DC
+
+MAC mənbə sətri yığıldıqdan sonra tacir sistemi mesajın autentifikasiya
+kodunu yaratmaq üçün kriptoqrafik alqoritm tətbiq etməlidir. Gateway
+müxtəlif kriptoqrafik alqoritmləri dəstəkləyir və sistem inzibatçısı
+konkret ticarət terminalı üçün hansı alqoritmin istifadə olunacağını
+müəyyən edə bilər. Ticarət sistemi SHA256 işarəsini tətbiq etməli,
+imzalamaq üçün MAC mənbəyi əlavə etməli və onaltılıq sistemdə şəxsi
+açarla kriptlər yaratmalıdır. Merchantsystem müvafiq kriptoqrafik
+açarların təhlükəsiz saxlanması və istifadəsi üçün tam məsuliyyət
+daşıyan xüsusi alqoritmlə həyata keçirilir. Effektiv açar uzunluğu RSA
+alqoritmi üçün ən azı 2048 bit olmalıdır. MAC sahəsinin dəyəri böyük
+hərf və ya kiçik hərf onaltılıq sətir ola bilər. Əlavə seçimlər tələb
+oluna bilər.
+
+11. Karta vəsaitin köçürülməsi inteqrasiyası
+
+Bu sənəd merchant ödəniş mərkəzindən bankın ödəniş mərkəzinə göndərilən
+sorğuların yaradılması qaydalarını təsvir edir.
+
+Ödəniş mərkəzi və bank arasında qarşılıqlı əlaqə UTF-8 kodlayan
+Yönləndirmə forması və JSON formatından istifadə edərək HTTP protokoluna
+uyğun olaraq həyata keçirilir.
+
+11.1 Parametrlərlə yönləndirmə
+
+Parametrlərlə “Azəricard” səhifəsinin URL-inə yönləndirmə:
+
+https://testmt.azericard.com/payment/view
+
+11.1.1 Açıqlama
+
+Siz istifadəçini aşağıda sadalanan sahələrlə səhifəmizə
+yönləndirirsiniz. Daha sonra istifadəçi Azərikart səhifəsində kart
+nömrəsini və digər isteğe bağlı parametrləri daxil edir. Bundan sonra
+Azericard-dan uğurlu cavab alsanız, əməliyyat statusu “pending” olacaq.
+
+11.1.2 Sorğu strukturu
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  Merchant                1-16                    Şirkət adı
+
+  SRN                     10                      Tərəfinizdən unikal
+                                                  əməliyyat nömrəsi
+
+  Amount                  1-2                     Ödəniş məbləği
+
+  Cur                     3                       Ödəniş valyutası
+
+  ReceiverCredentials     151                     İstifadəçinin tam adı
+
+  RedirectLink            12                      Əməliyyatın sonunda
+                                                  müştərini yönləndirmək
+                                                  istədiyiniz keçid
+
+  Signature               32                      Hesablanmış dəyər
+                                                  MD5(Bütün sahələr
+                                                  birləşdirilib + Açar*)
+  -----------------------------------------------------------------------
+
+* Açar inteqrasiya zamanı sizə veriləcək
+
+11.1.3 Kart məlumatlarının daxil edilməsi
+
+İstifadəçi Azericard internet səhifəsində kartın nömrəsini daxil edir və
+bütün tələb olunan məlumatları alır.
+
+- İstifadəçi "geri" düyməsini sıxmaqla və ya 60 saniyədən sonra
+yönləndiriləcək
+
+11.1.4 İstiqamətləndirmə Cavab Strukturu
+
+İstifadəçi aşağıda sadalanan parametrlərlə merchant linkinə
+yönləndiriləcək.
+
+  -----------------------------------------------------------------------
+  Sahə                    Uzunluq                 Açıqlama
+  ----------------------- ----------------------- -----------------------
+  OperationID             16-20                   Bizim tərəfimizdə
+                                                  unikal əməliyyat
+                                                  nömrəsi
+
+  SRN                     10                      Sizin tərəfinizdən
+                                                  unikal əməliyyat
+                                                  nömrəsi
+
+  Amount                  1-2                     Müraciətdən gələn
+                                                  məbləğ
+
+  Cur                     3                       Sorğunun valyutası
+                                                  yalnız 944 olmalıdır
+
+  CardStatus                                      Azericard tərəfində
+                                                  istifadəçi kartı
+                                                  statusu
+
+  ReceiverPAN             16                      Maskalı kart nömrəsi
+
+  Status                                          Cari tranzaksiya
+                                                  statusu (məsələn,
+                                                  "pending")
+
+  Timestamp                                       Cavab vaxtı
+
+  Response Code                                   Cavab kodu
+
+  Message                                         Cavab mesajı
+
+  Signature               32                      Hesablanmış dəyər
+                                                  MD5(Bütün sahələr
+                                                  birləşdirilib + Açar)
+  -----------------------------------------------------------------------
+
+11.1.5 Kart statusunun siyahısı
+
+1. “our_active” - kart kompüterinizdədir və aktiv statusa malikdir
+
+2. “our_inactive” - kart bizim kompüterdədir və qeyri-aktiv statusa
+malikdir (bloklanmış/müddəti bitmiş və s.)
+
+3. “foreign” - kart kompüterinizdə deyil
+
+11.2 Birbaşa Pul Çıxarma Sorğusu *
+
+Qeyd: birbaşa sorğu üçün PCI DSS sertifikatı lazımdır
+
+11.1 Açıqlama
+
+Metod, tətbiqin UI hissəsini cəlb etmədən geri götürmə sorğusunu birbaşa
+qeyd edir.
+
+11.2 Sorğu strukturu
+
+POST
+
+https://testmt.azericard.com/api/direct
+
+Body
+
+{ "ReceiverPAN":"4444444444444444", "SRN":"4142398967",
+"Amount":"10.00", "Merchant":"TEST", "Cur":"944",
+"ReceiverCredentials":"Elvin Goderman",
+"RedirectLink":"http://localhost:8080/payment/callback",
+"Signature":"4E34786EB5788E4AE2BEF724E2D33E12" }
+
+İmzaları hesablamaq üçün bütün sorğu sahələrinin dəyərlərini
+birləşdirin, sətirin sonuna açarı əlavə edin və yekun sətirin MD5
+hashını hesablayın. Birbaşa Pul Çıxarma Talebi sətirinin heşləşdirilməsi
+üçün nümunə “44444444444444441414239896710.00TEST944Elvin
+Godermanhttp://localhost:8080/payment/callback+yourkey” Qeyd edək ki, j
+sahələrində sorğunun ardıcıllığı gövdə sırası ilə eyni olmalıdır.
+
+11.3 Cavabların strukturu
+
+11.3.1 Uğurlu
+
+Body:
+
+{ "OperationID": "20230414155833291728", "SRN": "4142398967", "Amount":
+10.00, "Cur": 944, "CardStatus": "Our_Active", "ReceiverPAN":
+"476019******7181", "Status": "Pending", "Timestamp":
+"20230414155835106", "ResponseCode": "0", "Message": "Success",
+"Signature": "4E34786EB5788E4AE2BEF724E2D33E12" }
+
+11.3.2 Xəta
+
+Body (Kart xətası):
+
+{ "OperationID": "0", "SRN": "4705316214", "Amount": 10.00, "Cur": 944,
+"CardStatus": "Unknown", "Status": "PAN Value is not valid",
+"Timestamp": "20230414161509967", "ResponseCode": "137", "Message":
+"Error", "Signature": "B674CD6EC279C3AA2B4E421AB158F1CB" }
+
+11.3.3 Kart statusunun siyahısı
+
+1. “our_active” - kart kompüterinizdədir və aktiv statusa malikdir
+
+2. “our_inactive” - kart bizim kompüterdədir və qeyri-aktiv statusa
+malikdir (bloklanmış/müddəti bitmiş və s.)
+
+3. “foreign” - kart kompüterinizdə deyil
+
+4. “Unknown” - kartın autentifikasiyası başlamadı
+
+11.3.4 Mümkün xətaların siyahısı
+
+Kodlar və mesajlar
+
+  -----------------------------------------------------------------------
+  Cavab Kodu              Mesaj                   Açıqlama
+  ----------------------- ----------------------- -----------------------
+  0                       Uğurlu olmadı           Uğurla tamamlandı
+
+  106                     İmza xətası             Giriş məlumatları
+                                                  imzaya uyğun gəlmir
+
+  112                     Ödəniş tapılmadı        Ödəniş arxa tərəfdə
+                                                  tapılmadı
+
+  116                     Tranzaksiya artıq       Tranzaksiya artıq
+                          başlayıb                Statusun yoxlanılması
+                                                  çağırışına keçərək
+                                                  tamamlanması və ya
+                                                  yoxlanılmasını
+                                                  gözləməyə başlayıb.
+
+  105                     Dublikat əməliyyat      Tranzaksiya Gözləyən
+                                                  statusunda deyil. Onu
+                                                  rədd etmək və ya
+                                                  təsdiqləmək mümkün
+                                                  deyil. Əlavə məlumat
+                                                  üçün Azericard ilə
+                                                  əlaqə saxlayın
+
+  Different errors code   Tranzaksiya UFX         Müxtəlif səbəblər
+                          tərəfində müxtəlif      
+                          səbəblərə görə rədd     
+                          edildi.                 
+  -----------------------------------------------------------------------
+
+11.4 Əməliyyat sorğusunun təsdiqi
+
+11.4.1 Açıqlama
+
+Bu üsul gözlənilən əməliyyatı təsdiqləyir
+
+11.4.2 Sorğu strukturu
+
+POST
+
+https://testmt.azericard.com/api/confirm
+
+Body:
+
+{ "Merchant":"TEST", "SRN": "1234567890", "Amount":10.00, "Cur": 944,
+"Timestamp" : "20200703224154887", "Signature" :
+"098f6bcd4621d373cade4e832627b4f6" }
+
+11.5 Cavabların strukturu
+
+11.5.1 Uğurlu
+
+Body:
+
+{ "OperationID": "c84cbf53-0dd6-441d-95cb-7be8d22dd690", "SRN":
+"1234567890", "RRN": "PP3031665341", "Amount": 10.00, "Cur": 944,
+"ReceiverPAN": "4760********7181", "Status": "Confirmed", "Timestamp":
+"20230131163601372", "ResponseCode": 0, "Message": "Successfully
+Completed",
+"Signature": "A75B75FD1ACCB8C5BD3EAB5C892A2A93" }
+
+11.5.2 Xəta
+
+Body (Kart xətası):
+
+{ "OperationID": "c84cbf53-0dd6-441d-95cb-7be8d22dd690", "SRN":
+"1234567890", "RRN": "PP3031665341", "Amount": 10.00, "Cur": 944,
+"ReceiverPAN": "4760********7181", "Status": "Confirmed", "Timestamp":
+"20230131163601372", "ResponseCode": 0, "Message": "Successfully
+Completed",
+"Signature": "A75B75FD1ACCB8C5BD3EAB5C892A2A93" }
+
+11.5.3 Mümkün xətaların siyahısı
+
+Kodlar və mesajlar
+
+  -----------------------------------------------------------------------
+  Cavab Kodu              Mesaj                   Açıqlama
+  ----------------------- ----------------------- -----------------------
+  0                       Uğurlu olmadı           Uğurla tamamlandı
+
+  106                     İmza xətası             Giriş məlumatları
+                                                  imzaya uyğun gəlmir
+
+  112                     Ödəniş tapılmadı        Ödəniş arxa tərəfdə
+                                                  tapılmadı
+
+  116                     Tranzaksiya artıq       Tranzaksiya artıq
+                          başlayıb                Statusun yoxlanılması
+                                                  çağırışına keçərək
+                                                  tamamlanması və ya
+                                                  yoxlanılmasını
+                                                  gözləməyə başlayıb.
+
+  105                     Dublikat əməliyyat      Tranzaksiya Gözləyən
+                                                  statusunda deyil. Onu
+                                                  rədd etmək və ya
+                                                  təsdiqləmək mümkün
+                                                  deyil. Əlavə məlumat
+                                                  üçün Azericard ilə
+                                                  əlaqə saxlayın
+
+  Different errors code   Tranzaksiya UFX         Müxtəlif səbəblər
+                          tərəfində müxtəlif      
+                          səbəblərə görə rədd     
+                          edildi.                 
+  -----------------------------------------------------------------------
+
+11.6 Sorğunu rədd edin
+
+11.6.1 Açıqlama
+
+Metod gözlənilən əməliyyatları rədd etmək üçün istifadə olunur.
+
+11.6.2 Sorğu strukturu
+
+POST
+
+https://testmt.azericard.com/api/decline
+
+Header: Content Type: application/json
+
+Body:
+
+{ "Merchant": "TEST", "SRN": "1234567890", "Amount": 10.00,
+"Cur": 944, "Timestamp" : "20200703224154887", "Signature" :
+"183488e0609297b31e1ef18afb2d3673" }
+
+11.6.3 Cavab strukturu
+
+Uğurlu
+
+Body:
+
+{ "OperationID": "20230124105429272794", "SRN": "1234567890", "Amount":
+10.00, "Cur": 944, "Status": "Declined", "Timestamp":
+"20230124152435358", "ResponseCode": 0, "Message": "Successfully
+Completed", "Signature": "83B14022FFF060D44A0DD4357E7F3A73" }
+
+Xəta
+
+Body:
+
+{ "OperationID": "20230124105429272794", "SRN": "1234567890",
+"Timestamp": "20230124154656216", "ResponseCode": 105, "Message":
+"Duplicate transaction", "Signature": "2C13385948D54A0BC73951AD452869E4"
+}
+
+Mümkün xətaların siyahısı
+
+  -----------------------------------------------------------------------
+  Cavab Kodu              Mesaj                   Açıqlama
+  ----------------------- ----------------------- -----------------------
+  0                       Uğurlu olmadı           Uğurla tamamlandı
+
+  106                     İmza xətası             Giriş məlumatları
+                                                  imzaya uyğun gəlmir
+
+  112                     Ödəniş tapılmadı        Ödəniş arxa tərəfdə
+                                                  tapılmadı
+
+  105                     Dublikat əməliyyat      Tranzaksiya Gözləyən
+                                                  statusunda deyil. Onu
+                                                  rədd etmək və ya
+                                                  təsdiqləmək mümkün
+                                                  deyil. Əlavə məlumat
+                                                  üçün Azericard ilə
+                                                  əlaqə saxlayın
+  -----------------------------------------------------------------------
+
+11.7 Əməliyyat Sorğunun Vəziyyəti
+
+11.7.1 Açıqlama
+
+Bu üsul PC Azericard tərəfində əməliyyatın vəziyyətini yoxlamaq üçündür.
+
+11.7.2 Sorğu strukturu
+
+POST
+
+https://testmt.azericard.com/api/status
+
+Body:
+
+{ "Merchant":"TEST", "SRN": "1234567890", "Signature" :
+"098f6bcd4621d373cade4e832627b4f6" }
+
+11.7.3 Cavab strukturu
+
+Uğurlu
+
+Body:
+
+{ "Merchant": "TEST", "OperationID": "20230125140012670902", "SRN":
+"1234567890", "RRN": "PU2334078354", "Amount": 10.00, "Cur": 944,
+"CardStatus": "Our_Active", "ReceiverPAN": "4127********8698", "Status":
+"Successfully processed", "Timestamp": "20230126122109741",
+"TransactionStatus": "0", "Signature":
+"B1CB778B65B3C6039BCB173A5BCCDFDB" }
+
+Xəta
+
+Nümunə olaraq “Ödəniş tapılmadı” cavabı istifadə edilmişdir
+
+Body:
+
+{ "OperationID": "20230126093557306490", "SRN": "1234567890",
+"Timestamp": "20230126132719593", "ResponseCode": 104, "Message":
+"Payment not found", "Signature": "582F507C77F9051C4F15E7B8A844E2AF" }
+
+Mümkün xətaların siyahısı
+
+  -----------------------------------------------------------------------
+  Cavab Kodu              Mesaj                   Açıqlama
+  ----------------------- ----------------------- -----------------------
+  0                       Uğurlu olmadı           Uğurla tamamlandı
+
+  106                     İmza xətası             Giriş məlumatları
+                                                  imzaya uyğun gəlmir
+
+  104                     Ödəniş tapılmadı        Ödəniş arxa tərəfdə
+                                                  tapılmadı
+
+  113                     Status gözlənilir,      Status gözlənilir,
+                          əməliyyatı tamamlamaq   əməliyyatı tamamlamaq
+                          üçün ödəniş             üçün ödəniş
+                          təsdiqlənməlidir        təsdiqlənməlidir
+
+  115                     Ödəniş əvvəllər rədd    Ödəniş əvvəllər rədd
+                          edilib                  edilib
+
+  110                     Daxili xəta,            Azericard ilə bağlı
+                          Azericard-a məlumat     müxtəlif xətalar
+                          verin                   mümkündür, əlavə
+                                                  məlumat üçün Azericard
+                                                  ilə əlaqə saxlayın.
+
+  114                     Hesabat xidməti         Hesabat xidməti
+                          əməliyyat üçün uğursuz  əməliyyat üçün uğursuz
+                          qaytarıldı              qaytarıldı
+  -----------------------------------------------------------------------
+
+11.8 Canlı quruluş tələbi
+
+11.8.1 Sorğu strukturu
+
+GET
+
+https://testmt.azericard.com/api/alive
+
+11.8.2 Cavab strukturu
+
+Body:
+
+{ "Version": x.x.x, "ResponseCode": 0, "Message": "Successfully" }
+
+11.9 Sahələrin təsviri
+
+Sahə formatının təyinatı:
+
+number - simvolların sayı 0-9
+
+ans - boşluq daxil olmaqla, hərf-rəqəm, rəqəm və xüsusi simvollar
+
+  -------------------------------------------------------------------------------------
+  Başlıq                Təyinat            Format         Uzunluq        Mövcudluq
+  --------------------- ------------------ -------------- -------------- --------------
+  Amount                Cur sahəsində      number         Less than 12   Tələb olunur
+                        göstərilən                                       
+                        valyutada köçürmə                                
+                        məbləği. Məbləğ                                  
+                        minimal vahidlərlə                               
+                        göstərilmişdir                                   
+
+  Cur                   Sahənin üç rəqəmli number         3              Tələb olunur
+                        valyuta kodu.                                    
+                        Transfer məbləği.                                
+                        944 manata                                       
+
+  ReceiverPAN           Alıcının kartı     number         Less than 20   Tələb olunur
+                        nömrəsini köçürün                                
+
+  ReceiverCredentials   Soyadı Adı         string         Less than 151  Tələb olunur
+                        Alıcının atasının                                
+                        adı                                              
+
+  Merchant              Satıcı id bankla   string         Less than 16   Tələb olunur
+                        razılaşdı                                        
+
+  OperationID           Gələcək istifadə   number         Less than 13   Könüllü
+                        üçün lazım olduqda                               
+                        tacir tərəfindən                                 
+                        yaradılan unikal                                 
+                        ID əməliyyatı                                    
+
+  SRN                   Gələcək istifadə   number         12             Tələb olunur
+                        üçün lazım olduqda                               
+                        tacir tərəfindən                                 
+                        formalaşdırılan                                  
+                        əməliyyat arayış                                 
+                        nömrəsi                                          
+
+  RRN                   PC Azericard       number         12             Tələb olunur
+                        tərəfindən                                       
+                        formalaşdırılmış                                 
+                        əməliyyat arayış                                 
+                        nömrəsi                                          
+
+  SenderCountry         Göndərənin ölkə    number         3              Könüllü
+                        kodu                                             
+
+  SenderCity            Göndərən şəhər     string         13             Könüllü
+                        kodu                                             
+
+  SenderAddress         Göndərənin ünvanı  string         25             Könüllü
+
+  SenderCredentials     Adı Soyadı         string         Less than 151  Könüllü
+                        Göndərənin                                       
+                        atasının adı                                     
+
+  Attribute             Əlavə sorğu        any                           Könüllü
+                        sahələri obyekti                                 
+                        zəncirindən                                      
+                        ibarətdir                                        
+
+  SenderPAN             Göndərənin kart    number         Less than 20   Könüllü
+                        nömrəsi                                          
+
+  TransactionNumber     PC Bank tərəfindən string         15             Tələb olunur
+                        yaradılmış                                       
+                        əməliyyat ID.                                    
+                        Sorğuya cavab                                    
+                        olaraq geri                                      
+                        qaytarıldı                                       
+
+  ApprovalCode          Məbləğin uğurlu    ans            6              Tələb olunur
+                        köçürülməsi                                      
+                        halında sorğuya                                  
+                        cavab qaytarıldı.                                
+                        (Kod=00-da)                                      
+
+  ResponseCode          Cavab Kodu         number         3              Tələb olunur
+
+  CardStatus            PC Azericard       string         Less than 20   Könüllü
+                        sistemində                                       
+                        qəbuledici kartın                                
+                        vəziyyəti                                        
+
+  Timestamp             Sorğu/cavab vaxtı  timestamp      17             Tələb olunur
+
+  Status                Yerli xidmət       string         Less than 20   Könüllü
+                        verilənlər                                       
+                        bazasında                                        
+                        əməliyyat                                        
+                        statusudatabase                                  
+
+  TransactionStatus     PC Azericard OWS   number         3              Könüllü
+                        verilənlər                                       
+                        bazasında                                        
+                        əməliyyat                                        
+
+  Signature             Hesablanmış dəyər  string         32             Tələb olunur
+                        MD5(bütün sahələr                                
+                        birləşdirilib +                                  
+                        Açar)                                            
+  -------------------------------------------------------------------------------------
+
+11.10 Cavab Kodu
+
+  -----------------------------------------------------------------------
+  Code                                Message
+  ----------------------------------- -----------------------------------
+  0                                   Uğurla tamamlandı, Uğurla emal
+                                      olundu *(cavab mesajı yerli emitent
+                                      banklardan asılıdır)
+
+  1                                   Kart məsələsinə baxın
+
+  3                                   Etibarsız merchant
+
+  5                                   Do not honor
+
+  12                                  Etibarsız əməliyyat
+
+  57                                  Kart sahibinə əməliyyata icazə
+                                      verilmir
+
+  61                                  Çıxarma məbləği limitini aşır
+
+  65                                  Çıxarma tezliyi limitini aşdı
+
+  91                                  Şəbəkə xətası limiti
+
+  96                                  Sistem nasazlığı
+
+  103                                 Doğrulama xətası
+
+  104                                 Ödəniş tapılmadı
+
+  105                                 Dublikat əməliyyat
+
+  106                                 İmza xətası
+
+  108                                 Daxili səhv
+
+  110                                 Daxili xəta, Azericard ilə əlaqə
+                                      saxlayın
+
+  113                                 Status gözlənilir, əməliyyatı
+                                      tamamlamaq üçün ödəniş
+                                      təsdiqlənməlidir
+
+  114                                 Hesabat xidməti əməliyyat üçün
+                                      uğursuz qaytarıldı
+
+  116                                 Tranzaksiya artıq başlayıb
+
+  118                                 ufx-ə zəng əlaqə xəbərə baş verdi
+
+  119                                 Vaxt möhürü diapazonda deyil
+
+  120                                 Vaxt möhürü yanlış formata malikdir
+
+  123                                 Bu tacir üçün birbaşa geri çəkilmə
+                                      sorğusuna icazə verilmir
+
+  131                                 Merchant yoxdur
+
+  132                                 SRN dəyəri 10 simvol uzunluğunda
+                                      deyil
+
+  133                                 Məbləğ dəyəri etibarlı deyil
+
+  134                                 Valyuta kodu etibarlı deyil
+
+  135                                 Etibarnamə dəyəri etibarlı deyil
+
+  136                                 Geri zəng URI etibarlı deyil
+
+  137                                 PAN Dəyəri etibarlı deyil
+
+  138                                 Ümumi yoxlama xətası, Azericard ilə
+                                      əlaqə saxlayın
+
+  139                                 SRN dəyəri verilmiş tacir üçün
+                                      unikal deyil
+
+  201                                 Ödəniş əvvəllər rədd edilib
+
+  202                                 Əməliyyat davam edir
+  -----------------------------------------------------------------------
+
+Sandbox
+
+Müştərilərimizə dəstək olmaq üçün yaradılmış sandbox səhifəsi onların
+inteqrasyalarını yoxlamaq üçün nəzərdə tutulub. Aşağıdaki linkdən
+istifadə edərək siz yeni funksionallıqların yaradılmasını, yaranmış
+boşluqların müəyyən edilməsi və aradan qaldırılmasını, düzəlişlərin
+yoxlanılmasını proseslərini icra edə bilərsiniz.
+
+P_SIGN Check:
+
+https://testsite.3dsecure.az/sandbox/p-sign.php
+
+Test sistemində ödənişin yoxlanması üçün link
+
+https://testsite.3dsecure.az/sandbox/auth.php
+
+Aşağıda göstərilmiş link (checkout-reversal-psign.php) reversal və
+checkout etmədən öncə sorğunun P_SİGN datasını necə və hansı dəyərlərin
+mac hissədə hesablanmasınə əks etdirəcək
+
+https://testsite.3dsecure.az/sandbox/checkout-reversal-psign.php
+
+Aşağıda göstərilmiş link (checkout-reversal.php) scripti isə müştəriyə
+sandbox üzərindən əməliyyatları checkout və reversal etməyə icazə
+verəcək. Checkout üçün TRTYPE=21 istifadə edilməldir, Reversal üçün isə
+TRTYPE=22 və TRTYPE=24 istifadə edilməlidir.
+
+https://testsite.3dsecure.az/sandbox/checkout-reversal.php
+
+Aşağıda göstərilmiş linklər transaction status sorğularının P_SIGN
+hesablanması və ödənişin statusunun yoxlanılması üçün istifadə ediləcək.
+
+https://testsite.3dsecure.az/sandbox/transaction_status.php
+
+https://testsite.3dsecure.az/sandbox/transaction_status_psign.php
+
+Nümunəvi curl sorğuları
+
+TRTYPE=0,1
+
+curl --location --request POST
+'https://testmpi.3dsecure.az/cgi-bin/cgi_link' \--header 'Content-Type:
+application/x-www-form-urlencoded' \--data-urlencode 'AMOUNT=10'
+\--data-urlencode 'CURRENCY=AZN' \--data-urlencode
+'ORDER=20220628084800' \--data-urlencode 'DESC=test Odenish'
+\--data-urlencode 'TRTYPE=0' \--data-urlencode
+'TIMESTAMP=20220825105200' \--data-urlencode 'NONCE=7fdc0caafb113590'
+\--data-urlencode 'BACKREF=https//test.com/test/callback'
+\--data-urlencode
+'P_SIGN=2f3ac6adba8af5b38dcab617c59284bb69e5618197c60189f38d3f3727cfa2b533147bde577fb8b45e7b7ecaa80d500f069386013ec52367f93bcb127b31c1fa9843ca776cdca571986a925c1ce9f9ad50c29689ca74890369bbb5bcf86af6dea4
+e9dca805b360f47752fe9dfc6b5848dc43f2cd9552fad4309545c6169f625de46963ca0401407f9319294db6e8d27f35f9d1bc48a61811502a391cef230d6f219b01cd1e32ad58c21af6f051c56485b4ae3759a3080f6fc2d6d8dcd5f0bb1b2acd7b2b4dc43b1c9fcdc7794e7272281216edd0742b9d3
+fd879004fa9b45662d9b7e7f7c7b278f1808461b31a9572c43ae36df78a6eea54e60f4d1a681edc62'
+\--data-urlencode 'MERCH_NAME=test' \--data-urlencode
+'MERCH_URL=http://test.com' \--data-urlencode 'TERMINAL=77777777'
+\--data-urlencode 'EMAIL=tsupport@test.com' \--data-urlencode
+'COUNTRY=AZ' \--data-urlencode 'MERCH_GMT=+4' \--data-urlencode
+'M_INFO=ewoiYnJvd3NlclNjcmVlbkhlaWdodCI6IjE5MjAiLAoiYnJvd3NlclNjcmVlbldpZHRoIjoiMTA4MCIsCiJicm93c2VyVFoiOiIwIiwKIm1vYmlsZVBob25lIiA6eyAiY2MiOiI5OTQiLCAic3Vic2NyaWJlciI6IjU1Nzc3Nzc3Nzc3IiB9Cn0'
+\--data-urlencode 'NAME=Test Testov'
+
+HTTP POST
+
+POST /cgi-bin/cgi_link HTTP/1.1Host: testmpi.3dsecure.azContent-Type:
+application/x-www-form-urlencodedAMOUNT=10&CURRENCY=AZN&ORDER=20220628084800&DESC=test
+Odenish&TRTYPE=0&TIMESTAMP=20220825105200&NONCE=7fdc0caafb113590&BACKREF=https//test.com/test/callback&P_SIGN=2f3ac6adba8af5b38dcab617c59284bb69e5618197c60189f38d3f3727cfa2b533147bde577fb8b45e7b7ecaa80d500f069386013ec52367f93bcb127b31c1fa9843ca776cdca571986a925c1ce9f9ad50c29689ca74890369bbb5bcf86af6dea4
+e9dca805b360f47752fe9dfc6b5848dc43f2cd9552fad4309545c6169f625de46963ca0401407f9319294db6e8d27f35f9d1bc48a61811502a391cef230d6f219b01cd1e32ad58c21af6f051c56485b4ae3759a3080f6fc2d6d8dcd5f0bb1b2acd7b2b4dc43b1c9fcdc7794e7272281216edd0742b9d3
+fd879004fa9b45662d9b7e7f7c7b278f1808461b31a9572c43ae36df78a6eea54e60f4d1a681edc62&MERCH_NAME=test&MERCH_URL=http://test.com&TERMINAL=77777777&EMAIL=tsupport@test.com&COUNTRY=AZ&MERCH_GMT=+4&M_INFO=ewoiYnJvd3NlclNjcmVlbkhlaWdodCI6IjE5MjAiLAoiYnJvd3NlclNjcmVlbldpZHRoIjoiMTA4MCIsCiJicm93c2VyVFoiOiIwIiwKIm1vYmlsZVBob25lIiA6eyAiY2MiOiI5OTQiLCAic3Vic2NyaWJlciI6IjU1Nzc3Nzc3Nzc3IiB9Cn0&NAME=Test
+Testov
+
+TRTYPE = 21, 22, 24 (Refund / Reversal / Completion)
+
+curl --location --request POST
+'https://testmpi.3dsecure.az/cgi-bin/cgi_link' \--header 'Content-Type:
+application/x-www-form-urlencoded' \--data-urlencode 'AMOUNT=5'
+\--data-urlencode 'CURRENCY=AZN' \--data-urlencode
+'ORDER=20210506070034' \--data-urlencode 'RRN=112676199769'
+\--data-urlencode 'INT_REF=5E3601D7C71745A9' \--data-urlencode
+'TERMINAL=77777777' \--data-urlencode 'TRTYPE=21' \--data-urlencode
+'TIMESTAMP=20210506070051' \--data-urlencode 'NONCE=2c9434b2aa5bb4af'
+\--data-urlencode
+'P_SIGN=2f3ac6adba8af5b38dcab617c59284bb69e5618197c60189f38d3f3727cfa2b533147bde577fb8b45e7b7ecaa80d500f069386013ec52367f93bcb127b31c1fa9843ca776cdca571986a925c1ce9f9ad50c29689ca74890369bbb5bcf86af6dea4
+e9dca805b360f47752fe9dfc6b5848dc43f2cd9552fad4309545c6169f625de46963ca0401407f9319294db6e8d27f35f9d1bc48a61811502a391cef230d6f219b01cd1e32ad58c21af6f051c56485b4ae3759a3080f6fc2d6d8dcd5f0bb1b2acd7b2b4dc43b1c9fcdc7794e7272281216edd0742b9d3
+fd879004fa9b45662d9b7e7f7c7b278f1808461b31a9572c43ae36df78a6eea54e60f4d1a681edc62'
+
+HTTP POST
+
+HTTP POSTPOST /cgi-bin/cgi_link HTTP/1.1Host:
+testmpi.3dsecure.azContent-Type:
+application/x-www-form-urlencodedAMOUNT=5&CURRENCY=AZN&ORDER=20210506070034&RRN=112676199769&INT_REF=5E3601D7C71745A9&TERMINAL=77777777&TRTYPE=21&TIMESTAMP=20210506070051&NONCE=2c9434b2aa5bb4af&P_SIGN=2f3ac6adba8af5b38dcab617c59284bb69e5618197c60189f38d3f3727cfa2b533147bde577fb8b45e7b7ecaa80d500f069386013ec52367f93bcb127b31c1fa9843ca776cdca571986a925c1ce9f9ad50c29689ca74890369bbb5bcf86af6dea4
+e9dca805b360f47752fe9dfc6b5848dc43f2cd9552fad4309545c6169f625de46963ca0401407f9319294db6e8d27f35f9d1bc48a61811502a391cef230d6f219b01cd1e32ad58c21af6f051c56485b4ae3759a3080f6fc2d6d8dcd5f0bb1b2acd7b2b4dc43b1c9fcdc7794e7272281216edd0742b9d3
+fd879004fa9b45662d9b7e7f7c7b278f1808461b31a9572c43ae36df78a6eea54e60f4d1a681edc62
+
+TRTYPE = 90 (Transaction Status Inquiry)
+
+curl --location --request POST
+'https://testmpi.3dsecure.az/cgi-bin/cgi_link' \--header 'Content-Type:
+application/x-www-form-urlencoded' \--data-urlencode 'TRAN_TRTYPE=1'
+\--data-urlencode 'ORDER=20210506070034' \--data-urlencode
+'TERMINAL=77777777' \--data-urlencode 'TRTYPE=90' \--data-urlencode
+'TIMESTAMP=20210506070051' \--data-urlencode 'NONCE=2c9434b2aa5bb4af'
+\--data-urlencode
+'P_SIGN=2f3ac6adba8af5b38dcab617c59284bb69e5618197c60189f38d3f3727cfa2b533147bde577fb8b45e7b7ecaa80d500f069386013ec52367f93bcb127b31c1fa9843ca776cdca571986a925c1ce9f9ad50c29689ca74890369bbb5bcf86af6dea4
+e9dca805b360f47752fe9dfc6b5848dc43f2cd9552fad4309545c6169f625de46963ca0401407f9319294db6e8d27f35f9d1bc48a61811502a391cef230d6f219b01cd1e32ad58c21af6f051c56485b4ae3759a3080f6fc2d6d8dcd5f0bb1b2acd7b2b4dc43b1c9fcdc7794e7272281216edd0742b9d3
+fd879004fa9b45662d9b7e7f7c7b278f1808461b31a9572c43ae36df78a6eea54e60f4d1a681edc62'
+
+HTTP POST
+
+POST /cgi-bin/cgi_link HTTP/1.1Host: testmpi.3dsecure.azContent-Type:
+application/x-www-form-urlencodedTRAN_TRTYPE=1&ORDER=20210506070034&TERMINAL=77777777&TRTYPE=90&TIMESTAMP=20210506070051&NONCE=2c9434b2aa5bb4af&P_SIGN=2f

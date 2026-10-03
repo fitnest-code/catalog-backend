@@ -17,26 +17,10 @@ import java.util.List;
 public class TranslationServiceImpl implements TranslationService {
     private final TranslationRepository translationRepository;
     private final org.springframework.cache.CacheManager cacheManager;
-    private final org.springframework.web.client.RestTemplate restTemplate;
-
-    @jakarta.persistence.PersistenceContext
-    private jakarta.persistence.EntityManager entityManager;
-
-    @org.springframework.beans.factory.annotation.Autowired
-    @org.springframework.context.annotation.Lazy
-    private TranslationServiceImpl self;
-
-    @org.springframework.beans.factory.annotation.Autowired
-    private TranslationEntityResolver translationEntityResolver;
 
     public TranslationServiceImpl(TranslationRepository translationRepository, org.springframework.cache.CacheManager cacheManager) {
         this.translationRepository = translationRepository;
         this.cacheManager = cacheManager;
-        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(1000);
-        factory.setReadTimeout(1500);
-        this.restTemplate = new org.springframework.web.client.RestTemplate(factory);
-        this.restTemplate.getMessageConverters().add(0, new org.springframework.http.converter.StringHttpMessageConverter(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Override
@@ -162,31 +146,8 @@ public class TranslationServiceImpl implements TranslationService {
             return null;
         }
 
-        try {
-            Class<?> entityClass = translationEntityResolver.getEntityClass(entityType);
-            if (entityClass != null) {
-                Object entity = null;
-                try {
-                    Long longId = Long.parseLong(entityId);
-                    entity = entityManager.find(entityClass, longId);
-                } catch (NumberFormatException e) {
-                    entity = entityManager.find(entityClass, entityId);
-                }
-
-                if (entity != null) {
-                    String originalValueAz = translationEntityResolver.extractFieldValue(entity, fieldName);
-                    if (originalValueAz != null && !originalValueAz.trim().isEmpty()) {
-                        String translatedValue = translateText(originalValueAz, languageCode.toLowerCase());
-                        if (translatedValue != null && !translatedValue.trim().isEmpty()) {
-                            self.saveOrUpdateTranslation(entityType, entityId, languageCode, fieldName, translatedValue);
-                            return translatedValue;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-        }
-
+        // Manual translations only: AZ lives on its own entity table, EN/RU live in
+        // the translations table (admin-provided). No machine translation.
         return null;
     }
 
@@ -235,44 +196,17 @@ public class TranslationServiceImpl implements TranslationService {
     @Override
     @org.springframework.scheduling.annotation.Async
     @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
-    public void autoTranslateAndSave(String entityType, String entityId, String fieldName, String originalValueAz) {
+    public void copyAzForProperNouns(String entityType, String entityId, String fieldName, String originalValueAz) {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
             return;
         }
+        // Proper nouns (names, addresses) are identical in every language:
+        // copy the AZ source to EN/RU. All other fields stay untranslated until
+        // an admin provides EN/RU manually. No machine translation.
         if (isProperNounField(entityType, fieldName)) {
             saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, originalValueAz);
             saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, originalValueAz);
-            return;
         }
-
-        // Translate to EN
-        String enValue = translateText(originalValueAz, "en");
-        if (enValue != null && !enValue.trim().isEmpty()) {
-            saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, enValue);
-        } else {
-            saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, originalValueAz);
-        }
-
-        // Translate to RU
-        String ruValue = translateText(originalValueAz, "ru");
-        if (ruValue != null && !ruValue.trim().isEmpty()) {
-            saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, ruValue);
-        } else {
-            saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, originalValueAz);
-        }
-    }
-
-    @Override
-    public String translateText(String text, String targetLanguage) {
-        // Try Google Translate (Ultra-accurate, extremely reliable, free, no keys needed)
-        try {
-            String googleTranslated = translateWithGoogle(text, targetLanguage);
-            if (googleTranslated != null && !googleTranslated.trim().isEmpty()) {
-                return googleTranslated;
-            }
-        } catch (Exception e) {
-        }
-        return null;
     }
 
     private static boolean isProperNounField(String entityType, String fieldName) {
@@ -293,66 +227,6 @@ public class TranslationServiceImpl implements TranslationService {
             return type.equals("GYM") || type.equals("STORE");
         }
         return type.equals("GYM") || type.equals("STORE") || type.equals("TRAINER") || type.equals("GYMADMIN");
-    }
-
-    private String sanitizeHtml(String text) {
-        if (text == null) return null;
-        if (!text.contains("<") && !text.contains(">")) {
-            return text;
-        }
-        try {
-            String clean = text.replaceAll("(?i)<head[^>]*?>[\\s\\S]*?</head>", "");
-            clean = clean.replaceAll("(?i)<style[^>]*?>[\\s\\S]*?</style>", "");
-            clean = clean.replaceAll("(?i)<script[^>]*?>[\\s\\S]*?</script>", "");
-            clean = clean.replaceAll("<[^>]*>", " ");
-            clean = clean.replaceAll("\\s+", " ").trim();
-            return org.apache.commons.text.StringEscapeUtils.unescapeHtml4(clean);
-        } catch (Exception e) {
-            return text;
-        }
-    }
-
-    private String translateWithGoogle(String text, String targetLanguage) {
-        if (text == null || text.trim().isEmpty()) {
-            return null;
-        }
-        text = sanitizeHtml(text);
-        if (text == null || text.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            java.net.URI uri = org.springframework.web.util.UriComponentsBuilder
-                .fromUriString("https://translate.googleapis.com/translate_a/single")
-                .queryParam("client", "gtx")
-                .queryParam("sl", "az")
-                .queryParam("tl", targetLanguage.toLowerCase())
-                .queryParam("dt", "t")
-                .queryParam("q", text)
-                .build()
-                .toUri();
-
-            String response = restTemplate.getForObject(uri, String.class);
-            if (response != null) {
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(response);
-                if (rootNode.isArray() && rootNode.size() > 0) {
-                    com.fasterxml.jackson.databind.JsonNode firstArray = rootNode.get(0);
-                    if (firstArray.isArray() && firstArray.size() > 0) {
-                        StringBuilder sb = new StringBuilder();
-                        for (com.fasterxml.jackson.databind.JsonNode segment : firstArray) {
-                            if (segment.isArray() && segment.size() > 0) {
-                                sb.append(segment.get(0).asText());
-                            }
-                        }
-                        if (sb.length() > 0) {
-                            return sb.toString();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-        }
-        return null;
     }
 
     @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
