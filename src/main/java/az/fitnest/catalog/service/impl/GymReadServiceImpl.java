@@ -433,7 +433,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         double[] bbox = boundingBox(lat, lng, radiusKm);
         List<Gym> candidates = gymRepository.findByAddressLatitudeBetweenAndAddressLongitudeBetween(bbox[0], bbox[1],
                 bbox[2], bbox[3]);
-        LocalDateTime newThreshold = LocalDateTime.now().minusDays(30L);
+        LocalDateTime newThreshold = LocalDateTime.now().minusMonths(1L);
         Long currentUserId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
         String userLanguage = getUserLanguage(currentUserId);
 
@@ -958,7 +958,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public GymCountResponse getGymCount(String type, Long subscriptionId, Long categoryId) {
         java.time.LocalDateTime newThreshold = null;
         if (type != null && type.equalsIgnoreCase("new")) {
-            newThreshold = java.time.LocalDateTime.now().minusWeeks(1);
+            // "New" = created within the last 1 month (same rule as gym cards).
+            newThreshold = java.time.LocalDateTime.now().minusMonths(1);
         }
         long count = gymRepository.countGymsWithFilters(categoryId, subscriptionId, newThreshold);
         return new GymCountResponse(count, type != null ? type : "all", subscriptionId, categoryId);
@@ -968,7 +969,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     public GymTypeCountResponse getGymCountByType(String type) {
         long count;
         if (type.equalsIgnoreCase("new")) {
-            count = gymRepository.countByCreatedDateAfter(java.time.LocalDateTime.now().minusWeeks(1));
+            // "New" = created within the last 1 month (same rule as gym cards).
+            count = gymRepository.countByCreatedDateAfter(java.time.LocalDateTime.now().minusMonths(1));
         } else {
             count = gymRepository.count();
         }
