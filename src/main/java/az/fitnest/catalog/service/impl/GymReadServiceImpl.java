@@ -163,7 +163,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }, taskExecutor);
 
         CompletableFuture<List<GymTrainerResponse>> trainerDtosFuture = CompletableFuture
-                .supplyAsync(() -> trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
+                .supplyAsync(() -> trainerRepository.findByGymId(gymId, Pageable.unpaged(Sort.by("id")))
                         .getContent().stream()
                         .map(GymMapper::toTrainerDto)
                         .toList(), taskExecutor);
@@ -1818,7 +1818,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }, taskExecutor);
 
         CompletableFuture<List<GymTrainerResponse>> trainerDtosFuture = CompletableFuture
-                .supplyAsync(() -> trainerRepository.findByGymId(gymId, PageRequest.of(0, 5, Sort.by("id")))
+                .supplyAsync(() -> trainerRepository.findByGymId(gymId, Pageable.unpaged(Sort.by("id")))
                         .getContent().stream()
                         .map(GymMapper::toTrainerDto)
                         .toList(), taskExecutor);
