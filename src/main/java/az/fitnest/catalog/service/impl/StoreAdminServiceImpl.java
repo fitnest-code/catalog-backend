@@ -330,10 +330,17 @@ public class StoreAdminServiceImpl implements StoreAdminService {
                     .forEach(filesToDelete::add);
         }
 
-        if (store.getDiscounts() != null) store.getDiscounts().clear();
-        if (store.getImages() != null) store.getImages().clear();
+        // The bulk deletes above bypass the persistence context, leaving the
+        // managed collections stale. Clearing them (or cascading delete on the
+        // stale parent) would re-issue versioned deletes for already-gone rows
+        // -> StaleObjectStateException (prod: store delete always 500'd when
+        // discounts existed). Detach everything and reload: child collections
+        // are already empty in the DB, so cascade delete touches nothing.
+        entityManager.clear();
+        Store managed = storeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("STORE_NOT_FOUND", "Mağaza tapılmadı: " + id));
 
-        storeRepository.delete(store);
+        storeRepository.delete(managed);
 
         fileStorageService.deleteFilesAfterCommit(filesToDelete);
     }
