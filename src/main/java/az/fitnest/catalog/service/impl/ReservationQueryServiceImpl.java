@@ -516,7 +516,12 @@ public class ReservationQueryServiceImpl implements az.fitnest.catalog.service.R
         if (!gymRepository.existsById(gymId)) {
             throw new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found");
         }
-        boolean isEnabled = sessionRepository.existsByGymId(gymId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        boolean isEnabled = sessionRepository.existsUpcomingByGymId(
+                gymId,
+                now.toLocalDate(),
+                now.toLocalTime(),
+                az.fitnest.catalog.model.enums.SessionStatus.CANCELLED);
         return new GymReservationStatusResponse(isEnabled);
     }
 

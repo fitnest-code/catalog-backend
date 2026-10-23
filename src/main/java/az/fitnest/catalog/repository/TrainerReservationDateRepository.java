@@ -1,6 +1,7 @@
 package az.fitnest.catalog.repository;
 
 import az.fitnest.catalog.model.entity.TrainerReservationDate;
+import az.fitnest.catalog.model.enums.SessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,6 +15,15 @@ public interface TrainerReservationDateRepository extends JpaRepository<TrainerR
     List<TrainerReservationDate> findByGymId(Long gymId);
 
     boolean existsByGymId(Long gymId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(trd) > 0 FROM TrainerReservationDate trd " +
+            "WHERE trd.gymId = :gymId AND trd.status <> :cancelledStatus " +
+            "AND (trd.date > :date OR (trd.date = :date AND trd.startTime > :time))")
+    boolean existsUpcomingByGymId(
+            @org.springframework.data.repository.query.Param("gymId") Long gymId,
+            @org.springframework.data.repository.query.Param("date") LocalDate date,
+            @org.springframework.data.repository.query.Param("time") LocalTime time,
+            @org.springframework.data.repository.query.Param("cancelledStatus") SessionStatus cancelledStatus);
 
     List<TrainerReservationDate> findByTrainerId(Long trainerId);
 
