@@ -25,5 +25,43 @@ public record GymEntranceScanResponse(
     @Schema(description = "The result status of the scan (e.g., ELIGIBLE, SUCCESSFUL, UNSUCCESSFUL)")
     String status,
     @Schema(description = "The specific reason for denial if isAllowed is false (e.g., NO_ACTIVE_SUBSCRIPTION, VISIT_LIMIT_EXCEEDED, GYM_NOT_SUPPORTED, OUT_OF_WORKING_HOURS, TOO_FAR_FROM_GYM, CHECKIN_FAILED)")
-    String reason
+    String reason,
+
+    // Home-gym decision payload (spec R5/R6/R8/R14/R18).
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String decision,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String messageKey,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String entryType,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long visitId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long homeGymId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long standardVisitsUsed,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Integer standardVisitsLimit,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long homeVisitsThisPeriod,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String unlocksAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String renewsAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String confirmationType,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String confirmationToken,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String confirmationExpiresAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Long targetGymId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String targetGymName,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String homeGymName,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String availableHours,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String packageName
 ) {}

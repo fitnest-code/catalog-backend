@@ -170,9 +170,21 @@ public class GymController {
             @RequestParam String qrCodeValue,
             @RequestParam Double lat,
             @RequestParam Double lng,
+            @RequestParam(value = "confirmation", required = false) String confirmation,
+            @RequestParam(value = "confirmationToken", required = false) String confirmationToken,
             @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent);
+            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent,
+                    confirmation, confirmationToken);
+            if ("CONFIRMATION_REQUIRED".equals(response.decision())) {
+                return ResponseEntity.status(409).body(response);
+            }
+            if ("OTHER_GYMS_LOCKED".equals(response.decision())
+                    || "VISIT_LIMIT_EXCEEDED".equals(response.decision())
+                    || "TIER_NOT_ALLOWED_AT_THIS_TIME".equals(response.decision())
+                    || "SUBSCRIPTION_FROZEN".equals(response.decision())) {
+                return ResponseEntity.status(403).body(response);
+            }
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();

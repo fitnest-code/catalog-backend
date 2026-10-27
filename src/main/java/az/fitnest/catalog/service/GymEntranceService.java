@@ -12,7 +12,8 @@ public interface GymEntranceService {
     
     String getGymQrUrl(Long gymId);
     
-    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent);
+    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
+                                              String userAgent, String confirmation, String confirmationToken);
     
     List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId);
     
