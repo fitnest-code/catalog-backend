@@ -9,10 +9,12 @@ import az.fitnest.catalog.dto.response.HomeGymTimeSlotRuleResponse;
 import az.fitnest.catalog.exception.BadRequestException;
 import az.fitnest.catalog.exception.ForbiddenException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.exception.UnprocessableEntityException;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymTimeSlotRule;
+import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.repository.GymAdminRepository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
@@ -40,8 +42,10 @@ import java.util.Set;
  * Admin management for the home-gym feature (spec mock 6.1-6.3, R14/R15/R17/R18).
  *
  * <p>Prices are versioned by the first day of a month, so an ordinary change
- * writes a new row for next month instead of mutating the current one. The
- * master switch publishes an R18 event consumed by order-backend.
+ * writes a new row for next month instead of mutating the current one. Time-slot
+ * rules follow the same rule (F-03): a change to a currently effective rule closes
+ * the old row at the end of the current month and opens a new one next month.
+ * The master switch publishes an R18 event consumed by order-backend.
  */
 @Service
 @RequiredArgsConstructor
@@ -123,6 +127,10 @@ public class HomeGymAdminService {
         }
         requireNonNegative(request.getSinglePrice(), "singlePrice");
         requireNonNegative(request.getUnlimitedPrice(), "unlimitedPrice");
+        boolean homeEligible = Boolean.TRUE.equals(request.getHomeEligible());
+        if (homeEligible && request.getUnlimitedPrice() == null) {
+            throw new BadRequestException("HOME_GYM_INVALID_PRICE", "error.home_gym.unlimited_price_required");
+        }
 
         LocalDate effectiveFrom = effectiveMonth(request.getEffectiveFrom());
         GymPackagePrice price = packagePriceRepository
@@ -139,7 +147,7 @@ public class HomeGymAdminService {
     }
 
     // ---------------------------------------------------------------------
-    // Time-slot rules (R14/R15)
+    // Time-slot rules (R14/R15, admin validations F-03)
     // ---------------------------------------------------------------------
 
     @Transactional(readOnly = true)
@@ -154,9 +162,14 @@ public class HomeGymAdminService {
             throw new BadRequestException("HOME_GYM_INVALID_REQUEST", "error.home_gym.invalid_request");
         }
         Gym gym = requireGym(gymId);
+        LocalDate effectiveFrom = resolveEffectiveFrom(request.getEffectiveFrom());
+        LocalDate effectiveTo = resolveEffectiveTo(request.getEffectiveTo(), effectiveFrom);
+        TimeSlotValues values = validateTimeSlot(gym, request, effectiveFrom, effectiveTo);
+        validateNoOverlap(gymId, null, values, effectiveFrom, effectiveTo);
+
         GymTimeSlotRule rule = new GymTimeSlotRule();
         rule.setGym(gym);
-        applyTimeSlot(rule, request, gym, LocalDate.now(HomeGymRuleService.BAKU));
+        applyTimeSlot(rule, values, effectiveFrom, effectiveTo);
         return toTimeSlotResponse(timeSlotRuleRepository.save(rule));
     }
 
@@ -169,10 +182,44 @@ public class HomeGymAdminService {
         GymTimeSlotRule rule = timeSlotRuleRepository.findByIdAndGymId(ruleId, gymId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "HOME_GYM_TIME_SLOT_NOT_FOUND", "error.home_gym.time_slot_not_found"));
-        LocalDate fallbackFrom = rule.getEffectiveFrom() != null
-                ? rule.getEffectiveFrom() : LocalDate.now(HomeGymRuleService.BAKU);
-        applyTimeSlot(rule, request, gym, fallbackFrom);
-        return toTimeSlotResponse(timeSlotRuleRepository.save(rule));
+
+        LocalDate today = LocalDate.now(HomeGymRuleService.BAKU);
+        LocalDate nextMonthStart = nextMonthStart();
+        LocalDate requestedFrom = resolveEffectiveFrom(request.getEffectiveFrom());
+        // A future rule that has not taken effect yet is edited in place. Everything else is
+        // versioned (F-03): the old row is closed before the new one becomes effective.
+        boolean futureRule = rule.getEffectiveFrom() != null && rule.getEffectiveFrom().isAfter(today);
+        LocalDate effectiveFrom = futureRule ? rule.getEffectiveFrom() : requestedFrom;
+        LocalDate effectiveTo = resolveEffectiveTo(request.getEffectiveTo(), effectiveFrom);
+        TimeSlotValues values = validateTimeSlot(gym, request, effectiveFrom, effectiveTo);
+        validateNoOverlap(gymId, ruleId, values, effectiveFrom, effectiveTo);
+
+        if (rule.getEffectiveFrom() != null && !rule.getEffectiveFrom().isAfter(today)) {
+            // Currently effective: keep history until the day before the new version.
+            LocalDate closeAt = effectiveFrom.minusDays(1);
+            if (closeAt.isBefore(rule.getEffectiveFrom())) {
+                closeAt = rule.getEffectiveFrom();
+            }
+            rule.setEffectiveTo(closeAt);
+            timeSlotRuleRepository.save(rule);
+
+            GymTimeSlotRule version = new GymTimeSlotRule();
+            version.setGym(gym);
+            applyTimeSlot(version, values, effectiveFrom, effectiveTo);
+            return toTimeSlotResponse(timeSlotRuleRepository.save(version));
+        }
+
+        if (futureRule && !rule.getEffectiveFrom().isBefore(nextMonthStart)) {
+            // Not effective yet: edit in place.
+            applyTimeSlot(rule, values, effectiveFrom, effectiveTo);
+            return toTimeSlotResponse(timeSlotRuleRepository.save(rule));
+        }
+
+        // Historical row: leave it untouched and add the new version.
+        GymTimeSlotRule version = new GymTimeSlotRule();
+        version.setGym(gym);
+        applyTimeSlot(version, values, effectiveFrom, effectiveTo);
+        return toTimeSlotResponse(timeSlotRuleRepository.save(version));
     }
 
     @Transactional
@@ -181,47 +228,205 @@ public class HomeGymAdminService {
         GymTimeSlotRule rule = timeSlotRuleRepository.findByIdAndGymId(ruleId, gymId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "HOME_GYM_TIME_SLOT_NOT_FOUND", "error.home_gym.time_slot_not_found"));
+
+        LocalDate today = LocalDate.now(HomeGymRuleService.BAKU);
+        boolean currentlyEffective = rule.getEffectiveFrom() != null
+                && !rule.getEffectiveFrom().isAfter(today)
+                && (rule.getEffectiveTo() == null || !rule.getEffectiveTo().isBefore(today));
+        if (currentlyEffective) {
+            // F-03: the current rule keeps working until the end of the month.
+            LocalDate closeAt = nextMonthStart().minusDays(1);
+            if (!closeAt.isBefore(rule.getEffectiveFrom())) {
+                rule.setEffectiveTo(closeAt);
+                timeSlotRuleRepository.save(rule);
+                return;
+            }
+        }
         timeSlotRuleRepository.delete(rule);
+    }
+
+    // ---------------------------------------------------------------------
+    // Validation helpers
+    // ---------------------------------------------------------------------
+
+    private record TimeSlotValues(Set<String> weekdays, LocalTime start, LocalTime end,
+                                  Set<Long> allowedPackageIds, Long pricePackageId) {
+    }
+
+    private TimeSlotValues validateTimeSlot(Gym gym, HomeGymTimeSlotRequest request,
+                                            LocalDate effectiveFrom, LocalDate effectiveTo) {
+        LocalTime start = parseTime(request.getStartTime(), "startTime");
+        LocalTime end = parseTime(request.getEndTime(), "endTime");
+        if (start == null || end == null || !start.isBefore(end)) {
+            // v3: start < end, inside the same day (no overnight windows).
+            throw new BadRequestException("HOME_GYM_INVALID_TIME_WINDOW", "error.home_gym.invalid_time_window");
+        }
+        if (effectiveTo != null && effectiveTo.isBefore(effectiveFrom)) {
+            throw new BadRequestException("HOME_GYM_INVALID_EFFECTIVE_RANGE", "error.home_gym.invalid_effective_range");
+        }
+
+        Set<String> weekdays = normalizeWeekdays(request.getWeekdays());
+        if (weekdays.isEmpty()) {
+            throw new BadRequestException("HOME_GYM_INVALID_WEEKDAY", "error.home_gym.invalid_weekday");
+        }
+        validateWithinWorkHours(gym, weekdays, start, end);
+
+        Set<Long> offered = offeredPackageIds(gym);
+        Set<Long> allowed = new LinkedHashSet<>(distinctIds(request.getAllowedPackageIds()));
+        if (allowed.isEmpty()) {
+            throw new BadRequestException("HOME_GYM_ALLOWED_PACKAGES_REQUIRED",
+                    "error.home_gym.allowed_packages_required");
+        }
+        int minOfferedRank = minimumOfferedRank(offered);
+        for (Long packageId : allowed) {
+            validateGymPackage(packageId, offered, minOfferedRank);
+        }
+
+        Long pricePackageId = request.getPricePackageId();
+        if (pricePackageId == null) {
+            throw new BadRequestException("HOME_GYM_PRICE_PACKAGE_REQUIRED",
+                    "error.home_gym.price_package_required");
+        }
+        validateGymPackage(pricePackageId, offered, minOfferedRank);
+        GymPackagePrice price = packagePriceRepository
+                .findByGymIdAndPackageIdAndEffectiveFrom(gym.getId(), pricePackageId, effectiveFrom)
+                .orElse(null);
+        if (price != null && Boolean.FALSE.equals(price.getIncluded())) {
+            throw new UnprocessableEntityException("HOME_GYM_PRICE_PACKAGE_NOT_INCLUDED",
+                    "error.home_gym.price_package_not_included");
+        }
+
+        return new TimeSlotValues(weekdays, start, end, allowed, pricePackageId);
+    }
+
+    private void validateGymPackage(Long packageId, Set<Long> offered, int minOfferedRank) {
+        if (offered.contains(packageId)) {
+            return;
+        }
+        int rank = ruleService.packageContext(packageId).rank();
+        // Packages above an offered one inherit access to the gym; unknown ranks fail closed.
+        if (rank > 0 && minOfferedRank > 0 && rank >= minOfferedRank) {
+            return;
+        }
+        throw new BadRequestException("HOME_GYM_PACKAGE_NOT_IN_GYM", "error.home_gym.package_not_in_gym");
+    }
+
+    private int minimumOfferedRank(Set<Long> offered) {
+        int min = 0;
+        for (Long packageId : offered) {
+            int rank = ruleService.packageContext(packageId).rank();
+            if (rank > 0 && (min == 0 || rank < min)) {
+                min = rank;
+            }
+        }
+        return min;
+    }
+
+    private void validateWithinWorkHours(Gym gym, Set<String> weekdays, LocalTime start, LocalTime end) {
+        Set<GymWorkHour> workHours = gym.getGeneralWorkHours();
+        if (workHours == null || workHours.isEmpty()) {
+            return;
+        }
+        for (String weekday : weekdays) {
+            GymWorkHour window = workHours.stream()
+                    .filter(hour -> hour != null && hour.getPeriod() != null
+                            && weekday.equals(hour.getPeriod().name()))
+                    .findFirst()
+                    .orElse(null);
+            if (window == null) {
+                throw new BadRequestException("HOME_GYM_OUTSIDE_WORK_HOURS",
+                        "error.home_gym.outside_work_hours");
+            }
+            if (window.getFromTime() != null && start.isBefore(window.getFromTime())) {
+                throw new BadRequestException("HOME_GYM_OUTSIDE_WORK_HOURS",
+                        "error.home_gym.outside_work_hours");
+            }
+            if (window.getToTime() != null && end.isAfter(window.getToTime())) {
+                throw new BadRequestException("HOME_GYM_OUTSIDE_WORK_HOURS",
+                        "error.home_gym.outside_work_hours");
+            }
+        }
+    }
+
+    private void validateNoOverlap(Long gymId, Long excludeRuleId, TimeSlotValues values,
+                                   LocalDate effectiveFrom, LocalDate effectiveTo) {
+        for (GymTimeSlotRule other : timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(gymId)) {
+            if (other.getId() != null && other.getId().equals(excludeRuleId)) {
+                continue;
+            }
+            if (!other.isEffectiveOn(effectiveFrom)) {
+                continue;
+            }
+            if (effectiveTo != null && other.getEffectiveFrom() != null
+                    && other.getEffectiveFrom().isAfter(effectiveTo)) {
+                continue;
+            }
+            if (!daysIntersect(values.weekdays(), other.getWeekdays())) {
+                continue;
+            }
+            LocalTime otherStart = other.getStartTime();
+            LocalTime otherEnd = other.getEndTime();
+            if (otherStart == null || otherEnd == null) {
+                // Legacy all-day rules overlap every window.
+                throw overlap();
+            }
+            // Windows are inclusive on the minute (16:59 ends before 17:00 starts).
+            if (!values.start().isAfter(otherEnd) && !otherStart.isAfter(values.end())) {
+                throw overlap();
+            }
+        }
+    }
+
+    private UnprocessableEntityException overlap() {
+        return new UnprocessableEntityException("TIME_SLOT_OVERLAP", "error.home_gym.time_slot_overlap");
+    }
+
+    private boolean daysIntersect(Set<String> weekdays, String otherWeekdays) {
+        if (otherWeekdays == null || otherWeekdays.isBlank()) {
+            return true;
+        }
+        for (String part : otherWeekdays.split(",")) {
+            if (weekdays.contains(part.trim().toUpperCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private LocalDate resolveEffectiveFrom(LocalDate requested) {
+        LocalDate nextMonthStart = nextMonthStart();
+        if (requested == null) {
+            return nextMonthStart;
+        }
+        LocalDate date = requested.withDayOfMonth(1);
+        return date.isBefore(nextMonthStart) ? nextMonthStart : date;
+    }
+
+    private LocalDate resolveEffectiveTo(LocalDate requested, LocalDate effectiveFrom) {
+        if (requested == null) {
+            return null;
+        }
+        return requested.isBefore(effectiveFrom) ? effectiveFrom : requested;
+    }
+
+    private LocalDate nextMonthStart() {
+        return LocalDate.now(HomeGymRuleService.BAKU).withDayOfMonth(1).plusMonths(1);
+    }
+
+    private void applyTimeSlot(GymTimeSlotRule rule, TimeSlotValues values,
+                               LocalDate effectiveFrom, LocalDate effectiveTo) {
+        rule.setWeekdays(values.weekdays().isEmpty() ? null : String.join(",", values.weekdays()));
+        rule.setStartTime(values.start());
+        rule.setEndTime(values.end());
+        rule.setAllowedPackageIds(new LinkedHashSet<>(values.allowedPackageIds()));
+        rule.setPricePackageId(values.pricePackageId());
+        rule.setEffectiveFrom(effectiveFrom);
+        rule.setEffectiveTo(effectiveTo);
     }
 
     // ---------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------
-
-    private void applyTimeSlot(GymTimeSlotRule rule, HomeGymTimeSlotRequest request, Gym gym,
-                               LocalDate fallbackFrom) {
-        LocalTime start = parseTime(request.getStartTime(), "startTime");
-        LocalTime end = parseTime(request.getEndTime(), "endTime");
-        if ((start == null) != (end == null)) {
-            throw new BadRequestException("HOME_GYM_INVALID_TIME_WINDOW", "error.home_gym.invalid_time_window");
-        }
-        if (start != null && start.equals(end)) {
-            throw new BadRequestException("HOME_GYM_INVALID_TIME_WINDOW", "error.home_gym.invalid_time_window");
-        }
-
-        LocalDate effectiveFrom = request.getEffectiveFrom() != null
-                ? request.getEffectiveFrom() : fallbackFrom;
-        if (request.getEffectiveTo() != null && request.getEffectiveTo().isBefore(effectiveFrom)) {
-            throw new BadRequestException("HOME_GYM_INVALID_EFFECTIVE_RANGE", "error.home_gym.invalid_effective_range");
-        }
-
-        Set<Long> offered = offeredPackageIds(gym);
-        Set<Long> allowed = new LinkedHashSet<>(distinctIds(request.getAllowedPackageIds()));
-        if (!allowed.isEmpty() && !offered.containsAll(allowed)) {
-            throw new BadRequestException("HOME_GYM_PACKAGE_NOT_IN_GYM", "error.home_gym.package_not_in_gym");
-        }
-        if (request.getPricePackageId() != null && !offered.contains(request.getPricePackageId())) {
-            throw new BadRequestException("HOME_GYM_PACKAGE_NOT_IN_GYM", "error.home_gym.package_not_in_gym");
-        }
-
-        rule.setWeekdays(normalizeWeekdays(request.getWeekdays()));
-        rule.setStartTime(start);
-        rule.setEndTime(end);
-        rule.setAllowedPackageIds(allowed);
-        rule.setPricePackageId(request.getPricePackageId());
-        rule.setEffectiveFrom(effectiveFrom);
-        rule.setEffectiveTo(request.getEffectiveTo());
-    }
 
     private HomeGymAdminStateResponse state(Gym gym) {
         return HomeGymAdminStateResponse.builder()
@@ -313,10 +518,12 @@ public class HomeGymAdminService {
     }
 
     private LocalDate effectiveMonth(LocalDate requested) {
-        LocalDate date = requested != null
-                ? requested
-                : LocalDate.now(HomeGymRuleService.BAKU).plusMonths(1);
-        return date.withDayOfMonth(1);
+        LocalDate nextMonthStart = nextMonthStart();
+        if (requested == null) {
+            return nextMonthStart;
+        }
+        LocalDate date = requested.withDayOfMonth(1);
+        return date.isBefore(nextMonthStart) ? nextMonthStart : date;
     }
 
     private void requireNonNegative(Double value, String field) {
@@ -336,11 +543,11 @@ public class HomeGymAdminService {
         }
     }
 
-    private String normalizeWeekdays(List<String> weekdays) {
-        if (weekdays == null || weekdays.isEmpty()) {
-            return null;
-        }
+    private Set<String> normalizeWeekdays(List<String> weekdays) {
         Set<String> normalized = new LinkedHashSet<>();
+        if (weekdays == null || weekdays.isEmpty()) {
+            return normalized;
+        }
         for (String weekday : weekdays) {
             if (weekday == null || weekday.isBlank()) {
                 continue;
@@ -351,7 +558,7 @@ public class HomeGymAdminService {
             }
             normalized.add(value);
         }
-        return normalized.isEmpty() ? null : String.join(",", normalized);
+        return normalized;
     }
 
     private List<String> splitWeekdays(String weekdays) {

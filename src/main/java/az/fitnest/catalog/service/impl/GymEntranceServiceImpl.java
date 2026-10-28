@@ -352,6 +352,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         Long standardVisitsUsed = null;
         Integer standardVisitsLimit = null;
         Long homeVisitsThisPeriod = null;
+        String nextHomeEntryAt = null;
         String unlocksAt = null;
         String renewsAt = null;
         String confirmationType = null;
@@ -471,6 +472,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 standardVisitsUsed = orderResponse.getStandardVisitsUsed();
                 standardVisitsLimit = orderResponse.getStandardVisitsLimit();
                 homeVisitsThisPeriod = orderResponse.getHomeVisitsThisPeriod();
+                nextHomeEntryAt = emptyToNull(orderResponse.getNextHomeEntryAt());
                 unlocksAt = emptyToNull(orderResponse.getUnlocksAt());
                 renewsAt = emptyToNull(orderResponse.getRenewsAt());
                 confirmationType = emptyToNull(orderResponse.getConfirmationType());
@@ -553,6 +555,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .standardVisitsUsed(standardVisitsUsed)
                 .standardVisitsLimit(standardVisitsLimit)
                 .homeVisitsThisPeriod(homeVisitsThisPeriod)
+                .nextHomeEntryAt(nextHomeEntryAt)
                 .unlocksAt(unlocksAt)
                 .renewsAt(renewsAt)
                 .confirmationType(confirmationType)

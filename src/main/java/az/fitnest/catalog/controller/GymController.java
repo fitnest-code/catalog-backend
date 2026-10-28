@@ -181,6 +181,8 @@ public class GymController {
             }
             if ("OTHER_GYMS_LOCKED".equals(response.decision())
                     || "VISIT_LIMIT_EXCEEDED".equals(response.decision())
+                    || "DAILY_LIMIT_REACHED".equals(response.decision())
+                    || "HOME_MONTHLY_LIMIT_REACHED".equals(response.decision())
                     || "TIER_NOT_ALLOWED_AT_THIS_TIME".equals(response.decision())
                     || "SUBSCRIPTION_FROZEN".equals(response.decision())) {
                 return ResponseEntity.status(403).body(response);

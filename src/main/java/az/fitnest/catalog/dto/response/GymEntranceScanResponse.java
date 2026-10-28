@@ -45,6 +45,8 @@ public record GymEntranceScanResponse(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     Long homeVisitsThisPeriod,
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    String nextHomeEntryAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     String unlocksAt,
     @JsonInclude(JsonInclude.Include.NON_NULL)
     String renewsAt,
