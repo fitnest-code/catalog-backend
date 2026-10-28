@@ -57,6 +57,36 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
     }
 
     @Override
+    public void hasEligibleHomeGym(HasEligibleHomeGymRequest request,
+                                   StreamObserver<HasEligibleHomeGymResponse> responseObserver) {
+        try {
+            Long packageId = request.getPackageId() > 0 ? request.getPackageId() : null;
+            List<Long> packageIds = homeGymRuleService.eligiblePackageIds(packageId);
+            // The reminder is only useful when the package has at least one selectable gym
+            // (R1: master switch on and package-level price override not disabled).
+            var ids = gymRepository.findHomeGymIds(null, packageIds,
+                    org.springframework.data.domain.PageRequest.of(0, 200)).getContent();
+            boolean eligible = false;
+            for (Long gymId : ids) {
+                var gym = gymRepository.findWithDetailsById(gymId).orElse(null);
+                if (gym != null && homeGymRuleService.isHomeEligible(gym, packageId)) {
+                    eligible = true;
+                    break;
+                }
+            }
+            responseObserver.onNext(HasEligibleHomeGymResponse.newBuilder()
+                    .setEligible(eligible)
+                    .build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to check eligible home gyms: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
     public void getActivePartnersKpi(
             GetActivePartnersKpiRequest request,
             StreamObserver<ActivePartnersKpiResponse> responseObserver

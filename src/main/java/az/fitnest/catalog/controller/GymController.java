@@ -177,8 +177,12 @@ public class GymController {
         try {
             var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent,
                     confirmation, confirmationToken, qrScanId);
-            if ("CONFIRMATION_REQUIRED".equals(response.decision())) {
+            if ("CONFIRMATION_REQUIRED".equals(response.decision())
+                    || "QR_SCAN_CONFLICT".equals(response.decision())) {
                 return ResponseEntity.status(409).body(response);
+            }
+            if ("INVALID_QR_SCAN_ID".equals(response.decision())) {
+                return ResponseEntity.status(400).body(response);
             }
             if ("OTHER_GYMS_LOCKED".equals(response.decision())
                     || "VISIT_LIMIT_EXCEEDED".equals(response.decision())
