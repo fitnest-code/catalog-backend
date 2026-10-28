@@ -328,7 +328,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     @Transactional
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
                                                      String userAgent, String confirmation,
-                                                     String confirmationToken) {
+                                                     String confirmationToken, String qrScanId) {
         String platform = PlatformUtil.detectPlatform(userAgent);
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
@@ -461,7 +461,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                                 resolution != null ? resolution.singlePrice() : null,
                                 resolution != null ? resolution.unlimitedPrice() : null,
                                 gym.getName(),
-                                resolution != null ? resolution.availableHours() : null);
+                                resolution != null ? resolution.availableHours() : null,
+                                qrScanId);
 
                 decision = orderResponse.getDecision() != null && !orderResponse.getDecision().isBlank()
                         ? orderResponse.getDecision() : null;

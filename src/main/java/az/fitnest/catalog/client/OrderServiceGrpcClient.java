@@ -43,7 +43,7 @@ public class OrderServiceGrpcClient {
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public void checkIn(Long userId, Long gymId, boolean consumeFrozen) {
-        checkIn(userId, gymId, consumeFrozen, null, null, null, null, null, null, null, null);
+        checkIn(userId, gymId, consumeFrozen, null, null, null, null, null, null, null, null, null);
     }
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
@@ -51,7 +51,8 @@ public class OrderServiceGrpcClient {
                                                         String confirmation, String confirmationToken,
                                                         Long timeSlotRuleId, String pricePackage,
                                                         Double singlePrice, Double unlimitedPrice,
-                                                        String gymName, String availableHours) {
+                                                        String gymName, String availableHours,
+                                                        String qrScanId) {
         az.fitnest.order.grpc.CheckInRequest.Builder builder = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
@@ -79,6 +80,9 @@ public class OrderServiceGrpcClient {
         }
         if (availableHours != null) {
             builder.setAvailableHours(availableHours);
+        }
+        if (qrScanId != null && !qrScanId.isBlank()) {
+            builder.setQrScanId(qrScanId);
         }
 
         return blockingStub

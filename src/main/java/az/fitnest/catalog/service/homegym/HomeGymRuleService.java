@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -306,22 +307,25 @@ public class HomeGymRuleService {
         return false;
     }
 
-    private boolean matchesTime(GymTimeSlotRule rule, LocalTime now) {
+    boolean matchesTime(GymTimeSlotRule rule, LocalTime now) {
+        // R14/T-12: rules are stored with minute precision (e.g. 00:01-16:59), so a scan at
+        // 16:59:59 belongs to the 16:59 minute and must not be rejected by the seconds part.
+        LocalTime minute = now.truncatedTo(ChronoUnit.MINUTES);
         LocalTime start = rule.getStartTime();
         LocalTime end = rule.getEndTime();
         if (start == null && end == null) {
             return true;
         }
         if (start == null) {
-            return !now.isAfter(end);
+            return !minute.isAfter(end);
         }
         if (end == null) {
-            return !now.isBefore(start);
+            return !minute.isBefore(start);
         }
         if (!start.isAfter(end)) {
-            return !now.isBefore(start) && !now.isAfter(end);
+            return !minute.isBefore(start) && !minute.isAfter(end);
         }
-        return !now.isBefore(start) || !now.isAfter(end);
+        return !minute.isBefore(start) || !minute.isAfter(end);
     }
 
     private boolean isAllDay(GymTimeSlotRule rule) {

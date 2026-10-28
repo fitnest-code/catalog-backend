@@ -289,7 +289,8 @@ public class HomeGymAdminService {
         }
         validateGymPackage(pricePackageId, offered, minOfferedRank);
         GymPackagePrice price = packagePriceRepository
-                .findByGymIdAndPackageIdAndEffectiveFrom(gym.getId(), pricePackageId, effectiveFrom)
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        gym.getId(), pricePackageId, effectiveFrom)
                 .orElse(null);
         if (price != null && Boolean.FALSE.equals(price.getIncluded())) {
             throw new UnprocessableEntityException("HOME_GYM_PRICE_PACKAGE_NOT_INCLUDED",
@@ -575,11 +576,17 @@ public class HomeGymAdminService {
     }
 
     private Map<String, String> requireLocalized(Map<String, String> input, String field) {
+        int maxLength = "title".equals(field) ? 65 : 240;
         Map<String, String> normalized = new LinkedHashMap<>();
         if (input != null) {
             input.forEach((key, value) -> {
                 if (key != null && value != null && !value.isBlank()) {
-                    normalized.put(key.trim().toUpperCase(Locale.ROOT), value.trim());
+                    String text = value.trim();
+                    if (text.length() > maxLength) {
+                        throw new BadRequestException("HOME_GYM_TEXT_TOO_LONG",
+                                "error.home_gym.text_too_long");
+                    }
+                    normalized.put(key.trim().toUpperCase(Locale.ROOT), text);
                 }
             });
         }

@@ -114,6 +114,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final NotificationsServiceGrpcClient notificationsServiceClient;
     private final UserServiceGrpcClient userServiceGrpcClient;
     private final az.fitnest.catalog.service.GymActivationNotifier gymActivationNotifier;
+    private final az.fitnest.catalog.service.homegym.HomeGymPackageEventPublisher homeGymPackageEventPublisher;
 
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
@@ -633,8 +634,13 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteAllGymSubscriptions(Long gymId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Set<Long> removedPackageIds = gym.getSubscriptions().stream()
+                .map(GymSubscription::getPackageId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
         gym.getSubscriptions().clear();
         gymRepository.save(gym);
+        homeGymPackageEventPublisher.packageRemoved(gym.getId(), gym.getName(), removedPackageIds);
     }
 
     @Transactional
@@ -642,11 +648,18 @@ public class GymWriteServiceImpl implements GymWriteService {
     public void deleteGymSubscriptionById(Long gymId, Long subscriptionId) {
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
-        boolean removed = gym.getSubscriptions().removeIf(s -> s.getId().equals(subscriptionId));
-        if (!removed) {
+        GymSubscription removedSubscription = gym.getSubscriptions().stream()
+                .filter(s -> s.getId().equals(subscriptionId))
+                .findFirst()
+                .orElse(null);
+        if (removedSubscription == null) {
             throw new ResourceNotFoundException("SUBSCRIPTION_NOT_FOUND", "error.subscription_not_found");
         }
+        gym.getSubscriptions().remove(removedSubscription);
         gymRepository.save(gym);
+        // F-04: removing a package from a gym runs the R18 flow for its home-gym subscribers.
+        homeGymPackageEventPublisher.packageRemoved(gym.getId(), gym.getName(),
+                Collections.singletonList(removedSubscription.getPackageId()));
     }
 
     @Transactional
@@ -881,7 +894,9 @@ public class GymWriteServiceImpl implements GymWriteService {
     })
     public void updateGymSubscriptions(Long gymId, GymCreateStep6Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Set<Long> before = packageIds(gym);
         updateGymSubscriptionsInternal(gym, request);
+        publishRemovedPackages(gym, before);
     }
 
     private Map<Integer, String> uploadServiceIcons(List<MultipartFile> serviceIcons) {
@@ -2267,7 +2282,29 @@ public class GymWriteServiceImpl implements GymWriteService {
     })
     public void updateGymSubscriptionsV2(Long gymId, GymCreateStep6RequestV2 request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        Set<Long> before = packageIds(gym);
         updateGymSubscriptionsInternalV2(gym, request, Collections.emptyMap());
+        publishRemovedPackages(gym, before);
+    }
+
+    private Set<Long> packageIds(Gym gym) {
+        if (gym.getSubscriptions() == null) {
+            return Collections.emptySet();
+        }
+        return gym.getSubscriptions().stream()
+                .map(GymSubscription::getPackageId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+    }
+
+    /** F-04: packages that disappeared in an update run the R18 flow in order-backend. */
+    private void publishRemovedPackages(Gym gym, Set<Long> before) {
+        if (before == null || before.isEmpty()) {
+            return;
+        }
+        Set<Long> removed = new java.util.LinkedHashSet<>(before);
+        removed.removeAll(packageIds(gym));
+        homeGymPackageEventPublisher.packageRemoved(gym.getId(), gym.getName(), removed);
     }
 
     @Override

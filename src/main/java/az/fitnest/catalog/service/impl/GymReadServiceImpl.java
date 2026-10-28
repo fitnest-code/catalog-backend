@@ -1080,9 +1080,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Transactional
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
-            String userAgent, String confirmation, String confirmationToken) {
+            String userAgent, String confirmation, String confirmationToken, String qrScanId) {
         return gymEntranceService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent,
-                confirmation, confirmationToken);
+                confirmation, confirmationToken, qrScanId);
     }
 
     @Transactional(readOnly = true)

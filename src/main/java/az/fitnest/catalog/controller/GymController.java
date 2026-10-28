@@ -172,10 +172,11 @@ public class GymController {
             @RequestParam Double lng,
             @RequestParam(value = "confirmation", required = false) String confirmation,
             @RequestParam(value = "confirmationToken", required = false) String confirmationToken,
+            @RequestParam(value = "qrScanId", required = false) String qrScanId,
             @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
             var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent,
-                    confirmation, confirmationToken);
+                    confirmation, confirmationToken, qrScanId);
             if ("CONFIRMATION_REQUIRED".equals(response.decision())) {
                 return ResponseEntity.status(409).body(response);
             }
