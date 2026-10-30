@@ -226,6 +226,15 @@ public class Gym
     @Builder.Default
     private Integer creationStep = 1;
 
+    /**
+     * Master switch for R18: whether this gym can be selected as a home gym.
+     * Disabling it does not remove existing selections; order expires them at the
+     * end of the current subscription month.
+     */
+    @Column(name = "home_eligible")
+    @Builder.Default
+    private Boolean homeEligible = true;
+
     public Long getGymId() {
         return getId();
     }

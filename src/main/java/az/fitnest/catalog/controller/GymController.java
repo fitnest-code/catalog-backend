@@ -170,9 +170,28 @@ public class GymController {
             @RequestParam String qrCodeValue,
             @RequestParam Double lat,
             @RequestParam Double lng,
+            @RequestParam(value = "confirmation", required = false) String confirmation,
+            @RequestParam(value = "confirmationToken", required = false) String confirmationToken,
+            @RequestParam(value = "qrScanId", required = false) String qrScanId,
             @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent);
+            var response = gymReadService.scanGymQrEntrance(principal, qrCodeValue, lat, lng, userAgent,
+                    confirmation, confirmationToken, qrScanId);
+            if ("CONFIRMATION_REQUIRED".equals(response.decision())
+                    || "QR_SCAN_CONFLICT".equals(response.decision())) {
+                return ResponseEntity.status(409).body(response);
+            }
+            if ("INVALID_QR_SCAN_ID".equals(response.decision())) {
+                return ResponseEntity.status(400).body(response);
+            }
+            if ("OTHER_GYMS_LOCKED".equals(response.decision())
+                    || "VISIT_LIMIT_EXCEEDED".equals(response.decision())
+                    || "DAILY_LIMIT_REACHED".equals(response.decision())
+                    || "HOME_MONTHLY_LIMIT_REACHED".equals(response.decision())
+                    || "TIER_NOT_ALLOWED_AT_THIS_TIME".equals(response.decision())
+                    || "SUBSCRIPTION_FROZEN".equals(response.decision())) {
+                return ResponseEntity.status(403).body(response);
+            }
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();

@@ -23,6 +23,68 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
     private final GymAdminRepository gymAdminRepository;
     private final GymRepository gymRepository;
     private final az.fitnest.catalog.repository.ReservationRepository reservationRepository;
+    private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
+
+    @Override
+    public void getHomeGymInfo(GetHomeGymInfoRequest request,
+                               StreamObserver<GetHomeGymInfoResponse> responseObserver) {
+        try {
+            var gym = gymRepository.findWithDetailsById(request.getGymId()).orElse(null);
+            if (gym == null) {
+                responseObserver.onNext(GetHomeGymInfoResponse.newBuilder().setFound(false).build());
+                responseObserver.onCompleted();
+                return;
+            }
+            Long packageId = request.getPackageId() > 0 ? request.getPackageId() : null;
+            var packageContext = homeGymRuleService.packageContext(packageId);
+            boolean supportsPackage = homeGymRuleService.supportsPackage(gym, packageContext);
+            boolean homeEligible = homeGymRuleService.isHomeEligible(gym, packageId);
+            String availableHours = homeGymRuleService.availableHours(gym, packageContext);
+            responseObserver.onNext(GetHomeGymInfoResponse.newBuilder()
+                    .setFound(true)
+                    .setName(gym.getName() != null ? gym.getName() : "")
+                    .setSupportsPackage(supportsPackage)
+                    .setHomeEligible(homeEligible)
+                    .setAvailableHours(availableHours != null ? availableHours : "")
+                    .build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to load home-gym info: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void hasEligibleHomeGym(HasEligibleHomeGymRequest request,
+                                   StreamObserver<HasEligibleHomeGymResponse> responseObserver) {
+        try {
+            Long packageId = request.getPackageId() > 0 ? request.getPackageId() : null;
+            List<Long> packageIds = homeGymRuleService.eligiblePackageIds(packageId);
+            // The reminder is only useful when the package has at least one selectable gym
+            // (R1: master switch on and package-level price override not disabled).
+            var ids = gymRepository.findHomeGymIds(null, packageIds,
+                    org.springframework.data.domain.PageRequest.of(0, 200)).getContent();
+            boolean eligible = false;
+            for (Long gymId : ids) {
+                var gym = gymRepository.findWithDetailsById(gymId).orElse(null);
+                if (gym != null && homeGymRuleService.isHomeEligible(gym, packageId)) {
+                    eligible = true;
+                    break;
+                }
+            }
+            responseObserver.onNext(HasEligibleHomeGymResponse.newBuilder()
+                    .setEligible(eligible)
+                    .build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to check eligible home gyms: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+        }
+    }
 
     @Override
     public void getActivePartnersKpi(

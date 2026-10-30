@@ -28,7 +28,9 @@ public interface GymReadService {
     List<GymSubscriptionCountResponse> getGymCountBySubscription();
     double calculateDistanceRaw(double lat1, double lng1, double lat2, double lng2);
     String getGymQrUrl(Long gymId);
-    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng, String userAgent);
+    GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
+                                              String userAgent, String confirmation, String confirmationToken,
+                                              String qrScanId);
     List<GymEntranceHistoryAdminResponse> getGymEntranceHistory(Long gymId);
     az.fitnest.catalog.dto.response.GymAnalyticsResponse getGymAnalytics(Long gymId, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, String status, String sort, int page, int pageSize);
     az.fitnest.catalog.dto.response.GymInfoAdminResponse getGymDetailsAdmin(Long gymId);

@@ -53,6 +53,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private final GymQrCodeService gymQrCodeService;
     private final MessageSource messageSource;
     private final az.fitnest.catalog.service.TranslationService translationService;
+    private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
 
     private String getUserLanguage(Long userId) {
         try {
@@ -247,6 +248,16 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .build();
     }
 
+    private static final java.util.Set<String> FROZEN_STATUSES = java.util.Set.of(
+            "frozen", "dondurulub", "donmuş", "donmus", "заморожен", "■■■■■■■■■");
+
+    private boolean isSubscriptionStatusFrozen(String status) {
+        if (status == null || status.isEmpty()) {
+            return false;
+        }
+        return FROZEN_STATUSES.contains(status.toLowerCase().trim());
+    }
+
     /**
      * Check if a subscription status from the order-backend gRPC service represents an active subscription.
      * The gRPC response may contain translated status values (e.g. "Aktiv" in AZ, "Активный" in RU)
@@ -256,8 +267,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private boolean isSubscriptionStatusActive(String status) {
         if (status == null || status.isEmpty()) return false;
         String lower = status.toLowerCase().trim();
-        java.util.Set<String> frozenVariants = java.util.Set.of("frozen", "dondurulub", "■■■■■■■■■", "заморожен", "donmuş");
-        if (frozenVariants.contains(lower)) return false;
+        if (isSubscriptionStatusFrozen(lower)) return false;
         return !lower.equals("none") && !lower.equals("cancelled") && !lower.equals("expired");
     }
 
@@ -317,7 +327,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     @Override
     @Transactional
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
-                                                     String userAgent) {
+                                                     String userAgent, String confirmation,
+                                                     String confirmationToken, String qrScanId) {
         String platform = PlatformUtil.detectPlatform(userAgent);
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
@@ -333,118 +344,74 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         boolean allowed = true;
         String reason = null;
         String status = "ELIGIBLE";
+        String decision = null;
+        String messageKey = null;
+        String entryType = null;
+        Long visitId = null;
+        Long homeGymId = null;
+        Long standardVisitsUsed = null;
+        Integer standardVisitsLimit = null;
+        Long homeVisitsThisPeriod = null;
+        String nextHomeEntryAt = null;
+        String unlocksAt = null;
+        String renewsAt = null;
+        String confirmationType = null;
+        String returnedConfirmationToken = null;
+        String confirmationExpiresAt = null;
+        Long targetGymId = null;
+        String targetGymName = null;
+        String homeGymName = null;
+        String availableHours = null;
+        String packageName = null;
 
         Double amount = 0.0;
         Long packageId = null;
-        az.fitnest.order.grpc.ActiveSubscriptionResponse subResp = null;
         boolean isTestUser = UserContext.isTestUser();
+        az.fitnest.catalog.service.homegym.HomeGymRuleService.CheckInResolution resolution = null;
+
         if (isTestUser) {
-            allowed = true;
-            status = "ELIGIBLE";
+            decision = "ENTERED_STANDARD";
         } else {
             try {
-                subResp = orderServiceGrpcClient.getActiveSubscription(userId);
-            String subStatus = subResp.getSubscriptionStatus();
-            if (!isSubscriptionStatusActive(subStatus)) {
+                az.fitnest.order.grpc.ActiveSubscriptionResponse subResp =
+                        orderServiceGrpcClient.getActiveSubscription(userId);
+                String subStatus = subResp.getSubscriptionStatus();
+                if (isSubscriptionStatusFrozen(subStatus)) {
+                    allowed = false;
+                    reason = "SUBSCRIPTION_FROZEN";
+                    decision = "SUBSCRIPTION_FROZEN";
+                    messageKey = "error.subscription_frozen";
+                } else if (!isSubscriptionStatusActive(subStatus)) {
+                    allowed = false;
+                    reason = "NO_ACTIVE_SUBSCRIPTION";
+                } else if (subResp.getPackageId() <= 0) {
+                    allowed = false;
+                    reason = "NO_ACTIVE_SUBSCRIPTION";
+                } else {
+                    long userPackageId = subResp.getPackageId();
+                    packageId = userPackageId;
+                    var packageContext = homeGymRuleService.packageContext(userPackageId);
+                    packageName = packageContext.name();
+                    if (!homeGymRuleService.supportsPackage(gym, packageContext)) {
+                        allowed = false;
+                        reason = "GYM_NOT_SUPPORTED";
+                    } else {
+                        java.time.LocalDateTime nowBaku =
+                                java.time.LocalDateTime.now(ZoneId.of("Asia/Baku"));
+                        resolution = homeGymRuleService.resolveForCheckIn(gym, packageContext, nowBaku);
+                        availableHours = resolution.availableHours();
+                        if (!resolution.allowed()) {
+                            allowed = false;
+                            reason = resolution.reason();
+                            decision = "TIER_NOT_ALLOWED_AT_THIS_TIME";
+                        } else {
+                            amount = resolution.singlePrice() != null ? resolution.singlePrice() : 0.0;
+                        }
+                    }
+                }
+            } catch (Exception e) {
                 allowed = false;
                 reason = "NO_ACTIVE_SUBSCRIPTION";
-            } else if (subResp.getRemainingLimit() <= 0) {
-                allowed = false;
-                reason = "VISIT_LIMIT_EXCEEDED";
-            } else {
-                long userPackageId = subResp.getPackageId();
-                packageId = userPackageId;
-                boolean checkHierarchySuccess = false;
-                try {
-                    List<Long> allPackageIds = new ArrayList<>();
-                    allPackageIds.add(userPackageId);
-                    if (gym.getSubscriptions() != null) {
-                        for (var sub : gym.getSubscriptions()) {
-                            if (sub.getPackageId() != null) {
-                                allPackageIds.add(sub.getPackageId());
-                            }
-                        }
-                    }
-
-                    Map<Long, String> packageNamesMap = new java.util.HashMap<>();
-                    List<Long> missingPackageIds = new ArrayList<>();
-                    for (Long pkgId : allPackageIds) {
-                        String cachedName = PACKAGE_NAME_CACHE.get(pkgId);
-                        if (cachedName != null) {
-                            packageNamesMap.put(pkgId, cachedName);
-                        } else {
-                            missingPackageIds.add(pkgId);
-                        }
-                    }
-
-                    if (!missingPackageIds.isEmpty()) {
-                        List<az.fitnest.order.grpc.PackageNameInfo> packageNames = orderServiceGrpcClient.getPackageNamesByIds(missingPackageIds);
-                        for (var info : packageNames) {
-                            PACKAGE_NAME_CACHE.put(info.getPackageId(), info.getName());
-                            packageNamesMap.put(info.getPackageId(), info.getName());
-                        }
-                    }
-
-                    String userPackageName = packageNamesMap.get(userPackageId);
-                    int userRank = getPackageRank(userPackageName);
-
-                    List<GymSubscription> eligibleSubscriptions = new ArrayList<>();
-                    if (gym.getSubscriptions() != null) {
-                        for (var sub : gym.getSubscriptions()) {
-                            if (sub.getPackageId() != null) {
-                                String gymPackageName = packageNamesMap.get(sub.getPackageId());
-                                if (gymPackageName != null) {
-                                    int gymRank = getPackageRank(gymPackageName);
-                                    if (userRank >= gymRank) {
-                                        eligibleSubscriptions.add(sub);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (eligibleSubscriptions.isEmpty()) {
-                        allowed = false;
-                        reason = "GYM_NOT_SUPPORTED";
-                        checkHierarchySuccess = true;
-                    } else {
-                        GymSubscription bestSub = null;
-                        int bestRank = Integer.MAX_VALUE;
-                        for (var sub : eligibleSubscriptions) {
-                            String name = packageNamesMap.get(sub.getPackageId());
-                            int rank = getPackageRank(name);
-                            if (rank < bestRank) {
-                                bestRank = rank;
-                                bestSub = sub;
-                            }
-                        }
-                        if (bestSub != null) {
-                            amount = bestSub.getDailyPrice() != null ? bestSub.getDailyPrice() : 0.0;
-                            packageId = bestSub.getPackageId();
-                            checkHierarchySuccess = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    // Fallback to exact matching
-                }
-
-                if (!checkHierarchySuccess) {
-                    var matchedSub = gym.getSubscriptions() != null ? gym.getSubscriptions().stream()
-                            .filter(sub -> sub.getPackageId() != null && sub.getPackageId().equals(userPackageId))
-                            .findFirst() : java.util.Optional.<GymSubscription>empty();
-
-                    if (matchedSub.isEmpty()) {
-                        allowed = false;
-                        reason = "GYM_NOT_SUPPORTED";
-                    } else {
-                        amount = matchedSub.get().getDailyPrice() != null ? matchedSub.get().getDailyPrice() : 0.0;
-                        packageId = matchedSub.get().getPackageId();
-                    }
-                }
-            }
-        } catch (Exception e) {
-            allowed = false;
-            reason = "NO_ACTIVE_SUBSCRIPTION";
             }
         }
 
@@ -486,9 +453,55 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                     targetReservation = activeReservations.get(0);
                 }
 
-                orderServiceGrpcClient.checkIn(userId, gymId, consumeFrozen);
+                az.fitnest.order.grpc.CheckInResponse orderResponse =
+                        orderServiceGrpcClient.checkIn(userId, gymId, consumeFrozen, confirmation,
+                                confirmationToken,
+                                resolution != null ? resolution.ruleId() : null,
+                                resolution != null ? resolution.pricePackageName() : null,
+                                resolution != null ? resolution.singlePrice() : null,
+                                resolution != null ? resolution.unlimitedPrice() : null,
+                                gym.getName(),
+                                resolution != null ? resolution.availableHours() : null,
+                                qrScanId);
 
-                if (targetReservation != null) {
+                decision = orderResponse.getDecision() != null && !orderResponse.getDecision().isBlank()
+                        ? orderResponse.getDecision() : null;
+                messageKey = emptyToNull(orderResponse.getMessageKey());
+                entryType = emptyToNull(orderResponse.getEntryType());
+                visitId = orderResponse.getVisitId() > 0 ? orderResponse.getVisitId() : null;
+                homeGymId = orderResponse.getHomeGymId() > 0 ? orderResponse.getHomeGymId() : null;
+                standardVisitsUsed = orderResponse.getStandardVisitsUsed();
+                standardVisitsLimit = orderResponse.getStandardVisitsLimit();
+                homeVisitsThisPeriod = orderResponse.getHomeVisitsThisPeriod();
+                nextHomeEntryAt = emptyToNull(orderResponse.getNextHomeEntryAt());
+                unlocksAt = emptyToNull(orderResponse.getUnlocksAt());
+                renewsAt = emptyToNull(orderResponse.getRenewsAt());
+                confirmationType = emptyToNull(orderResponse.getConfirmationType());
+                returnedConfirmationToken = emptyToNull(orderResponse.getConfirmationToken());
+                confirmationExpiresAt = emptyToNull(orderResponse.getConfirmationExpiresAt());
+                targetGymId = orderResponse.getTargetGymId() > 0 ? orderResponse.getTargetGymId() : null;
+                homeGymName = emptyToNull(orderResponse.getHomeGymName());
+                if (orderResponse.getAvailableHours() != null
+                        && !orderResponse.getAvailableHours().isBlank()) {
+                    availableHours = orderResponse.getAvailableHours();
+                }
+                if (orderResponse.getGymName() != null && !orderResponse.getGymName().isBlank()) {
+                    targetGymName = orderResponse.getGymName();
+                }
+
+                boolean entered = decision != null && decision.startsWith("ENTERED_");
+                if (decision == null) {
+                    allowed = false;
+                    reason = "CHECKIN_FAILED";
+                    decision = "CHECKIN_FAILED";
+                } else if (!entered) {
+                    allowed = false;
+                    reason = decision;
+                } else {
+                    allowed = true;
+                }
+
+                if (entered && targetReservation != null) {
                     targetReservation.setAttended(true);
                     if (targetReservation.getStatus() == ReservationStatus.PENDING) {
                         targetReservation.setStatus(ReservationStatus.APPROVED);
@@ -500,6 +513,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 allowed = false;
                 status = "UNSUCCESSFUL";
                 reason = "CHECKIN_FAILED";
+                decision = "CHECKIN_FAILED";
             }
         }
 
@@ -525,7 +539,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         String gymAddress = addr != null ? addr.getAddressText() : null;
 
         return GymEntranceScanResponse.builder()
-                .gymName(allowed ? localizedName : null)
+                .gymName(localizedName)
                 .gymAddress(allowed ? gymAddress : null)
                 .enterDate(allowed ? java.time.LocalDate.now(ZoneId.of("Asia/Baku")).toString() : null)
                 .enterHour(allowed
@@ -534,8 +548,32 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .isAllowed(allowed)
                 .status(status)
                 .reason(reason)
+                .decision(decision)
+                .messageKey(messageKey)
+                .entryType(entryType)
+                .visitId(visitId)
+                .homeGymId(homeGymId)
+                .standardVisitsUsed(standardVisitsUsed)
+                .standardVisitsLimit(standardVisitsLimit)
+                .homeVisitsThisPeriod(homeVisitsThisPeriod)
+                .nextHomeEntryAt(nextHomeEntryAt)
+                .unlocksAt(unlocksAt)
+                .renewsAt(renewsAt)
+                .confirmationType(confirmationType)
+                .confirmationToken(returnedConfirmationToken)
+                .confirmationExpiresAt(confirmationExpiresAt)
+                .targetGymId(targetGymId)
+                .targetGymName(targetGymName)
+                .homeGymName(homeGymName)
+                .availableHours(availableHours)
+                .packageName(packageName)
                 .build();
     }
+
+    private String emptyToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -604,6 +642,13 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         try {
             subResp = orderServiceGrpcClient.getActiveSubscription(userId);
             String status = subResp.getSubscriptionStatus();
+            if (isSubscriptionStatusFrozen(status)) {
+                return GymEntranceEligibilityResponse.builder()
+                        .allowed(false)
+                        .status("INELIGIBLE")
+                        .reason(localizeEligibilityReason("SUBSCRIPTION_FROZEN"))
+                        .build();
+            }
             if (!isSubscriptionStatusActive(status)) {
                 return GymEntranceEligibilityResponse.builder()
                         .allowed(false)
@@ -635,6 +680,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private String localizeEligibilityReason(String reasonCode) {
         String messageKey = switch (reasonCode) {
             case "NO_ACTIVE_SUBSCRIPTION" -> "error.no_active_subscription";
+            case "SUBSCRIPTION_FROZEN" -> "error.subscription_frozen";
             case "VISIT_LIMIT_EXCEEDED" -> "error.visit_limit_exceeded";
             default -> null;
         };

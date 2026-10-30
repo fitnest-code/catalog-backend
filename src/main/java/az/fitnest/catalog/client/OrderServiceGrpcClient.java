@@ -43,19 +43,60 @@ public class OrderServiceGrpcClient {
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
     public void checkIn(Long userId, Long gymId, boolean consumeFrozen) {
-        az.fitnest.order.grpc.CheckInRequest request = az.fitnest.order.grpc.CheckInRequest.newBuilder()
+        checkIn(userId, gymId, consumeFrozen, null, null, null, null, null, null, null, null, null);
+    }
+
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "orderService")
+    public az.fitnest.order.grpc.CheckInResponse checkIn(Long userId, Long gymId, boolean consumeFrozen,
+                                                        String confirmation, String confirmationToken,
+                                                        Long timeSlotRuleId, String pricePackage,
+                                                        Double singlePrice, Double unlimitedPrice,
+                                                        String gymName, String availableHours,
+                                                        String qrScanId) {
+        az.fitnest.order.grpc.CheckInRequest.Builder builder = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
-                .setConsumeFrozen(consumeFrozen)
-                .build();
-
-        az.fitnest.order.grpc.CheckInResponse response = blockingStub
-                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
-                .checkIn(request);
-
-        if (!response.getSuccess()) {
-            throw new RuntimeException("error.rpc_failed");
+                .setConsumeFrozen(consumeFrozen);
+        if (confirmation != null) {
+            builder.setConfirmation(confirmation);
         }
+        if (confirmationToken != null) {
+            builder.setConfirmationToken(confirmationToken);
+        }
+        if (timeSlotRuleId != null) {
+            builder.setTimeSlotRuleId(timeSlotRuleId);
+        }
+        if (pricePackage != null) {
+            builder.setPricePackage(pricePackage);
+        }
+        if (singlePrice != null) {
+            builder.setSinglePrice(singlePrice);
+        }
+        if (unlimitedPrice != null) {
+            builder.setUnlimitedPrice(unlimitedPrice);
+        }
+        if (gymName != null) {
+            builder.setGymName(gymName);
+        }
+        if (availableHours != null) {
+            builder.setAvailableHours(availableHours);
+        }
+        if (qrScanId != null && !qrScanId.isBlank()) {
+            builder.setQrScanId(qrScanId);
+        }
+
+        return blockingStub
+                .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS)
+                .checkIn(builder.build());
+    }
+
+    public az.fitnest.order.grpc.GetHomeGymContextResponse getHomeGymContext(Long userId, Long subscriptionId) {
+        az.fitnest.order.grpc.GetHomeGymContextRequest request =
+                az.fitnest.order.grpc.GetHomeGymContextRequest.newBuilder()
+                        .setUserId(userId != null ? userId : 0L)
+                        .setSubscriptionId(subscriptionId != null ? subscriptionId : 0L)
+                        .build();
+        return userSubscriptionStub.getHomeGymContext(request);
     }
 
     public List<az.fitnest.order.grpc.PackageNameInfo> getPackageNamesByIds(List<Long> packageIds) {

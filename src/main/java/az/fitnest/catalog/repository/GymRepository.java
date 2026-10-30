@@ -368,4 +368,43 @@ public interface GymRepository
     List<Gym> findActiveWithCategoriesByIdIn(
             @org.springframework.data.repository.query.Param("ids") Collection<Long> ids,
             @org.springframework.data.repository.query.Param("status") GymStatus status);
+
+    // Home-gym listing (R1): only active gyms whose master switch is on and that
+    // support at least one package from the subscriber's hierarchy.
+    @Query(
+            value = "SELECT g.id FROM Gym g " +
+                    "WHERE g.status = az.fitnest.catalog.model.enums.GymStatus.ACTIVE " +
+                    "AND g.homeEligible = true " +
+                    "AND EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId IN :packageIds) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) " +
+                    "OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
+                    // Stable ordering keeps pagination deterministic.
+                    "ORDER BY LOWER(g.name), g.id"
+    )
+    org.springframework.data.domain.Page<Long> findHomeGymIds(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("packageIds") List<Long> packageIds,
+            org.springframework.data.domain.Pageable pageable);
+
+    @Query(
+            value = "SELECT g.id FROM gyms g " +
+                    "WHERE g.status = 'ACTIVE' AND g.home_eligible = true " +
+                    "AND EXISTS (SELECT 1 FROM gym_subscriptions gs WHERE gs.gym_id = g.id AND gs.package_id IN :packageIds) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')) " +
+                    "OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%'))) " +
+                    "GROUP BY g.id, g.latitude, g.longitude " +
+                    "ORDER BY (6371 * acos(least(1, cos(radians(:userLat)) * cos(radians(g.latitude)) * cos(radians(g.longitude) - radians(:userLng)) + sin(radians(:userLat)) * sin(radians(g.latitude))))) ASC, g.id ASC",
+            countQuery = "SELECT count(DISTINCT g.id) FROM gyms g " +
+                    "WHERE g.status = 'ACTIVE' AND g.home_eligible = true " +
+                    "AND EXISTS (SELECT 1 FROM gym_subscriptions gs WHERE gs.gym_id = g.id AND gs.package_id IN :packageIds) " +
+                    "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')) " +
+                    "OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))",
+            nativeQuery = true
+    )
+    org.springframework.data.domain.Page<Long> findClosestHomeGymIds(
+            @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("packageIds") List<Long> packageIds,
+            @org.springframework.data.repository.query.Param("userLat") Double userLat,
+            @org.springframework.data.repository.query.Param("userLng") Double userLng,
+            org.springframework.data.domain.Pageable pageable);
 }
