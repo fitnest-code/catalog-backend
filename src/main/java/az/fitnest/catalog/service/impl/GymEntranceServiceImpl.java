@@ -14,6 +14,7 @@ import az.fitnest.catalog.model.enums.ReservationStatus;
 import az.fitnest.catalog.repository.*;
 import az.fitnest.catalog.service.GymEntranceService;
 import az.fitnest.catalog.service.GymQrCodeService;
+import az.fitnest.catalog.service.visithistory.VisitAttemptEventPublisher;
 import az.fitnest.catalog.util.PlatformUtil;
 import az.fitnest.catalog.util.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private final MessageSource messageSource;
     private final az.fitnest.catalog.service.TranslationService translationService;
     private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
+    private final VisitAttemptEventPublisher visitAttemptEventPublisher;
 
     private String getUserLanguage(Long userId) {
         try {
@@ -340,6 +342,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         }
         Gym gym = gymRepository.findById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        LocalDateTime scanMoment = LocalDateTime.now(ZoneId.of("Asia/Baku"));
 
         boolean allowed = true;
         String reason = null;
@@ -381,12 +384,18 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                     reason = "SUBSCRIPTION_FROZEN";
                     decision = "SUBSCRIPTION_FROZEN";
                     messageKey = "error.subscription_frozen";
+                    rejectAttempt(userId, gym, packageName, qrScanId,
+                            VisitAttemptEventPublisher.SUBSCRIPTION_FROZEN, scanMoment);
                 } else if (!isSubscriptionStatusActive(subStatus)) {
                     allowed = false;
                     reason = "NO_ACTIVE_SUBSCRIPTION";
+                    rejectAttempt(userId, gym, packageName, qrScanId,
+                            VisitAttemptEventPublisher.SUBSCRIPTION_EXPIRED, scanMoment);
                 } else if (subResp.getPackageId() <= 0) {
                     allowed = false;
                     reason = "NO_ACTIVE_SUBSCRIPTION";
+                    rejectAttempt(userId, gym, packageName, qrScanId,
+                            VisitAttemptEventPublisher.SUBSCRIPTION_EXPIRED, scanMoment);
                 } else {
                     long userPackageId = subResp.getPackageId();
                     packageId = userPackageId;
@@ -395,6 +404,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                     if (!homeGymRuleService.supportsPackage(gym, packageContext)) {
                         allowed = false;
                         reason = "GYM_NOT_SUPPORTED";
+                        rejectAttempt(userId, gym, packageName, qrScanId,
+                                VisitAttemptEventPublisher.GYM_NOT_IN_PACKAGE, scanMoment);
                     } else {
                         java.time.LocalDateTime nowBaku =
                                 java.time.LocalDateTime.now(ZoneId.of("Asia/Baku"));
@@ -404,6 +415,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                             allowed = false;
                             reason = resolution.reason();
                             decision = "TIER_NOT_ALLOWED_AT_THIS_TIME";
+                            rejectAttempt(userId, gym, packageName, qrScanId,
+                                    VisitAttemptEventPublisher.TIER_NOT_ALLOWED_AT_THIS_TIME, scanMoment);
                         } else {
                             amount = resolution.singlePrice() != null ? resolution.singlePrice() : 0.0;
                         }
@@ -524,7 +537,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         GymEntranceHistory history = GymEntranceHistory.builder()
                 .userId(userId)
                 .gymId(gymId)
-                .scanDate(LocalDateTime.now(ZoneId.of("Asia/Baku")))
+                .scanDate(scanMoment)
                 .status(status)
                 .reason(reason)
                 .platform(platform)
@@ -572,6 +585,16 @@ public class GymEntranceServiceImpl implements GymEntranceService {
 
     private String emptyToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    /**
+     * Publishes a rejection that order never sees (catalog short-circuits before the
+     * gRPC check-in). The event is emitted after the scan transaction commits.
+     */
+    private void rejectAttempt(Long userId, Gym gym, String packageName, String qrScanId,
+                               String rejectCode, LocalDateTime scannedAt) {
+        visitAttemptEventPublisher.rejected(userId, gym.getId(), gym.getName(), packageName,
+                qrScanId, rejectCode, scannedAt);
     }
 
 
