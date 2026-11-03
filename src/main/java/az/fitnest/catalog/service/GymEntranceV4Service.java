@@ -38,7 +38,8 @@ public class GymEntranceV4Service {
       @NotBlank String qrCodeValue,
       @NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
       @NotNull @DecimalMin("-180") @DecimalMax("180") Double lng,
-      @NotBlank @Size(max = 100) String requestId) {}
+      @NotBlank @Size(max = 100) String requestId,
+      @NotNull Boolean isFirstVisitToGym) {}
 
   public Object scan(Scan input) {
     Long userId = UserContext.getCurrentUserId();
