@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.response.HomeGymGymResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.repository.GymRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class HomeGymCatalogService {
     private final OrderServiceGrpcClient orderServiceGrpcClient;
 
     public PaginatedResponse<HomeGymGymResponse> getGyms(Long userId, Long subscriptionId, String q,
-                                                         int page, int pageSize,
+                                                         Long categoryId, int page, int pageSize,
                                                          Double userLat, Double userLng) {
         int safePage = Math.max(1, page);
         int safeSize = Math.min(Math.max(1, pageSize), 100);
@@ -52,9 +53,10 @@ public class HomeGymCatalogService {
         Pageable pageable = PageRequest.of(safePage - 1, safeSize);
         Page<Long> idPage;
         if (userLat != null && userLng != null) {
-            idPage = gymRepository.findClosestHomeGymIds(searchKey, packageIds, userLat, userLng, pageable);
+            idPage = gymRepository.findClosestHomeGymIds(searchKey, categoryId, packageIds, userLat, userLng,
+                    pageable);
         } else {
-            idPage = gymRepository.findHomeGymIds(searchKey, packageIds, pageable);
+            idPage = gymRepository.findHomeGymIds(searchKey, categoryId, packageIds, pageable);
         }
 
         List<HomeGymGymResponse> items = new ArrayList<>();
@@ -81,6 +83,12 @@ public class HomeGymCatalogService {
 
     private HomeGymGymResponse toResponse(Gym gym, HomeGymRuleService.PackageContext packageContext,
                                           Double userLat, Double userLng) {
+        // Main category first (that is what the filter chips normally use), then a sub
+        // category as a fallback so the card still shows a label when only sub is set.
+        Category category = gym.getCategory();
+        if (category == null) {
+            category = gym.getSubCategory();
+        }
         Address address = gym.getAddress();
         String city = null;
         String location = null;
@@ -110,6 +118,9 @@ public class HomeGymCatalogService {
                 .distanceKm(distanceKm)
                 .rating(gym.getRating())
                 .availableHours(ruleService.availableHours(gym, packageContext))
+                .categoryId(category != null ? category.getId() : null)
+                .categoryName(category != null ? category.getName() : null)
+                .categoryIconUrl(category != null ? category.getIconUrl() : null)
                 .build();
     }
 

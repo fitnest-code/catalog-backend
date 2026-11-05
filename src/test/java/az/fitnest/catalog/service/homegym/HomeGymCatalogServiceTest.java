@@ -5,6 +5,7 @@ import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.response.HomeGymGymResponse;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
 import az.fitnest.catalog.model.entity.Address;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.util.AzerbaijanLocations;
@@ -66,77 +67,149 @@ class HomeGymCatalogServiceTest {
                 .thenReturn(context(0L, false));
 
         ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
-                () -> service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, null, null));
+                () -> service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null));
 
         assertEquals("SUBSCRIPTION_NOT_FOUND", error.getErrorCode());
-        verify(gymRepository, never()).findHomeGymIds(any(), any(), any());
+        verify(gymRepository, never()).findHomeGymIds(any(), any(), any(), any());
     }
 
     @Test
     void pagingIsClampedToOnePageAndAHundredItems() {
-        when(gymRepository.findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 1), 0));
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 0, 0, null, null);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 0, 0, null, null);
 
         assertEquals(1, response.page());
         assertEquals(1, response.pageSize());
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(gymRepository).findHomeGymIds(isNull(), eq(ELIGIBLE), captor.capture());
+        verify(gymRepository).findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), captor.capture());
         assertEquals(0, captor.getValue().getPageNumber());
         assertEquals(1, captor.getValue().getPageSize());
     }
 
     @Test
     void pageSizeIsCappedAtOneHundred() {
-        when(gymRepository.findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 2, 500, null, null);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 2, 500, null, null);
 
         assertEquals(2, response.page());
         assertEquals(100, response.pageSize());
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(gymRepository).findHomeGymIds(isNull(), eq(ELIGIBLE), captor.capture());
+        verify(gymRepository).findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), captor.capture());
         assertEquals(1, captor.getValue().getPageNumber());
         assertEquals(100, captor.getValue().getPageSize());
     }
 
     @Test
     void theSearchTermIsTrimmedAndBlankBecomesNull() {
-        when(gymRepository.findHomeGymIds(any(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(any(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
-        service.getGyms(USER_ID, SUBSCRIPTION_ID, "  FitZone  ", 1, 10, null, null);
-        service.getGyms(USER_ID, SUBSCRIPTION_ID, "   ", 1, 10, null, null);
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, "  FitZone  ", null, 1, 10, null, null);
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, "   ", null, 1, 10, null, null);
 
-        verify(gymRepository).findHomeGymIds(eq("FitZone"), eq(ELIGIBLE), any(Pageable.class));
-        verify(gymRepository).findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class));
+        verify(gymRepository).findHomeGymIds(eq("FitZone"), isNull(), eq(ELIGIBLE), any(Pageable.class));
+        verify(gymRepository).findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class));
+    }
+
+    @Test
+    void theCategoryFilterIsPassedToThePlainQuery() {
+        when(gymRepository.findHomeGymIds(isNull(), eq(7L), eq(ELIGIBLE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 7L, 1, 10, null, null);
+
+        verify(gymRepository).findHomeGymIds(isNull(), eq(7L), eq(ELIGIBLE), any(Pageable.class));
+    }
+
+    @Test
+    void theCategoryFilterIsPassedToTheClosestQuery() {
+        when(gymRepository.findClosestHomeGymIds(isNull(), eq(7L), eq(ELIGIBLE), eq(40.0), eq(49.0),
+                any(Pageable.class))).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 7L, 1, 10, 40.0, 49.0);
+
+        verify(gymRepository).findClosestHomeGymIds(isNull(), eq(7L), eq(ELIGIBLE), eq(40.0), eq(49.0),
+                any(Pageable.class));
+    }
+
+    @Test
+    void theMainCategoryIsMappedToTheItem() {
+        gymPage(List.of(1L), 1);
+        Gym gym = gym(1L, "FitZone", address(40.0, 49.0));
+        gym.getMainCategories().add(category(7L, "Fitness", "https://cdn/fitness.png"));
+        gym.getSubCategories().add(category(8L, "CrossFit", "https://cdn/crossfit.png"));
+        when(gymRepository.findWithListDetailsByIdIn(List.of(1L))).thenReturn(List.of(gym));
+        when(ruleService.isHomeEligible(gym, GOLD)).thenReturn(true);
+
+        HomeGymGymResponse item = service
+                .getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null)
+                .items().get(0);
+
+        assertEquals(7L, item.categoryId());
+        assertEquals("Fitness", item.categoryName());
+        assertEquals("https://cdn/fitness.png", item.categoryIconUrl());
+    }
+
+    @Test
+    void aSubCategoryIsUsedWhenThereIsNoMainCategory() {
+        gymPage(List.of(1L), 1);
+        Gym gym = gym(1L, "FitZone", address(40.0, 49.0));
+        gym.getSubCategories().add(category(8L, "CrossFit", "https://cdn/crossfit.png"));
+        when(gymRepository.findWithListDetailsByIdIn(List.of(1L))).thenReturn(List.of(gym));
+        when(ruleService.isHomeEligible(gym, GOLD)).thenReturn(true);
+
+        HomeGymGymResponse item = service
+                .getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null)
+                .items().get(0);
+
+        assertEquals(8L, item.categoryId());
+        assertEquals("CrossFit", item.categoryName());
+        assertEquals("https://cdn/crossfit.png", item.categoryIconUrl());
+    }
+
+    @Test
+    void aGymWithoutCategoriesHasNoCategoryFields() {
+        gymPage(List.of(1L), 1);
+        Gym gym = gym(1L, "FitZone", address(40.0, 49.0));
+        when(gymRepository.findWithListDetailsByIdIn(List.of(1L))).thenReturn(List.of(gym));
+        when(ruleService.isHomeEligible(gym, GOLD)).thenReturn(true);
+
+        HomeGymGymResponse item = service
+                .getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null)
+                .items().get(0);
+
+        assertNull(item.categoryId());
+        assertNull(item.categoryName());
+        assertNull(item.categoryIconUrl());
     }
 
     @Test
     void coordinatesSwitchTheQueryToTheClosestGyms() {
-        when(gymRepository.findClosestHomeGymIds(eq("FitZone"), eq(ELIGIBLE), eq(40.0), eq(49.0),
+        when(gymRepository.findClosestHomeGymIds(eq("FitZone"), isNull(), eq(ELIGIBLE), eq(40.0), eq(49.0),
                 any(Pageable.class))).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
-        service.getGyms(USER_ID, SUBSCRIPTION_ID, "FitZone", 1, 10, 40.0, 49.0);
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, "FitZone", null, 1, 10, 40.0, 49.0);
 
-        verify(gymRepository).findClosestHomeGymIds(eq("FitZone"), eq(ELIGIBLE), eq(40.0), eq(49.0),
+        verify(gymRepository).findClosestHomeGymIds(eq("FitZone"), isNull(), eq(ELIGIBLE), eq(40.0), eq(49.0),
                 any(Pageable.class));
-        verify(gymRepository, never()).findHomeGymIds(any(), any(), any());
+        verify(gymRepository, never()).findHomeGymIds(any(), any(), any(), any());
     }
 
     @Test
     void aSingleCoordinateFallsBackToThePlainQuery() {
-        when(gymRepository.findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
-        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, 40.0, null);
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, 40.0, null);
 
-        verify(gymRepository).findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class));
-        verify(gymRepository, never()).findClosestHomeGymIds(any(), any(), any(), any(), any());
+        verify(gymRepository).findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class));
+        verify(gymRepository, never()).findClosestHomeGymIds(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -145,13 +218,13 @@ class HomeGymCatalogServiceTest {
         when(ruleService.packageContext(null))
                 .thenReturn(new HomeGymRuleService.PackageContext(null, null, 0, List.of()));
         when(ruleService.eligiblePackageIds(null)).thenReturn(List.of(-1L));
-        when(gymRepository.findHomeGymIds(isNull(), eq(List.of(-1L)), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(List.of(-1L)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
-        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, null, null);
+        service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null);
 
         verify(ruleService).packageContext(null);
-        verify(gymRepository).findHomeGymIds(isNull(), eq(List.of(-1L)), any(Pageable.class));
+        verify(gymRepository).findHomeGymIds(isNull(), isNull(), eq(List.of(-1L)), any(Pageable.class));
     }
 
     @Test
@@ -164,7 +237,7 @@ class HomeGymCatalogServiceTest {
         when(ruleService.isHomeEligible(second, GOLD)).thenReturn(false);
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, null, null);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null);
 
         assertEquals(1, response.items().size());
         assertEquals("1", response.items().get(0).gymId());
@@ -181,7 +254,7 @@ class HomeGymCatalogServiceTest {
         when(ruleService.isHomeEligible(any(Gym.class), eq(GOLD))).thenReturn(true);
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, null, null);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null);
 
         assertEquals(List.of("1", "2"),
                 response.items().stream().map(HomeGymGymResponse::gymId).toList());
@@ -197,7 +270,7 @@ class HomeGymCatalogServiceTest {
                 .thenReturn("09:00-18:00");
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, 40.0, 49.0);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, 40.0, 49.0);
 
         HomeGymGymResponse item = response.items().get(0);
         assertEquals("FitZone", item.name());
@@ -219,7 +292,7 @@ class HomeGymCatalogServiceTest {
         when(ruleService.isHomeEligible(gym, GOLD)).thenReturn(true);
 
         HomeGymGymResponse item = service
-                .getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, 40.0, 49.0)
+                .getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, 40.0, 49.0)
                 .items().get(0);
 
         assertNull(item.city());
@@ -238,7 +311,7 @@ class HomeGymCatalogServiceTest {
         when(ruleService.isHomeEligible(gym, GOLD)).thenReturn(true);
 
         HomeGymGymResponse item = service
-                .getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, 40.0, 49.0)
+                .getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, 40.0, 49.0)
                 .items().get(0);
 
         assertEquals(AzerbaijanLocations.canonical("Ganja"), item.city());
@@ -247,11 +320,11 @@ class HomeGymCatalogServiceTest {
 
     @Test
     void anEmptyPageReturnsNoItemsAndTheRepositoryTotal() {
-        when(gymRepository.findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
         PaginatedResponse<HomeGymGymResponse> response =
-                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, 1, 10, null, null);
+                service.getGyms(USER_ID, SUBSCRIPTION_ID, null, null, 1, 10, null, null);
 
         assertTrue(response.items().isEmpty());
         assertEquals(0, response.total());
@@ -265,9 +338,9 @@ class HomeGymCatalogServiceTest {
 
     private void gymPage(List<Long> ids, long total) {
         Page<Long> page = new PageImpl<>(ids, PageRequest.of(0, 10), total);
-        when(gymRepository.findHomeGymIds(isNull(), eq(ELIGIBLE), any(Pageable.class)))
+        when(gymRepository.findHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Pageable.class)))
                 .thenReturn(page);
-        when(gymRepository.findClosestHomeGymIds(isNull(), eq(ELIGIBLE), any(Double.class),
+        when(gymRepository.findClosestHomeGymIds(isNull(), isNull(), eq(ELIGIBLE), any(Double.class),
                 any(Double.class), any(Pageable.class))).thenReturn(page);
     }
 
@@ -293,6 +366,15 @@ class HomeGymCatalogServiceTest {
                 .build();
         gym.setId(id);
         return gym;
+    }
+
+    private static Category category(Long id, String name, String iconUrl) {
+        Category category = Category.builder()
+                .name(name)
+                .iconUrl(iconUrl)
+                .build();
+        category.setId(id);
+        return category;
     }
 
     private static Address address(Double latitude, Double longitude) {

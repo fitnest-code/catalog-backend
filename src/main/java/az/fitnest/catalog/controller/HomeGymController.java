@@ -37,12 +37,13 @@ public class HomeGymController {
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") int pageSize,
             @RequestParam(value = "lat", required = false) Double lat,
-            @RequestParam(value = "lng", required = false) Double lng) {
+            @RequestParam(value = "lng", required = false) Double lng,
+            @RequestParam(value = "categoryId", required = false) Long categoryId) {
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
             throw new UnauthorizedException("error.unauthorized");
         }
         return ResponseEntity.ok(homeGymCatalogService.getGyms(
-                userId, subscriptionId, q, page, pageSize, lat, lng));
+                userId, subscriptionId, q, categoryId, page, pageSize, lat, lng));
     }
 }

@@ -18,6 +18,12 @@ public record HomeGymGymResponse(
         Double distanceKm,
         Double rating,
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        String availableHours
+        String availableHours,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Long categoryId,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String categoryName,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String categoryIconUrl
 ) {
 }

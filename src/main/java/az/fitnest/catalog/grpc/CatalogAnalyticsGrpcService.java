@@ -64,7 +64,7 @@ public class CatalogAnalyticsGrpcService extends GymServiceGrpc.GymServiceImplBa
             List<Long> packageIds = homeGymRuleService.eligiblePackageIds(packageId);
             // The reminder is only useful when the package has at least one selectable gym
             // (R1: master switch on and package-level price override not disabled).
-            var ids = gymRepository.findHomeGymIds(null, packageIds,
+            var ids = gymRepository.findHomeGymIds(null, null, packageIds,
                     org.springframework.data.domain.PageRequest.of(0, 200)).getContent();
             boolean eligible = false;
             for (Long gymId : ids) {

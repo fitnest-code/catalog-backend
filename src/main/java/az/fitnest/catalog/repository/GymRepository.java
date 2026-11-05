@@ -371,11 +371,16 @@ public interface GymRepository
 
     // Home-gym listing (R1): only active gyms whose master switch is on and that
     // support at least one package from the subscriber's hierarchy.
+    // categoryId is optional and matches either a main or a sub category, so the
+    // mobile filter chips can use both levels without changing the paging total.
     @Query(
             value = "SELECT g.id FROM Gym g " +
                     "WHERE g.status = az.fitnest.catalog.model.enums.GymStatus.ACTIVE " +
                     "AND g.homeEligible = true " +
                     "AND EXISTS (SELECT s FROM g.subscriptions s WHERE s.packageId IN :packageIds) " +
+                    "AND (:categoryId IS NULL " +
+                    "OR EXISTS (SELECT mc FROM g.mainCategories mc WHERE mc.id = :categoryId) " +
+                    "OR EXISTS (SELECT sc FROM g.subCategories sc WHERE sc.id = :categoryId)) " +
                     "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) " +
                     "OR LOWER(g.address.addressText) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
                     // Stable ordering keeps pagination deterministic.
@@ -383,6 +388,7 @@ public interface GymRepository
     )
     org.springframework.data.domain.Page<Long> findHomeGymIds(
             @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
             @org.springframework.data.repository.query.Param("packageIds") List<Long> packageIds,
             org.springframework.data.domain.Pageable pageable);
 
@@ -390,6 +396,9 @@ public interface GymRepository
             value = "SELECT g.id FROM gyms g " +
                     "WHERE g.status = 'ACTIVE' AND g.home_eligible = true " +
                     "AND EXISTS (SELECT 1 FROM gym_subscriptions gs WHERE gs.gym_id = g.id AND gs.package_id IN :packageIds) " +
+                    "AND (:categoryId IS NULL " +
+                    "OR EXISTS (SELECT 1 FROM gym_main_categories gmc WHERE gmc.gym_id = g.id AND gmc.category_id = :categoryId) " +
+                    "OR EXISTS (SELECT 1 FROM gym_sub_categories gsc WHERE gsc.gym_id = g.id AND gsc.category_id = :categoryId)) " +
                     "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')) " +
                     "OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%'))) " +
                     "GROUP BY g.id, g.latitude, g.longitude " +
@@ -397,12 +406,16 @@ public interface GymRepository
             countQuery = "SELECT count(DISTINCT g.id) FROM gyms g " +
                     "WHERE g.status = 'ACTIVE' AND g.home_eligible = true " +
                     "AND EXISTS (SELECT 1 FROM gym_subscriptions gs WHERE gs.gym_id = g.id AND gs.package_id IN :packageIds) " +
+                    "AND (:categoryId IS NULL " +
+                    "OR EXISTS (SELECT 1 FROM gym_main_categories gmc WHERE gmc.gym_id = g.id AND gmc.category_id = :categoryId) " +
+                    "OR EXISTS (SELECT 1 FROM gym_sub_categories gsc WHERE gsc.gym_id = g.id AND gsc.category_id = :categoryId)) " +
                     "AND (:q IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')) " +
                     "OR LOWER(g.address_text) LIKE LOWER(CONCAT('%', CAST(:q AS text), '%')))",
             nativeQuery = true
     )
     org.springframework.data.domain.Page<Long> findClosestHomeGymIds(
             @org.springframework.data.repository.query.Param("q") String q,
+            @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
             @org.springframework.data.repository.query.Param("packageIds") List<Long> packageIds,
             @org.springframework.data.repository.query.Param("userLat") Double userLat,
             @org.springframework.data.repository.query.Param("userLng") Double userLng,
