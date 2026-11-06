@@ -56,5 +56,12 @@ public interface GymReadService {
     GymInfoAdminResponseV2 getGymDetailsAdminV2(Long gymId);
     GymSubscriptionsAdminResponseV2 getGymSubscriptionsV2(Long gymId);
 
+    // Pre-purchase home-gym read-only APIs
+    GymListResponseV3 getGymsV3(Long userId, String q, String type, Long categoryId, Long subscriptionId,
+                                int page, int pageSize, Double userLat, Double userLng, String sortDir,
+                                Boolean homeEligible, Long packageId, String tier);
+    GymDetailResponseV4 getGymDetailV4(Long userId, Long gymId);
+    SearchCategoriesResponse getSearchCategoriesV2();
+
     PaginatedResponse<LessonHourResponse> getGymLessonHoursArchiveAdmin(Long gymId, int page, int pageSize);
 }

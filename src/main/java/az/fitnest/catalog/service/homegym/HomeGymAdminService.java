@@ -143,7 +143,63 @@ public class HomeGymAdminService {
         price.setSinglePrice(request.getSinglePrice());
         price.setUnlimitedPrice(request.getUnlimitedPrice());
         price.setEffectiveFrom(effectiveFrom);
-        return toPriceResponse(packagePriceRepository.save(price));
+        GymPackagePrice saved = packagePriceRepository.save(price);
+        // Keep the package switches upward-closed: enabling one tier enables every
+        // higher tier, disabling one tier disables every lower tier (spec 6.3).
+        if (request.getHomeEligible() != null) {
+            propagateHomeEligibility(gym, request.getPackageId(), effectiveFrom,
+                    Boolean.TRUE.equals(request.getHomeEligible()));
+        }
+        return toPriceResponse(saved);
+    }
+
+    private void propagateHomeEligibility(Gym gym, Long sourcePackageId, LocalDate effectiveFrom,
+                                          boolean enabled) {
+        int sourceRank = ruleService.packageContext(sourcePackageId).rank();
+        if (sourceRank <= 0) {
+            return;
+        }
+        for (Long packageId : offeredPackageIds(gym)) {
+            if (packageId == null || packageId.equals(sourcePackageId)) {
+                continue;
+            }
+            int rank = ruleService.packageContext(packageId).rank();
+            if (rank <= 0) {
+                continue;
+            }
+            boolean affected = enabled ? rank > sourceRank : rank < sourceRank;
+            if (affected) {
+                applyHomeEligible(gym, packageId, effectiveFrom, enabled);
+            }
+        }
+    }
+
+    private void applyHomeEligible(Gym gym, Long packageId, LocalDate effectiveFrom, boolean enabled) {
+        GymPackagePrice row = packagePriceRepository
+                .findByGymIdAndPackageIdAndEffectiveFrom(gym.getId(), packageId, effectiveFrom)
+                .orElse(null);
+        if (row == null) {
+            GymPackagePrice previous = packagePriceRepository
+                    .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanOrderByEffectiveFromDesc(
+                            gym.getId(), packageId, effectiveFrom)
+                    .orElse(null);
+            row = new GymPackagePrice();
+            row.setGym(gym);
+            row.setPackageId(packageId);
+            row.setEffectiveFrom(effectiveFrom);
+            if (previous != null) {
+                // Copy the previous version so the propagated switch does not reset prices.
+                row.setIncluded(previous.getIncluded());
+                row.setSinglePrice(previous.getSinglePrice());
+                row.setUnlimitedPrice(previous.getUnlimitedPrice());
+            } else {
+                row.setIncluded(Boolean.TRUE);
+            }
+        }
+        if (row.getId() == null || !java.util.Objects.equals(row.getHomeEligible(), enabled)) {
+            row.setHomeEligible(enabled);
+            packagePriceRepository.save(row);
+        }
     }
 
     // ---------------------------------------------------------------------

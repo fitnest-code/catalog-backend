@@ -1,6 +1,7 @@
 package az.fitnest.catalog.service.homegym;
 
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymSubscription;
@@ -19,11 +20,17 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Resolves home-gym package hierarchy, time-slot rules and price snapshots for
@@ -51,6 +58,23 @@ public class HomeGymRuleService {
     }
 
     public record PriceSnapshot(String pricePackageName, Double singlePrice, Double unlimitedPrice) {
+    }
+
+    /**
+     * Read-only pre-purchase view of the home-gym hierarchy for one gym.
+     * {@code minTier} is null when the master switch is off or no offered package is enabled.
+     * {@code eligibleForRequestedTier} is only set when the caller supplied a package/tier.
+     */
+    public record HomeGymInfo(GymMembershipPolicyV4.Tier minTier,
+                              List<GymMembershipPolicyV4.Tier> tiers,
+                              Boolean eligibleForRequestedTier) {
+        static HomeGymInfo none(Integer requestedRank) {
+            return new HomeGymInfo(null, List.of(), requestedRank == null ? null : Boolean.FALSE);
+        }
+
+        public boolean eligible() {
+            return minTier != null;
+        }
     }
 
     private record CachedPackageContext(PackageContext context, long expiresAt) {
@@ -139,14 +163,121 @@ public class HomeGymRuleService {
     }
 
     /**
-     * R18 master switch plus the optional package-level override on the latest price row.
+     * R18 master switch plus the package-level switches on the latest price rows.
+     * Eligibility follows the same upward-closed tier rule used by the list endpoints:
+     * a gym is selectable for a package when the package tier is at or above its
+     * {@code homeMinTier}.
      */
     public boolean isHomeEligible(Gym gym, Long packageId) {
         if (gym == null || Boolean.FALSE.equals(gym.getHomeEligible())) {
             return false;
         }
-        GymPackagePrice price = latestPrice(gym.getId(), packageId);
-        return price == null || !Boolean.FALSE.equals(price.getHomeEligible());
+        Integer requestedRank = packageId == null ? null : packageContext(packageId).rank();
+        HomeGymInfo info = homeGymInfo(gym, requestedRank);
+        return requestedRank == null ? info.eligible() : Boolean.TRUE.equals(info.eligibleForRequestedTier());
+    }
+
+    public HomeGymInfo homeGymInfo(Gym gym) {
+        return homeGymInfo(gym, null);
+    }
+
+    public HomeGymInfo homeGymInfo(Gym gym, Integer requestedRank) {
+        if (gym == null || gym.getId() == null) {
+            return HomeGymInfo.none(requestedRank);
+        }
+        return homeGymInfoByGym(List.of(gym), requestedRank)
+                .getOrDefault(gym.getId(), HomeGymInfo.none(requestedRank));
+    }
+
+    public Map<Long, HomeGymInfo> homeGymInfoByGym(Collection<Gym> gyms) {
+        return homeGymInfoByGym(gyms, null);
+    }
+
+    /**
+     * Batch variant used by list endpoints so one query resolves the latest price row
+     * for every gym instead of one query per gym/package pair.
+     */
+    public Map<Long, HomeGymInfo> homeGymInfoByGym(Collection<Gym> gyms, Integer requestedRank) {
+        if (gyms == null || gyms.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> gymIds = gyms.stream()
+                .filter(Objects::nonNull)
+                .map(Gym::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, Map<Long, GymPackagePrice>> latestPrices = gymIds.isEmpty()
+                ? Map.of()
+                : packagePriceRepository
+                        .findLatestByGymIdIn(gymIds, LocalDate.now(BAKU))
+                        .stream()
+                        .filter(row -> row.getGym() != null && row.getGym().getId() != null
+                                && row.getPackageId() != null)
+                        .collect(Collectors.groupingBy(
+                                row -> row.getGym().getId(),
+                                Collectors.toMap(GymPackagePrice::getPackageId, row -> row,
+                                        (first, second) -> first)));
+        Map<Long, HomeGymInfo> result = new HashMap<>();
+        for (Gym gym : gyms) {
+            if (gym == null || gym.getId() == null) {
+                continue;
+            }
+            result.put(gym.getId(), computeHomeGymInfo(gym,
+                    latestPrices.getOrDefault(gym.getId(), Map.of()), requestedRank));
+        }
+        return result;
+    }
+
+    private HomeGymInfo computeHomeGymInfo(Gym gym, Map<Long, GymPackagePrice> latestPrices,
+                                           Integer requestedRank) {
+        if (Boolean.FALSE.equals(gym.getHomeEligible())) {
+            return HomeGymInfo.none(requestedRank);
+        }
+        TreeMap<Integer, Long> offeredByRank = new TreeMap<>();
+        if (gym.getSubscriptions() != null) {
+            for (GymSubscription subscription : gym.getSubscriptions()) {
+                Long packageId = subscription == null ? null : subscription.getPackageId();
+                if (packageId == null) {
+                    continue;
+                }
+                int rank = packageContext(packageId).rank();
+                // Unknown tiers fail closed: they cannot be mapped to a public tier.
+                if (rank > 0) {
+                    offeredByRank.putIfAbsent(rank, packageId);
+                }
+            }
+        }
+        int highestDisabledRank = 0;
+        for (Map.Entry<Integer, Long> entry : offeredByRank.entrySet()) {
+            GymPackagePrice price = latestPrices.get(entry.getValue());
+            if (price != null && (Boolean.FALSE.equals(price.getIncluded())
+                    || Boolean.FALSE.equals(price.getHomeEligible()))) {
+                highestDisabledRank = Math.max(highestDisabledRank, entry.getKey());
+            }
+        }
+        Integer minRank = offeredByRank.ceilingKey(highestDisabledRank + 1);
+        if (minRank == null) {
+            return HomeGymInfo.none(requestedRank);
+        }
+        GymMembershipPolicyV4.Tier minTier = tierOfRank(minRank);
+        List<GymMembershipPolicyV4.Tier> tiers = new ArrayList<>();
+        for (GymMembershipPolicyV4.Tier tier : GymMembershipPolicyV4.Tier.values()) {
+            if (tierRank(tier) >= minRank) {
+                tiers.add(tier);
+            }
+        }
+        Boolean eligibleForRequestedTier = requestedRank == null ? null : requestedRank >= minRank;
+        return new HomeGymInfo(minTier, List.copyOf(tiers), eligibleForRequestedTier);
+    }
+
+    public static int tierRank(GymMembershipPolicyV4.Tier tier) {
+        return tier == null ? 0 : tier.ordinal() + 1;
+    }
+
+    private static GymMembershipPolicyV4.Tier tierOfRank(int rank) {
+        GymMembershipPolicyV4.Tier[] tiers = GymMembershipPolicyV4.Tier.values();
+        return rank >= 1 && rank <= tiers.length ? tiers[rank - 1] : null;
     }
 
     /**

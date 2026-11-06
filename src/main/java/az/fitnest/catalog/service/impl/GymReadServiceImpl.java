@@ -83,6 +83,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final java.util.concurrent.Executor taskExecutor;
     private final az.fitnest.catalog.service.GymEntranceService gymEntranceService;
     private final GymDetailV3Service gymDetailV3Service;
+    private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -977,6 +978,37 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return new GymTypeCountResponse(type, count);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SearchCategoriesResponse getSearchCategoriesV2() {
+        Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
+        String language = getUserLanguage(userId);
+
+        List<Gym> activeGyms = gymRepository.findActiveWithSubscriptions(
+                az.fitnest.catalog.model.enums.GymStatus.ACTIVE);
+        long homeEligibleCount = homeGymRuleService.homeGymInfoByGym(activeGyms).values().stream()
+                .filter(az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo::eligible)
+                .count();
+
+        List<SearchCategoryResponse> categories = new java.util.ArrayList<>();
+        categories.add(SearchCategoryResponse.builder()
+                .type("HOME_ELIGIBLE")
+                .titleKey("search.category.homeEligible")
+                .subtitleKey("search.category.homeEligible.sub")
+                .gymCount(homeEligibleCount)
+                .build());
+        for (GymCategoryCountResponse category : self.getGymCountByCategoryCached(language)) {
+            categories.add(SearchCategoryResponse.builder()
+                    .type("CATEGORY")
+                    .id(category.categoryId() != null ? category.categoryId().toString() : null)
+                    .name(category.categoryName())
+                    .iconUrl(category.categoryIcon())
+                    .gymCount(category.count())
+                    .build());
+        }
+        return SearchCategoriesResponse.builder().categories(categories).build();
+    }
+
     @Transactional(readOnly = true)
     public List<GymCategoryCountResponse> getGymCountByCategory() {
         Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
@@ -1807,9 +1839,14 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     @Override
     @Transactional(readOnly = true)
     public GymDetailResponseV2 getGymDetailV2(Long userId, Long gymId) {
-        final String userLang = getUserLanguage(userId);
         Gym gym = gymRepository.findWithDetailsById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        return buildGymDetailV2(userId, gym);
+    }
+
+    private GymDetailResponseV2 buildGymDetailV2(Long userId, Gym gym) {
+        final String userLang = getUserLanguage(userId);
+        final Long gymId = gym.getId();
 
         CompletableFuture<Boolean> isSavedFuture = CompletableFuture.supplyAsync(() -> {
             if (userId != null) {
@@ -2044,6 +2081,62 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     @Override
     @Transactional(readOnly = true)
+    public GymDetailResponseV4 getGymDetailV4(Long userId, Long gymId) {
+        Gym gym = gymRepository.findWithDetailsById(gymId)
+                .orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        GymDetailResponseV2 detail = buildGymDetailV2(userId, gym);
+        az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo info =
+                homeGymRuleService.homeGymInfo(gym);
+        int minRank = az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(info.minTier());
+        // Same upward-closed rule as the list filter: every tier at or above minTier is eligible.
+        List<GymPackageHomeEligibilityResponse> packages = java.util.Arrays
+                .stream(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.values())
+                .map(tier -> new GymPackageHomeEligibilityResponse(tier,
+                        info.eligible()
+                                && az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier) >= minRank))
+                .toList();
+
+        return new GymDetailResponseV4(
+                detail.gym_id(),
+                detail.name(),
+                detail.description(),
+                detail.address(),
+                detail.isSaved(),
+                detail.phone(),
+                detail.email(),
+                detail.general_work_hours(),
+                detail.work_hours_woman(),
+                detail.work_hours_man(),
+                detail.rooms(),
+                detail.trainers(),
+                detail.recent_reviews(),
+                detail.categories(),
+                detail.coverImageUrl(),
+                detail.rating(),
+                detail.reviewsCount(),
+                detail.qr_code_url(),
+                detail.status(),
+                detail.supportedSubscriptions(),
+                detail.rest_days(),
+                toHomeGymInfoResponse(info),
+                packages
+        );
+    }
+
+    private HomeGymInfoResponse toHomeGymInfoResponse(
+            az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo info) {
+        if (info == null) {
+            return null;
+        }
+        return HomeGymInfoResponse.builder()
+                .minTier(info.minTier())
+                .tiers(info.tiers())
+                .eligibleForRequestedTier(info.eligibleForRequestedTier())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PaginatedResponse<GymMainPageResponseV2> getGymsV2(Long userId, String q, String type, Long categoryId,
                                                               Long subscriptionId, int page, int pageSize, Double userLat, Double userLng, String sortDir) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
@@ -2121,63 +2214,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             gymPage = Page.empty(pageable);
         }
 
-        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> globalWorkHoursMap = gymPage.getContent().stream()
-                .collect(Collectors.toMap(
-                        Gym::getId,
-                        gym -> gym.getGeneralWorkHours() != null ? new java.util.ArrayList<>(gym.getGeneralWorkHours()) : java.util.Collections.emptyList(),
-                        (existing, replacement) -> existing
-                ));
-
-        List<Long> savedGymIds = new java.util.ArrayList<>();
-        if (userId != null) {
-            List<Long> gymIds = gymPage.getContent().stream().map(Gym::getId).toList();
-            if (!gymIds.isEmpty()) {
-                savedGymIds = savedGymRepository.findGymIdsByUserIdAndGymIdIn(userId, gymIds);
-            }
-        }
-
-        final List<Long> finalSavedIds = savedGymIds;
-
-        List<Long> allPackageIds = gymPage.getContent().stream()
-                .flatMap(g -> g.getSubscriptions() != null ? uniqueSubscriptions(g.getSubscriptions()).stream() : java.util.stream.Stream.empty())
-                .map(az.fitnest.catalog.model.entity.GymSubscription::getPackageId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-
-        List<Long> uncachedPackageIds = allPackageIds.stream()
-                .filter(id -> !packageInfoCache.asMap().containsKey(id))
-                .toList();
-        if (!uncachedPackageIds.isEmpty()) {
-            try {
-                List<az.fitnest.order.grpc.PackageNameInfo> newInfos = orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
-                for (var info : newInfos) {
-                    packageInfoCache.asMap().put(info.getPackageId(), info);
-                }
-            } catch (Exception e) {
-            }
-        }
-
-        Map<Long, az.fitnest.order.grpc.PackageNameInfo> finalPackageMap = allPackageIds.stream()
-                .filter(packageInfoCache.asMap()::containsKey)
-                .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
-        final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
-
-        Map<String, String> translationLookup = fetchTranslationsInBulk(gymPage.getContent(), userLanguage);
-
-        List<GymMainPageResponseV2> items = gymPage.getContent().stream()
-                .map(gym -> mapToGymMainPageDtoV2(
-                        gym,
-                        userId,
-                        userLat,
-                        userLng,
-                        finalSavedIds.contains(gym.getId()),
-                        finalPackageMap,
-                        finalWorkHoursMap,
-                        translationLookup,
-                        userLanguage
-                ))
-                .collect(Collectors.toList());
+        List<GymMainPageResponseV2> items = mapGymListItems(userId, gymPage.getContent(),
+                userLat, userLng, userLanguage);
 
         String message = null;
         if (items.isEmpty()) {
@@ -2192,6 +2230,253 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .pageSize(pageSize)
                 .message(message)
                 .build();
+    }
+
+    private List<GymMainPageResponseV2> mapGymListItems(Long userId, List<Gym> gyms, Double userLat,
+                                                       Double userLng, String userLanguage) {
+        Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap = gyms.stream()
+                .collect(Collectors.toMap(
+                        Gym::getId,
+                        gym -> gym.getGeneralWorkHours() != null
+                                ? new java.util.ArrayList<>(gym.getGeneralWorkHours())
+                                : java.util.Collections.emptyList(),
+                        (existing, replacement) -> existing
+                ));
+
+        List<Long> savedGymIds = new java.util.ArrayList<>();
+        if (userId != null) {
+            List<Long> gymIds = gyms.stream().map(Gym::getId).toList();
+            if (!gymIds.isEmpty()) {
+                savedGymIds = savedGymRepository.findGymIdsByUserIdAndGymIdIn(userId, gymIds);
+            }
+        }
+        final List<Long> finalSavedIds = savedGymIds;
+
+        List<Long> allPackageIds = gyms.stream()
+                .flatMap(g -> g.getSubscriptions() != null
+                        ? uniqueSubscriptions(g.getSubscriptions()).stream()
+                        : java.util.stream.Stream.empty())
+                .map(GymSubscription::getPackageId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<Long> uncachedPackageIds = allPackageIds.stream()
+                .filter(id -> !packageInfoCache.asMap().containsKey(id))
+                .toList();
+        if (!uncachedPackageIds.isEmpty()) {
+            try {
+                List<az.fitnest.order.grpc.PackageNameInfo> newInfos =
+                        orderServiceGrpcClient.getPackageNamesByIds(uncachedPackageIds);
+                for (var info : newInfos) {
+                    packageInfoCache.asMap().put(info.getPackageId(), info);
+                }
+            } catch (Exception ignored) {
+                // Keep going with cached names; the plan id is still returned.
+            }
+        }
+
+        Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageMap = allPackageIds.stream()
+                .filter(packageInfoCache.asMap()::containsKey)
+                .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
+        Map<String, String> translationLookup = fetchTranslationsInBulk(gyms, userLanguage);
+
+        return gyms.stream()
+                .map(gym -> mapToGymMainPageDtoV2(
+                        gym,
+                        userId,
+                        userLat,
+                        userLng,
+                        finalSavedIds.contains(gym.getId()),
+                        packageMap,
+                        workHoursMap,
+                        translationLookup,
+                        userLanguage
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GymListResponseV3 getGymsV3(Long userId, String q, String type, Long categoryId,
+                                       Long subscriptionId, int page, int pageSize, Double userLat,
+                                       Double userLng, String sortDir, Boolean homeEligible,
+                                       Long packageId, String tier) {
+        if (categoryId != null && !categoryRepository.existsById(categoryId)) {
+            throw new BadRequestException("INVALID_CATEGORY", "error.invalid_category");
+        }
+        Integer requestedRank = resolveRequestedRank(packageId, tier);
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.max(1, Math.min(pageSize, 100));
+        String userLanguage = getUserLanguage(userId);
+        String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        List<Gym> candidates;
+        if ("SAVED".equalsIgnoreCase(type)) {
+            if (userId == null) {
+                return emptyGymListResponseV3(safePage, safeSize);
+            }
+            candidates = savedGymRepository.findByUserIdWithGym(userId).stream()
+                    .map(SavedGym::getGym)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(g -> matchesSearchAndCategory(g, searchKey, categoryId))
+                    .collect(Collectors.toList());
+            if (userLat != null && userLng != null) {
+                candidates.sort(Comparator.comparingDouble(g -> distanceTo(g, userLat, userLng)));
+            }
+        } else {
+            boolean hasSubscriptionFilter = subscriptionId != null;
+            List<Long> subscriptionIds = hasSubscriptionFilter
+                    ? java.util.Collections.singletonList(subscriptionId)
+                    : java.util.Collections.singletonList(-1L);
+            Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
+                    ? Sort.Direction.ASC : Sort.Direction.DESC;
+            Page<Long> idPage;
+            if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type)
+                    || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
+                idPage = gymRepository.findAllClosestWithFiltersNativeIdsV2(searchKey, categoryId,
+                        hasSubscriptionFilter, subscriptionIds, userLat, userLng, Pageable.unpaged());
+            } else {
+                idPage = gymRepository.findGymIdsWithFiltersV2(searchKey, categoryId,
+                        hasSubscriptionFilter, subscriptionIds,
+                        Pageable.unpaged(Sort.by(direction, "createdDate")));
+            }
+            List<Long> ids = idPage.getContent();
+            if (ids.isEmpty()) {
+                candidates = java.util.Collections.emptyList();
+            } else {
+                Map<Long, Gym> gymMap = gymRepository.findWithListDetailsByIdIn(ids).stream()
+                        .collect(Collectors.toMap(Gym::getId, g -> g, (first, second) -> first));
+                candidates = ids.stream()
+                        .map(gymMap::get)
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+            }
+        }
+
+        Map<Long, az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo> homeInfo =
+                homeGymRuleService.homeGymInfoByGym(candidates, requestedRank);
+        long homeEligibleCount = candidates.stream()
+                .filter(g -> isHomeEligible(homeInfo.get(g.getId()), requestedRank))
+                .count();
+        List<Gym> filtered = Boolean.TRUE.equals(homeEligible)
+                ? candidates.stream()
+                        .filter(g -> isHomeEligible(homeInfo.get(g.getId()), requestedRank))
+                        .toList()
+                : candidates;
+
+        int start = (safePage - 1) * safeSize;
+        List<Gym> pageGyms = start >= filtered.size()
+                ? java.util.Collections.emptyList()
+                : filtered.subList(start, Math.min(start + safeSize, filtered.size()));
+        List<GymMainPageResponseV2> v2Items = mapGymListItems(userId, pageGyms, userLat, userLng,
+                userLanguage);
+        List<GymMainPageResponseV3> items = new java.util.ArrayList<>(v2Items.size());
+        for (int i = 0; i < v2Items.size(); i++) {
+            items.add(toGymMainPageResponseV3(v2Items.get(i),
+                    toHomeGymInfoResponse(homeInfo.get(pageGyms.get(i).getId()))));
+        }
+
+        String message = null;
+        if (items.isEmpty()) {
+            message = messageSource.getMessage("error.gym_not_found", null,
+                    org.springframework.context.i18n.LocaleContextHolder.getLocale());
+        }
+
+        return GymListResponseV3.builder()
+                .items(items)
+                .meta(GymListMetaV3.builder()
+                        .total(filtered.size())
+                        .homeEligibleCount(homeEligibleCount)
+                        .page(safePage)
+                        .pageSize(safeSize)
+                        .build())
+                .message(message)
+                .build();
+    }
+
+    private GymListResponseV3 emptyGymListResponseV3(int page, int pageSize) {
+        return GymListResponseV3.builder()
+                .items(java.util.Collections.emptyList())
+                .meta(GymListMetaV3.builder()
+                        .total(0L)
+                        .homeEligibleCount(0L)
+                        .page(page)
+                        .pageSize(pageSize)
+                        .build())
+                .build();
+    }
+
+    private GymMainPageResponseV3 toGymMainPageResponseV3(GymMainPageResponseV2 source,
+                                                           HomeGymInfoResponse homeGym) {
+        return GymMainPageResponseV3.builder()
+                .gymId(source.gymId())
+                .name(source.name())
+                .coverImageUrl(source.coverImageUrl())
+                .stars(source.stars())
+                .isNew(source.isNew())
+                .location(source.location())
+                .city(source.city())
+                .distanceKm(source.distanceKm())
+                .isSaved(source.isSaved())
+                .categories(source.categories())
+                .supportedSubscriptions(source.supportedSubscriptions())
+                .workHoursText(source.workHoursText())
+                .homeGym(homeGym)
+                .build();
+    }
+
+    private Integer resolveRequestedRank(Long packageId, String tier) {
+        if (packageId != null) {
+            return homeGymRuleService.packageContext(packageId).rank();
+        }
+        if (tier == null || tier.isBlank()) {
+            return null;
+        }
+        try {
+            return az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(
+                    az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier
+                            .valueOf(tier.trim().toUpperCase(java.util.Locale.ROOT)));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("INVALID_TIER", "error.invalid_tier");
+        }
+    }
+
+    private boolean isHomeEligible(
+            az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo info,
+            Integer requestedRank) {
+        if (info == null) {
+            return false;
+        }
+        return requestedRank == null
+                ? info.eligible()
+                : Boolean.TRUE.equals(info.eligibleForRequestedTier());
+    }
+
+    private boolean matchesSearchAndCategory(Gym gym, String searchKey, Long categoryId) {
+        if (searchKey != null) {
+            String lowerQ = searchKey.toLowerCase(java.util.Locale.ROOT);
+            boolean nameMatches = gym.getName() != null
+                    && gym.getName().toLowerCase(java.util.Locale.ROOT).contains(lowerQ);
+            boolean addressMatches = gym.getAddress() != null && gym.getAddress().getAddressText() != null
+                    && gym.getAddress().getAddressText().toLowerCase(java.util.Locale.ROOT).contains(lowerQ);
+            if (!nameMatches && !addressMatches) {
+                return false;
+            }
+        }
+        if (categoryId != null) {
+            return gym.getCategories() != null
+                    && gym.getCategories().stream().anyMatch(c -> categoryId.equals(c.getId()));
+        }
+        return true;
+    }
+
+    private double distanceTo(Gym gym, double userLat, double userLng) {
+        Address address = gym.getAddress();
+        if (address == null || address.getLatitude() == null || address.getLongitude() == null) {
+            return Double.MAX_VALUE;
+        }
+        return calculateDistanceRaw(userLat, userLng, address.getLatitude(), address.getLongitude());
     }
 
     private PaginatedResponse<GymMainPageResponseV2> emptyPaginatedResponseV2(int page, int pageSize) {

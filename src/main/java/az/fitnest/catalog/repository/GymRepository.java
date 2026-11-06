@@ -372,6 +372,13 @@ public interface GymRepository
             @org.springframework.data.repository.query.Param("ids") Collection<Long> ids,
             @org.springframework.data.repository.query.Param("status") GymStatus status);
 
+    // Lightweight query for the live home-gym count on the search page. Only the
+    // subscriptions are needed to derive the public minTier read-only value.
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"subscriptions"})
+    @Query("SELECT g FROM Gym g WHERE g.status = :status")
+    List<Gym> findActiveWithSubscriptions(
+            @org.springframework.data.repository.query.Param("status") GymStatus status);
+
     // Home-gym listing (R1): only active gyms whose master switch is on and that
     // support at least one package from the subscriber's hierarchy.
     // categoryId is optional and matches either a main or a sub category, so the

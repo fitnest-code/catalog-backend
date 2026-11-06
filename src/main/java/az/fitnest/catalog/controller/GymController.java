@@ -8,6 +8,9 @@ import az.fitnest.catalog.dto.response.GymCountResponse;
 import az.fitnest.catalog.dto.response.GymDetailResponse;
 import az.fitnest.catalog.dto.response.GymDetailResponseV2;
 import az.fitnest.catalog.dto.response.GymDetailResponseV3;
+import az.fitnest.catalog.dto.response.GymDetailResponseV4;
+import az.fitnest.catalog.dto.response.GymListResponseV3;
+import az.fitnest.catalog.dto.response.SearchCategoriesResponse;
 import az.fitnest.catalog.dto.response.GymEntranceEligibilityResponse;
 import az.fitnest.catalog.dto.response.GymEntranceScanResponse;
 import az.fitnest.catalog.dto.response.GymImageResponse;
@@ -302,6 +305,57 @@ public class GymController {
         Long userId = UserContext.extractUserId(principal);
         int safePageSize = Math.min(page_size, 100);
         return ResponseEntity.ok(this.gymReadService.getGymsV2(userId, q, type, categoryId, subscriptionId, page, safePageSize, lat, lng, sortDir.name().toLowerCase()));
+    }
+
+    @GetMapping("/v3/gyms")
+    @Operation(summary = "İdman zallarını əldə edin (V3)",
+            description = "V2 siyahısına əlavə olaraq hər zal üçün əsas zal iyerarxiyası (homeGym) və uyğunluq sayğacları qaytarır.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "İdman zalları uğurla əldə edildi",
+                    content = {@Content(schema = @Schema(implementation = GymListResponseV3.class))})
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<GymListResponseV3> getGymsV3(
+            @AuthenticationPrincipal Object principal,
+            @Parameter(description = "Axtarış sorğusu") @RequestParam(value = "q", required = false) String q,
+            @Parameter(description = "Filtr növü (ALL, NEW, CLOSEST, SAVED)") @RequestParam(value = "type", defaultValue = "ALL") String type,
+            @Parameter(description = "Kateqoriya ID-si") @RequestParam(value = "category", required = false) Long categoryId,
+            @Parameter(description = "Abunəlik ID-si") @RequestParam(value = "subscriptionId", required = false) Long subscriptionId,
+            @Parameter(description = "Səhifə indeksi (1-dən başlayaraq)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Hər səhifədəki elementlərin sayı") @RequestParam(defaultValue = "10") int page_size,
+            @Parameter(description = "İstifadəçinin enliyi (latitude)") @RequestParam(value = "lat", required = false) Double lat,
+            @Parameter(description = "İstifadəçinin uzunluğu (longitude)") @RequestParam(value = "lng", required = false) Double lng,
+            @Parameter(description = "Sıralama istiqaməti. ASC, DESC") @RequestParam(value = "sort_dir", defaultValue = "DESC") SortDirection sortDir,
+            @Parameter(description = "Yalnız əsas zal ola bilən zallar") @RequestParam(value = "homeEligible", required = false, defaultValue = "false") Boolean homeEligible,
+            @Parameter(description = "Paket ID-si (uyğunluq üçün)") @RequestParam(value = "packageId", required = false) Long packageId,
+            @Parameter(description = "Paket səviyyəsi (BRONZE, SILVER, GOLD, PLATINUM)") @RequestParam(value = "tier", required = false) String tier) {
+        Long userId = UserContext.extractUserId(principal);
+        int safePageSize = Math.min(page_size, 100);
+        return ResponseEntity.ok(this.gymReadService.getGymsV3(userId, q, type, categoryId, subscriptionId,
+                page, safePageSize, lat, lng, sortDir.name().toLowerCase(), homeEligible, packageId, tier));
+    }
+
+    @GetMapping("/v4/gyms/{gymId:\\d+}")
+    @Operation(summary = "İdman zalı təfərrüatları (V4)",
+            description = "V2 təfərrüatına əlavə olaraq homeGym iyerarxiyası və dörd paket üzrə homeEligible bayraqları.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "İdman zalı təfərrüatları uğurla əldə edildi",
+                    content = {@Content(schema = @Schema(implementation = GymDetailResponseV4.class))}),
+            @ApiResponse(responseCode = "404", description = "İdman zalı tapılmadı")
+    })
+    public ResponseEntity<GymDetailResponseV4> getGymDetailV4(
+            @AuthenticationPrincipal Object principal,
+            @Parameter(description = "İdman zalının ID-si") @PathVariable Long gymId) {
+        Long userId = UserContext.extractUserId(principal);
+        return ResponseEntity.ok(this.gymReadService.getGymDetailV4(userId, gymId));
+    }
+
+    @GetMapping("/v2/gyms/count/by-category")
+    @Operation(summary = "Axtarış kateqoriyaları (V2)",
+            description = "Əvvəlcə HOME_ELIGIBLE, sonra real kateqoriyalar və canlı zal sayları.")
+    public ResponseEntity<SearchCategoriesResponse> getSearchCategoriesV2() {
+        return ResponseEntity.ok(this.gymReadService.getSearchCategoriesV2());
     }
 
     @Operation(summary = "Arxiv dərs saatlarını alın", description = "İdman zalına aid keçmiş (son 1 həftə) dərs saatlarının siyahısını gətirir. ADMIN, GYM_SUPER_ADMIN və ya GYM_ADMIN rolu tələb olunur.")
