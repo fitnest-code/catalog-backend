@@ -1469,8 +1469,12 @@ public class GymWriteServiceImpl implements GymWriteService {
     @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-stats", "landing-media-public"}, allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
+        GymStatus previous = gym.getStatus();
         gym.setStatus(enabled ? GymStatus.ACTIVE : GymStatus.INACTIVE);
         gymRepository.save(gym);
+        if (enabled && previous != GymStatus.ACTIVE) {
+            gymActivationNotifier.notifyNewActiveGym(gym.getId(), gym.getName());
+        }
     }
 
     private void updateWorkHours(Set<GymWorkHour> target, Set<GymWorkHourResponse> source) {

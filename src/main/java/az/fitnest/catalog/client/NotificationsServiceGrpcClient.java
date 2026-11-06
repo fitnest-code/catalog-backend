@@ -2,6 +2,7 @@ package az.fitnest.catalog.client;
 
 import az.fitnest.notifications.grpc.NotificationsServiceGrpc;
 import az.fitnest.notifications.grpc.NotifyNewGymRequest;
+import az.fitnest.notifications.grpc.NotifyNewGymResponse;
 import az.fitnest.notifications.grpc.SendPushNotificationRequest;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.client.inject.GrpcClient;
@@ -33,9 +34,13 @@ public class NotificationsServiceGrpcClient {
         }
     }
 
-    /** Triggers new-gym notification fan-out; templates/localization live in notifications-backend. */
+    /**
+     * Triggers new-gym notification fan-out. Templates live in notifications-backend.
+     *
+     * @return false when the RPC fails, so the caller can retry on a later activation
+     */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "notificationsService")
-    public void notifyNewGym(Long gymId, String gymName) {
+    public boolean notifyNewGym(Long gymId, String gymName) {
         try {
             NotifyNewGymRequest.Builder builder = NotifyNewGymRequest.newBuilder();
             if (gymId != null) {
@@ -44,11 +49,12 @@ public class NotificationsServiceGrpcClient {
             if (gymName != null) {
                 builder.setGymName(gymName);
             }
-            notificationsServiceBlockingStub
+            NotifyNewGymResponse response = notificationsServiceBlockingStub
                     .withDeadlineAfter(60, java.util.concurrent.TimeUnit.SECONDS)
                     .notifyNewGym(builder.build());
+            return response.getSuccess();
         } catch (Exception e) {
-            // Ignored — gym creation must not fail because of notification delivery
+            return false;
         }
     }
 }

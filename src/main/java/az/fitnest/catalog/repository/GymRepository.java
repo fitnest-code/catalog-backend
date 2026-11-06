@@ -4,9 +4,12 @@ import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.enums.GymStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -420,4 +423,16 @@ public interface GymRepository
             @org.springframework.data.repository.query.Param("userLat") Double userLat,
             @org.springframework.data.repository.query.Param("userLng") Double userLng,
             org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * One row can win. A second activation, including turning the gym back on, updates nothing.
+     * The context is cleared so the managed gym does not flush a null timestamp back over the claim.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Gym g set g.newGymPushSentAt = :sentAt where g.id = :id and g.newGymPushSentAt is null")
+    int claimNewGymPush(@Param("id") Long id, @Param("sentAt") LocalDateTime sentAt);
+
+    @Modifying
+    @Query("update Gym g set g.newGymPushSentAt = null where g.id = :id and g.newGymPushSentAt = :sentAt")
+    int releaseNewGymPush(@Param("id") Long id, @Param("sentAt") LocalDateTime sentAt);
 }

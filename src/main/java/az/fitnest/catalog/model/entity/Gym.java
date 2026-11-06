@@ -12,6 +12,7 @@ import az.fitnest.catalog.model.enums.GymStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -234,6 +235,13 @@ public class Gym
     @Column(name = "home_eligible")
     @Builder.Default
     private Boolean homeEligible = true;
+
+    /**
+     * Set when the one-time "new gym" push is claimed. Left null until the first
+     * activation so a failed send can be retried. Not part of any API response.
+     */
+    @Column(name = "new_gym_push_sent_at")
+    private LocalDateTime newGymPushSentAt;
 
     public Long getGymId() {
         return getId();
