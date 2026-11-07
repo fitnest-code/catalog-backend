@@ -1,5 +1,7 @@
 # Primary gym and membership policy v4
 
+Pre-purchase browse/search/detail home-gym flags for mobile: see [HOME_GYM_PRE_PURCHASE_MOBILE.md](./HOME_GYM_PRE_PURCHASE_MOBILE.md) (`GET /api/v3/gyms`, `GET /api/v4/gyms/{id}`, `GET /api/v2/gyms/count/by-category`).
+
 ## Scope and implementation plan
 
 The four admin screenshots supplied on 28 October 2026 define a new opt-in membership flow. Existing v1/v2/v3 controllers, request/response DTOs, gRPC contracts and check-in implementations are preserved. No production infrastructure or databases were changed.

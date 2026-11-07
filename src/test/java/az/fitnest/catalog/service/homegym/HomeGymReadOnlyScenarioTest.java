@@ -245,6 +245,29 @@ class HomeGymReadOnlyScenarioTest {
     }
 
     @Test
+    void silverOnlyGymIsEligibleForGoldViaPackageAndAboveHierarchy() {
+        // Package-and-above: a gym that offers SILVER (minTier=SILVER) is selectable
+        // for GOLD even when GOLD is not listed on the gym's subscriptions.
+        HomeGymRuleService.HomeGymInfo info =
+                service.homeGymInfo(gym(GYM_ID, true, SILVER), 3);
+
+        assertEquals(Tier.SILVER, info.minTier());
+        assertTrue(info.eligibleForRequestedTier());
+        assertTrue(service.isHomeEligible(gym(GYM_ID, true, SILVER), GOLD));
+    }
+
+    @Test
+    void gymOfferingOnlyHigherTiersIsNotEligibleForALowerRequestedTier() {
+        // PLATINUM-only gym cannot be home for a GOLD request (requestedRank < minRank).
+        HomeGymRuleService.HomeGymInfo info =
+                service.homeGymInfo(gym(GYM_ID, true, PLATINUM), 3);
+
+        assertEquals(Tier.PLATINUM, info.minTier());
+        assertFalse(info.eligibleForRequestedTier());
+        assertFalse(service.isHomeEligible(gym(GYM_ID, true, PLATINUM), GOLD));
+    }
+
+    @Test
     void aRequestedTierBelowTheMinimumIsNotEligible() {
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
                 .thenReturn(List.of(price(GYM_ID, BRONZE, false, true)));

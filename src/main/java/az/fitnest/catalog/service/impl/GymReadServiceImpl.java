@@ -984,11 +984,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         Long userId = az.fitnest.catalog.util.UserContext.getCurrentUserId();
         String language = getUserLanguage(userId);
 
-        List<Gym> activeGyms = gymRepository.findActiveWithSubscriptions(
-                az.fitnest.catalog.model.enums.GymStatus.ACTIVE);
-        long homeEligibleCount = homeGymRuleService.homeGymInfoByGym(activeGyms).values().stream()
-                .filter(az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo::eligible)
-                .count();
+        long homeEligibleCount = self.countHomeEligibleGymsCached();
 
         List<SearchCategoryResponse> categories = new java.util.ArrayList<>();
         categories.add(SearchCategoryResponse.builder()
@@ -1007,6 +1003,19 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                     .build());
         }
         return SearchCategoriesResponse.builder().categories(categories).build();
+    }
+
+    /**
+     * Cached HOME_ELIGIBLE gym count for the search page. Evicted from HomeGymAdminService
+     * when the master switch or package homeEligible flags change.
+     */
+    @Cacheable(value = "home-eligible-gym-count")
+    public long countHomeEligibleGymsCached() {
+        List<Gym> activeGyms = gymRepository.findActiveWithSubscriptions(
+                az.fitnest.catalog.model.enums.GymStatus.ACTIVE);
+        return homeGymRuleService.homeGymInfoByGym(activeGyms).values().stream()
+                .filter(az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo::eligible)
+                .count();
     }
 
     @Transactional(readOnly = true)
@@ -2310,65 +2319,54 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         int safeSize = Math.max(1, Math.min(pageSize, 100));
         String userLanguage = getUserLanguage(userId);
         String searchKey = (q != null && !q.isBlank()) ? q.trim() : null;
+        boolean filterHomeEligible = Boolean.TRUE.equals(homeEligible);
 
-        List<Gym> candidates;
-        if ("SAVED".equalsIgnoreCase(type)) {
-            if (userId == null) {
-                return emptyGymListResponseV3(safePage, safeSize);
-            }
-            candidates = savedGymRepository.findByUserIdWithGym(userId).stream()
-                    .map(SavedGym::getGym)
-                    .filter(java.util.Objects::nonNull)
-                    .filter(g -> matchesSearchAndCategory(g, searchKey, categoryId))
-                    .collect(Collectors.toList());
-            if (userLat != null && userLng != null) {
-                candidates.sort(Comparator.comparingDouble(g -> distanceTo(g, userLat, userLng)));
-            }
-        } else {
-            boolean hasSubscriptionFilter = subscriptionId != null;
-            List<Long> subscriptionIds = hasSubscriptionFilter
-                    ? java.util.Collections.singletonList(subscriptionId)
-                    : java.util.Collections.singletonList(-1L);
-            Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
-                    ? Sort.Direction.ASC : Sort.Direction.DESC;
-            Page<Long> idPage;
-            if (userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type)
-                    || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type))) {
-                idPage = gymRepository.findAllClosestWithFiltersNativeIdsV2(searchKey, categoryId,
-                        hasSubscriptionFilter, subscriptionIds, userLat, userLng, Pageable.unpaged());
-            } else {
-                idPage = gymRepository.findGymIdsWithFiltersV2(searchKey, categoryId,
-                        hasSubscriptionFilter, subscriptionIds,
-                        Pageable.unpaged(Sort.by(direction, "createdDate")));
-            }
-            List<Long> ids = idPage.getContent();
-            if (ids.isEmpty()) {
-                candidates = java.util.Collections.emptyList();
-            } else {
-                Map<Long, Gym> gymMap = gymRepository.findWithListDetailsByIdIn(ids).stream()
-                        .collect(Collectors.toMap(Gym::getId, g -> g, (first, second) -> first));
-                candidates = ids.stream()
-                        .map(gymMap::get)
-                        .filter(java.util.Objects::nonNull)
-                        .toList();
-            }
+        // 1) Candidate IDs only (avoid hydrating list-details for the whole catalog).
+        List<Long> candidateIds = resolveGymListCandidateIdsV3(userId, type, searchKey, categoryId,
+                subscriptionId, userLat, userLng, sortDir, filterHomeEligible, packageId, requestedRank);
+        if (candidateIds.isEmpty()) {
+            return emptyGymListResponseV3(safePage, safeSize);
         }
 
-        Map<Long, az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo> homeInfo =
-                homeGymRuleService.homeGymInfoByGym(candidates, requestedRank);
-        long homeEligibleCount = candidates.stream()
-                .filter(g -> isHomeEligible(homeInfo.get(g.getId()), requestedRank))
-                .count();
-        List<Gym> filtered = Boolean.TRUE.equals(homeEligible)
-                ? candidates.stream()
-                        .filter(g -> isHomeEligible(homeInfo.get(g.getId()), requestedRank))
-                        .toList()
-                : candidates;
+        // 2) Subscriptions-only hydrate for rule evaluation.
+        Map<Long, Gym> ruleGyms = gymRepository.findWithSubscriptionsByIdIn(candidateIds).stream()
+                .collect(Collectors.toMap(Gym::getId, g -> g, (first, second) -> first));
+        List<Gym> orderedForRules = candidateIds.stream()
+                .map(ruleGyms::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
 
+        Map<Long, az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo> homeInfo =
+                homeGymRuleService.homeGymInfoByGym(orderedForRules, requestedRank);
+
+        long homeEligibleCount = candidateIds.stream()
+                .filter(id -> isHomeEligible(homeInfo.get(id), requestedRank))
+                .count();
+
+        List<Long> filteredIds = filterHomeEligible
+                ? candidateIds.stream()
+                        .filter(id -> isHomeEligible(homeInfo.get(id), requestedRank))
+                        .toList()
+                : candidateIds;
+
+        // 3) Page IDs, then load list-details only for the page.
         int start = (safePage - 1) * safeSize;
-        List<Gym> pageGyms = start >= filtered.size()
+        List<Long> pageIds = start >= filteredIds.size()
                 ? java.util.Collections.emptyList()
-                : filtered.subList(start, Math.min(start + safeSize, filtered.size()));
+                : filteredIds.subList(start, Math.min(start + safeSize, filteredIds.size()));
+
+        List<Gym> pageGyms;
+        if (pageIds.isEmpty()) {
+            pageGyms = java.util.Collections.emptyList();
+        } else {
+            Map<Long, Gym> detailMap = gymRepository.findWithListDetailsByIdIn(pageIds).stream()
+                    .collect(Collectors.toMap(Gym::getId, g -> g, (first, second) -> first));
+            pageGyms = pageIds.stream()
+                    .map(detailMap::get)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+
         List<GymMainPageResponseV2> v2Items = mapGymListItems(userId, pageGyms, userLat, userLng,
                 userLanguage);
         List<GymMainPageResponseV3> items = new java.util.ArrayList<>(v2Items.size());
@@ -2386,13 +2384,80 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         return GymListResponseV3.builder()
                 .items(items)
                 .meta(GymListMetaV3.builder()
-                        .total(filtered.size())
+                        .total((long) filteredIds.size())
                         .homeEligibleCount(homeEligibleCount)
                         .page(safePage)
                         .pageSize(safeSize)
                         .build())
                 .message(message)
                 .build();
+    }
+
+    /**
+     * Resolves ordered candidate gym IDs for V3 list. When homeEligible filtering is on and a
+     * package/tier is known, reuses the post-purchase home-gym SQL prefilter so package
+     * membership is enforced in the database before rule evaluation.
+     */
+    private List<Long> resolveGymListCandidateIdsV3(Long userId, String type, String searchKey,
+                                                    Long categoryId, Long subscriptionId,
+                                                    Double userLat, Double userLng, String sortDir,
+                                                    boolean filterHomeEligible, Long packageId,
+                                                    Integer requestedRank) {
+        if ("SAVED".equalsIgnoreCase(type)) {
+            if (userId == null) {
+                return java.util.Collections.emptyList();
+            }
+            List<Gym> saved = savedGymRepository.findByUserIdWithGym(userId).stream()
+                    .map(SavedGym::getGym)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(g -> matchesSearchAndCategory(g, searchKey, categoryId))
+                    .collect(Collectors.toCollection(java.util.ArrayList::new));
+            if (userLat != null && userLng != null) {
+                saved.sort(Comparator.comparingDouble(g -> distanceTo(g, userLat, userLng)));
+            }
+            return saved.stream().map(Gym::getId).toList();
+        }
+
+        List<Long> hierarchyPackageIds = resolveHierarchyPackageIds(packageId, requestedRank);
+        boolean useHomeSql = filterHomeEligible && hierarchyPackageIds != null;
+        boolean hasSubscriptionFilter = subscriptionId != null;
+        List<Long> subscriptionIds = hasSubscriptionFilter
+                ? java.util.Collections.singletonList(subscriptionId)
+                : java.util.Collections.singletonList(-1L);
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        boolean closest = userLat != null && userLng != null && ("CLOSEST".equalsIgnoreCase(type)
+                || type == null || type.isEmpty() || "ALL".equalsIgnoreCase(type));
+
+        Page<Long> idPage;
+        if (useHomeSql && closest) {
+            idPage = gymRepository.findClosestHomeGymIds(searchKey, categoryId, hierarchyPackageIds,
+                    userLat, userLng, Pageable.unpaged());
+        } else if (useHomeSql) {
+            idPage = gymRepository.findHomeGymIds(searchKey, categoryId, hierarchyPackageIds,
+                    Pageable.unpaged());
+        } else if (closest) {
+            idPage = gymRepository.findAllClosestWithFiltersNativeIdsV2(searchKey, categoryId,
+                    hasSubscriptionFilter, subscriptionIds, userLat, userLng, Pageable.unpaged());
+        } else {
+            idPage = gymRepository.findGymIdsWithFiltersV2(searchKey, categoryId,
+                    hasSubscriptionFilter, subscriptionIds,
+                    Pageable.unpaged(Sort.by(direction, "createdDate")));
+        }
+        return idPage.getContent();
+    }
+
+    /**
+     * Package IDs for SQL home-eligible prefilter (null when no package/tier was requested).
+     */
+    private List<Long> resolveHierarchyPackageIds(Long packageId, Integer requestedRank) {
+        if (packageId != null) {
+            return homeGymRuleService.eligiblePackageIds(packageId);
+        }
+        if (requestedRank != null && requestedRank > 0) {
+            return homeGymRuleService.packageIdsAtOrBelowRank(requestedRank);
+        }
+        return null;
     }
 
     private GymListResponseV3 emptyGymListResponseV3(int page, int pageSize) {

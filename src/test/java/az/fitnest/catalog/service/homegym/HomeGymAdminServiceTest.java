@@ -358,6 +358,56 @@ class HomeGymAdminServiceTest {
         verify(packagePriceRepository).save(existing);
     }
 
+    @Test
+    void enablingHomeEligibleOnSilverAlsoEnablesHigherTiers() {
+        gymWithAllPackages();
+        when(packagePriceRepository.findByGymIdAndPackageIdAndEffectiveFrom(
+                eq(GYM_ID), anyLong(), eq(NEXT_MONTH))).thenReturn(Optional.empty());
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanOrderByEffectiveFromDesc(
+                        eq(GYM_ID), anyLong(), eq(NEXT_MONTH))).thenReturn(Optional.empty());
+
+        service.upsertPrice(GYM_ID, HomeGymPackagePriceRequest.builder()
+                .packageId(SILVER)
+                .homeEligible(true)
+                .singlePrice(10.0)
+                .unlimitedPrice(100.0)
+                .build());
+
+        ArgumentCaptor<GymPackagePrice> captor = ArgumentCaptor.forClass(GymPackagePrice.class);
+        verify(packagePriceRepository, times(3)).save(captor.capture());
+        Set<Long> savedPackages = captor.getAllValues().stream()
+                .map(GymPackagePrice::getPackageId)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of(SILVER, GOLD, PLATINUM), savedPackages);
+        assertTrue(captor.getAllValues().stream().allMatch(p -> Boolean.TRUE.equals(p.getHomeEligible())));
+    }
+
+    @Test
+    void disablingHomeEligibleOnGoldAlsoDisablesLowerTiers() {
+        gymWithAllPackages();
+        when(packagePriceRepository.findByGymIdAndPackageIdAndEffectiveFrom(
+                eq(GYM_ID), anyLong(), eq(NEXT_MONTH))).thenReturn(Optional.empty());
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanOrderByEffectiveFromDesc(
+                        eq(GYM_ID), anyLong(), eq(NEXT_MONTH))).thenReturn(Optional.empty());
+
+        service.upsertPrice(GYM_ID, HomeGymPackagePriceRequest.builder()
+                .packageId(GOLD)
+                .homeEligible(false)
+                .singlePrice(10.0)
+                .unlimitedPrice(100.0)
+                .build());
+
+        ArgumentCaptor<GymPackagePrice> captor = ArgumentCaptor.forClass(GymPackagePrice.class);
+        verify(packagePriceRepository, times(3)).save(captor.capture());
+        Set<Long> savedPackages = captor.getAllValues().stream()
+                .map(GymPackagePrice::getPackageId)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of(BRONZE, SILVER, GOLD), savedPackages);
+        assertTrue(captor.getAllValues().stream().allMatch(p -> Boolean.FALSE.equals(p.getHomeEligible())));
+    }
+
     // ------------------------------------------------------------------
     // Time slots: validation (R14/F-03)
     // ------------------------------------------------------------------
@@ -688,6 +738,16 @@ class HomeGymAdminServiceTest {
         }
         return new HomeGymRuleService.PackageContext(packageId, name, rank,
                 List.of(BRONZE, SILVER, GOLD, PLATINUM).subList(0, rank));
+    }
+
+    private void gymWithAllPackages() {
+        Set<GymSubscription> subscriptions = new LinkedHashSet<>();
+        for (Long packageId : List.of(BRONZE, SILVER, GOLD, PLATINUM)) {
+            GymSubscription subscription = new GymSubscription();
+            subscription.setPackageId(packageId);
+            subscriptions.add(subscription);
+        }
+        gym.setSubscriptions(subscriptions);
     }
 
     private static Gym gym() {

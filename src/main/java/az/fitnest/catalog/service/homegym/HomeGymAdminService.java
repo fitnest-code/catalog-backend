@@ -21,6 +21,7 @@ import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
 import az.fitnest.catalog.util.UserContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -75,6 +76,7 @@ public class HomeGymAdminService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "home-eligible-gym-count", allEntries = true)
     public HomeGymAdminStateResponse setHomeEligible(Long gymId, HomeGymToggleRequest request) {
         if (request == null || request.getEnabled() == null) {
             throw new BadRequestException("HOME_GYM_INVALID_REQUEST", "error.home_gym.invalid_request");
@@ -117,6 +119,7 @@ public class HomeGymAdminService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "home-eligible-gym-count", allEntries = true)
     public HomeGymPackagePriceResponse upsertPrice(Long gymId, HomeGymPackagePriceRequest request) {
         if (request == null || request.getPackageId() == null) {
             throw new BadRequestException("HOME_GYM_INVALID_REQUEST", "error.home_gym.invalid_request");

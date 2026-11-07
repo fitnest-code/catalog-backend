@@ -172,9 +172,35 @@ public class HomeGymRuleService {
         if (gym == null || Boolean.FALSE.equals(gym.getHomeEligible())) {
             return false;
         }
-        Integer requestedRank = packageId == null ? null : packageContext(packageId).rank();
+        if (packageId == null) {
+            return homeGymInfo(gym).eligible();
+        }
+        PackageContext context = packageContext(packageId);
+        Integer requestedRank = context.rank() > 0 ? context.rank() : null;
         HomeGymInfo info = homeGymInfo(gym, requestedRank);
-        return requestedRank == null ? info.eligible() : Boolean.TRUE.equals(info.eligibleForRequestedTier());
+        // Match post-purchase listing: tier gate plus gym offering a package in the hierarchy.
+        return Boolean.TRUE.equals(info.eligibleForRequestedTier()) && supportsPackage(gym, context);
+    }
+
+    /**
+     * Package IDs whose tier rank is at or below {@code rank}. Used to SQL-prefilter
+     * pre-purchase home-eligible lists the same way post-purchase listing uses the hierarchy.
+     */
+    public List<Long> packageIdsAtOrBelowRank(int rank) {
+        if (rank <= 0) {
+            return List.of(-1L);
+        }
+        List<Long> ids = new ArrayList<>();
+        try {
+            for (var plan : orderServiceGrpcClient.getGymPlans()) {
+                if (packageRank(plan.getName()) > 0 && packageRank(plan.getName()) <= rank) {
+                    ids.add(plan.getPackageId());
+                }
+            }
+        } catch (Exception ignored) {
+            return List.of(-1L);
+        }
+        return ids.isEmpty() ? List.of(-1L) : List.copyOf(ids);
     }
 
     public HomeGymInfo homeGymInfo(Gym gym) {
@@ -267,7 +293,13 @@ public class HomeGymRuleService {
                 tiers.add(tier);
             }
         }
-        Boolean eligibleForRequestedTier = requestedRank == null ? null : requestedRank >= minRank;
+        // Package-and-above: eligible when the requested tier is at/above minTier and the gym
+        // offers at least one package at or below that tier (hierarchy membership).
+        Boolean eligibleForRequestedTier = null;
+        if (requestedRank != null) {
+            boolean offeredInHierarchy = offeredByRank.floorKey(requestedRank) != null;
+            eligibleForRequestedTier = requestedRank >= minRank && offeredInHierarchy;
+        }
         return new HomeGymInfo(minTier, List.copyOf(tiers), eligibleForRequestedTier);
     }
 

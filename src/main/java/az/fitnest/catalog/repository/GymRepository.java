@@ -231,6 +231,15 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"mainCategories", "subCategories", "subscriptions", "subscriptions.supportedServices", "generalWorkHours"})
     public List<Gym> findWithListDetailsByIdIn(List<Long> ids);
 
+    /**
+     * Lightweight hydrate for pre-purchase home-gym rule evaluation: only subscriptions
+     * are needed to derive minTier before the page is mapped to list-detail DTOs.
+     */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"subscriptions"})
+    @Query("SELECT g FROM Gym g WHERE g.id IN :ids")
+    List<Gym> findWithSubscriptionsByIdIn(
+            @org.springframework.data.repository.query.Param("ids") Collection<Long> ids);
+
     @org.springframework.data.jpa.repository.Query("SELECT mc, COUNT(g.id) FROM Gym g JOIN g.mainCategories mc GROUP BY mc")
     List<Object[]> countGymsByCategory();
 
