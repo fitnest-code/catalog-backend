@@ -56,6 +56,11 @@ public interface GymRepository
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"address", "mainCategories", "subCategories", "subscriptions", "subscriptions.supportedServices", "rooms", "rooms.images", "rooms.category", "descriptions", "generalWorkHours", "workHoursWoman", "workHoursMan", "restDays"})
     public Optional<Gym> findWithDetailsById(Long id);
 
+    /** Access-hours only needs work hours + rest days — avoid the full admin/detail graph. */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"generalWorkHours", "restDays"})
+    @Query("SELECT g FROM Gym g WHERE g.id = :id")
+    Optional<Gym> findAccessHoursById(@org.springframework.data.repository.query.Param("id") Long id);
+
     long countByStatus(GymStatus status);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {

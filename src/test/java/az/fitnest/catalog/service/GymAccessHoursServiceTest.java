@@ -11,6 +11,7 @@ import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
 import az.fitnest.catalog.service.homegym.HomeGymRuleService;
 import az.fitnest.catalog.service.homegym.HomeGymRuleService.PackageContext;
 import az.fitnest.order.grpc.ActiveSubscriptionResponse;
+import az.fitnest.order.grpc.SubscriptionPackageInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -71,13 +70,14 @@ class GymAccessHoursServiceTest {
         )));
         gym.setRestDays(EnumSet.of(GymWorkHourPeriod.SUNDAY));
 
-        when(gymRepository.findWithDetailsById(GYM_ID)).thenReturn(Optional.of(gym));
+        when(gymRepository.findAccessHoursById(GYM_ID)).thenReturn(Optional.of(gym));
         stubPackages();
     }
 
     @Test
     void unrestrictedGym_openDuringWorkHours() {
-        when(timeSlotRuleRepository.findEffectiveRules(eq(GYM_ID), any())).thenReturn(List.of());
+        when(timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(GYM_ID))
+                .thenReturn(List.of());
         stubActiveBronze();
 
         LocalDateTime thursdayNoon = LocalDateTime.of(2026, 11, 12, 12, 0);
@@ -94,7 +94,8 @@ class GymAccessHoursServiceTest {
 
     @Test
     void restDay_closedWithNextOpenAt() {
-        when(timeSlotRuleRepository.findEffectiveRules(eq(GYM_ID), any())).thenReturn(List.of());
+        when(timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(GYM_ID))
+                .thenReturn(List.of());
         stubActiveBronze();
 
         LocalDateTime sundayNoon = LocalDateTime.of(2026, 11, 15, 12, 0);
@@ -108,9 +109,10 @@ class GymAccessHoursServiceTest {
 
     @Test
     void bronzeInsideLimitedWindow_openNow() {
-        when(timeSlotRuleRepository.findEffectiveRules(eq(GYM_ID), any()))
+        when(timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(GYM_ID))
                 .thenReturn(bronzeLimitedRules());
         stubActiveBronze();
+        stubGymPlans();
 
         LocalDateTime thursday1130 = LocalDateTime.of(2026, 11, 12, 11, 30);
         GymAccessHoursResponse response = service.getAccessHours(GYM_ID, USER_ID, thursday1130);
@@ -124,9 +126,10 @@ class GymAccessHoursServiceTest {
 
     @Test
     void bronzeOutsideLimitedWindow_closedWhileSilverWouldBeOpen() {
-        when(timeSlotRuleRepository.findEffectiveRules(eq(GYM_ID), any()))
+        when(timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(GYM_ID))
                 .thenReturn(bronzeLimitedRules());
         stubActiveBronze();
+        stubGymPlans();
 
         LocalDateTime thursday1800 = LocalDateTime.of(2026, 11, 12, 18, 0);
         GymAccessHoursResponse bronzeResponse = service.getAccessHours(GYM_ID, USER_ID, thursday1800);
@@ -163,6 +166,15 @@ class GymAccessHoursServiceTest {
                         .setPackageId(BRONZE)
                         .setPackageName("Bronze")
                         .build());
+    }
+
+    private void stubGymPlans() {
+        when(orderServiceGrpcClient.getGymPlans()).thenReturn(List.of(
+                SubscriptionPackageInfo.newBuilder().setPackageId(BRONZE).setName("Bronze").build(),
+                SubscriptionPackageInfo.newBuilder().setPackageId(SILVER).setName("Silver").build(),
+                SubscriptionPackageInfo.newBuilder().setPackageId(GOLD).setName("Gold").build(),
+                SubscriptionPackageInfo.newBuilder().setPackageId(PLATINUM).setName("Platinum").build()
+        ));
     }
 
     private List<GymTimeSlotRule> bronzeLimitedRules() {

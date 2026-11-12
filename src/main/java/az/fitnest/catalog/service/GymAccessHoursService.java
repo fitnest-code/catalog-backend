@@ -23,15 +23,17 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Mobile access-hours for a gym: general work hours, per-package windows from
- * home-gym time-slot rules, and a {@code forUser} snapshot for the caller's
- * active subscription (Asia/Baku).
+ * Mobile access-hours: gym work hours, package time-slot windows, and {@code forUser}
+ * for the caller's active subscription (Asia/Baku).
+ *
+ * <p>One gym load + one rules query per request. {@code nextOpenAt} scans in memory.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +41,8 @@ import java.util.Set;
 public class GymAccessHoursService {
 
     static final ZoneId BAKU = HomeGymRuleService.BAKU;
+    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59);
+    private static final int NEXT_OPEN_HORIZON_DAYS = 14;
 
     private final GymRepository gymRepository;
     private final GymTimeSlotRuleRepository timeSlotRuleRepository;
@@ -51,100 +55,102 @@ public class GymAccessHoursService {
 
     /** Package-visible for unit tests with a fixed clock. */
     GymAccessHoursResponse getAccessHours(Long gymId, Long userId, LocalDateTime nowBaku) {
-        Gym gym = gymRepository.findWithDetailsById(gymId)
+        Gym gym = gymRepository.findAccessHoursById(gymId)
                 .orElseThrow(() -> new ResourceNotFoundException("error.gym_not_found"));
 
         LocalDate today = nowBaku.toLocalDate();
         LocalTime now = nowBaku.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
 
+        // All rules for the gym once; day filtering stays in memory (also used by nextOpenAt).
+        List<GymTimeSlotRule> allRules = timeSlotRuleRepository
+                .findByGymIdOrderByEffectiveFromDescIdAsc(gymId);
+        boolean hasPackageRestrictions = !allRules.isEmpty();
+
         GymAccessHoursResponse.GymWorkHoursInfo workingHours = buildWorkingHours(gym);
-        List<GymTimeSlotRule> rules = timeSlotRuleRepository.findEffectiveRules(gymId, today);
-        List<GymTimeSlotRule> todayRules = rules.stream()
-                .filter(rule -> matchesWeekday(rule, today.getDayOfWeek()))
-                .toList();
-
-        boolean hasPackageRestrictions = !rules.isEmpty();
-        List<GymAccessHoursResponse.GymPackageAccess> byPackage =
-                hasPackageRestrictions ? buildByPackage(rules, today) : List.of();
-
+        List<GymAccessHoursResponse.GymPackageAccess> byPackage = hasPackageRestrictions
+                ? buildByPackage(allRules, today)
+                : List.of();
         GymAccessHoursResponse.ForUserInfo forUser = buildForUser(
-                gym, userId, nowBaku, today, now, todayRules, hasPackageRestrictions);
+                gym, userId, nowBaku, today, now, allRules, hasPackageRestrictions);
 
         return new GymAccessHoursResponse(workingHours, byPackage, forUser, hasPackageRestrictions);
     }
 
     private GymAccessHoursResponse.GymWorkHoursInfo buildWorkingHours(Gym gym) {
-        Set<GymWorkHour> allWorkHours = gym.getGeneralWorkHours();
-        boolean fullHours = allWorkHours == null || allWorkHours.isEmpty();
-        List<GymAccessHoursResponse.GymWorkHourWindow> windows = new ArrayList<>();
-        if (!fullHours) {
-            allWorkHours.stream()
-                    .sorted(Comparator
-                            .comparing((GymWorkHour wh) -> wh.getPeriod() == null ? 99 : wh.getPeriod().ordinal())
-                            .thenComparing(GymWorkHour::getFromTime, Comparator.nullsLast(Comparator.naturalOrder())))
-                    .forEach(wh -> windows.add(new GymAccessHoursResponse.GymWorkHourWindow(
-                            wh.getPeriod() != null ? wh.getPeriod().name() : null,
-                            wh.getFromTime(),
-                            wh.getToTime())));
+        Set<GymWorkHour> hours = gym.getGeneralWorkHours();
+        if (hours == null || hours.isEmpty()) {
+            return new GymAccessHoursResponse.GymWorkHoursInfo(true, List.of());
         }
-        return new GymAccessHoursResponse.GymWorkHoursInfo(fullHours, windows);
+        List<GymAccessHoursResponse.GymWorkHourWindow> windows = hours.stream()
+                .sorted(Comparator
+                        .comparing((GymWorkHour wh) -> wh.getPeriod() == null ? 99 : wh.getPeriod().ordinal())
+                        .thenComparing(GymWorkHour::getFromTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(wh -> new GymAccessHoursResponse.GymWorkHourWindow(
+                        wh.getPeriod() != null ? wh.getPeriod().name() : null,
+                        wh.getFromTime(),
+                        wh.getToTime()))
+                .toList();
+        return new GymAccessHoursResponse.GymWorkHoursInfo(false, windows);
     }
 
     private List<GymAccessHoursResponse.GymPackageAccess> buildByPackage(
             List<GymTimeSlotRule> rules, LocalDate today) {
-        Set<Long> packageIds = new LinkedHashSet<>();
+        Set<Long> seedIds = new LinkedHashSet<>();
         for (GymTimeSlotRule rule : rules) {
             if (rule.getAllowedPackageIds() != null) {
-                packageIds.addAll(rule.getAllowedPackageIds());
+                seedIds.addAll(rule.getAllowedPackageIds());
             }
             if (rule.getPricePackageId() != null) {
-                packageIds.add(rule.getPricePackageId());
-            }
-        }
-        // Include higher tiers that inherit from listed packages so byPackage is complete.
-        for (Long listed : new ArrayList<>(packageIds)) {
-            PackageContext listedCtx = homeGymRuleService.packageContext(listed);
-            int listedRank = listedCtx.rank();
-            if (listedRank <= 0) {
-                continue;
-            }
-            for (long candidate = 1; candidate <= 4; candidate++) {
-                PackageContext ctx = homeGymRuleService.packageContext(candidate);
-                if (ctx.rank() >= listedRank) {
-                    packageIds.add(candidate);
-                }
+                seedIds.add(rule.getPricePackageId());
             }
         }
 
+        // Warm contexts from seeds, then include every plan that inherits access to any rule.
+        Map<Long, PackageContext> contexts = new LinkedHashMap<>();
+        for (Long id : seedIds) {
+            contexts.put(id, homeGymRuleService.packageContext(id));
+        }
+        try {
+            for (var plan : orderServiceGrpcClient.getGymPlans()) {
+                long id = plan.getPackageId();
+                contexts.computeIfAbsent(id, homeGymRuleService::packageContext);
+            }
+        } catch (Exception ignored) {
+            // Fall back to seed ids only when the catalog of plans is unavailable.
+        }
+
         List<GymAccessHoursResponse.GymPackageAccess> byPackage = new ArrayList<>();
-        for (Long pkgId : packageIds) {
-            PackageContext ctx = homeGymRuleService.packageContext(pkgId);
-            String name = packageDisplayName(ctx, pkgId);
+        for (Map.Entry<Long, PackageContext> entry : contexts.entrySet()) {
+            Long pkgId = entry.getKey();
+            PackageContext ctx = entry.getValue();
             List<GymAccessHoursResponse.GymAccessWindow> windows = new ArrayList<>();
-            boolean sawExplicitWindow = false;
+            boolean allDay = false;
             for (GymTimeSlotRule rule : rules) {
                 if (!isPackageAllowed(rule, ctx)) {
                     continue;
                 }
                 if (rule.getStartTime() == null && rule.getEndTime() == null) {
-                    // All-day rule for this package — treat as fullHours for that package.
+                    allDay = true;
                     continue;
                 }
-                sawExplicitWindow = true;
-                windows.add(new GymAccessHoursResponse.GymAccessWindow(
-                        rule.getEffectiveFrom() != null ? rule.getEffectiveFrom() : today,
-                        rule.getEffectiveTo(),
-                        rule.getStartTime(),
-                        rule.getEndTime(),
-                        true));
+                if (rule.getStartTime() != null && rule.getEndTime() != null) {
+                    windows.add(new GymAccessHoursResponse.GymAccessWindow(
+                            rule.getEffectiveFrom() != null ? rule.getEffectiveFrom() : today,
+                            rule.getEffectiveTo(),
+                            rule.getStartTime(),
+                            rule.getEndTime(),
+                            true));
+                }
             }
-            boolean fullHours = !sawExplicitWindow;
+            if (windows.isEmpty() && !allDay) {
+                continue;
+            }
             windows.sort(Comparator
                     .comparing((GymAccessHoursResponse.GymAccessWindow w) -> w.from,
                             Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(w -> w.to, Comparator.nullsLast(Comparator.naturalOrder())));
             byPackage.add(new GymAccessHoursResponse.GymPackageAccess(
-                    pkgId, name, fullHours, windows));
+                    pkgId, packageDisplayName(ctx, pkgId), allDay && windows.isEmpty(), windows));
         }
         byPackage.sort(Comparator.comparing(p -> p.packageId, Comparator.nullsLast(Comparator.naturalOrder())));
         return byPackage;
@@ -156,27 +162,24 @@ public class GymAccessHoursService {
             LocalDateTime nowBaku,
             LocalDate today,
             LocalTime now,
-            List<GymTimeSlotRule> todayRules,
+            List<GymTimeSlotRule> allRules,
             boolean hasPackageRestrictions) {
         if (userId == null) {
             return null;
         }
 
-        Long packageId = null;
-        String packageName = null;
+        Long packageId;
+        String packageName;
         try {
             var sub = orderServiceGrpcClient.getActiveSubscription(userId);
-            String status = sub.getSubscriptionStatus();
-            if (status != null
-                    && "ACTIVE".equalsIgnoreCase(status.trim())
-                    && sub.getPackageId() > 0) {
-                packageId = sub.getPackageId();
-                packageName = sub.getPackageName();
+            if (sub.getSubscriptionStatus() == null
+                    || !"ACTIVE".equalsIgnoreCase(sub.getSubscriptionStatus().trim())
+                    || sub.getPackageId() <= 0) {
+                return null;
             }
+            packageId = sub.getPackageId();
+            packageName = sub.getPackageName();
         } catch (Exception ignored) {
-            return null;
-        }
-        if (packageId == null) {
             return null;
         }
 
@@ -185,37 +188,12 @@ public class GymAccessHoursService {
             packageName = packageDisplayName(ctx, packageId);
         }
 
-        if (isRestDay(gym, today.getDayOfWeek())) {
-            return new GymAccessHoursResponse.ForUserInfo(
-                    packageId,
-                    packageName,
-                    false,
-                    null,
-                    nextOpenAt(gym, ctx, todayRules, hasPackageRestrictions, nowBaku),
-                    0);
-        }
+        List<TimeWindow> accessWindows = accessWindowsForDay(
+                gym, ctx, allRules, hasPackageRestrictions, today);
 
-        List<TimeWindow> workWindows = workWindowsForDay(gym, today.getDayOfWeek());
-        boolean outsideWorkHours = !workWindows.isEmpty()
-                && workWindows.stream().noneMatch(w -> contains(w, now));
-        if (outsideWorkHours) {
-            return new GymAccessHoursResponse.ForUserInfo(
-                    packageId,
-                    packageName,
-                    false,
-                    null,
-                    nextOpenAt(gym, ctx, todayRules, hasPackageRestrictions, nowBaku),
-                    0);
-        }
-
-        List<TimeWindow> accessWindows = resolveAccessWindows(
-                gym, ctx, todayRules, hasPackageRestrictions, today.getDayOfWeek(), workWindows);
-
-        Optional<TimeWindow> current = accessWindows.stream()
-                .filter(w -> contains(w, now))
-                .findFirst();
-        if (current.isPresent()) {
-            LocalDateTime closesAt = LocalDateTime.of(today, current.get().to());
+        TimeWindow current = findContaining(accessWindows, now);
+        if (current != null) {
+            LocalDateTime closesAt = LocalDateTime.of(today, current.to());
             int minutesLeft = (int) Math.max(0, ChronoUnit.MINUTES.between(nowBaku, closesAt));
             return new GymAccessHoursResponse.ForUserInfo(
                     packageId, packageName, true, closesAt, null, minutesLeft);
@@ -226,32 +204,33 @@ public class GymAccessHoursService {
                 packageName,
                 false,
                 null,
-                nextOpenAt(gym, ctx, todayRules, hasPackageRestrictions, nowBaku),
+                nextOpenAt(gym, ctx, allRules, hasPackageRestrictions, nowBaku),
                 0);
     }
 
-    private List<TimeWindow> resolveAccessWindows(
+    private List<TimeWindow> accessWindowsForDay(
             Gym gym,
             PackageContext ctx,
-            List<GymTimeSlotRule> todayRules,
+            List<GymTimeSlotRule> allRules,
             boolean hasPackageRestrictions,
-            DayOfWeek day,
-            List<TimeWindow> workWindows) {
+            LocalDate date) {
+        DayOfWeek day = date.getDayOfWeek();
+        if (isRestDay(gym, day)) {
+            return List.of();
+        }
+
+        List<TimeWindow> workWindows = workWindowsForDay(gym, day);
         if (!hasPackageRestrictions) {
-            return workWindows.isEmpty()
-                    ? List.of(new TimeWindow(LocalTime.MIN, LocalTime.of(23, 59)))
-                    : workWindows;
+            return workWindows.isEmpty() ? List.of(new TimeWindow(LocalTime.MIN, END_OF_DAY)) : workWindows;
         }
 
         List<TimeWindow> ruleWindows = new ArrayList<>();
-        for (GymTimeSlotRule rule : todayRules) {
-            if (!isPackageAllowed(rule, ctx)) {
+        for (GymTimeSlotRule rule : allRules) {
+            if (!rule.isEffectiveOn(date) || !matchesWeekday(rule, day) || !isPackageAllowed(rule, ctx)) {
                 continue;
             }
             if (rule.getStartTime() == null && rule.getEndTime() == null) {
-                return workWindows.isEmpty()
-                        ? List.of(new TimeWindow(LocalTime.MIN, LocalTime.of(23, 59)))
-                        : workWindows;
+                return workWindows.isEmpty() ? List.of(new TimeWindow(LocalTime.MIN, END_OF_DAY)) : workWindows;
             }
             if (rule.getStartTime() != null && rule.getEndTime() != null) {
                 ruleWindows.add(new TimeWindow(rule.getStartTime(), rule.getEndTime()));
@@ -266,7 +245,10 @@ public class GymAccessHoursService {
         List<TimeWindow> intersected = new ArrayList<>();
         for (TimeWindow rule : ruleWindows) {
             for (TimeWindow work : workWindows) {
-                intersect(rule, work).ifPresent(intersected::add);
+                TimeWindow overlap = intersect(rule, work);
+                if (overlap != null) {
+                    intersected.add(overlap);
+                }
             }
         }
         return mergeWindows(intersected);
@@ -275,26 +257,16 @@ public class GymAccessHoursService {
     private LocalDateTime nextOpenAt(
             Gym gym,
             PackageContext ctx,
-            List<GymTimeSlotRule> ignoredTodayRules,
+            List<GymTimeSlotRule> allRules,
             boolean hasPackageRestrictions,
             LocalDateTime nowBaku) {
         LocalDate start = nowBaku.toLocalDate();
         LocalTime now = nowBaku.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
 
-        for (int offset = 0; offset < 14; offset++) {
+        for (int offset = 0; offset < NEXT_OPEN_HORIZON_DAYS; offset++) {
             LocalDate date = start.plusDays(offset);
-            DayOfWeek day = date.getDayOfWeek();
-            if (isRestDay(gym, day)) {
-                continue;
-            }
-            List<GymTimeSlotRule> dayRules = hasPackageRestrictions
-                    ? timeSlotRuleRepository.findEffectiveRules(gym.getId(), date).stream()
-                    .filter(rule -> matchesWeekday(rule, day))
-                    .toList()
-                    : List.of();
-            List<TimeWindow> workWindows = workWindowsForDay(gym, day);
-            List<TimeWindow> access = resolveAccessWindows(
-                    gym, ctx, dayRules, hasPackageRestrictions, day, workWindows);
+            List<TimeWindow> access = accessWindowsForDay(
+                    gym, ctx, allRules, hasPackageRestrictions, date);
             for (TimeWindow window : access) {
                 if (offset == 0) {
                     if (window.from().isAfter(now)) {
@@ -310,11 +282,7 @@ public class GymAccessHoursService {
 
     private boolean isRestDay(Gym gym, DayOfWeek day) {
         Set<GymWorkHourPeriod> restDays = gym.getRestDays();
-        if (restDays == null || restDays.isEmpty()) {
-            return false;
-        }
-        GymWorkHourPeriod period = toPeriod(day);
-        return period != null && restDays.contains(period);
+        return restDays != null && restDays.contains(toPeriod(day));
     }
 
     private List<TimeWindow> workWindowsForDay(Gym gym, DayOfWeek day) {
@@ -325,39 +293,34 @@ public class GymAccessHoursService {
         GymWorkHourPeriod period = toPeriod(day);
         List<TimeWindow> windows = new ArrayList<>();
         for (GymWorkHour wh : hours) {
-            if (wh.getPeriod() != period || wh.getFromTime() == null || wh.getToTime() == null) {
-                continue;
+            if (wh.getPeriod() == period && wh.getFromTime() != null && wh.getToTime() != null) {
+                windows.add(new TimeWindow(wh.getFromTime(), wh.getToTime()));
             }
-            windows.add(new TimeWindow(wh.getFromTime(), wh.getToTime()));
         }
         return mergeWindows(windows);
     }
 
-    private boolean isPackageAllowed(GymTimeSlotRule rule, PackageContext context) {
+    /**
+     * Same inheritance as {@link HomeGymRuleService}: a higher-tier subscriber is admitted
+     * by a lower-tier rule via {@link PackageContext#eligiblePackageIds()}.
+     */
+    private static boolean isPackageAllowed(GymTimeSlotRule rule, PackageContext context) {
         Set<Long> allowed = rule.getAllowedPackageIds();
         if (allowed == null || allowed.isEmpty()) {
             return true;
         }
-        if (context == null) {
+        if (context == null || context.eligiblePackageIds() == null) {
             return false;
         }
-        int rank = context.rank();
         for (Long allowedPackageId : allowed) {
-            if (context.eligiblePackageIds() != null
-                    && context.eligiblePackageIds().contains(allowedPackageId)) {
+            if (context.eligiblePackageIds().contains(allowedPackageId)) {
                 return true;
-            }
-            if (allowedPackageId != null) {
-                int allowedRank = homeGymRuleService.packageContext(allowedPackageId).rank();
-                if (allowedRank > 0 && rank > 0 && allowedRank <= rank) {
-                    return true;
-                }
             }
         }
         return false;
     }
 
-    private boolean matchesWeekday(GymTimeSlotRule rule, DayOfWeek day) {
+    private static boolean matchesWeekday(GymTimeSlotRule rule, DayOfWeek day) {
         String weekdays = rule.getWeekdays();
         if (weekdays == null || weekdays.isBlank()) {
             return true;
@@ -370,26 +333,27 @@ public class GymAccessHoursService {
         return false;
     }
 
-    private static boolean contains(TimeWindow window, LocalTime minute) {
-        return !minute.isBefore(window.from()) && !minute.isAfter(window.to());
+    private static TimeWindow findContaining(List<TimeWindow> windows, LocalTime minute) {
+        for (TimeWindow window : windows) {
+            if (!minute.isBefore(window.from()) && !minute.isAfter(window.to())) {
+                return window;
+            }
+        }
+        return null;
     }
 
-    private static Optional<TimeWindow> intersect(TimeWindow a, TimeWindow b) {
+    private static TimeWindow intersect(TimeWindow a, TimeWindow b) {
         LocalTime from = a.from().isAfter(b.from()) ? a.from() : b.from();
         LocalTime to = a.to().isBefore(b.to()) ? a.to() : b.to();
-        if (from.isAfter(to)) {
-            return Optional.empty();
-        }
-        return Optional.of(new TimeWindow(from, to));
+        return from.isAfter(to) ? null : new TimeWindow(from, to);
     }
 
     private static List<TimeWindow> mergeWindows(List<TimeWindow> input) {
         if (input.isEmpty()) {
             return List.of();
         }
-        List<TimeWindow> sorted = input.stream()
-                .sorted(Comparator.comparing(TimeWindow::from).thenComparing(TimeWindow::to))
-                .toList();
+        List<TimeWindow> sorted = new ArrayList<>(input);
+        sorted.sort(Comparator.comparing(TimeWindow::from).thenComparing(TimeWindow::to));
         List<TimeWindow> merged = new ArrayList<>();
         TimeWindow current = sorted.get(0);
         for (int i = 1; i < sorted.size(); i++) {
@@ -407,15 +371,7 @@ public class GymAccessHoursService {
     }
 
     private static GymWorkHourPeriod toPeriod(DayOfWeek day) {
-        return switch (day) {
-            case MONDAY -> GymWorkHourPeriod.MONDAY;
-            case TUESDAY -> GymWorkHourPeriod.TUESDAY;
-            case WEDNESDAY -> GymWorkHourPeriod.WEDNESDAY;
-            case THURSDAY -> GymWorkHourPeriod.THURSDAY;
-            case FRIDAY -> GymWorkHourPeriod.FRIDAY;
-            case SATURDAY -> GymWorkHourPeriod.SATURDAY;
-            case SUNDAY -> GymWorkHourPeriod.SUNDAY;
-        };
+        return GymWorkHourPeriod.valueOf(day.name());
     }
 
     private static String packageDisplayName(PackageContext ctx, Long packageId) {
