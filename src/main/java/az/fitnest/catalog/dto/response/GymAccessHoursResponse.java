@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
-/** Response for {@code GET /api/v1/gyms/{gymId}/access-hours}. */
+/** Response for {@code GET /api/v1/me/gyms/{gymId}/access-hours}. */
 public class GymAccessHoursResponse {
 
     private final GymWorkHoursInfo workingHours;
