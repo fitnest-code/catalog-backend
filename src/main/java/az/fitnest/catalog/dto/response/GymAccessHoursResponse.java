@@ -64,15 +64,26 @@ public class GymAccessHoursResponse {
         }
     }
 
-    /** Access window for a specific time period. */
+    /**
+     * Access window for one calendar day of a package schedule.
+     * {@code dayName} matches {@link GymWorkHourWindow#dayName} (e.g. {@code MONDAY}).
+     */
     public static class GymAccessWindow {
+        public final String dayName;
         public final LocalDate effectiveFrom;
         public final LocalDate effectiveTo;
         public final LocalTime from;
         public final LocalTime to;
         public final boolean allowed;
 
-        public GymAccessWindow(LocalDate effectiveFrom, LocalDate effectiveTo, LocalTime from, LocalTime to, boolean allowed) {
+        public GymAccessWindow(
+                String dayName,
+                LocalDate effectiveFrom,
+                LocalDate effectiveTo,
+                LocalTime from,
+                LocalTime to,
+                boolean allowed) {
+            this.dayName = dayName;
             this.effectiveFrom = effectiveFrom;
             this.effectiveTo = effectiveTo;
             this.from = from;

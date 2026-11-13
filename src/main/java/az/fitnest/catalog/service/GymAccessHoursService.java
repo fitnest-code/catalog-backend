@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,7 +69,7 @@ public class GymAccessHoursService {
 
         GymAccessHoursResponse.GymWorkHoursInfo workingHours = buildWorkingHours(gym);
         List<GymAccessHoursResponse.GymPackageAccess> byPackage = hasPackageRestrictions
-                ? buildByPackage(allRules, today)
+                ? buildByPackage(gym, allRules, today)
                 : List.of();
         GymAccessHoursResponse.ForUserInfo forUser = buildForUser(
                 gym, userId, nowBaku, today, now, allRules, hasPackageRestrictions);
@@ -94,7 +95,7 @@ public class GymAccessHoursService {
     }
 
     private List<GymAccessHoursResponse.GymPackageAccess> buildByPackage(
-            List<GymTimeSlotRule> rules, LocalDate today) {
+            Gym gym, List<GymTimeSlotRule> rules, LocalDate today) {
         Set<Long> seedIds = new LinkedHashSet<>();
         for (GymTimeSlotRule rule : rules) {
             if (rule.getAllowedPackageIds() != null) {
@@ -124,36 +125,153 @@ public class GymAccessHoursService {
             Long pkgId = entry.getKey();
             PackageContext ctx = entry.getValue();
             List<GymAccessHoursResponse.GymAccessWindow> windows = new ArrayList<>();
-            boolean allDay = false;
+            Set<String> seen = new LinkedHashSet<>();
+            boolean unrestrictedAllDay = false;
+            Map<DayOfWeek, List<TimeWindow>> byDay = new LinkedHashMap<>();
+
             for (GymTimeSlotRule rule : rules) {
                 if (!isPackageAllowed(rule, ctx)) {
                     continue;
                 }
                 if (rule.getStartTime() == null && rule.getEndTime() == null) {
-                    allDay = true;
+                    if (coversEveryDay(rule)) {
+                        unrestrictedAllDay = true;
+                    }
                     continue;
                 }
-                if (rule.getStartTime() != null && rule.getEndTime() != null) {
+                if (rule.getStartTime() == null || rule.getEndTime() == null) {
+                    continue;
+                }
+                LocalDate effectiveFrom = rule.getEffectiveFrom() != null ? rule.getEffectiveFrom() : today;
+                for (DayOfWeek day : weekdaysOf(rule)) {
+                    byDay.computeIfAbsent(day, ignoredDay -> new ArrayList<>())
+                            .add(new TimeWindow(rule.getStartTime(), rule.getEndTime()));
+                    String key = day.name() + '|' + rule.getStartTime() + '|' + rule.getEndTime()
+                            + '|' + effectiveFrom + '|' + rule.getEffectiveTo();
+                    if (!seen.add(key)) {
+                        continue;
+                    }
                     windows.add(new GymAccessHoursResponse.GymAccessWindow(
-                            rule.getEffectiveFrom() != null ? rule.getEffectiveFrom() : today,
+                            day.name(),
+                            effectiveFrom,
                             rule.getEffectiveTo(),
                             rule.getStartTime(),
                             rule.getEndTime(),
                             true));
                 }
             }
-            if (windows.isEmpty() && !allDay) {
+
+            boolean fullHours = unrestrictedAllDay || coversGymWorkHours(gym, byDay);
+            if (!fullHours && windows.isEmpty()) {
                 continue;
             }
-            windows.sort(Comparator
-                    .comparing((GymAccessHoursResponse.GymAccessWindow w) -> w.from,
-                            Comparator.nullsLast(Comparator.naturalOrder()))
-                    .thenComparing(w -> w.to, Comparator.nullsLast(Comparator.naturalOrder())));
+            if (fullHours) {
+                // Higher tiers that effectively have gym work hours — do not echo lower-tier slots.
+                windows = List.of();
+            } else {
+                windows.sort(Comparator
+                        .comparing((GymAccessHoursResponse.GymAccessWindow w) -> dayOrdinal(w.dayName))
+                        .thenComparing(w -> w.from, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(w -> w.to, Comparator.nullsLast(Comparator.naturalOrder())));
+            }
             byPackage.add(new GymAccessHoursResponse.GymPackageAccess(
-                    pkgId, packageDisplayName(ctx, pkgId), allDay && windows.isEmpty(), windows));
+                    pkgId, packageDisplayName(ctx, pkgId), fullHours, windows));
         }
         byPackage.sort(Comparator.comparing(p -> p.packageId, Comparator.nullsLast(Comparator.naturalOrder())));
         return byPackage;
+    }
+
+    /**
+     * True when merged package access covers every general work-hour window
+     * (rest days ignored). Used so Silver/Gold/Platinum show {@code fullHours=true}
+     * when gap-fill / inheritance yields the full gym schedule.
+     */
+    private boolean coversGymWorkHours(Gym gym, Map<DayOfWeek, List<TimeWindow>> packageByDay) {
+        if (packageByDay.isEmpty()) {
+            return false;
+        }
+        for (DayOfWeek day : DayOfWeek.values()) {
+            if (isRestDay(gym, day)) {
+                continue;
+            }
+            List<TimeWindow> work = workWindowsForDay(gym, day);
+            if (work.isEmpty()) {
+                continue;
+            }
+            List<TimeWindow> access = mergeWindows(packageByDay.getOrDefault(day, List.of()));
+            if (!coversAll(access, work)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Every {@code required} window is fully contained in some merged {@code access} window. */
+    private static boolean coversAll(List<TimeWindow> access, List<TimeWindow> required) {
+        for (TimeWindow need : required) {
+            boolean covered = false;
+            for (TimeWindow have : access) {
+                if (!have.from().isAfter(need.from()) && !have.to().isBefore(need.to())) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static List<DayOfWeek> weekdaysOf(GymTimeSlotRule rule) {
+        String weekdays = rule.getWeekdays();
+        if (weekdays == null || weekdays.isBlank()) {
+            return List.of(DayOfWeek.values());
+        }
+        List<DayOfWeek> days = new ArrayList<>();
+        for (String part : weekdays.split(",")) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            try {
+                days.add(DayOfWeek.valueOf(trimmed.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // Skip unknown tokens; same as weekday matching elsewhere.
+            }
+        }
+        return days;
+    }
+
+    private static boolean coversEveryDay(GymTimeSlotRule rule) {
+        String weekdays = rule.getWeekdays();
+        if (weekdays == null || weekdays.isBlank()) {
+            return true;
+        }
+        Set<DayOfWeek> days = new LinkedHashSet<>();
+        for (String part : weekdays.split(",")) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            try {
+                days.add(DayOfWeek.valueOf(trimmed.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // ignore
+            }
+        }
+        return days.containsAll(List.of(DayOfWeek.values()));
+    }
+
+    private static int dayOrdinal(String dayName) {
+        if (dayName == null || dayName.isBlank()) {
+            return 99;
+        }
+        try {
+            return DayOfWeek.valueOf(dayName).ordinal();
+        } catch (IllegalArgumentException ignored) {
+            return 99;
+        }
     }
 
     private GymAccessHoursResponse.ForUserInfo buildForUser(

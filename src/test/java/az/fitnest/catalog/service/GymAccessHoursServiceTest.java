@@ -147,6 +147,53 @@ class GymAccessHoursServiceTest {
         assertEquals(LocalDateTime.of(2026, 11, 12, 22, 0), silverResponse.getForUser().closesAt);
     }
 
+    @Test
+    void byPackage_bronzeLimitedWithDayTaggedWindows_higherTiersFullHours() {
+        when(timeSlotRuleRepository.findByGymIdOrderByEffectiveFromDescIdAsc(GYM_ID))
+                .thenReturn(bronzeLimitedRules());
+        stubActiveBronze();
+        stubGymPlans();
+
+        LocalDateTime thursdayNoon = LocalDateTime.of(2026, 11, 12, 12, 0);
+        GymAccessHoursResponse response = service.getAccessHours(GYM_ID, USER_ID, thursdayNoon);
+
+        GymAccessHoursResponse.GymPackageAccess bronze = packageAccess(response, BRONZE);
+        assertNotNull(bronze);
+        assertFalse(bronze.fullHours);
+        assertFalse(bronze.windows.isEmpty());
+        assertTrue(bronze.windows.stream().allMatch(w -> w.dayName != null && !w.dayName.isBlank()));
+        assertTrue(bronze.windows.stream().anyMatch(w ->
+                "MONDAY".equals(w.dayName)
+                        && LocalTime.of(10, 0).equals(w.from)
+                        && LocalTime.of(14, 0).equals(w.to)));
+        assertTrue(bronze.windows.stream().anyMatch(w ->
+                "SATURDAY".equals(w.dayName)
+                        && LocalTime.of(10, 0).equals(w.from)
+                        && LocalTime.of(14, 0).equals(w.to)));
+        // Same clock range on different days must not collapse into duplicate day-less rows.
+        long monday1014 = bronze.windows.stream()
+                .filter(w -> "MONDAY".equals(w.dayName)
+                        && LocalTime.of(10, 0).equals(w.from)
+                        && LocalTime.of(14, 0).equals(w.to))
+                .count();
+        assertEquals(1, monday1014);
+
+        for (Long higher : List.of(SILVER, GOLD, PLATINUM)) {
+            GymAccessHoursResponse.GymPackageAccess pkg = packageAccess(response, higher);
+            assertNotNull(pkg, "missing package " + higher);
+            assertTrue(pkg.fullHours, "package " + higher + " should have fullHours");
+            assertTrue(pkg.windows.isEmpty(), "package " + higher + " should omit windows when fullHours");
+        }
+    }
+
+    private static GymAccessHoursResponse.GymPackageAccess packageAccess(
+            GymAccessHoursResponse response, Long packageId) {
+        return response.getByPackage().stream()
+                .filter(p -> packageId.equals(p.packageId))
+                .findFirst()
+                .orElse(null);
+    }
+
     private void stubPackages() {
         when(homeGymRuleService.packageContext(BRONZE))
                 .thenReturn(new PackageContext(BRONZE, "Bronze", 1, List.of(BRONZE)));
