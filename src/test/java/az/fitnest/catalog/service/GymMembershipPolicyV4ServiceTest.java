@@ -159,6 +159,8 @@ class GymMembershipPolicyV4ServiceTest {
         org.mockito.Mockito.mock(
             az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class);
     var gyms = org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymRepository.class);
+    var packagePrices =
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPackagePriceRepository.class);
     var disables =
         org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPrimaryDisableV4Repository.class);
     var notify = org.mockito.Mockito.mock(PrimaryGymNotificationV4Service.class);
@@ -212,7 +214,7 @@ class GymMembershipPolicyV4ServiceTest {
             .build();
     org.mockito.Mockito.when(repo.findById(10L)).thenReturn(Optional.of(row));
     org.mockito.Mockito.when(gyms.findById(10L)).thenReturn(Optional.of(gym));
-    var service = new GymMembershipPolicyV4Service(repo, gyms, disables, notify, plans);
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
     var before = LocalDateTime.of(2026, 10, 26, 16, 59, 59);
     var after = before.withHour(17).withMinute(0);
     assertTrue(service.quote(10L, 1L, before).allowed());
