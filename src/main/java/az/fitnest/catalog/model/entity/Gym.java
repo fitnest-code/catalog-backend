@@ -229,12 +229,13 @@ public class Gym
 
     /**
      * Master switch for R18: whether this gym can be selected as a home gym.
-     * Disabling it does not remove existing selections; order expires them at the
-     * end of the current subscription month.
+     * Default is off — admin must enable via membership policy {@code primaryEnabled}
+     * (synced into this column). Disabling does not remove existing selections; order
+     * expires them at the end of the current subscription month.
      */
     @Column(name = "home_eligible")
     @Builder.Default
-    private Boolean homeEligible = true;
+    private Boolean homeEligible = false;
 
     /**
      * Set when the one-time "new gym" push is claimed. Left null until the first

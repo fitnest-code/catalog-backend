@@ -155,20 +155,19 @@ class HomeGymRuleServiceTest {
 
     @Test
     void packageSwitchOffDisablesEligibility() {
-        when(packagePriceRepository
-                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
-                        GYM_ID, GOLD, LocalDate.now(HomeGymRuleService.BAKU)))
-                .thenReturn(Optional.of(price(GYM_ID, GOLD, 10.0, 100.0, false)));
+        // isHomeEligible batches via findLatestByGymIdIn (not the single-row finder).
+        when(packagePriceRepository.findLatestByGymIdIn(
+                        eq(List.of(GYM_ID)), eq(LocalDate.now(HomeGymRuleService.BAKU))))
+                .thenReturn(List.of(price(GYM_ID, GOLD, 10.0, 100.0, false)));
 
         assertFalse(service.isHomeEligible(gym(GYM_ID, true, GOLD), GOLD));
     }
 
     @Test
     void packageSwitchOnKeepsEligibility() {
-        when(packagePriceRepository
-                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
-                        GYM_ID, GOLD, LocalDate.now(HomeGymRuleService.BAKU)))
-                .thenReturn(Optional.of(price(GYM_ID, GOLD, 10.0, 100.0, true)));
+        when(packagePriceRepository.findLatestByGymIdIn(
+                        eq(List.of(GYM_ID)), eq(LocalDate.now(HomeGymRuleService.BAKU))))
+                .thenReturn(List.of(price(GYM_ID, GOLD, 10.0, 100.0, true)));
 
         assertTrue(service.isHomeEligible(gym(GYM_ID, true, GOLD), GOLD));
     }

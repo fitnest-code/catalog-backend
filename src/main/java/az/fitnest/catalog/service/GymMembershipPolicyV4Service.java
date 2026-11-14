@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GymMembershipPolicyV4Service {
   private final GymMembershipPolicyV4Repository policies;
   private final GymRepository gyms;
+  private final GymPackagePriceRepository packagePrices;
   private final GymPrimaryDisableV4Repository disables;
   private final PrimaryGymNotificationV4Service notifications;
   private final OrderServiceGrpcClient plans;
@@ -45,6 +47,7 @@ public class GymMembershipPolicyV4Service {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "home-eligible-gym-count", allEntries = true)
   public GymMembershipPolicyV4 save(
       Long gymId, az.fitnest.catalog.dto.v4.GymPolicyUpdateV4 update) {
     var input = update.policy();
@@ -141,7 +144,41 @@ public class GymMembershipPolicyV4Service {
     }
     notifications.record(gymId, disabled, update);
     policies.saveAndFlush(row);
+    // Mobile list APIs read gyms.home_eligible / gym_package_price — keep them aligned with
+    // admin "Əsas zal kimi seçilə bilər" (primaryEnabled), which defaults to false.
+    syncHomeEligibleFlags(gym, normalized, now.toLocalDate());
     return decode(row);
+  }
+
+  /**
+   * Bridges v4 membership policy into the v1 home-gym columns used by selectable-gym lists.
+   * Master switch is on only when at least one tier has {@code primaryEnabled=true}.
+   */
+  private void syncHomeEligibleFlags(Gym gym, List<PackageRule> packages, LocalDate today) {
+    boolean anyPrimary = packages.stream().anyMatch(PackageRule::primaryEnabled);
+    gym.setHomeEligible(anyPrimary);
+    gyms.save(gym);
+
+    LocalDate effectiveFrom = today.withDayOfMonth(1);
+    for (PackageRule rule : packages) {
+      GymPackagePrice price =
+          packagePrices
+              .findByGymIdAndPackageIdAndEffectiveFrom(
+                  gym.getId(), rule.packageId(), effectiveFrom)
+              .orElseGet(GymPackagePrice::new);
+      price.setGym(gym);
+      price.setPackageId(rule.packageId());
+      price.setIncluded(rule.included());
+      price.setHomeEligible(rule.primaryEnabled());
+      if (rule.primaryMonthlyPrice() != null) {
+        price.setUnlimitedPrice(rule.primaryMonthlyPrice().doubleValue());
+      }
+      if (rule.entryPrice() != null) {
+        price.setSinglePrice(rule.entryPrice().doubleValue());
+      }
+      price.setEffectiveFrom(effectiveFrom);
+      packagePrices.save(price);
+    }
   }
 
   public static void validateRules(GymMembershipPolicyV4 p) {
