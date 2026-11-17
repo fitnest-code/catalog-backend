@@ -35,6 +35,43 @@ class GymMembershipPolicyV4ServiceTest {
   }
 
   @Test
+  void bronzeMorningWindowAdmitsSilverAndSilverEveningDeniesBronze() throws Exception {
+    var service =
+        serviceFor(
+            List.of(
+                rule("00:00", "16:59", Tier.BRONZE, Set.of(Tier.BRONZE)),
+                rule("17:00", "00:00", Tier.SILVER, Set.of(Tier.SILVER))),
+            LocalTime.MIDNIGHT);
+    var morning = LocalDateTime.of(2026, 10, 26, 10, 0);
+    var evening = LocalDateTime.of(2026, 10, 26, 17, 0);
+    assertTrue(service.quote(10L, 1L, morning).allowed());
+    assertTrue(service.quote(10L, 2L, morning).allowed());
+    assertFalse(service.quote(10L, 1L, evening).allowed());
+    assertTrue(service.quote(10L, 2L, evening).allowed());
+    assertTrue(service.quote(10L, 2L, evening.withHour(22)).allowed());
+  }
+
+  @Test
+  void midnightEndMeansEndOfDay() {
+    assertDoesNotThrow(
+        () ->
+            GymMembershipPolicyV4Service.validateRules(
+                new GymMembershipPolicyV4(
+                    0,
+                    true,
+                    packages(),
+                    List.of(
+                        rule("00:00", "16:59", Tier.BRONZE, Set.of(Tier.values())),
+                        rule("17:00", "00:00", Tier.SILVER, Set.of(Tier.SILVER))))));
+    assertEquals(
+        LocalTime.of(23, 59),
+        GymMembershipPolicyV4Service.effectiveEnd(LocalTime.of(17, 0), LocalTime.MIDNIGHT));
+    assertEquals(
+        LocalTime.MIDNIGHT,
+        GymMembershipPolicyV4Service.effectiveEnd(LocalTime.MIDNIGHT, LocalTime.MIDNIGHT));
+  }
+
+  @Test
   void disabledTimeRulesNeedNoRanges() {
     assertDoesNotThrow(
         () ->
@@ -151,6 +188,37 @@ class GymMembershipPolicyV4ServiceTest {
   void proximityDistanceHasMeterUnits() {
     assertEquals(0, GymEntranceV4Service.distanceMeters(40.4, 49.8, 40.4, 49.8), 0.001);
     assertTrue(GymEntranceV4Service.distanceMeters(40.4, 49.8, 40.41, 49.8) > 1000);
+  }
+
+  GymMembershipPolicyV4Service serviceFor(List<TimeRule> rules, LocalTime workStart)
+      throws Exception {
+    var repo =
+        org.mockito.Mockito.mock(
+            az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class);
+    var gyms = org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymRepository.class);
+    var row = new GymMembershipPolicyV4Entity();
+    row.setGymId(10L);
+    row.setPayload(
+        new com.fasterxml.jackson.databind.ObjectMapper()
+            .findAndRegisterModules()
+            .writeValueAsString(new GymMembershipPolicyV4(0, true, packages(), rules)));
+    var gym =
+        Gym.builder()
+            .name("Test Gym")
+            .status(az.fitnest.catalog.model.enums.GymStatus.ACTIVE)
+            .generalWorkHours(
+                Set.of(
+                    new GymWorkHour(GymWorkHourPeriod.MONDAY, workStart, LocalTime.of(23, 59))))
+            .build();
+    org.mockito.Mockito.when(repo.findById(10L)).thenReturn(Optional.of(row));
+    org.mockito.Mockito.when(gyms.findById(10L)).thenReturn(Optional.of(gym));
+    return new GymMembershipPolicyV4Service(
+        repo,
+        gyms,
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPackagePriceRepository.class),
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPrimaryDisableV4Repository.class),
+        org.mockito.Mockito.mock(PrimaryGymNotificationV4Service.class),
+        org.mockito.Mockito.mock(az.fitnest.catalog.client.OrderServiceGrpcClient.class));
   }
 
   @Test

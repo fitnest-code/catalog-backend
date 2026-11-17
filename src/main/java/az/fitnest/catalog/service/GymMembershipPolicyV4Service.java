@@ -181,6 +181,27 @@ public class GymMembershipPolicyV4Service {
     }
   }
 
+  /**
+   * The admin UI shows "Bitmə 00:00" for "until end of day", but a raw 00:00 end would be a
+   * midnight *start* and leave a gap after the last real window (everyone denied). Gym work hours
+   * must still include the closing minutes (e.g. 23:59) for coverage to match.
+   */
+  static LocalTime effectiveEnd(LocalTime start, LocalTime end) {
+    if (end.equals(LocalTime.MIDNIGHT) && start.isAfter(LocalTime.MIDNIGHT))
+      return LocalTime.of(23, 59);
+    return end;
+  }
+
+  /**
+   * Tier windows inherit upward (as legacy home-gym): a rule admits a member when any allowed tier
+   * is at or below the member's tier, so Bronze-allowed windows also admit Silver/Gold/Platinum.
+   */
+  static boolean tierAdmitted(Set<Tier> allowed, Tier member) {
+    return allowed != null
+        && member != null
+        && allowed.stream().anyMatch(t -> t.ordinal() <= member.ordinal());
+  }
+
   public static void validateRules(GymMembershipPolicyV4 p) {
     if (p.packages() == null
         || p.packages().size() != 4
@@ -199,13 +220,13 @@ public class GymMembershipPolicyV4Service {
           || r.start().getNano() != 0
           || r.end().getSecond() != 0
           || r.end().getNano() != 0
-          || r.start().isAfter(r.end())) throw error(HttpStatus.BAD_REQUEST, "INVALID_TIME_RANGE");
+          || r.start().isAfter(effectiveEnd(r.start(), r.end()))) throw error(HttpStatus.BAD_REQUEST, "INVALID_TIME_RANGE");
       var price =
           p.packages().stream().filter(x -> x.tier() == r.priceTier() && x.included()).findFirst();
       if (price.isPresent()
           && price.get().primaryMonthlyPrice() == null
           && p.packages().stream()
-              .anyMatch(x -> x.primaryEnabled() && r.allowedTiers().contains(x.tier())))
+              .anyMatch(x -> x.primaryEnabled() && tierAdmitted(r.allowedTiers(), x.tier())))
         throw error(HttpStatus.BAD_REQUEST, "TIME_PRIMARY_PRICE_REQUIRED");
       if (price.isEmpty()
           || r.allowedTiers().stream().anyMatch(t -> t.ordinal() < r.priceTier().ordinal()))
@@ -217,9 +238,11 @@ public class GymMembershipPolicyV4Service {
               .filter(r -> r.days().contains(day))
               .sorted(Comparator.comparing(TimeRule::start))
               .toList();
-      for (int i = 1; i < ranges.size(); i++)
-        if (!ranges.get(i).start().isAfter(ranges.get(i - 1).end()))
+      for (int i = 1; i < ranges.size(); i++) {
+        var prev = ranges.get(i - 1);
+        if (!ranges.get(i).start().isAfter(effectiveEnd(prev.start(), prev.end())))
           throw error(HttpStatus.BAD_REQUEST, "OVERLAPPING_TIME_RULES");
+      }
     }
   }
 
@@ -240,7 +263,7 @@ public class GymMembershipPolicyV4Service {
                     r ->
                         r.days().contains(day)
                             && !time.isBefore(r.start())
-                            && !time.isAfter(r.end()));
+                            && !time.isAfter(effectiveEnd(r.start(), r.end())));
         if (working != covered)
           throw error(HttpStatus.BAD_REQUEST, "TIME_RULES_MUST_COVER_WORK_HOURS");
       }
@@ -275,10 +298,13 @@ public class GymMembershipPolicyV4Service {
                   r ->
                       r.days().contains(at.getDayOfWeek())
                           && !at.toLocalTime().withSecond(0).withNano(0).isBefore(r.start())
-                          && !at.toLocalTime().withSecond(0).withNano(0).isAfter(r.end()))
+                          && !at.toLocalTime()
+                              .withSecond(0)
+                              .withNano(0)
+                              .isAfter(effectiveEnd(r.start(), r.end())))
               .findFirst()
               .orElse(null);
-      if (range == null || !range.allowedTiers().contains(member.tier()))
+      if (range == null || !tierAdmitted(range.allowedTiers(), member.tier()))
         reason = "TIME_ACCESS_DENIED";
       else
         base =
@@ -316,7 +342,7 @@ public class GymMembershipPolicyV4Service {
       GymMembershipPolicyV4 policy, PackageRule member, Gym gym) {
     if (policy.timeRulesEnabled())
       return policy.timeRules().stream()
-          .filter(r -> r.allowedTiers().contains(member.tier()))
+          .filter(r -> tierAdmitted(r.allowedTiers(), member.tier()))
           .map(
               r -> {
                 var price =
@@ -327,7 +353,7 @@ public class GymMembershipPolicyV4Service {
                 return new AccessWindow(
                     r.days(),
                     r.start(),
-                    r.end(),
+                    effectiveEnd(r.start(), r.end()),
                     r.priceTier(),
                     price.entryPrice(),
                     price.primaryMonthlyPrice());
