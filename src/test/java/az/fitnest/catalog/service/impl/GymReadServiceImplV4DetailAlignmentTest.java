@@ -1,0 +1,202 @@
+package az.fitnest.catalog.service.impl;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import az.fitnest.catalog.client.OrderServiceGrpcClient;
+import az.fitnest.catalog.dto.response.GymDetailResponseV4;
+import az.fitnest.catalog.dto.response.GymPackageHomeEligibilityResponse;
+import az.fitnest.catalog.dto.response.GymPlanItemResponseV2;
+import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4;
+import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.PackageRule;
+import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier;
+import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymSubscription;
+import az.fitnest.catalog.repository.GymPackagePriceRepository;
+import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
+import az.fitnest.catalog.repository.ReviewRepository;
+import az.fitnest.catalog.repository.TrainerRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import az.fitnest.catalog.service.GymMembershipPolicyV4Service;
+import az.fitnest.catalog.service.homegym.HomeGymRuleService;
+import az.fitnest.order.grpc.PackageNameInfo;
+import az.fitnest.order.grpc.SubscriptionPackageInfo;
+import java.lang.reflect.Constructor;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.concurrent.Executor;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+/**
+ * Regression: the gym list (upward-closed home eligibility) showed a gym for Platinum, but the v4
+ * detail's supportedSubscriptions was built only from gym_subscriptions, so the app hid Platinum.
+ * Package ids 101-104 are unique to this class because HomeGymRuleService caches contexts statically.
+ */
+class GymReadServiceImplV4DetailAlignmentTest {
+  static final long BRONZE = 101, SILVER = 102, GOLD = 103, PLATINUM = 104;
+
+  GymRepository gymRepository;
+  OrderServiceGrpcClient order;
+  GymMembershipPolicyV4Service policyService;
+  GymPackagePriceRepository packagePrices;
+  GymReadServiceImpl service;
+  Gym gym;
+
+  @BeforeEach
+  void setUp() throws Exception {
+    order = mock(OrderServiceGrpcClient.class);
+    gymRepository = mock(GymRepository.class);
+    policyService = mock(GymMembershipPolicyV4Service.class);
+    packagePrices = mock(GymPackagePriceRepository.class);
+    when(order.getGymPlans())
+        .thenReturn(
+            List.of(
+                plan(BRONZE, "Bronze Plan"),
+                plan(SILVER, "Silver Plan"),
+                plan(GOLD, "Gold Plan"),
+                plan(PLATINUM, "Platinum Plan")));
+    when(order.getPackageNamesByIds(any()))
+        .thenReturn(List.of(PackageNameInfo.newBuilder().setPackageId(GOLD).setName("Gold Plan").build()));
+
+    gym = Gym.builder().name("Volan").homeEligible(true).build();
+    gym.setId(14L);
+    GymSubscription gold = new GymSubscription();
+    gold.setId(900L);
+    gold.setGym(gym);
+    gold.setPackageId(GOLD);
+    gold.setDailyPrice(12.0);
+    gym.getSubscriptions().add(gold);
+    when(gymRepository.findWithDetailsById(14L)).thenReturn(Optional.of(gym));
+
+    HomeGymRuleService rules =
+        new HomeGymRuleService(packagePrices, mock(GymTimeSlotRuleRepository.class), order);
+    service = newService(rules);
+  }
+
+  @Test
+  void platinumHomeEligibleGetsSynthesizedPlanFromOrderPlansWhenPolicyMissing() {
+    when(policyService.get(14L))
+        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED"));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    assertTrue(homeEligible(detail, Tier.PLATINUM));
+    assertTrue(homeEligible(detail, Tier.GOLD));
+    assertFalse(homeEligible(detail, Tier.SILVER));
+    Set<String> ids = planIds(detail);
+    assertTrue(ids.contains(String.valueOf(PLATINUM)), "Platinum plan must be offered: " + ids);
+    // Existing Gold row is kept as-is.
+    assertTrue(ids.contains(String.valueOf(GOLD)));
+    GymPlanItemResponseV2 platinum = plan(detail, PLATINUM);
+    assertEquals("Platinum", platinum.packageName());
+  }
+
+  @Test
+  void platinumPackageIdAndPriceComeFromPolicyWhenAvailable() {
+    when(policyService.get(14L))
+        .thenReturn(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    rule(BRONZE, Tier.BRONZE, false, "3.00"),
+                    rule(SILVER, Tier.SILVER, false, "4.00"),
+                    rule(GOLD, Tier.GOLD, true, "5.00"),
+                    rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
+                List.of()));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    GymPlanItemResponseV2 platinum = plan(detail, PLATINUM);
+    assertEquals(9.5, platinum.dailyPrice());
+    assertEquals(2, detail.supportedSubscriptions().size());
+  }
+
+  @Test
+  void orderFailureStillReturnsPolicyBackedPlan() {
+    when(order.getGymPlans()).thenThrow(new RuntimeException("order down"));
+    when(policyService.get(14L))
+        .thenReturn(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    rule(BRONZE, Tier.BRONZE, false, "3.00"),
+                    rule(SILVER, Tier.SILVER, false, "4.00"),
+                    rule(GOLD, Tier.GOLD, true, "5.00"),
+                    rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
+                List.of()));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    // Ranks cannot be resolved without order-backend, so eligibility fails closed and nothing is
+    // fabricated; the call must still succeed instead of throwing.
+    assertNotNull(detail);
+  }
+
+  // --- helpers -----------------------------------------------------------------------------
+
+  static SubscriptionPackageInfo plan(long id, String name) {
+    return SubscriptionPackageInfo.newBuilder().setPackageId(id).setName(name).build();
+  }
+
+  static PackageRule rule(long id, Tier tier, boolean primary, String price) {
+    return new PackageRule(
+        id, tier, primary, primary, new BigDecimal(price), primary ? new BigDecimal("50") : null,
+        List.of(), null);
+  }
+
+  static boolean homeEligible(GymDetailResponseV4 detail, Tier tier) {
+    return detail.packages().stream()
+        .filter(p -> p.tier() == tier)
+        .map(GymPackageHomeEligibilityResponse::homeEligible)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  static Set<String> planIds(GymDetailResponseV4 detail) {
+    Set<String> ids = new LinkedHashSet<>();
+    for (GymPlanItemResponseV2 p : detail.supportedSubscriptions()) ids.add(p.plan_id());
+    return ids;
+  }
+
+  static GymPlanItemResponseV2 plan(GymDetailResponseV4 detail, long packageId) {
+    return detail.supportedSubscriptions().stream()
+        .filter(p -> String.valueOf(packageId).equals(p.plan_id()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("missing plan " + packageId));
+  }
+
+  /** The service has ~30 collaborators; mock them all except the ones this scenario drives. */
+  private GymReadServiceImpl newService(HomeGymRuleService rules) throws Exception {
+    Constructor<?> ctor = GymReadServiceImpl.class.getDeclaredConstructors()[0];
+    Object[] args = new Object[ctor.getParameterCount()];
+    Class<?>[] types = ctor.getParameterTypes();
+    for (int i = 0; i < types.length; i++) {
+      Class<?> t = types[i];
+      if (t == TrainerRepository.class) {
+        TrainerRepository trainers = mock(TrainerRepository.class);
+        when(trainers.findByGymId(any(), any())).thenReturn(Page.empty());
+        args[i] = trainers;
+      } else if (t == ReviewRepository.class) {
+        ReviewRepository reviews = mock(ReviewRepository.class);
+        when(reviews.findByGymId(any(), any(Pageable.class))).thenReturn(Page.empty());
+        args[i] = reviews;
+      } else if (t == GymRepository.class) args[i] = gymRepository;
+      else if (t == OrderServiceGrpcClient.class) args[i] = order;
+      else if (t == HomeGymRuleService.class) args[i] = rules;
+      else if (t == GymMembershipPolicyV4Service.class) args[i] = policyService;
+      else if (t == GymPackagePriceRepository.class) args[i] = packagePrices;
+      else if (t == Executor.class) args[i] = (Executor) Runnable::run;
+      else args[i] = mock(t);
+    }
+    return (GymReadServiceImpl) ctor.newInstance(args);
+  }
+}

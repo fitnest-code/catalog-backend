@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadService {
     private final GymRepository gymRepository;
     private final GymDescriptionRepository gymDescriptionRepository;
@@ -84,6 +85,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     private final az.fitnest.catalog.service.GymEntranceService gymEntranceService;
     private final GymDetailV3Service gymDetailV3Service;
     private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
+    // Used only by getGymDetailV4 to resolve packageIds / prices for home-eligible tiers that have no
+    // legacy gym_subscriptions row (see alignSupportedSubscriptions).
+    private final az.fitnest.catalog.service.GymMembershipPolicyV4Service membershipPolicyV4Service;
+    private final az.fitnest.catalog.repository.GymPackagePriceRepository gymPackagePriceRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.context.annotation.Lazy
@@ -2044,7 +2049,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .collect(java.util.stream.Collectors.toList());
             }
         } catch (Exception e) {
-            System.err.println("Could not fetch supported subscriptions from order-backend: " + e.getMessage());
+            // Was a silent System.err; an empty list here hides every package in the app, so log it.
+            log.warn("Could not fetch supported subscriptions from order-backend for gym {}: {}",
+                    gym.getId(), e.toString());
         }
         String localizedName = getLocalizedGymName(gym, userLanguage);
         String localizedDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(),
@@ -2104,6 +2111,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         info.eligible()
                                 && az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier) >= minRank))
                 .toList();
+        List<GymPlanItemResponseV2> alignedSubscriptions =
+                alignSupportedSubscriptions(gym, detail.supportedSubscriptions(), packages);
 
         return new GymDetailResponseV4(
                 detail.gym_id(),
@@ -2125,11 +2134,163 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 detail.reviewsCount(),
                 detail.qr_code_url(),
                 detail.status(),
-                detail.supportedSubscriptions(),
+                alignedSubscriptions,
                 detail.rest_days(),
                 toHomeGymInfoResponse(info),
                 packages
         );
+    }
+
+    /**
+     * {@code packages[].homeEligible} is upward-closed (Gold-only gym => Gold and Platinum eligible)
+     * but {@code supportedSubscriptions} comes only from legacy gym_subscriptions rows, so the app hid
+     * eligible tiers that had no row (e.g. DEV gym 14 Platinum). Append a synthesized plan item for each
+     * home-eligible tier that is missing; existing rows are never removed or altered.
+     * packageId resolution order: gym subscription of that rank, V4 policy, order-backend plans.
+     */
+    private List<GymPlanItemResponseV2> alignSupportedSubscriptions(
+            Gym gym, List<GymPlanItemResponseV2> existing, List<GymPackageHomeEligibilityResponse> packages) {
+        List<GymPlanItemResponseV2> result = existing == null
+                ? new ArrayList<>() : new ArrayList<>(existing);
+        Map<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier, GymPlanItemResponseV2> offeredByTier =
+                new java.util.EnumMap<>(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.class);
+        for (GymPlanItemResponseV2 item : result) {
+            var tier = tierOfPlanItem(item);
+            if (tier != null) {
+                offeredByTier.putIfAbsent(tier, item);
+            }
+        }
+        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = packages.stream()
+                .filter(p -> Boolean.TRUE.equals(p.homeEligible()) && !offeredByTier.containsKey(p.tier()))
+                .map(GymPackageHomeEligibilityResponse::tier)
+                .toList();
+        if (missing.isEmpty()) {
+            return result;
+        }
+
+        az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy = null;
+        try {
+            policy = membershipPolicyV4Service.get(gym.getId());
+        } catch (Exception e) {
+            // POLICY_NOT_CONFIGURED is normal for gyms never edited in the v4 admin.
+            log.debug("No V4 policy for gym {} while aligning subscriptions: {}", gym.getId(), e.toString());
+        }
+        Map<Long, String> orderPlanNames = new java.util.HashMap<>();
+        try {
+            for (var plan : orderServiceGrpcClient.getGymPlans()) {
+                orderPlanNames.put(plan.getPackageId(), plan.getName());
+            }
+        } catch (Exception e) {
+            log.warn("Could not load order-backend gym plans for gym {}; aligning supportedSubscriptions "
+                    + "from catalog data only: {}", gym.getId(), e.toString());
+        }
+
+        for (var tier : missing) {
+            Long packageId = resolvePackageIdForTier(gym, tier, policy, orderPlanNames);
+            if (packageId == null) {
+                log.warn("Gym {} tier {} is homeEligible but no packageId could be resolved", gym.getId(), tier);
+                continue;
+            }
+            String planId = packageId.toString();
+            if (result.stream().anyMatch(i -> planId.equals(i.plan_id()))) {
+                continue;
+            }
+            int rank = az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier);
+            // Nearest lower offered tier supplies benefits/category: higher tiers include them.
+            GymPlanItemResponseV2 lower = offeredByTier.entrySet().stream()
+                    .filter(e -> az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(e.getKey()) < rank)
+                    .reduce((a, b) -> b)
+                    .map(Map.Entry::getValue)
+                    .orElse(null);
+            String name = cleanPackageName(orderPlanNames.get(packageId));
+            if (name == null || name.isBlank()) {
+                name = tier.name().charAt(0) + tier.name().substring(1).toLowerCase();
+            }
+            result.add(GymPlanItemResponseV2.builder()
+                    .plan_id(planId)
+                    .packageName(name)
+                    .categoryId(lower != null ? lower.categoryId() : null)
+                    .dailyPrice(resolveSyntheticDailyPrice(gym, packageId, tier, policy))
+                    .benefits(lower != null && lower.benefits() != null ? lower.benefits() : List.of())
+                    .build());
+        }
+        return result;
+    }
+
+    private az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier tierOfPlanItem(GymPlanItemResponseV2 item) {
+        if (item == null || item.plan_id() == null) {
+            return null;
+        }
+        try {
+            return tierOfRank(homeGymRuleService.packageContext(Long.valueOf(item.plan_id())).rank());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier tierOfRank(int rank) {
+        var tiers = az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.values();
+        return rank >= 1 && rank <= tiers.length ? tiers[rank - 1] : null;
+    }
+
+    private Long resolvePackageIdForTier(Gym gym, az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier tier,
+            az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy, Map<Long, String> orderPlanNames) {
+        int rank = az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier);
+        if (gym.getSubscriptions() != null) {
+            for (GymSubscription sub : gym.getSubscriptions()) {
+                if (sub != null && sub.getPackageId() != null
+                        && homeGymRuleService.packageContext(sub.getPackageId()).rank() == rank) {
+                    return sub.getPackageId();
+                }
+            }
+        }
+        if (policy != null && policy.packages() != null) {
+            for (var rule : policy.packages()) {
+                if (rule.tier() == tier && rule.packageId() != null) {
+                    return rule.packageId();
+                }
+            }
+        }
+        for (Map.Entry<Long, String> plan : orderPlanNames.entrySet()) {
+            if (getPackageRank(plan.getValue()) == rank) {
+                return plan.getKey();
+            }
+        }
+        return null;
+    }
+
+    private Double resolveSyntheticDailyPrice(Gym gym, Long packageId,
+            az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier tier,
+            az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy) {
+        if (gym.getSubscriptions() != null) {
+            for (GymSubscription sub : gym.getSubscriptions()) {
+                if (sub != null && packageId.equals(sub.getPackageId()) && sub.getDailyPrice() != null) {
+                    return sub.getDailyPrice();
+                }
+            }
+        }
+        try {
+            var price = gymPackagePriceRepository
+                    .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                            gym.getId(), packageId, java.time.LocalDate.now(
+                                    az.fitnest.catalog.service.homegym.HomeGymRuleService.BAKU))
+                    .orElse(null);
+            if (price != null && price.getSinglePrice() != null) {
+                return price.getSinglePrice();
+            }
+        } catch (Exception e) {
+            log.warn("Could not read gym_package_price for gym {} package {}: {}",
+                    gym.getId(), packageId, e.toString());
+        }
+        if (policy != null && policy.packages() != null) {
+            for (var rule : policy.packages()) {
+                if (rule.tier() == tier && rule.entryPrice() != null) {
+                    return rule.entryPrice().doubleValue();
+                }
+            }
+        }
+        // Never null: the app decodes dailyPrice as a number.
+        return 0.0;
     }
 
     private HomeGymInfoResponse toHomeGymInfoResponse(

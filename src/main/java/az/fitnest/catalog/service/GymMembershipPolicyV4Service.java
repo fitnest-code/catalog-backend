@@ -147,7 +147,32 @@ public class GymMembershipPolicyV4Service {
     // Mobile list APIs read gyms.home_eligible / gym_package_price — keep them aligned with
     // admin "Əsas zal kimi seçilə bilər" (primaryEnabled), which defaults to false.
     syncHomeEligibleFlags(gym, normalized, now.toLocalDate());
+    ensurePrimarySubscriptions(gym, normalized);
     return decode(row);
+  }
+
+  /**
+   * Home-eligibility is derived from gym_subscriptions (HomeGymRuleService) and the v4 detail's
+   * supportedSubscriptions are built from the same rows, so a primaryEnabled package without a row
+   * drifts: the list shows the gym but the app hides the package. Insert a minimal row (gym_id +
+   * package_id, same shape as GymWriteServiceImpl.enableGymSubscription) when missing. Never
+   * deletes or edits existing rows, so admin-configured prices/services are untouched.
+   */
+  private void ensurePrimarySubscriptions(Gym gym, List<PackageRule> packages) {
+    boolean added = false;
+    for (PackageRule rule : packages) {
+      if (!rule.included() || !rule.primaryEnabled() || rule.packageId() == null) continue;
+      boolean present =
+          gym.getSubscriptions().stream().anyMatch(s -> rule.packageId().equals(s.getPackageId()));
+      if (present) continue;
+      GymSubscription subscription = new GymSubscription();
+      subscription.setGym(gym);
+      subscription.setPackageId(rule.packageId());
+      subscription.setSupportedServices(new HashSet<>());
+      gym.getSubscriptions().add(subscription);
+      added = true;
+    }
+    if (added) gyms.save(gym);
   }
 
   /**
