@@ -35,8 +35,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Regression: the gym list (upward-closed home eligibility) showed a gym for Platinum, but the v4
- * detail's supportedSubscriptions was built only from gym_subscriptions, so the app hid Platinum.
+ * v4 detail supportedSubscriptions alignment. Tiers without a gym_subscriptions row are synthesized
+ * only when the V4 policy offers them (included/primaryEnabled); upward-closed homeEligible alone must
+ * not add chips (Bronze-only Central Fitness showed Silver/Gold/Platinum).
  * Package ids 101-104 are unique to this class because HomeGymRuleService caches contexts statically.
  */
 class GymReadServiceImplV4DetailAlignmentTest {
@@ -62,8 +63,21 @@ class GymReadServiceImplV4DetailAlignmentTest {
                 plan(SILVER, "Silver Plan"),
                 plan(GOLD, "Gold Plan"),
                 plan(PLATINUM, "Platinum Plan")));
+    // Mirror order-backend: return a name for whichever ids are asked about (gym rows are filtered
+    // out of supportedSubscriptions when their name lookup comes back empty).
     when(order.getPackageNamesByIds(any()))
-        .thenReturn(List.of(PackageNameInfo.newBuilder().setPackageId(GOLD).setName("Gold Plan").build()));
+        .thenAnswer(
+            inv -> {
+              List<Long> ids = inv.getArgument(0);
+              return ids.stream()
+                  .map(
+                      id ->
+                          PackageNameInfo.newBuilder()
+                              .setPackageId(id)
+                              .setName(id == BRONZE ? "Bronze Plan" : id == GOLD ? "Gold Plan" : "Plan " + id)
+                              .build())
+                  .toList();
+            });
 
     gym = Gym.builder().name("Volan").homeEligible(true).build();
     gym.setId(14L);
@@ -81,21 +95,88 @@ class GymReadServiceImplV4DetailAlignmentTest {
   }
 
   @Test
-  void platinumHomeEligibleGetsSynthesizedPlanFromOrderPlansWhenPolicyMissing() {
+  void goldOnlyGymWithoutPolicyDoesNotSynthesizeHomeEligiblePlatinum() {
     when(policyService.get(14L))
         .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED"));
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
+    // packages[].homeEligible stays upward-closed...
     assertTrue(homeEligible(detail, Tier.PLATINUM));
     assertTrue(homeEligible(detail, Tier.GOLD));
     assertFalse(homeEligible(detail, Tier.SILVER));
+    // ...but home eligibility is not an offer: only the DB-backed Gold row is returned.
+    assertEquals(Set.of(String.valueOf(GOLD)), planIds(detail));
+  }
+
+  @Test
+  void goldOnlyGymSynthesizesPlatinumWhenPolicyEnablesIt() {
+    when(policyService.get(14L))
+        .thenReturn(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    rule(BRONZE, Tier.BRONZE, false, "3.00"),
+                    rule(SILVER, Tier.SILVER, false, "4.00"),
+                    rule(GOLD, Tier.GOLD, true, "5.00"),
+                    rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
+                List.of()));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
     Set<String> ids = planIds(detail);
     assertTrue(ids.contains(String.valueOf(PLATINUM)), "Platinum plan must be offered: " + ids);
     // Existing Gold row is kept as-is.
     assertTrue(ids.contains(String.valueOf(GOLD)));
-    GymPlanItemResponseV2 platinum = plan(detail, PLATINUM);
-    assertEquals("Platinum", platinum.packageName());
+    assertEquals("Platinum", plan(detail, PLATINUM).packageName());
+  }
+
+  @Test
+  void bronzeOnlyGymShowsOnlyBronzeChipEvenThoughHigherTiersAreHomeEligible() {
+    // Central Fitness (gym 97) shape: single Bronze gym_subscriptions row.
+    gym.getSubscriptions().clear();
+    GymSubscription bronze = new GymSubscription();
+    bronze.setId(901L);
+    bronze.setGym(gym);
+    bronze.setPackageId(BRONZE);
+    bronze.setDailyPrice(3.0);
+    gym.getSubscriptions().add(bronze);
+    when(policyService.get(14L))
+        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED"));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    for (Tier tier : Tier.values()) {
+      assertTrue(homeEligible(detail, tier), tier + " is home-eligible via upward closure");
+    }
+    assertEquals(Set.of(String.valueOf(BRONZE)), planIds(detail));
+  }
+
+  @Test
+  void bronzeOnlyGymWithPolicyOfferingOnlyBronzeStaysBronzeOnly() {
+    gym.getSubscriptions().clear();
+    GymSubscription bronze = new GymSubscription();
+    bronze.setId(901L);
+    bronze.setGym(gym);
+    bronze.setPackageId(BRONZE);
+    bronze.setDailyPrice(3.0);
+    gym.getSubscriptions().add(bronze);
+    when(policyService.get(14L))
+        .thenReturn(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    rule(BRONZE, Tier.BRONZE, true, "3.00"),
+                    rule(SILVER, Tier.SILVER, false, "4.00"),
+                    rule(GOLD, Tier.GOLD, false, "5.00"),
+                    rule(PLATINUM, Tier.PLATINUM, false, "9.50")),
+                List.of()));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    assertEquals(Set.of(String.valueOf(BRONZE)), planIds(detail));
   }
 
   @Test
