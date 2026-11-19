@@ -2142,10 +2142,16 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     /**
-     * {@code packages[].homeEligible} is upward-closed (Gold-only gym => Gold and Platinum eligible)
-     * but {@code supportedSubscriptions} comes only from legacy gym_subscriptions rows, so the app hid
-     * eligible tiers that had no row (e.g. DEV gym 14 Platinum). Append a synthesized plan item for each
-     * home-eligible tier that is missing; existing rows are never removed or altered.
+     * {@code supportedSubscriptions} comes from legacy gym_subscriptions rows, but a gym may also sell a
+     * tier through its V4 policy without having such a row (e.g. DEV gym 14 Platinum). Append a
+     * synthesized plan item for such tiers only; existing rows are never removed or altered.
+     *
+     * <p>WHY the V4 policy and not {@code packages[].homeEligible}: home eligibility is upward-closed
+     * (Bronze-only gym => Silver/Gold/Platinum eligible) and only says who may use the gym as a home
+     * gym. It is not the list of tiers the gym sells, so synthesizing from it made Bronze-only gyms
+     * (e.g. Central Fitness, gym 97) show Silver/Gold/Platinum chips. A tier is synthesized only when
+     * the policy marks it {@code included} or {@code primaryEnabled}; with no policy
+     * (POLICY_NOT_CONFIGURED) only the DB rows are returned.
      * packageId resolution order: gym subscription of that rank, V4 policy, order-backend plans.
      */
     private List<GymPlanItemResponseV2> alignSupportedSubscriptions(
@@ -2160,11 +2166,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 offeredByTier.putIfAbsent(tier, item);
             }
         }
-        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = packages.stream()
+        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> candidates = packages.stream()
                 .filter(p -> Boolean.TRUE.equals(p.homeEligible()) && !offeredByTier.containsKey(p.tier()))
                 .map(GymPackageHomeEligibilityResponse::tier)
                 .toList();
-        if (missing.isEmpty()) {
+        if (candidates.isEmpty()) {
             return result;
         }
 
@@ -2174,6 +2180,17 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         } catch (Exception e) {
             // POLICY_NOT_CONFIGURED is normal for gyms never edited in the v4 admin.
             log.debug("No V4 policy for gym {} while aligning subscriptions: {}", gym.getId(), e.toString());
+        }
+        if (policy == null || policy.packages() == null) {
+            return result;
+        }
+        final var policyRules = policy.packages();
+        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = candidates.stream()
+                .filter(t -> policyRules.stream()
+                        .anyMatch(r -> r != null && r.tier() == t && (r.included() || r.primaryEnabled())))
+                .toList();
+        if (missing.isEmpty()) {
+            return result;
         }
         Map<Long, String> orderPlanNames = new java.util.HashMap<>();
         try {
