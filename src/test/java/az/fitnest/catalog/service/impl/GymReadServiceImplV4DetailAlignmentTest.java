@@ -31,9 +31,6 @@ import java.util.*;
 import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
 /**
  * v4 detail supportedSubscriptions alignment. Tiers without a gym_subscriptions row are synthesized
  * only when the V4 policy offers them (included/primaryEnabled); upward-closed homeEligible alone must
@@ -96,8 +93,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
 
   @Test
   void goldOnlyGymWithoutPolicyDoesNotSynthesizeHomeEligiblePlatinum() {
-    when(policyService.get(14L))
-        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED"));
+    when(policyService.find(14L)).thenReturn(Optional.empty());
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
@@ -111,8 +107,8 @@ class GymReadServiceImplV4DetailAlignmentTest {
 
   @Test
   void goldOnlyGymSynthesizesPlatinumWhenPolicyEnablesIt() {
-    when(policyService.get(14L))
-        .thenReturn(
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
             new GymMembershipPolicyV4(
                 1,
                 false,
@@ -121,7 +117,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
                     rule(SILVER, Tier.SILVER, false, "4.00"),
                     rule(GOLD, Tier.GOLD, true, "5.00"),
                     rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
-                List.of()));
+                List.of())));
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
@@ -142,8 +138,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
     bronze.setPackageId(BRONZE);
     bronze.setDailyPrice(3.0);
     gym.getSubscriptions().add(bronze);
-    when(policyService.get(14L))
-        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED"));
+    when(policyService.find(14L)).thenReturn(Optional.empty());
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
@@ -162,8 +157,8 @@ class GymReadServiceImplV4DetailAlignmentTest {
     bronze.setPackageId(BRONZE);
     bronze.setDailyPrice(3.0);
     gym.getSubscriptions().add(bronze);
-    when(policyService.get(14L))
-        .thenReturn(
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
             new GymMembershipPolicyV4(
                 1,
                 false,
@@ -172,7 +167,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
                     rule(SILVER, Tier.SILVER, false, "4.00"),
                     rule(GOLD, Tier.GOLD, false, "5.00"),
                     rule(PLATINUM, Tier.PLATINUM, false, "9.50")),
-                List.of()));
+                List.of())));
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
@@ -181,8 +176,8 @@ class GymReadServiceImplV4DetailAlignmentTest {
 
   @Test
   void platinumPackageIdAndPriceComeFromPolicyWhenAvailable() {
-    when(policyService.get(14L))
-        .thenReturn(
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
             new GymMembershipPolicyV4(
                 1,
                 false,
@@ -191,7 +186,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
                     rule(SILVER, Tier.SILVER, false, "4.00"),
                     rule(GOLD, Tier.GOLD, true, "5.00"),
                     rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
-                List.of()));
+                List.of())));
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 
@@ -203,8 +198,8 @@ class GymReadServiceImplV4DetailAlignmentTest {
   @Test
   void orderFailureStillReturnsPolicyBackedPlan() {
     when(order.getGymPlans()).thenThrow(new RuntimeException("order down"));
-    when(policyService.get(14L))
-        .thenReturn(
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
             new GymMembershipPolicyV4(
                 1,
                 false,
@@ -213,7 +208,7 @@ class GymReadServiceImplV4DetailAlignmentTest {
                     rule(SILVER, Tier.SILVER, false, "4.00"),
                     rule(GOLD, Tier.GOLD, true, "5.00"),
                     rule(PLATINUM, Tier.PLATINUM, true, "9.50")),
-                List.of()));
+                List.of())));
 
     GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
 

@@ -36,6 +36,16 @@ public class GymMembershipPolicyV4Service {
             .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "POLICY_NOT_CONFIGURED")));
   }
 
+  /**
+   * Non-throwing lookup for callers already inside a read-only transaction (e.g. gym detail).
+   * {@link #get} marks the outer TX rollback-only when the policy is missing because
+   * {@code ResponseStatusException} is a runtime exception — swallowing it still fails commit.
+   */
+  @Transactional(readOnly = true)
+  public Optional<GymMembershipPolicyV4> find(Long gymId) {
+    return policies.findById(gymId).map(this::decode);
+  }
+
   private GymMembershipPolicyV4 decode(GymMembershipPolicyV4Entity row) {
     try {
       var p = mapper.readValue(row.getPayload(), GymMembershipPolicyV4.class);

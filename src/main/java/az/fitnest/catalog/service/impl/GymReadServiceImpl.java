@@ -2174,13 +2174,11 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             return result;
         }
 
-        az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy = null;
-        try {
-            policy = membershipPolicyV4Service.get(gym.getId());
-        } catch (Exception e) {
-            // POLICY_NOT_CONFIGURED is normal for gyms never edited in the v4 admin.
-            log.debug("No V4 policy for gym {} while aligning subscriptions: {}", gym.getId(), e.toString());
-        }
+        // Use find() not get(): get() throws POLICY_NOT_CONFIGURED which marks this read-only
+        // transaction rollback-only; catching it still makes commit throw UnexpectedRollbackException
+        // (HTTP 500 on GET /v4/gyms/{id} for gyms without a V4 policy, e.g. DEV gym 8).
+        az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy =
+                membershipPolicyV4Service.find(gym.getId()).orElse(null);
         if (policy == null || policy.packages() == null) {
             return result;
         }
