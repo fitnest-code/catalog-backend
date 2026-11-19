@@ -315,6 +315,71 @@ class HomeGymRuleServiceTest {
     }
 
     @Test
+    void bronzeOnlyGymPricesSilverSubscriberFromBronzeEntryTariff() {
+        // Shark GYM shape: Silver user may enter (upward home eligibility) but the gym only
+        // offers Bronze; V4 left a stub Silver row at single_price=0 / included=false.
+        when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of());
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(SILVER), any(LocalDate.class)))
+                .thenReturn(Optional.of(stubPrice(GYM_ID, SILVER, 0.0)));
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(BRONZE), any(LocalDate.class)))
+                .thenReturn(Optional.of(price(GYM_ID, BRONZE, 3.5, 75.0, true)));
+        Gym gym = gym(GYM_ID, true, BRONZE);
+        gym.getSubscriptions().iterator().next().setDailyPrice(3.5);
+
+        HomeGymRuleService.CheckInResolution resolution =
+                service.resolveForCheckIn(gym, service.packageContext(SILVER), NOW);
+
+        assertTrue(resolution.allowed());
+        assertEquals(3.5, resolution.singlePrice());
+        assertEquals(75.0, resolution.unlimitedPrice());
+        assertEquals("Bronze", resolution.pricePackageName());
+    }
+
+    @Test
+    void gymWithRealSilverPriceStillUsesSilverForSilverSubscriber() {
+        when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of());
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(SILVER), any(LocalDate.class)))
+                .thenReturn(Optional.of(price(GYM_ID, SILVER, 8.0, 80.0, true)));
+        Gym gym = gym(GYM_ID, true, SILVER);
+        gym.getSubscriptions().iterator().next().setDailyPrice(8.0);
+
+        HomeGymRuleService.CheckInResolution resolution =
+                service.resolveForCheckIn(gym, service.packageContext(SILVER), NOW);
+
+        assertEquals(8.0, resolution.singlePrice());
+        assertEquals(80.0, resolution.unlimitedPrice());
+        assertEquals("Silver", resolution.pricePackageName());
+    }
+
+    @Test
+    void explicitTimeSlotPricePackageIdWinsOverSubscriberFallback() {
+        GymTimeSlotRule rule = rule(1L, "MONDAY", LocalTime.of(9, 0), LocalTime.of(18, 0),
+                Set.of(BRONZE, SILVER), GOLD);
+        when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of(rule));
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(GOLD), any(LocalDate.class)))
+                .thenReturn(Optional.of(price(GYM_ID, GOLD, 10.0, 100.0, true)));
+        // Bronze-only offer would otherwise win for a Silver subscriber without the slot override.
+        Gym gym = gym(GYM_ID, true, BRONZE);
+        gym.getSubscriptions().iterator().next().setDailyPrice(3.5);
+
+        HomeGymRuleService.CheckInResolution resolution =
+                service.resolveForCheckIn(gym, service.packageContext(SILVER), NOW);
+
+        assertTrue(resolution.allowed());
+        assertEquals(10.0, resolution.singlePrice());
+        assertEquals("Gold", resolution.pricePackageName());
+        assertEquals(1L, resolution.ruleId());
+    }
+
+    @Test
     void withoutAnyPriceTheSnapshotIsZeroInsteadOfNull() {
         when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of());
         when(packagePriceRepository
@@ -485,6 +550,19 @@ class HomeGymRuleServiceTest {
                 .unlimitedPrice(unlimited)
                 .homeEligible(homeEligible)
                 .included(true)
+                .effectiveFrom(TODAY.minusMonths(1))
+                .build();
+    }
+
+    /** V4 disabled-tier stub: present in DB but not a real gym offer. */
+    private static GymPackagePrice stubPrice(Long gymId, Long packageId, Double single) {
+        return GymPackagePrice.builder()
+                .gym(gymReference(gymId))
+                .packageId(packageId)
+                .singlePrice(single)
+                .unlimitedPrice(null)
+                .homeEligible(false)
+                .included(false)
                 .effectiveFrom(TODAY.minusMonths(1))
                 .build();
     }

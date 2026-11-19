@@ -320,7 +320,10 @@ public class HomeGymRuleService {
         List<GymTimeSlotRule> rules = timeSlotRuleRepository.findEffectiveRules(gym.getId(), today);
         String availableHours = computeAvailableHours(rules, context);
         if (rules.isEmpty()) {
-            PriceSnapshot price = priceFor(gym, context.packageId(), today);
+            // Higher-tier subscribers may enter a lower-tier home gym; price from the gym's
+            // offered package, not a V4 stub row for the subscriber's unused tier (Shark/Silver→0).
+            Long pricePackageId = resolveEntryPricePackageId(gym, context, null);
+            PriceSnapshot price = priceFor(gym, pricePackageId, today);
             return new CheckInResolution(true, null, null, price.pricePackageName(),
                     price.singlePrice(), price.unlimitedPrice(), null);
         }
@@ -347,11 +350,69 @@ public class HomeGymRuleService {
         }
 
         GymTimeSlotRule rule = allowed.get(0);
-        Long pricePackageId = rule.getPricePackageId() != null
-                ? rule.getPricePackageId() : context.packageId();
+        Long pricePackageId = resolveEntryPricePackageId(gym, context, rule.getPricePackageId());
         PriceSnapshot price = priceFor(gym, pricePackageId, today);
         return new CheckInResolution(true, null, rule.getId(), price.pricePackageName(),
                 price.singlePrice(), price.unlimitedPrice(), availableHours);
+    }
+
+    /**
+     * Chooses which package tariff to snapshot for a check-in.
+     * Explicit time-slot {@code pricePackageId} always wins. Otherwise use the subscriber's
+     * package when the gym has a real offer for it; if not (common for upward-closed home gyms
+     * that only sell Bronze), use the highest-rank offered package at or below the subscriber.
+     */
+    private Long resolveEntryPricePackageId(Gym gym, PackageContext context, Long explicitPricePackageId) {
+        if (explicitPricePackageId != null) {
+            return explicitPricePackageId;
+        }
+        if (context == null || context.packageId() == null) {
+            return null;
+        }
+        if (hasUsableEntryPrice(gym, context.packageId())) {
+            return context.packageId();
+        }
+        Long best = null;
+        int bestRank = -1;
+        if (gym != null && gym.getSubscriptions() != null) {
+            for (GymSubscription subscription : gym.getSubscriptions()) {
+                Long offeredId = subscription == null ? null : subscription.getPackageId();
+                if (offeredId == null || !context.eligiblePackageIds().contains(offeredId)) {
+                    continue;
+                }
+                int rank = packageContext(offeredId).rank();
+                if (rank > bestRank) {
+                    bestRank = rank;
+                    best = offeredId;
+                }
+            }
+        }
+        return best != null ? best : context.packageId();
+    }
+
+    /**
+     * True when the gym has a real entry tariff for {@code packageId}: an included
+     * {@code gym_package_price} row, or a {@code gym_subscriptions} row with daily_price.
+     * V4 stubs ({@code included=false}, zero/null price, no subscription offer) are not usable.
+     */
+    private boolean hasUsableEntryPrice(Gym gym, Long packageId) {
+        if (gym == null || packageId == null) {
+            return false;
+        }
+        GymPackagePrice row = latestPrice(gym.getId(), packageId);
+        if (row != null && Boolean.TRUE.equals(row.getIncluded())) {
+            return true;
+        }
+        if (gym.getSubscriptions() != null) {
+            for (GymSubscription subscription : gym.getSubscriptions()) {
+                if (subscription != null
+                        && packageId.equals(subscription.getPackageId())
+                        && subscription.getDailyPrice() != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
