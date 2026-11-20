@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**", "/health/**").permitAll()
                         .requestMatchers("/api/v1/media/stream/**").permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
+                        .requestMatchers("/api/v2/public/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )

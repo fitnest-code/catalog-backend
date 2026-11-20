@@ -1012,7 +1012,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-stats", "landing-media-public"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-gyms-v2", "landing-gym-detail-v2", "landing-gym-filters-v2", "landing-stats", "landing-media-public"}, allEntries = true)
     })
     public void createGymStep7(Long gymId, GymCreateStep7Request request) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
@@ -1052,7 +1052,7 @@ public class GymWriteServiceImpl implements GymWriteService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-stats", "landing-media-public"}, allEntries = true)
+            @CacheEvict(cacheNames = {"main-page-gyms", "gym-listings", "admin-gyms", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-gyms-v2", "landing-gym-detail-v2", "landing-gym-filters-v2", "landing-stats", "landing-media-public"}, allEntries = true)
     })
     public Long createGymComplete(GymCreateCompleteRequest request, MultipartFile coverPhoto,
                                   List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
@@ -1466,7 +1466,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-stats", "landing-media-public"}, allEntries = true)
+    @CacheEvict(cacheNames = {"admin-gyms", "main-page-gyms", "gym-listings", "gym-count-by-category", "gym-count-by-subscription", "landing-gyms", "landing-home-gyms", "landing-gym-detail", "landing-gym-filters", "landing-gyms-v2", "landing-gym-detail-v2", "landing-gym-filters-v2", "landing-stats", "landing-media-public"}, allEntries = true)
     public void toggleGymStatus(Long gymId, boolean enabled) {
         Gym gym = gymRepository.findById(gymId).orElseThrow(() -> new ResourceNotFoundException("GYM_NOT_FOUND", "error.gym_not_found"));
         GymStatus previous = gym.getStatus();
