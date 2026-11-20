@@ -292,4 +292,85 @@ class GymMembershipPolicyV4ServiceTest {
     assertEquals(new BigDecimal("6.00"), service.quote(10L, 3L, after).entryPrice());
     assertEquals(1, service.quote(10L, 1L, before).accessWindows().size());
   }
+
+  @Test
+  void saveCreatesGymSubscriptionForIncludedPackageEvenWithoutPrimary() {
+    var repo =
+        org.mockito.Mockito.mock(
+            az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class);
+    var gyms = org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymRepository.class);
+    var packagePrices =
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPackagePriceRepository.class);
+    var disables =
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPrimaryDisableV4Repository.class);
+    var notify = org.mockito.Mockito.mock(PrimaryGymNotificationV4Service.class);
+    var plans = org.mockito.Mockito.mock(az.fitnest.catalog.client.OrderServiceGrpcClient.class);
+
+    // Silver included but not primary — previously skipped gym_subscriptions and caused
+    // GYM_NOT_SUPPORTED for Silver members at QR entrance.
+    var memberPackages =
+        List.of(
+            new PackageRule(1L, Tier.BRONZE, false, false, BigDecimal.ZERO, null, List.of(), null),
+            new PackageRule(
+                2L,
+                Tier.SILVER,
+                true,
+                false,
+                new BigDecimal("7.00"),
+                null,
+                List.of("Fitness"),
+                null),
+            new PackageRule(
+                3L,
+                Tier.GOLD,
+                true,
+                false,
+                new BigDecimal("12.00"),
+                null,
+                List.of("Fitness"),
+                null),
+            new PackageRule(
+                4L, Tier.PLATINUM, false, false, BigDecimal.ZERO, null, List.of(), null));
+    var policy = new GymMembershipPolicyV4(0, false, memberPackages, List.of());
+    var gym =
+        Gym.builder()
+            .name("Premium Park Hotel")
+            .status(az.fitnest.catalog.model.enums.GymStatus.ACTIVE)
+            .subscriptions(new HashSet<>())
+            .build();
+    org.mockito.Mockito.when(gyms.findById(244L)).thenReturn(Optional.of(gym));
+    org.mockito.Mockito.when(gyms.save(org.mockito.ArgumentMatchers.any())).thenAnswer(a -> a.getArgument(0));
+    org.mockito.Mockito.when(repo.findById(244L)).thenReturn(Optional.empty());
+    org.mockito.Mockito.when(repo.saveAndFlush(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(
+            a -> {
+              GymMembershipPolicyV4Entity e = a.getArgument(0);
+              e.setVersion(0);
+              return e;
+            });
+    org.mockito.Mockito.when(
+            packagePrices.findByGymIdAndPackageIdAndEffectiveFrom(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Optional.empty());
+    org.mockito.Mockito.when(packagePrices.save(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(a -> a.getArgument(0));
+    org.mockito.Mockito.when(plans.checkPackageExists(org.mockito.ArgumentMatchers.anyLong()))
+        .thenReturn(true);
+
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
+    service.save(244L, new az.fitnest.catalog.dto.v4.GymPolicyUpdateV4(policy, false, Map.of()));
+
+    Set<Long> synced =
+        gym.getSubscriptions().stream().map(GymSubscription::getPackageId).collect(java.util.stream.Collectors.toSet());
+    assertEquals(Set.of(2L, 3L), synced);
+    assertEquals(
+        7.0,
+        gym.getSubscriptions().stream()
+            .filter(s -> s.getPackageId().equals(2L))
+            .findFirst()
+            .orElseThrow()
+            .getDailyPrice());
+  }
 }
