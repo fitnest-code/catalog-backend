@@ -162,22 +162,26 @@ public class GymMembershipPolicyV4Service {
   }
 
   /**
-   * Home-eligibility is derived from gym_subscriptions (HomeGymRuleService) and the v4 detail's
-   * supportedSubscriptions are built from the same rows, so a primaryEnabled package without a row
-   * drifts: the list shows the gym but the app hides the package. Insert a minimal row (gym_id +
-   * package_id, same shape as GymWriteServiceImpl.enableGymSubscription) when missing. Never
+   * QR entrance ({@code HomeGymRuleService.supportsPackage}) and v4 detail
+   * {@code supportedSubscriptions} both read {@code gym_subscriptions}. V4 policy previously only
+   * inserted a row when {@code primaryEnabled} was true, so {@code included=true} packages were
+   * written to {@code gym_package_price} but missing from {@code gym_subscriptions} — members on
+   * that tier got {@code GYM_NOT_SUPPORTED}. Sync every included package (not only primary). Never
    * deletes or edits existing rows, so admin-configured prices/services are untouched.
    */
   private void ensurePrimarySubscriptions(Gym gym, List<PackageRule> packages) {
     boolean added = false;
     for (PackageRule rule : packages) {
-      if (!rule.included() || !rule.primaryEnabled() || rule.packageId() == null) continue;
+      if (!rule.included() || rule.packageId() == null) continue;
       boolean present =
           gym.getSubscriptions().stream().anyMatch(s -> rule.packageId().equals(s.getPackageId()));
       if (present) continue;
       GymSubscription subscription = new GymSubscription();
       subscription.setGym(gym);
       subscription.setPackageId(rule.packageId());
+      if (rule.entryPrice() != null) {
+        subscription.setDailyPrice(rule.entryPrice().doubleValue());
+      }
       subscription.setSupportedServices(new HashSet<>());
       gym.getSubscriptions().add(subscription);
       added = true;
