@@ -175,6 +175,35 @@ class GymReadServiceImplV4DetailAlignmentTest {
   }
 
   @Test
+  void includedGoldShowsWhenHomeGymDisabled() {
+    // Qala Fitness Gəncə: Bronze gym_subscriptions only; Gold included in policy but primary off.
+    gym.setHomeEligible(false);
+    gym.getSubscriptions().clear();
+    GymSubscription bronze = new GymSubscription();
+    bronze.setId(901L);
+    bronze.setGym(gym);
+    bronze.setPackageId(BRONZE);
+    bronze.setDailyPrice(4.0);
+    gym.getSubscriptions().add(bronze);
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
+            new GymMembershipPolicyV4(
+                0,
+                false,
+                List.of(
+                    includedOnly(BRONZE, Tier.BRONZE, "4.00"),
+                    includedOnly(SILVER, Tier.SILVER, "0.00", false),
+                    includedOnly(GOLD, Tier.GOLD, "10.00"),
+                    includedOnly(PLATINUM, Tier.PLATINUM, "0.00", false)),
+                List.of())));
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    assertEquals(Set.of(String.valueOf(BRONZE), String.valueOf(GOLD)), planIds(detail));
+    assertEquals(10.0, plan(detail, GOLD).dailyPrice());
+  }
+
+  @Test
   void platinumPackageIdAndPriceComeFromPolicyWhenAvailable() {
     when(policyService.find(14L))
         .thenReturn(Optional.of(
@@ -227,6 +256,15 @@ class GymReadServiceImplV4DetailAlignmentTest {
     return new PackageRule(
         id, tier, primary, primary, new BigDecimal(price), primary ? new BigDecimal("50") : null,
         List.of(), null);
+  }
+
+  static PackageRule includedOnly(long id, Tier tier, String price) {
+    return includedOnly(id, tier, price, true);
+  }
+
+  static PackageRule includedOnly(long id, Tier tier, String price, boolean included) {
+    return new PackageRule(
+        id, tier, included, false, new BigDecimal(price), null, List.of(), null);
   }
 
   static boolean homeEligible(GymDetailResponseV4 detail, Tier tier) {

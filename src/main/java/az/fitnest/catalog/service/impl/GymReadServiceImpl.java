@@ -2112,7 +2112,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                                 && az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier) >= minRank))
                 .toList();
         List<GymPlanItemResponseV2> alignedSubscriptions =
-                alignSupportedSubscriptions(gym, detail.supportedSubscriptions(), packages);
+                alignSupportedSubscriptions(gym, detail.supportedSubscriptions());
 
         return new GymDetailResponseV4(
                 detail.gym_id(),
@@ -2143,19 +2143,20 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
     /**
      * {@code supportedSubscriptions} comes from legacy gym_subscriptions rows, but a gym may also sell a
-     * tier through its V4 policy without having such a row (e.g. DEV gym 14 Platinum). Append a
-     * synthesized plan item for such tiers only; existing rows are never removed or altered.
+     * tier through its V4 policy without having such a row (e.g. Qala Fitness Gold with
+     * {@code included=true} but {@code primaryEnabled=false}). Append a synthesized plan item for such
+     * tiers only; existing rows are never removed or altered.
      *
      * <p>WHY the V4 policy and not {@code packages[].homeEligible}: home eligibility is upward-closed
      * (Bronze-only gym => Silver/Gold/Platinum eligible) and only says who may use the gym as a home
      * gym. It is not the list of tiers the gym sells, so synthesizing from it made Bronze-only gyms
      * (e.g. Central Fitness, gym 97) show Silver/Gold/Platinum chips. A tier is synthesized only when
-     * the policy marks it {@code included} or {@code primaryEnabled}; with no policy
-     * (POLICY_NOT_CONFIGURED) only the DB rows are returned.
+     * the policy marks it {@code included} or {@code primaryEnabled} — even when the gym is not
+     * home-eligible (primary off). With no policy (POLICY_NOT_CONFIGURED) only the DB rows are returned.
      * packageId resolution order: gym subscription of that rank, V4 policy, order-backend plans.
      */
     private List<GymPlanItemResponseV2> alignSupportedSubscriptions(
-            Gym gym, List<GymPlanItemResponseV2> existing, List<GymPackageHomeEligibilityResponse> packages) {
+            Gym gym, List<GymPlanItemResponseV2> existing) {
         List<GymPlanItemResponseV2> result = existing == null
                 ? new ArrayList<>() : new ArrayList<>(existing);
         Map<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier, GymPlanItemResponseV2> offeredByTier =
@@ -2166,13 +2167,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 offeredByTier.putIfAbsent(tier, item);
             }
         }
-        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> candidates = packages.stream()
-                .filter(p -> Boolean.TRUE.equals(p.homeEligible()) && !offeredByTier.containsKey(p.tier()))
-                .map(GymPackageHomeEligibilityResponse::tier)
-                .toList();
-        if (candidates.isEmpty()) {
-            return result;
-        }
 
         // Use find() not get(): get() throws POLICY_NOT_CONFIGURED which marks this read-only
         // transaction rollback-only; catching it still makes commit throw UnexpectedRollbackException
@@ -2182,10 +2176,13 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (policy == null || policy.packages() == null) {
             return result;
         }
-        final var policyRules = policy.packages();
-        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = candidates.stream()
-                .filter(t -> policyRules.stream()
-                        .anyMatch(r -> r != null && r.tier() == t && (r.included() || r.primaryEnabled())))
+        // Drive synthesis from policy offers, not homeEligible chips — included tiers must show
+        // on gym detail even when primary/home-gym is disabled (Qala Fitness Gəncə shape).
+        List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = policy.packages().stream()
+                .filter(r -> r != null
+                        && (r.included() || r.primaryEnabled())
+                        && !offeredByTier.containsKey(r.tier()))
+                .map(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.PackageRule::tier)
                 .toList();
         if (missing.isEmpty()) {
             return result;
@@ -2203,7 +2200,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         for (var tier : missing) {
             Long packageId = resolvePackageIdForTier(gym, tier, policy, orderPlanNames);
             if (packageId == null) {
-                log.warn("Gym {} tier {} is homeEligible but no packageId could be resolved", gym.getId(), tier);
+                log.warn("Gym {} tier {} is policy-included but no packageId could be resolved", gym.getId(), tier);
                 continue;
             }
             String planId = packageId.toString();
