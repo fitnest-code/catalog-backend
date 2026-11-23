@@ -158,6 +158,78 @@ class GymMembershipPolicyV4ServiceTest {
   }
 
   @Test
+  void partialWorkHourCoverageIsAllowed() throws Exception {
+    // Silver only Mon 09:00-15:00 while gym is open all day — gaps are intentional.
+    var service =
+        serviceFor(List.of(rule("09:00", "15:00", Tier.SILVER, Set.of(Tier.SILVER))), LocalTime.MIDNIGHT);
+    assertTrue(service.quote(10L, 2L, LocalDateTime.of(2026, 10, 26, 10, 0)).allowed());
+    assertFalse(service.quote(10L, 2L, LocalDateTime.of(2026, 10, 26, 16, 0)).allowed());
+  }
+
+  @Test
+  void saveRejectsRulesOutsideWorkHoursButAllowsGaps() {
+    var repo =
+        org.mockito.Mockito.mock(
+            az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class);
+    var gyms = org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymRepository.class);
+    var packagePrices =
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPackagePriceRepository.class);
+    var disables =
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPrimaryDisableV4Repository.class);
+    var notify = org.mockito.Mockito.mock(PrimaryGymNotificationV4Service.class);
+    var plans = org.mockito.Mockito.mock(az.fitnest.catalog.client.OrderServiceGrpcClient.class);
+    var gym =
+        Gym.builder()
+            .name("Test Gym")
+            .status(az.fitnest.catalog.model.enums.GymStatus.ACTIVE)
+            .subscriptions(new HashSet<>())
+            .generalWorkHours(
+                Set.of(
+                    new GymWorkHour(
+                        GymWorkHourPeriod.MONDAY, LocalTime.of(9, 0), LocalTime.of(17, 0))))
+            .build();
+    org.mockito.Mockito.when(gyms.findById(10L)).thenReturn(Optional.of(gym));
+    org.mockito.Mockito.when(gyms.save(org.mockito.ArgumentMatchers.any())).thenAnswer(a -> a.getArgument(0));
+    org.mockito.Mockito.when(repo.findById(10L)).thenReturn(Optional.empty());
+    org.mockito.Mockito.when(repo.saveAndFlush(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(
+            a -> {
+              GymMembershipPolicyV4Entity e = a.getArgument(0);
+              e.setVersion(0);
+              return e;
+            });
+    org.mockito.Mockito.when(plans.checkPackageExists(org.mockito.ArgumentMatchers.anyLong()))
+        .thenReturn(true);
+    org.mockito.Mockito.when(
+            packagePrices.findByGymIdAndPackageIdAndEffectiveFrom(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Optional.empty());
+    org.mockito.Mockito.when(packagePrices.save(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(a -> a.getArgument(0));
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
+
+    var gapOk =
+        new GymMembershipPolicyV4(
+            0, true, packages(), List.of(rule("10:00", "12:00", Tier.BRONZE, Set.of(Tier.BRONZE))));
+    assertDoesNotThrow(
+        () -> service.save(10L, new az.fitnest.catalog.dto.v4.GymPolicyUpdateV4(gapOk, false, Map.of())));
+
+    var outside =
+        new GymMembershipPolicyV4(
+            0, true, packages(), List.of(rule("08:00", "10:00", Tier.BRONZE, Set.of(Tier.BRONZE))));
+    assertEquals(
+        "TIME_RULES_OUTSIDE_WORK_HOURS",
+        assertThrows(
+                ResponseStatusException.class,
+                () ->
+                    service.save(
+                        10L, new az.fitnest.catalog.dto.v4.GymPolicyUpdateV4(outside, false, Map.of())))
+            .getReason());
+  }
+
+  @Test
   void inclusiveEndMinuteWorksWithSeconds() {
     var gym =
         Gym.builder()
