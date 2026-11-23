@@ -20,7 +20,7 @@ Affected repositories: catalog-backend, order-backend, gateway-backend, notifica
 - Time zone: Asia/Baku. Usage follows subscription-start anniversaries, clamped to subscription expiry; January 31 -> February 28 -> March 31 does not drift. Cycle end is exclusive.
 - A package maps to one of BRONZE, SILVER, GOLD, PLATINUM. Use actual plan IDs from the existing subscription-package API; example IDs below are illustrative. Mapping is immutable after policy creation to preserve existing selections.
 - Directly included members use their tier's default price. Higher tiers can inherit the lowest included lower tier. An enabled time rule overrides the price tier for every admitted member, including Gold/Platinum and primary-gym members.
-- Time rules specify days, inclusive start/end minutes, admitted tiers and price tier. Rules cannot overlap and must exactly cover current gym work hours. Split overnight time rules into two day ranges. General gym work hours may cross midnight; the next day's early segment is recognized. Closed/rest days deny entry.
+- Time rules specify days, inclusive start/end minutes, admitted tiers and price tier. Rules cannot overlap. They do not need to cover every gym work-hour minute — uncovered open hours deny entry (`TIME_ACCESS_DENIED`). Rules must stay inside configured gym work hours (`TIME_RULES_OUTSIDE_WORK_HOURS`). Split overnight time rules into two day ranges. General gym work hours may cross midnight; the next day's early segment is recognized. Closed/rest days deny entry.
 - General allowance: 12 confirmed visits in the subscription month, including primary-gym visits. A primary gym permits up to 30 visits in that month, one visit per Baku calendar day. Repeat general scans of the same gym within two hours are denied. Different gyms may be visited on the same day while the general allowance remains.
 - Primary gym can be selected on the subscription screen, by an admin, or on first eligible v4 QR entry. Changing it after primary usage in the current month is forbidden. A successful entry at another gym clears it and counts toward the general allowance. A denied check-in does not clear it. Previous primary usage prevents automatic reselection in that same month.
 - Disabling primary selection immediately blocks new selections. Existing selections keep access until the end of the subscription month containing the disable event. An append-only disable history prevents repeated toggles/re-enabling from reviving old selections. Expired selection history is finalized lazily by the v4 status API/check-in flow.
@@ -80,7 +80,7 @@ Initial `policy.version` is 0. Subsequent updates must send the version returned
 }
 ```
 
-The example requires matching gym work hours of 00:01..23:59 every day. When time rules are disabled, send `timeRulesEnabled:false` and `timeRules:[]`; current gym work hours still govern access. A newly configured policy is separate from legacy gym subscription rows; GET returns 404 until explicitly configured.
+The example uses windows inside gym work hours of 00:01..23:59; gaps are allowed. When time rules are disabled, send `timeRulesEnabled:false` and `timeRules:[]`; current gym work hours still govern access. A newly configured policy is separate from legacy gym subscription rows; GET returns 404 until explicitly configured.
 
 To disable primary selection, keep inclusion/prices and set the affected row's `primaryEnabled:false`. Existing monthly prices are retained if omitted during disable so current-month access remains priced. If `notifySubscribers:true`, supply all three translations:
 
@@ -106,7 +106,7 @@ POST scan with:
 
 The QR must match the gym's stored QR value/token; location is mandatory, finite and within 200 metres. Use the existing generated QR contents (currently numeric gym IDs); the service compares against stored data. A catalog outage/order timeout fails closed. Reuse the same request ID for retries of the same check-in; do not generate a new ID on a network retry. Reusing it for a different gym returns 409. Successful receipt fields: `id`, `gymId`, `checkedInAt`, `primary`, `generalVisits`, `primaryVisits`, `entryPrice`, `monthlyPrice`, `priceTier`.
 
-New v4 business errors retain their HTTP status through scoped advice, e.g. `{"error":{"code":"GENERAL_VISIT_LIMIT","status":409}}`. Other useful codes: `PRIMARY_VISIT_LIMIT`, `ALREADY_ENTERED_TODAY`, `ALREADY_SCANNED_RECENTLY`, `PRIMARY_ALREADY_USED_THIS_MONTH`, `PRIMARY_SELECTION_DISABLED`, `TIME_ACCESS_DENIED`, `GYM_CLOSED`, `POLICY_CHANGED`, `TIME_RULES_MUST_COVER_WORK_HOURS`. Legacy error handlers/endpoints are unchanged.
+New v4 business errors retain their HTTP status through scoped advice, e.g. `{"error":{"code":"GENERAL_VISIT_LIMIT","status":409}}`. Other useful codes: `PRIMARY_VISIT_LIMIT`, `ALREADY_ENTERED_TODAY`, `ALREADY_SCANNED_RECENTLY`, `PRIMARY_ALREADY_USED_THIS_MONTH`, `PRIMARY_SELECTION_DISABLED`, `TIME_ACCESS_DENIED`, `GYM_CLOSED`, `POLICY_CHANGED`, `TIME_RULES_OUTSIDE_WORK_HOURS`. Legacy error handlers/endpoints are unchanged.
 
 ## Deployment and validation
 

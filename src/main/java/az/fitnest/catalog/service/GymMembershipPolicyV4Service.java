@@ -222,8 +222,7 @@ public class GymMembershipPolicyV4Service {
 
   /**
    * The admin UI shows "Bitmə 00:00" for "until end of day", but a raw 00:00 end would be a
-   * midnight *start* and leave a gap after the last real window (everyone denied). Gym work hours
-   * must still include the closing minutes (e.g. 23:59) for coverage to match.
+   * midnight *start* and leave a gap after the last real window (everyone denied).
    */
   static LocalTime effectiveEnd(LocalTime start, LocalTime end) {
     if (end.equals(LocalTime.MIDNIGHT) && start.isAfter(LocalTime.MIDNIGHT))
@@ -291,20 +290,17 @@ public class GymMembershipPolicyV4Service {
       if (!plans.checkPackageExists(r.packageId()))
         throw error(HttpStatus.BAD_REQUEST, "PACKAGE_NOT_ACTIVE");
     if (!p.timeRulesEnabled()) return;
-    // Inclusive minute ranges must cover exactly the configured working minutes, with no gaps.
-    for (var day : DayOfWeek.values()) {
-      for (int minute = 0; minute < 1440; minute++) {
-        final LocalTime time = LocalTime.of(minute / 60, minute % 60);
-        boolean working = isWorking(gym, day, time);
-        boolean covered =
-            p.timeRules().stream()
-                .anyMatch(
-                    r ->
-                        r.days().contains(day)
-                            && !time.isBefore(r.start())
-                            && !time.isAfter(effectiveEnd(r.start(), r.end())));
-        if (working != covered)
-          throw error(HttpStatus.BAD_REQUEST, "TIME_RULES_MUST_COVER_WORK_HOURS");
+    // Per-package schedules may leave work-hour gaps (nobody enters). Rules may not extend
+    // outside configured gym work hours — those minutes are always GYM_CLOSED at quote time.
+    for (var r : p.timeRules()) {
+      int startMin = r.start().getHour() * 60 + r.start().getMinute();
+      LocalTime end = effectiveEnd(r.start(), r.end());
+      int endMin = end.getHour() * 60 + end.getMinute();
+      for (var day : r.days()) {
+        for (int minute = startMin; minute <= endMin; minute++) {
+          if (!isWorking(gym, day, LocalTime.of(minute / 60, minute % 60)))
+            throw error(HttpStatus.BAD_REQUEST, "TIME_RULES_OUTSIDE_WORK_HOURS");
+        }
       }
     }
   }
