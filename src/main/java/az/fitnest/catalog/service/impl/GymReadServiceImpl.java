@@ -295,9 +295,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
         try {
-            if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
-                        .map(sub -> sub.getPackageId())
+            Map<Long, java.util.Set<Long>> offeredByGym =
+                    membershipPolicyV4Service.offeredPackageIdsByGym(List.of(gym.getId()));
+            List<GymSubscription> displaySubs = displaySubscriptions(gym, offeredByGym);
+            if (!displaySubs.isEmpty()) {
+                List<Long> packageIds = displaySubs.stream()
+                        .map(GymSubscription::getPackageId)
                         .filter(java.util.Objects::nonNull)
                         .toList();
                 List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
@@ -306,7 +309,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .collect(java.util.stream.Collectors.toMap(
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
-                supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
+                supportedSubscriptions = displaySubs.stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -589,6 +592,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         final Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> finalWorkHoursMap = globalWorkHoursMap;
 
         Map<String, String> translationLookup = fetchTranslationsInBulk(gymPage.getContent(), userLanguage);
+        Map<Long, java.util.Set<Long>> offeredByGym = membershipPolicyV4Service.offeredPackageIdsByGym(
+                gymPage.getContent().stream().map(Gym::getId).toList());
 
         List<GymMainPageResponse> items = gymPage.getContent().stream()
                 .map(gym -> mapToGymMainPageDto(
@@ -600,7 +605,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         finalPackageMap,
                         finalWorkHoursMap,
                         translationLookup,
-                        userLanguage
+                        userLanguage,
+                        offeredByGym
                 ))
                 .collect(Collectors.toList());
 
@@ -800,6 +806,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
 
         Map<String, String> translationLookup = fetchTranslationsInBulk(pageGyms, userLanguage);
+        Map<Long, java.util.Set<Long>> offeredByGym =
+                membershipPolicyV4Service.offeredPackageIdsByGym(pageGymIds);
 
         List<GymMainPageResponse> pageItems = pageGyms.stream()
                 .map(g -> mapToGymMainPageDto(
@@ -811,7 +819,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         manualPackageMap,
                         manualWorkHoursMap,
                         translationLookup,
-                        userLanguage
+                        userLanguage,
+                        offeredByGym
                 ))
                 .collect(Collectors.toList());
 
@@ -821,7 +830,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .page(page)
                 .pageSize(pageSize)
                 .build();
-    }    private GymMainPageResponse mapToGymMainPageDto(
+    }
+
+    private GymMainPageResponse mapToGymMainPageDto(
             Gym gym,
             Long userId,
             Double userLat,
@@ -830,7 +841,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap,
             Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap,
             Map<String, String> translationLookup,
-            String userLanguage) {
+            String userLanguage,
+            Map<Long, java.util.Set<Long>> offeredByGym) {
 
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
         boolean isNew = gym.getCreatedDate() != null
@@ -869,8 +881,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         List<GymPlanItemResponse> supportedSubscriptions = new java.util.ArrayList<>();
-        if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-            supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
+        List<GymSubscription> displaySubs = displaySubscriptions(gym, offeredByGym);
+        if (!displaySubs.isEmpty()) {
+            supportedSubscriptions = displaySubs.stream()
                     .filter(sub -> sub.getPackageId() != null)
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
@@ -2008,9 +2021,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
 
         List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
         try {
-            if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-                List<Long> packageIds = uniqueSubscriptions(gym.getSubscriptions()).stream()
-                        .map(sub -> sub.getPackageId())
+            Map<Long, java.util.Set<Long>> offeredByGym =
+                    membershipPolicyV4Service.offeredPackageIdsByGym(List.of(gym.getId()));
+            List<GymSubscription> displaySubs = displaySubscriptions(gym, offeredByGym);
+            if (!displaySubs.isEmpty()) {
+                List<Long> packageIds = displaySubs.stream()
+                        .map(GymSubscription::getPackageId)
                         .filter(java.util.Objects::nonNull)
                         .toList();
                 List<az.fitnest.order.grpc.PackageNameInfo> packageInfos = orderServiceGrpcClient
@@ -2019,7 +2035,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         .collect(java.util.stream.Collectors.toMap(
                                 az.fitnest.order.grpc.PackageNameInfo::getPackageId,
                                 p -> p));
-                supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
+                supportedSubscriptions = displaySubs.stream()
                         .filter(sub -> sub.getPackageId() != null)
                         .filter(sub -> idToInfo.get(sub.getPackageId()) != null)
                         .map(sub -> {
@@ -2145,7 +2161,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
      * {@code supportedSubscriptions} comes from legacy gym_subscriptions rows, but a gym may also sell a
      * tier through its V4 policy without having such a row (e.g. Qala Fitness Gold with
      * {@code included=true} but {@code primaryEnabled=false}). Append a synthesized plan item for such
-     * tiers only; existing rows are never removed or altered.
+     * tiers only. When a V4 policy exists, also drop legacy rows for packages that are no longer
+     * offered (Go Premium Fitness kept Bronze/Gold/Platinum rows after Silver-only policy).
      *
      * <p>WHY the V4 policy and not {@code packages[].homeEligible}: home eligibility is upward-closed
      * (Bronze-only gym => Silver/Gold/Platinum eligible) and only says who may use the gym as a home
@@ -2159,14 +2176,6 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Gym gym, List<GymPlanItemResponseV2> existing) {
         List<GymPlanItemResponseV2> result = existing == null
                 ? new ArrayList<>() : new ArrayList<>(existing);
-        Map<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier, GymPlanItemResponseV2> offeredByTier =
-                new java.util.EnumMap<>(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.class);
-        for (GymPlanItemResponseV2 item : result) {
-            var tier = tierOfPlanItem(item);
-            if (tier != null) {
-                offeredByTier.putIfAbsent(tier, item);
-            }
-        }
 
         // Use find() not get(): get() throws POLICY_NOT_CONFIGURED which marks this read-only
         // transaction rollback-only; catching it still makes commit throw UnexpectedRollbackException
@@ -2176,6 +2185,24 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         if (policy == null || policy.packages() == null) {
             return result;
         }
+
+        java.util.Set<Long> offeredIds =
+                az.fitnest.catalog.service.GymMembershipPolicyV4Service.offeredPackageIds(policy);
+        // Stale gym_subscriptions survive policy toggles (ensurePrimarySubscriptions never deletes).
+        result.removeIf(item -> {
+            Long packageId = parsePlanId(item);
+            return packageId == null || !offeredIds.contains(packageId);
+        });
+
+        Map<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier, GymPlanItemResponseV2> offeredByTier =
+                new java.util.EnumMap<>(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.class);
+        for (GymPlanItemResponseV2 item : result) {
+            var tier = tierOfPlanItem(item);
+            if (tier != null) {
+                offeredByTier.putIfAbsent(tier, item);
+            }
+        }
+
         // Drive synthesis from policy offers, not homeEligible chips — included tiers must show
         // on gym detail even when primary/home-gym is disabled (Qala Fitness Gəncə shape).
         List<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> missing = policy.packages().stream()
@@ -2462,6 +2489,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 .filter(packageInfoCache.asMap()::containsKey)
                 .collect(Collectors.toMap(id -> id, packageInfoCache.asMap()::get));
         Map<String, String> translationLookup = fetchTranslationsInBulk(gyms, userLanguage);
+        Map<Long, java.util.Set<Long>> offeredByGym = membershipPolicyV4Service.offeredPackageIdsByGym(
+                gyms.stream().map(Gym::getId).toList());
 
         return gyms.stream()
                 .map(gym -> mapToGymMainPageDtoV2(
@@ -2473,7 +2502,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         packageMap,
                         workHoursMap,
                         translationLookup,
-                        userLanguage
+                        userLanguage,
+                        offeredByGym
                 ))
                 .collect(Collectors.toList());
     }
@@ -2735,7 +2765,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             Map<Long, az.fitnest.order.grpc.PackageNameInfo> packageInfoMap,
             Map<Long, List<az.fitnest.catalog.model.entity.GymWorkHour>> workHoursMap,
             Map<String, String> translationLookup,
-            String userLanguage) {
+            String userLanguage,
+            Map<Long, java.util.Set<Long>> offeredByGym) {
 
         double stars = gym.getRating() != null ? gym.getRating() : 0.0;
         boolean isNew = gym.getCreatedDate() != null
@@ -2785,8 +2816,9 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         }
 
         List<GymPlanItemResponseV2> supportedSubscriptions = new java.util.ArrayList<>();
-        if (gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
-            supportedSubscriptions = uniqueSubscriptions(gym.getSubscriptions()).stream()
+        List<GymSubscription> displaySubs = displaySubscriptions(gym, offeredByGym);
+        if (!displaySubs.isEmpty()) {
+            supportedSubscriptions = displaySubs.stream()
                     .filter(sub -> sub.getPackageId() != null)
                     .map(sub -> {
                         az.fitnest.order.grpc.PackageNameInfo info = packageInfoMap.get(sub.getPackageId());
@@ -3091,6 +3123,38 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             unique.putIfAbsent(key, sub);
         }
         return new ArrayList<>(unique.values());
+    }
+
+    /**
+     * Public/list surfaces: when a V4 policy exists, only packages marked included/primaryEnabled
+     * are shown. Gyms without a policy keep every gym_subscriptions row (legacy behaviour).
+     * Admin subscription editors still use {@link #uniqueSubscriptions} unfiltered.
+     */
+    private List<GymSubscription> displaySubscriptions(
+            Gym gym, Map<Long, java.util.Set<Long>> offeredByGym) {
+        List<GymSubscription> unique = uniqueSubscriptions(
+                gym == null ? null : gym.getSubscriptions());
+        if (unique.isEmpty() || offeredByGym == null || gym == null || gym.getId() == null) {
+            return unique;
+        }
+        java.util.Set<Long> offered = offeredByGym.get(gym.getId());
+        if (offered == null) {
+            return unique;
+        }
+        return unique.stream()
+                .filter(sub -> sub.getPackageId() != null && offered.contains(sub.getPackageId()))
+                .toList();
+    }
+
+    private static Long parsePlanId(GymPlanItemResponseV2 item) {
+        if (item == null || item.plan_id() == null || item.plan_id().isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(item.plan_id());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
 

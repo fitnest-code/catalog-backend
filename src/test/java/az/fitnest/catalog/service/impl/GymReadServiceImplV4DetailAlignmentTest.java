@@ -66,6 +66,9 @@ class GymReadServiceImplV4DetailAlignmentTest {
         .thenAnswer(
             inv -> {
               List<Long> ids = inv.getArgument(0);
+              if (ids == null) {
+                return List.of();
+              }
               return ids.stream()
                   .map(
                       id ->
@@ -201,6 +204,59 @@ class GymReadServiceImplV4DetailAlignmentTest {
 
     assertEquals(Set.of(String.valueOf(BRONZE), String.valueOf(GOLD)), planIds(detail));
     assertEquals(10.0, plan(detail, GOLD).dailyPrice());
+  }
+
+  @Test
+  void silverOnlyPolicyPrunesStaleBronzeGoldPlatinumSubscriptionRows() {
+    // Go Premium Fitness (gym 251): policy Silver-only, but gym_subscriptions still had all four.
+    gym.getSubscriptions().clear();
+    for (long pkg : List.of(BRONZE, SILVER, GOLD, PLATINUM)) {
+      GymSubscription row = new GymSubscription();
+      row.setId(800 + pkg);
+      row.setGym(gym);
+      row.setPackageId(pkg);
+      row.setDailyPrice(5.0);
+      row.setSupportedServices(new HashSet<>());
+      gym.getSubscriptions().add(row);
+    }
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    includedOnly(BRONZE, Tier.BRONZE, "0.00", false),
+                    includedOnly(SILVER, Tier.SILVER, "5.00"),
+                    includedOnly(GOLD, Tier.GOLD, "0.00", false),
+                    includedOnly(PLATINUM, Tier.PLATINUM, "0.00", false)),
+                List.of())));
+    when(policyService.offeredPackageIdsByGym(any()))
+        .thenReturn(Map.of(14L, Set.of(SILVER)));
+    when(order.getPackageNamesByIds(any()))
+        .thenAnswer(
+            inv -> {
+              List<Long> ids = inv.getArgument(0);
+              if (ids == null) {
+                return List.of();
+              }
+              return ids.stream()
+                  .map(
+                      id ->
+                          PackageNameInfo.newBuilder()
+                              .setPackageId(id)
+                              .setName(
+                                  id == BRONZE
+                                      ? "Bronze"
+                                      : id == SILVER
+                                          ? "Silver"
+                                          : id == GOLD ? "Gold" : "Platinum")
+                              .build())
+                  .toList();
+            });
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    assertEquals(Set.of(String.valueOf(SILVER)), planIds(detail));
   }
 
   @Test

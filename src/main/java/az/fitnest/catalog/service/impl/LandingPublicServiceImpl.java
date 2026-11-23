@@ -83,6 +83,7 @@ public class LandingPublicServiceImpl implements LandingPublicService {
     private final TranslationService translationService;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final FileStorageService fileStorageService;
+    private final az.fitnest.catalog.service.GymMembershipPolicyV4Service membershipPolicyV4Service;
 
     @Override
     @Transactional(readOnly = true)
@@ -635,9 +636,15 @@ public class LandingPublicServiceImpl implements LandingPublicService {
         if (gym.getSubscriptions() == null || gym.getSubscriptions().isEmpty()) {
             return List.of("bronze");
         }
+        // Prefer V4 policy included/primary packages so stale gym_subscriptions (e.g. Bronze left
+        // after Silver-only policy) do not inflate accessMemberships / minEntryMembership.
+        java.util.Set<Long> offered = membershipPolicyV4Service
+                .offeredPackageIdsByGym(List.of(gym.getId()))
+                .get(gym.getId());
         List<Long> packageIds = gym.getSubscriptions().stream()
                 .map(GymSubscription::getPackageId)
                 .filter(Objects::nonNull)
+                .filter(id -> offered == null || offered.contains(id))
                 .distinct()
                 .toList();
         if (packageIds.isEmpty()) {

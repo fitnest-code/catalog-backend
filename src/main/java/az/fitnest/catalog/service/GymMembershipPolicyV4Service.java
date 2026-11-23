@@ -56,8 +56,61 @@ public class GymMembershipPolicyV4Service {
     }
   }
 
+  /**
+   * Package ids the gym currently sells per V4 policy ({@code included} or {@code primaryEnabled}).
+   * Gyms without a policy are omitted — callers treat omission as "use all gym_subscriptions rows".
+   * Batched so list endpoints do one DB round-trip instead of N.
+   */
+  @Transactional(readOnly = true)
+  public Map<Long, Set<Long>> offeredPackageIdsByGym(Collection<Long> gymIds) {
+    if (gymIds == null || gymIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, Set<Long>> out = new HashMap<>();
+    for (GymMembershipPolicyV4Entity row : policies.findAllById(gymIds)) {
+      if (row == null || row.getGymId() == null) {
+        continue;
+      }
+      out.put(row.getGymId(), offeredPackageIds(decode(row)));
+    }
+    return out;
+  }
+
+  /** Package ids marked included or primary-enabled on the given policy (empty when none). */
+  public static Set<Long> offeredPackageIds(GymMembershipPolicyV4 policy) {
+    if (policy == null || policy.packages() == null || policy.packages().isEmpty()) {
+      return Set.of();
+    }
+    Set<Long> ids = new LinkedHashSet<>();
+    for (PackageRule rule : policy.packages()) {
+      if (rule != null
+          && rule.packageId() != null
+          && (rule.included() || rule.primaryEnabled())) {
+        ids.add(rule.packageId());
+      }
+    }
+    return ids;
+  }
+
   @Transactional
-  @CacheEvict(cacheNames = "home-eligible-gym-count", allEntries = true)
+  // Policy drives public tier badges / supportedSubscriptions — drop Redis list+detail caches so
+  // landing and app stop serving stale Bronze min-entry after admin toggles included packages.
+  @CacheEvict(
+      cacheNames = {
+        "home-eligible-gym-count",
+        "main-page-gyms",
+        "gym-listings",
+        "gym-count-by-subscription",
+        "landing-gyms",
+        "landing-home-gyms",
+        "landing-gym-detail",
+        "landing-gym-filters",
+        "landing-gyms-v2",
+        "landing-gym-detail-v2",
+        "landing-gym-filters-v2",
+        "landing-stats"
+      },
+      allEntries = true)
   public GymMembershipPolicyV4 save(
       Long gymId, az.fitnest.catalog.dto.v4.GymPolicyUpdateV4 update) {
     var input = update.policy();
