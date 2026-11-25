@@ -53,6 +53,16 @@ public class OrderServiceGrpcClient {
                                                         Double singlePrice, Double unlimitedPrice,
                                                         String gymName, String availableHours,
                                                         String qrScanId) {
+        return checkIn(userId, gymId, consumeFrozen, confirmation, confirmationToken, timeSlotRuleId,
+                pricePackage, singlePrice, unlimitedPrice, gymName, availableHours, qrScanId, null);
+    }
+
+    public az.fitnest.order.grpc.CheckInResponse checkIn(Long userId, Long gymId, boolean consumeFrozen,
+                                                        String confirmation, String confirmationToken,
+                                                        Long timeSlotRuleId, String pricePackage,
+                                                        Double singlePrice, Double unlimitedPrice,
+                                                        String gymName, String availableHours,
+                                                        String qrScanId, Long categoryId) {
         az.fitnest.order.grpc.CheckInRequest.Builder builder = az.fitnest.order.grpc.CheckInRequest.newBuilder()
                 .setUserId(userId)
                 .setGymId(gymId)
@@ -83,6 +93,10 @@ public class OrderServiceGrpcClient {
         }
         if (qrScanId != null && !qrScanId.isBlank()) {
             builder.setQrScanId(qrScanId);
+        }
+        // Optional: unset/null keeps legacy clients and pre-v5 scans behaviour.
+        if (categoryId != null && categoryId > 0) {
+            builder.setCategoryId(categoryId);
         }
 
         return blockingStub

@@ -39,4 +39,8 @@ public class GymEntranceHistory extends BaseAuditableEntity {
 
     @Column(name = "package_id")
     private Long packageId;
+
+    /** Selected main/sub category at QR scan time; null = legacy scans before category picker. */
+    @Column(name = "category_id")
+    private Long categoryId;
 }
