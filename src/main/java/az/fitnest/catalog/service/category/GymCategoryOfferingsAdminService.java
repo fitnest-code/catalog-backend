@@ -28,6 +28,7 @@ import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.SupportedServiceRepository;
+import az.fitnest.catalog.service.TranslationService;
 import az.fitnest.catalog.service.homegym.HomeGymRuleService;
 import az.fitnest.catalog.util.UserContext;
 import java.time.LocalDate;
@@ -75,6 +76,7 @@ public class GymCategoryOfferingsAdminService {
     private final SupportedServiceRepository supportedServices;
     private final GymEntranceHistoryRepository history;
     private final HomeGymRuleService ruleService;
+    private final TranslationService translationService;
 
     // ------------------------------------------------------------------ prices
 
@@ -199,9 +201,10 @@ public class GymCategoryOfferingsAdminService {
         Set<Long> ids = serviceLinks.findByGymIdAndCategoryIdIn(gymId, List.of(categoryId)).stream()
                 .map(GymCategoryServiceLink::getSupportedServiceId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        String lang = UserContext.getUserLanguage();
         return supportedServices.findAllById(ids).stream()
                 .sorted(Comparator.comparing(SupportedService::getId))
-                .map(s -> new ServiceItem(s.getId(), s.getName(), s.getIconUrl()))
+                .map(s -> new ServiceItem(s.getId(), localizedServiceName(s, lang), s.getIconUrl()))
                 .toList();
     }
 
@@ -269,8 +272,9 @@ public class GymCategoryOfferingsAdminService {
             totalRevenue += amount;
         }
 
+        String lang = UserContext.getUserLanguage();
         Map<Long, String> names = categoryRepository.findAllById(counts.keySet()).stream()
-                .collect(Collectors.toMap(Category::getId, Category::getName));
+                .collect(Collectors.toMap(Category::getId, c -> localizedCategoryName(c, lang)));
         List<GymCategoryAnalyticsResponseV2.Row> out = new ArrayList<>();
         for (Map.Entry<Long, long[]> e : counts.entrySet()) {
             out.add(new GymCategoryAnalyticsResponseV2.Row(String.valueOf(e.getKey()), e.getKey(),
@@ -350,6 +354,18 @@ public class GymCategoryOfferingsAdminService {
         } catch (DateTimeParseException e) {
             throw new BadRequestException("CATEGORY_WORK_HOURS_INVALID", "Invalid time: " + s);
         }
+    }
+
+    private String localizedCategoryName(Category c, String lang) {
+        String localized = lang == null ? null
+                : translationService.getTranslatedValue("CATEGORY", c.getId().toString(), "name", lang);
+        return localized != null && !localized.isBlank() ? localized : c.getName();
+    }
+
+    private String localizedServiceName(SupportedService s, String lang) {
+        String localized = lang == null ? null
+                : translationService.getTranslatedValue("SUPPORTEDSERVICE", s.getId().toString(), "name", lang);
+        return localized != null && !localized.isBlank() ? localized : s.getName();
     }
 
     private static LocalDate currentMonthStart() {

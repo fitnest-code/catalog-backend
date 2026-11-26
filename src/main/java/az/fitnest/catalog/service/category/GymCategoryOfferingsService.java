@@ -157,7 +157,7 @@ public class GymCategoryOfferingsService {
                             : (ROLE_MAIN.equals(role) ? gym.getDescription() : null),
                     desc != null && desc.getCoverImageUrl() != null ? desc.getCoverImageUrl() : c.getPhotoUrl(),
                     roomImageUrls(gym, c.getId()),
-                    services(gym, role, linksByCat.get(c.getId()), servicesById),
+                    services(gym, role, linksByCat.get(c.getId()), servicesById, lang),
                     workHours(gym, hoursByCat.get(c.getId())),
                     prices));
         }
@@ -194,13 +194,13 @@ public class GymCategoryOfferingsService {
         return urls;
     }
 
-    private static List<ServiceItem> services(Gym gym, String role, List<GymCategoryServiceLink> links,
-                                              Map<Long, SupportedService> servicesById) {
+    private List<ServiceItem> services(Gym gym, String role, List<GymCategoryServiceLink> links,
+                                       Map<Long, SupportedService> servicesById, String lang) {
         if (links != null && !links.isEmpty()) {
             return links.stream()
                     .map(l -> servicesById.get(l.getSupportedServiceId()))
                     .filter(s -> s != null)
-                    .map(s -> new ServiceItem(s.getId(), s.getName(), s.getIconUrl()))
+                    .map(s -> new ServiceItem(s.getId(), localizedServiceName(s, lang), s.getIconUrl()))
                     .toList();
         }
         if (!ROLE_MAIN.equals(role) || gym.getSubscriptions() == null) {
@@ -211,10 +211,17 @@ public class GymCategoryOfferingsService {
         for (GymSubscription sub : gym.getSubscriptions()) {
             if (sub.getSupportedServices() == null) continue;
             for (SupportedService s : sub.getSupportedServices()) {
-                union.putIfAbsent(s.getId(), new ServiceItem(s.getId(), s.getName(), s.getIconUrl()));
+                union.putIfAbsent(s.getId(),
+                        new ServiceItem(s.getId(), localizedServiceName(s, lang), s.getIconUrl()));
             }
         }
         return new ArrayList<>(union.values());
+    }
+
+    private String localizedServiceName(SupportedService s, String lang) {
+        String localized = lang == null ? null
+                : translationService.getTranslatedValue("SUPPORTEDSERVICE", s.getId().toString(), "name", lang);
+        return localized != null && !localized.isBlank() ? localized : s.getName();
     }
 
     private static List<WorkHourItem> workHours(Gym gym, List<GymCategoryWorkHour> rows) {

@@ -18,13 +18,17 @@ import az.fitnest.catalog.repository.GymCategoryWorkHourRepository;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
+import az.fitnest.catalog.dto.request.CreateTranslationRequest;
 import az.fitnest.catalog.repository.SupportedServiceRepository;
+import az.fitnest.catalog.service.TranslationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +67,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Idempotent: a scenario is skipped when a gym with its exact name already exists, and the history rows are
  * only written while the Main+Sub gym has none. Delete the gyms by name to re-seed. Categories are reused from
  * the DB (never invented); scenarios that need more categories than exist are skipped with a warning.
+ * Also upserts AZ/EN/RU {@code CATEGORY} (and linked {@code SUPPORTEDSERVICE}) name translations so admin
+ * locale switches show real labels without a separate SQL job.
  */
 @Slf4j
 @Component
@@ -90,7 +96,20 @@ public class GymCategoryOfferingsDevSeeder implements ApplicationRunner {
     private final GymCategoryServiceLinkRepository categoryServices;
     private final SupportedServiceRepository supportedServices;
     private final GymEntranceHistoryRepository history;
+    private final TranslationService translations;
     private final TransactionTemplate tx;
+
+    /** Known AZ labels -> EN / RU. Unknown names fall back to the AZ string in every language. */
+    private static final Map<String, String[]> NAME_I18N = Map.ofEntries(
+            Map.entry("fitness", new String[] {"Fitness", "Фитнес"}),
+            Map.entry("yoga", new String[] {"Yoga", "Йога"}),
+            Map.entry("pilates", new String[] {"Pilates", "Пилатес"}),
+            Map.entry("hamam", new String[] {"Bath", "Баня"}),
+            Map.entry("sauna", new String[] {"Sauna", "Сауна"}),
+            Map.entry("pool", new String[] {"Pool", "Бассейн"}),
+            Map.entry("crossfit", new String[] {"CrossFit", "Кроссфит"}),
+            Map.entry("boxing", new String[] {"Boxing", "Бокс"}),
+            Map.entry("boks", new String[] {"Boxing", "Бокс"}));
 
     public GymCategoryOfferingsDevSeeder(
             CategoryRepository categories,
@@ -101,6 +120,7 @@ public class GymCategoryOfferingsDevSeeder implements ApplicationRunner {
             GymCategoryServiceLinkRepository categoryServices,
             SupportedServiceRepository supportedServices,
             GymEntranceHistoryRepository history,
+            TranslationService translations,
             PlatformTransactionManager transactionManager) {
         this.categories = categories;
         this.gyms = gyms;
@@ -110,6 +130,7 @@ public class GymCategoryOfferingsDevSeeder implements ApplicationRunner {
         this.categoryServices = categoryServices;
         this.supportedServices = supportedServices;
         this.history = history;
+        this.translations = translations;
         this.tx = new TransactionTemplate(transactionManager);
     }
 
@@ -154,6 +175,16 @@ public class GymCategoryOfferingsDevSeeder implements ApplicationRunner {
         List<String> created = new java.util.ArrayList<>();
         List<String> skipped = new java.util.ArrayList<>();
 
+        // Always refresh tri-lingual labels for the categories (and optional service) these scenarios use.
+        tx.executeWithoutResult(s -> {
+            for (Category c : cats) {
+                ensureNameTranslations("CATEGORY", c.getId().toString(), c.getName());
+            }
+            if (service != null) {
+                ensureNameTranslations("SUPPORTEDSERVICE", service.getId().toString(), service.getName());
+            }
+        });
+
         run(MAIN_ONLY, 1, cats, existing, created, skipped, () -> seedMainOnly(cats));
         run(MAIN_SUB, 2, cats, existing, created, skipped, () -> seedMainSub(cats, service));
         run(MULTI_SUB, 3, cats, existing, created, skipped, () -> seedMultiSub(cats));
@@ -173,6 +204,22 @@ public class GymCategoryOfferingsDevSeeder implements ApplicationRunner {
         }
         log.info("DEV category-scenario seeder done: created={}, skipped(existing or not enough categories)={}",
                 created, skipped);
+    }
+
+    private void ensureNameTranslations(String entityType, String entityId, String azName) {
+        if (azName == null || azName.isBlank()) {
+            return;
+        }
+        String[] enRu = NAME_I18N.getOrDefault(azName.trim().toLowerCase(Locale.ROOT),
+                new String[] {azName, azName});
+        upsert(entityType, entityId, "AZ", azName);
+        upsert(entityType, entityId, "EN", enRu[0]);
+        upsert(entityType, entityId, "RU", enRu[1]);
+    }
+
+    private void upsert(String entityType, String entityId, String lang, String value) {
+        translations.saveOrUpdateTranslation(
+                new CreateTranslationRequest(entityType, entityId, lang, "name", value));
     }
 
     private void run(String name, int categoriesNeeded, List<Category> cats, Set<String> existing,
