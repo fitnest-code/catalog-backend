@@ -111,9 +111,7 @@ public class GymCategoryOfferingsAdminService {
             throw new BadRequestException("HOME_GYM_PACKAGE_NOT_IN_GYM", "Package is not offered by this gym");
         }
         requireNonNegative(request.singlePrice());
-        if (request.unlimitedPrice() != null) {
-            requireNonNegative(request.unlimitedPrice());
-        }
+        // Subcategory offerings are single-entry only; monthly stays on membership/gym_package_price.
 
         boolean firstVersion = categoryPrices
                 .findByGymIdAndCategoryIdOrderByPackageIdAscEffectiveFromDesc(gymId, categoryId).stream()
@@ -138,7 +136,7 @@ public class GymCategoryOfferingsAdminService {
         row.setCategoryId(categoryId);
         row.setPackageId(request.packageId());
         row.setSinglePrice(request.singlePrice());
-        row.setUnlimitedPrice(request.unlimitedPrice());
+        row.setUnlimitedPrice(null);
         row.setEffectiveFrom(effectiveFrom);
         GymCategoryPackagePrice saved = categoryPrices.save(row);
         return toResponse(categoryId, saved.getPackageId(), saved.getSinglePrice(), saved.getUnlimitedPrice(),
