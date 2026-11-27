@@ -17,6 +17,7 @@ import az.fitnest.catalog.model.entity.GymTimeSlotRule;
 import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.model.enums.GymWorkHourPeriod;
 import az.fitnest.catalog.repository.GymAdminRepository;
+import az.fitnest.catalog.repository.GymMembershipPolicyV4Repository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
@@ -74,6 +75,7 @@ class HomeGymAdminServiceTest {
     private GymPackagePriceRepository packagePriceRepository;
     private GymTimeSlotRuleRepository timeSlotRuleRepository;
     private HomeGymRuleService ruleService;
+    private GymMembershipPolicyV4Repository membershipPolicyRepository;
     private KafkaTemplate<String, Object> kafkaTemplate;
     private HomeGymAdminService service;
     private Gym gym;
@@ -85,9 +87,11 @@ class HomeGymAdminServiceTest {
         packagePriceRepository = mock(GymPackagePriceRepository.class);
         timeSlotRuleRepository = mock(GymTimeSlotRuleRepository.class);
         ruleService = mock(HomeGymRuleService.class);
+        membershipPolicyRepository = mock(GymMembershipPolicyV4Repository.class);
         kafkaTemplate = mock(KafkaTemplate.class);
         service = new HomeGymAdminService(gymRepository, gymAdminRepository, packagePriceRepository,
-                timeSlotRuleRepository, ruleService, kafkaTemplate);
+                timeSlotRuleRepository, ruleService, membershipPolicyRepository, kafkaTemplate);
+        when(membershipPolicyRepository.existsById(GYM_ID)).thenReturn(false);
 
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 ADMIN_ID, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
@@ -406,6 +410,40 @@ class HomeGymAdminServiceTest {
                 .collect(java.util.stream.Collectors.toSet());
         assertEquals(Set.of(BRONZE, SILVER, GOLD), savedPackages);
         assertTrue(captor.getAllValues().stream().allMatch(p -> Boolean.FALSE.equals(p.getHomeEligible())));
+    }
+
+    @Test
+    void v4PolicyBlocksLegacyHomeEligibleCascadeOntoPlatinum() {
+        // Qala shape: V4 owns primary (Gold on / Platinum off). Legacy price upsert
+        // must not flip Platinum home_eligible via upward-closed propagation.
+        gymWithAllPackages();
+        when(membershipPolicyRepository.existsById(GYM_ID)).thenReturn(true);
+
+        GymPackagePrice gold = priceRow(GOLD);
+        gold.setId(41L);
+        gold.setHomeEligible(true);
+        GymPackagePrice platinum = priceRow(PLATINUM);
+        platinum.setId(42L);
+        platinum.setHomeEligible(false);
+        when(packagePriceRepository.findByGymIdAndPackageIdAndEffectiveFrom(GYM_ID, GOLD, NEXT_MONTH))
+                .thenReturn(Optional.of(gold));
+        when(packagePriceRepository.findByGymIdAndPackageIdAndEffectiveFrom(GYM_ID, PLATINUM, NEXT_MONTH))
+                .thenReturn(Optional.of(platinum));
+
+        service.upsertPrice(GYM_ID, HomeGymPackagePriceRequest.builder()
+                .packageId(GOLD)
+                .homeEligible(true)
+                .singlePrice(12.0)
+                .unlimitedPrice(120.0)
+                .build());
+
+        ArgumentCaptor<GymPackagePrice> captor = ArgumentCaptor.forClass(GymPackagePrice.class);
+        verify(packagePriceRepository, times(1)).save(captor.capture());
+        assertEquals(GOLD, captor.getValue().getPackageId());
+        assertEquals(12.0, gold.getSinglePrice());
+        assertEquals(120.0, gold.getUnlimitedPrice());
+        assertEquals(Boolean.TRUE, gold.getHomeEligible());
+        assertEquals(Boolean.FALSE, platinum.getHomeEligible());
     }
 
     // ------------------------------------------------------------------

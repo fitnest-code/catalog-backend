@@ -16,6 +16,7 @@ import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymTimeSlotRule;
 import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.repository.GymAdminRepository;
+import az.fitnest.catalog.repository.GymMembershipPolicyV4Repository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
@@ -64,6 +65,7 @@ public class HomeGymAdminService {
     private final GymPackagePriceRepository packagePriceRepository;
     private final GymTimeSlotRuleRepository timeSlotRuleRepository;
     private final HomeGymRuleService ruleService;
+    private final GymMembershipPolicyV4Repository membershipPolicyRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     // ---------------------------------------------------------------------
@@ -130,8 +132,11 @@ public class HomeGymAdminService {
         }
         requireNonNegative(request.getSinglePrice(), "singlePrice");
         requireNonNegative(request.getUnlimitedPrice(), "unlimitedPrice");
+        // V4 membership policy owns per-tier primary (primaryEnabled → syncHomeEligibleFlags).
+        // Legacy price upsert must not overwrite or upward-cascade those flags.
+        boolean v4OwnsPrimary = membershipPolicyRepository.existsById(gymId);
         boolean homeEligible = Boolean.TRUE.equals(request.getHomeEligible());
-        if (homeEligible && request.getUnlimitedPrice() == null) {
+        if (!v4OwnsPrimary && homeEligible && request.getUnlimitedPrice() == null) {
             throw new BadRequestException("HOME_GYM_INVALID_PRICE", "error.home_gym.unlimited_price_required");
         }
 
@@ -142,14 +147,15 @@ public class HomeGymAdminService {
         price.setGym(gym);
         price.setPackageId(request.getPackageId());
         price.setIncluded(request.getIncluded() == null ? Boolean.TRUE : request.getIncluded());
-        price.setHomeEligible(request.getHomeEligible());
+        if (!v4OwnsPrimary) {
+            price.setHomeEligible(request.getHomeEligible());
+        }
         price.setSinglePrice(request.getSinglePrice());
         price.setUnlimitedPrice(request.getUnlimitedPrice());
         price.setEffectiveFrom(effectiveFrom);
         GymPackagePrice saved = packagePriceRepository.save(price);
-        // Keep the package switches upward-closed: enabling one tier enables every
-        // higher tier, disabling one tier disables every lower tier (spec 6.3).
-        if (request.getHomeEligible() != null) {
+        // Spec 6.3 upward-closed cascade only for gyms without a V4 policy.
+        if (!v4OwnsPrimary && request.getHomeEligible() != null) {
             propagateHomeEligibility(gym, request.getPackageId(), effectiveFrom,
                     Boolean.TRUE.equals(request.getHomeEligible()));
         }
