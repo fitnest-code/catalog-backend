@@ -2118,13 +2118,12 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
         GymDetailResponseV2 detail = buildGymDetailV2(userId, gym);
         az.fitnest.catalog.service.homegym.HomeGymRuleService.HomeGymInfo info =
                 homeGymRuleService.homeGymInfo(gym);
-        int minRank = az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(info.minTier());
-        // Same upward-closed rule as the list filter: every tier at or above minTier is eligible.
+        // Per-tier chips follow HomeGymInfo.tiers (upward-closed, minus admin primary-off).
+        java.util.Set<az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier> homeTiers =
+                info.tiers() == null ? java.util.Set.of() : new java.util.HashSet<>(info.tiers());
         List<GymPackageHomeEligibilityResponse> packages = java.util.Arrays
                 .stream(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier.values())
-                .map(tier -> new GymPackageHomeEligibilityResponse(tier,
-                        info.eligible()
-                                && az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier) >= minRank))
+                .map(tier -> new GymPackageHomeEligibilityResponse(tier, homeTiers.contains(tier)))
                 .toList();
         List<GymPlanItemResponseV2> alignedSubscriptions =
                 alignSupportedSubscriptions(gym, detail.supportedSubscriptions());

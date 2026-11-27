@@ -274,16 +274,12 @@ public class HomeGymRuleService {
                 }
             }
         }
-        // minTier = lowest offered tier that is still included + primary-enabled.
-        // A higher tier with primary off (e.g. Platinum) must not wipe a lower
-        // enabled tier (e.g. Gold) — that was blocking Qala Fitness primary select.
-        // Missing price row = enabled (same as before).
+        // minTier = lowest offered tier with primary still on. A higher tier with primary
+        // off must not wipe a lower enabled tier (Qala Gold on / Platinum off).
+        // Missing price row = not explicitly disabled (upward-closed still applies).
         Integer minRank = null;
         for (Map.Entry<Integer, Long> entry : offeredByRank.entrySet()) {
-            GymPackagePrice price = latestPrices.get(entry.getValue());
-            boolean disabled = price != null && (Boolean.FALSE.equals(price.getIncluded())
-                    || Boolean.FALSE.equals(price.getHomeEligible()));
-            if (!disabled) {
+            if (!isPrimaryDisabled(latestPrices.get(entry.getValue()))) {
                 minRank = entry.getKey();
                 break;
             }
@@ -292,20 +288,37 @@ public class HomeGymRuleService {
             return HomeGymInfo.none(requestedRank);
         }
         GymMembershipPolicyV4.Tier minTier = tierOfRank(minRank);
+        // Badge / chips: upward-closed from minTier, but skip tiers admin explicitly
+        // turned off (primaryEnabled=false) — otherwise Platinum shows "основным" on Qala.
         List<GymMembershipPolicyV4.Tier> tiers = new ArrayList<>();
         for (GymMembershipPolicyV4.Tier tier : GymMembershipPolicyV4.Tier.values()) {
-            if (tierRank(tier) >= minRank) {
-                tiers.add(tier);
+            int rank = tierRank(tier);
+            if (rank < minRank) {
+                continue;
             }
+            Long packageId = offeredByRank.get(rank);
+            if (packageId != null && isPrimaryDisabled(latestPrices.get(packageId))) {
+                continue;
+            }
+            tiers.add(tier);
         }
-        // Package-and-above: eligible when the requested tier is at/above minTier and the gym
-        // offers at least one package at or below that tier (hierarchy membership).
         Boolean eligibleForRequestedTier = null;
         if (requestedRank != null) {
             boolean offeredInHierarchy = offeredByRank.floorKey(requestedRank) != null;
-            eligibleForRequestedTier = requestedRank >= minRank && offeredInHierarchy;
+            Long requestedPackageId = offeredByRank.get(requestedRank);
+            boolean requestedDisabled = requestedPackageId != null
+                    && isPrimaryDisabled(latestPrices.get(requestedPackageId));
+            eligibleForRequestedTier = requestedRank >= minRank
+                    && offeredInHierarchy
+                    && !requestedDisabled;
         }
         return new HomeGymInfo(minTier, List.copyOf(tiers), eligibleForRequestedTier);
+    }
+
+    /** Admin primary/included off on the price row — missing row is not an explicit off. */
+    private static boolean isPrimaryDisabled(GymPackagePrice price) {
+        return price != null && (Boolean.FALSE.equals(price.getIncluded())
+                || Boolean.FALSE.equals(price.getHomeEligible()));
     }
 
     public static int tierRank(GymMembershipPolicyV4.Tier tier) {
