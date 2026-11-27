@@ -274,15 +274,20 @@ public class HomeGymRuleService {
                 }
             }
         }
-        int highestDisabledRank = 0;
+        // minTier = lowest offered tier that is still included + primary-enabled.
+        // A higher tier with primary off (e.g. Platinum) must not wipe a lower
+        // enabled tier (e.g. Gold) — that was blocking Qala Fitness primary select.
+        // Missing price row = enabled (same as before).
+        Integer minRank = null;
         for (Map.Entry<Integer, Long> entry : offeredByRank.entrySet()) {
             GymPackagePrice price = latestPrices.get(entry.getValue());
-            if (price != null && (Boolean.FALSE.equals(price.getIncluded())
-                    || Boolean.FALSE.equals(price.getHomeEligible()))) {
-                highestDisabledRank = Math.max(highestDisabledRank, entry.getKey());
+            boolean disabled = price != null && (Boolean.FALSE.equals(price.getIncluded())
+                    || Boolean.FALSE.equals(price.getHomeEligible()));
+            if (!disabled) {
+                minRank = entry.getKey();
+                break;
             }
         }
-        Integer minRank = offeredByRank.ceilingKey(highestDisabledRank + 1);
         if (minRank == null) {
             return HomeGymInfo.none(requestedRank);
         }

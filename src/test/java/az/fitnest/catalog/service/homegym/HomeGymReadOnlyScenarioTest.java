@@ -151,14 +151,35 @@ class HomeGymReadOnlyScenarioTest {
 
     @Test
     void homeEligibleFalseDisablesThatTier() {
+        // Bronze + Silver primary off → floor rises to Gold (first enabled).
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
-                .thenReturn(List.of(price(GYM_ID, SILVER, false, true)));
+                .thenReturn(List.of(
+                        price(GYM_ID, BRONZE, false, true),
+                        price(GYM_ID, SILVER, false, true)));
 
         HomeGymRuleService.HomeGymInfo info =
                 service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM));
 
         assertEquals(Tier.GOLD, info.minTier());
         assertEquals(List.of(Tier.GOLD, Tier.PLATINUM), info.tiers());
+    }
+
+    @Test
+    void higherTierPrimaryOffDoesNotBlockLowerEnabledPrimary() {
+        // Qala shape: Bronze/Silver off, Gold on, Platinum off → Gold still selectable.
+        when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
+                .thenReturn(List.of(
+                        price(GYM_ID, BRONZE, false, true),
+                        price(GYM_ID, SILVER, false, false),
+                        price(GYM_ID, GOLD, true, true),
+                        price(GYM_ID, PLATINUM, false, true)));
+
+        HomeGymRuleService.HomeGymInfo info =
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM));
+
+        assertEquals(Tier.GOLD, info.minTier());
+        assertEquals(List.of(Tier.GOLD, Tier.PLATINUM), info.tiers());
+        assertTrue(info.eligible());
     }
 
     @Test
@@ -174,7 +195,9 @@ class HomeGymReadOnlyScenarioTest {
     @Test
     void theHighestOfferedTierBeingDisabledMakesTheGymIneligible() {
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
-                .thenReturn(List.of(price(GYM_ID, GOLD, false, true)));
+                .thenReturn(List.of(
+                        price(GYM_ID, BRONZE, false, true),
+                        price(GYM_ID, GOLD, false, true)));
 
         HomeGymRuleService.HomeGymInfo info = service.homeGymInfo(gym(GYM_ID, true, BRONZE, GOLD));
 
@@ -186,7 +209,9 @@ class HomeGymReadOnlyScenarioTest {
     @Test
     void aDisabledMiddleTierRaisesTheMinimumToTheNextOfferedTier() {
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
-                .thenReturn(List.of(price(GYM_ID, SILVER, false, true)));
+                .thenReturn(List.of(
+                        price(GYM_ID, BRONZE, false, true),
+                        price(GYM_ID, SILVER, false, true)));
 
         HomeGymRuleService.HomeGymInfo info =
                 service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM));

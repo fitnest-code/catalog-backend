@@ -208,7 +208,7 @@ class GymMembershipPolicyV4ServiceTest {
         .thenReturn(Optional.empty());
     org.mockito.Mockito.when(packagePrices.save(org.mockito.ArgumentMatchers.any()))
         .thenAnswer(a -> a.getArgument(0));
-    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans, org.mockito.Mockito.mock(az.fitnest.catalog.repository.SupportedServiceRepository.class));
 
     var gapOk =
         new GymMembershipPolicyV4(
@@ -290,7 +290,8 @@ class GymMembershipPolicyV4ServiceTest {
         org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPackagePriceRepository.class),
         org.mockito.Mockito.mock(az.fitnest.catalog.repository.GymPrimaryDisableV4Repository.class),
         org.mockito.Mockito.mock(PrimaryGymNotificationV4Service.class),
-        org.mockito.Mockito.mock(az.fitnest.catalog.client.OrderServiceGrpcClient.class));
+        org.mockito.Mockito.mock(az.fitnest.catalog.client.OrderServiceGrpcClient.class),
+        org.mockito.Mockito.mock(az.fitnest.catalog.repository.SupportedServiceRepository.class));
   }
 
   @Test
@@ -354,7 +355,7 @@ class GymMembershipPolicyV4ServiceTest {
             .build();
     org.mockito.Mockito.when(repo.findById(10L)).thenReturn(Optional.of(row));
     org.mockito.Mockito.when(gyms.findById(10L)).thenReturn(Optional.of(gym));
-    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans, org.mockito.Mockito.mock(az.fitnest.catalog.repository.SupportedServiceRepository.class));
     var before = LocalDateTime.of(2026, 10, 26, 16, 59, 59);
     var after = before.withHour(17).withMinute(0);
     assertTrue(service.quote(10L, 1L, before).allowed());
@@ -431,7 +432,7 @@ class GymMembershipPolicyV4ServiceTest {
     org.mockito.Mockito.when(plans.checkPackageExists(org.mockito.ArgumentMatchers.anyLong()))
         .thenReturn(true);
 
-    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans);
+    var service = new GymMembershipPolicyV4Service(repo, gyms, packagePrices, disables, notify, plans, org.mockito.Mockito.mock(az.fitnest.catalog.repository.SupportedServiceRepository.class));
     service.save(244L, new az.fitnest.catalog.dto.v4.GymPolicyUpdateV4(policy, false, Map.of()));
 
     Set<Long> synced =
