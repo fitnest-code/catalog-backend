@@ -166,7 +166,7 @@ class HomeGymReadOnlyScenarioTest {
 
     @Test
     void higherTierPrimaryOffDoesNotBlockLowerEnabledPrimary() {
-        // Qala shape: Bronze/Silver off, Gold on, Platinum off → Gold still selectable.
+        // Qala shape: Bronze/Silver off, Gold on, Platinum off → Gold selectable, Platinum chip off.
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
                 .thenReturn(List.of(
                         price(GYM_ID, BRONZE, false, true),
@@ -178,8 +178,14 @@ class HomeGymReadOnlyScenarioTest {
                 service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM));
 
         assertEquals(Tier.GOLD, info.minTier());
-        assertEquals(List.of(Tier.GOLD, Tier.PLATINUM), info.tiers());
+        assertEquals(List.of(Tier.GOLD), info.tiers());
         assertTrue(info.eligible());
+        assertEquals(Boolean.FALSE,
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM), 4)
+                        .eligibleForRequestedTier());
+        assertEquals(Boolean.TRUE,
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM), 3)
+                        .eligibleForRequestedTier());
     }
 
     @Test
