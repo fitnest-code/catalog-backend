@@ -90,7 +90,8 @@ class GymReadServiceImplV4DetailAlignmentTest {
     when(gymRepository.findWithDetailsById(14L)).thenReturn(Optional.of(gym));
 
     HomeGymRuleService rules =
-        new HomeGymRuleService(packagePrices, mock(GymTimeSlotRuleRepository.class), order);
+        new HomeGymRuleService(packagePrices, mock(GymTimeSlotRuleRepository.class), order,
+            mock(az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class));
     service = newService(rules);
   }
 

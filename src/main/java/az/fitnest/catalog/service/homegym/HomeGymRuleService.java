@@ -3,11 +3,15 @@ package az.fitnest.catalog.service.homegym;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4;
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymMembershipPolicyV4Entity;
 import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.model.entity.GymTimeSlotRule;
+import az.fitnest.catalog.repository.GymMembershipPolicyV4Repository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +57,8 @@ public class HomeGymRuleService {
     private final GymPackagePriceRepository packagePriceRepository;
     private final GymTimeSlotRuleRepository timeSlotRuleRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
+    private final GymMembershipPolicyV4Repository membershipPolicyRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     public record PackageContext(Long packageId, String name, int rank, List<Long> eligiblePackageIds) {
     }
@@ -244,18 +250,23 @@ public class HomeGymRuleService {
                                 row -> row.getGym().getId(),
                                 Collectors.toMap(GymPackagePrice::getPackageId, row -> row,
                                         (first, second) -> first)));
+        // V4 primaryEnabled is the admin source of truth; price.home_eligible can lag until sync.
+        Map<Long, Map<Integer, Boolean>> policyPrimaryByGym = loadPolicyPrimaryByRank(gymIds);
         Map<Long, HomeGymInfo> result = new HashMap<>();
         for (Gym gym : gyms) {
             if (gym == null || gym.getId() == null) {
                 continue;
             }
             result.put(gym.getId(), computeHomeGymInfo(gym,
-                    latestPrices.getOrDefault(gym.getId(), Map.of()), requestedRank));
+                    latestPrices.getOrDefault(gym.getId(), Map.of()),
+                    policyPrimaryByGym.get(gym.getId()),
+                    requestedRank));
         }
         return result;
     }
 
     private HomeGymInfo computeHomeGymInfo(Gym gym, Map<Long, GymPackagePrice> latestPrices,
+                                           Map<Integer, Boolean> policyPrimaryByRank,
                                            Integer requestedRank) {
         if (Boolean.FALSE.equals(gym.getHomeEligible())) {
             return HomeGymInfo.none(requestedRank);
@@ -274,12 +285,20 @@ public class HomeGymRuleService {
                 }
             }
         }
+        // When V4 lists a primary-enabled tier that has no subscription row yet, still offer it
+        // so admin primary-on is visible before syncIncludedSubscriptions catches up.
+        if (policyPrimaryByRank != null) {
+            for (Map.Entry<Integer, Boolean> entry : policyPrimaryByRank.entrySet()) {
+                if (Boolean.TRUE.equals(entry.getValue())) {
+                    offeredByRank.putIfAbsent(entry.getKey(), null);
+                }
+            }
+        }
         // minTier = lowest offered tier with primary still on. A higher tier with primary
         // off must not wipe a lower enabled tier (Qala Gold on / Platinum off).
-        // Missing price row = not explicitly disabled (upward-closed still applies).
         Integer minRank = null;
         for (Map.Entry<Integer, Long> entry : offeredByRank.entrySet()) {
-            if (!isPrimaryDisabled(latestPrices.get(entry.getValue()))) {
+            if (!isPrimaryDisabled(entry.getKey(), entry.getValue(), latestPrices, policyPrimaryByRank)) {
                 minRank = entry.getKey();
                 break;
             }
@@ -289,7 +308,7 @@ public class HomeGymRuleService {
         }
         GymMembershipPolicyV4.Tier minTier = tierOfRank(minRank);
         // Badge / chips: upward-closed from minTier, but skip tiers admin explicitly
-        // turned off (primaryEnabled=false) — otherwise Platinum shows "основным" on Qala.
+        // turned off (V4 primaryEnabled=false or price home_eligible=false).
         List<GymMembershipPolicyV4.Tier> tiers = new ArrayList<>();
         for (GymMembershipPolicyV4.Tier tier : GymMembershipPolicyV4.Tier.values()) {
             int rank = tierRank(tier);
@@ -297,7 +316,7 @@ public class HomeGymRuleService {
                 continue;
             }
             Long packageId = offeredByRank.get(rank);
-            if (packageId != null && isPrimaryDisabled(latestPrices.get(packageId))) {
+            if (isPrimaryDisabled(rank, packageId, latestPrices, policyPrimaryByRank)) {
                 continue;
             }
             tiers.add(tier);
@@ -306,8 +325,8 @@ public class HomeGymRuleService {
         if (requestedRank != null) {
             boolean offeredInHierarchy = offeredByRank.floorKey(requestedRank) != null;
             Long requestedPackageId = offeredByRank.get(requestedRank);
-            boolean requestedDisabled = requestedPackageId != null
-                    && isPrimaryDisabled(latestPrices.get(requestedPackageId));
+            boolean requestedDisabled = isPrimaryDisabled(
+                    requestedRank, requestedPackageId, latestPrices, policyPrimaryByRank);
             eligibleForRequestedTier = requestedRank >= minRank
                     && offeredInHierarchy
                     && !requestedDisabled;
@@ -315,10 +334,71 @@ public class HomeGymRuleService {
         return new HomeGymInfo(minTier, List.copyOf(tiers), eligibleForRequestedTier);
     }
 
-    /** Admin primary/included off on the price row — missing row is not an explicit off. */
-    private static boolean isPrimaryDisabled(GymPackagePrice price) {
+    /**
+     * Prefer V4 {@code primaryEnabled} when a policy row exists for that rank; otherwise fall back
+     * to the mirrored price flags. Missing price row is not an explicit off (legacy upward-closed).
+     */
+    private static boolean isPrimaryDisabled(int rank, Long packageId,
+                                             Map<Long, GymPackagePrice> latestPrices,
+                                             Map<Integer, Boolean> policyPrimaryByRank) {
+        if (policyPrimaryByRank != null && policyPrimaryByRank.containsKey(rank)) {
+            return !Boolean.TRUE.equals(policyPrimaryByRank.get(rank));
+        }
+        if (packageId == null) {
+            return false;
+        }
+        GymPackagePrice price = latestPrices.get(packageId);
         return price != null && (Boolean.FALSE.equals(price.getIncluded())
                 || Boolean.FALSE.equals(price.getHomeEligible()));
+    }
+
+    /** rank → primaryEnabled for gyms that have a V4 membership policy. */
+    private Map<Long, Map<Integer, Boolean>> loadPolicyPrimaryByRank(List<Long> gymIds) {
+        if (gymIds == null || gymIds.isEmpty() || membershipPolicyRepository == null) {
+            return Map.of();
+        }
+        Map<Long, Map<Integer, Boolean>> out = new HashMap<>();
+        for (GymMembershipPolicyV4Entity row : membershipPolicyRepository.findAllById(gymIds)) {
+            if (row == null || row.getGymId() == null) {
+                continue;
+            }
+            Map<Integer, Boolean> byRank = decodePolicyPrimaryByRank(row.getPayload());
+            if (!byRank.isEmpty()) {
+                out.put(row.getGymId(), byRank);
+            }
+        }
+        return out;
+    }
+
+    private Map<Integer, Boolean> decodePolicyPrimaryByRank(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return Map.of();
+        }
+        try {
+            JsonNode packages = objectMapper.readTree(payload).path("packages");
+            if (!packages.isArray()) {
+                return Map.of();
+            }
+            Map<Integer, Boolean> byRank = new HashMap<>();
+            for (JsonNode pkg : packages) {
+                GymMembershipPolicyV4.Tier tier = null;
+                String tierName = pkg.path("tier").asText(null);
+                if (tierName != null && !tierName.isBlank()) {
+                    try {
+                        tier = GymMembershipPolicyV4.Tier.valueOf(tierName);
+                    } catch (IllegalArgumentException ignored) {
+                        // unknown tier label — skip
+                    }
+                }
+                if (tier == null) {
+                    continue;
+                }
+                byRank.put(tierRank(tier), pkg.path("primaryEnabled").asBoolean(false));
+            }
+            return byRank;
+        } catch (Exception ignored) {
+            return Map.of();
+        }
     }
 
     public static int tierRank(GymMembershipPolicyV4.Tier tier) {
