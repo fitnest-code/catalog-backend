@@ -2209,8 +2209,10 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                         && !offeredByTier.containsKey(r.tier()))
                 .map(az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.PackageRule::tier)
                 .toList();
+        String userLanguage = resolveUserLanguage();
         if (missing.isEmpty()) {
-            return result;
+            // Still fill empty benefits from admin categories (Qala Platinum row with no services).
+            return enrichEmptyBenefitsFromPolicy(gym.getId(), result, policy, userLanguage);
         }
         Map<Long, String> orderPlanNames = new java.util.HashMap<>();
         try {
@@ -2233,7 +2235,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 continue;
             }
             int rank = az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(tier);
-            // Nearest lower offered tier supplies benefits/category: higher tiers include them.
+            // Nearest lower offered tier supplies category; gym services come from V4 categories.
             GymPlanItemResponseV2 lower = offeredByTier.entrySet().stream()
                     .filter(e -> az.fitnest.catalog.service.homegym.HomeGymRuleService.tierRank(e.getKey()) < rank)
                     .reduce((a, b) -> b)
@@ -2243,15 +2245,106 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
             if (name == null || name.isBlank()) {
                 name = tier.name().charAt(0) + tier.name().substring(1).toLowerCase();
             }
+            List<GymPlanBenefitResponse> benefits =
+                    benefitsFromPolicyCategories(gym.getId(), packageId, policy, userLanguage);
+            if (benefits.isEmpty() && lower != null && lower.benefits() != null) {
+                benefits = lower.benefits();
+            }
             result.add(GymPlanItemResponseV2.builder()
                     .plan_id(planId)
                     .packageName(name)
                     .categoryId(lower != null ? lower.categoryId() : null)
                     .dailyPrice(resolveSyntheticDailyPrice(gym, packageId, tier, policy))
-                    .benefits(lower != null && lower.benefits() != null ? lower.benefits() : List.of())
+                    .benefits(benefits)
                     .build());
         }
-        return result;
+        // Existing rows can have empty supported_services while admin categories are filled
+        // (Qala Platinum). Fill from V4 so gym detail never falls through to package benefits.
+        return enrichEmptyBenefitsFromPolicy(gym.getId(), result, policy, userLanguage);
+    }
+
+    /**
+     * Gym-detail benefits must be gym services from admin membership categories — not global
+     * subscription-package benefits (Laframed / FitCoin). Empty DB rows are filled from policy.
+     */
+    private List<GymPlanItemResponseV2> enrichEmptyBenefitsFromPolicy(
+            Long gymId,
+            List<GymPlanItemResponseV2> items,
+            az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy,
+            String userLanguage) {
+        if (items == null || items.isEmpty() || policy == null) {
+            return items == null ? List.of() : items;
+        }
+        List<GymPlanItemResponseV2> out = new ArrayList<>(items.size());
+        for (GymPlanItemResponseV2 item : items) {
+            if (item == null) {
+                continue;
+            }
+            boolean hasBenefits = item.benefits() != null && !item.benefits().isEmpty();
+            if (hasBenefits) {
+                out.add(item);
+                continue;
+            }
+            Long packageId = parsePlanId(item);
+            List<GymPlanBenefitResponse> fromPolicy =
+                    benefitsFromPolicyCategories(gymId, packageId, policy, userLanguage);
+            if (fromPolicy.isEmpty()) {
+                out.add(item);
+                continue;
+            }
+            out.add(GymPlanItemResponseV2.builder()
+                    .plan_id(item.plan_id())
+                    .packageName(item.packageName())
+                    .categoryId(item.categoryId())
+                    .dailyPrice(item.dailyPrice())
+                    .benefits(fromPolicy)
+                    .build());
+        }
+        return out;
+    }
+
+    private List<GymPlanBenefitResponse> benefitsFromPolicyCategories(
+            Long gymId,
+            Long packageId,
+            az.fitnest.catalog.dto.v4.GymMembershipPolicyV4 policy,
+            String userLanguage) {
+        if (gymId == null || packageId == null || policy == null || policy.packages() == null) {
+            return List.of();
+        }
+        az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.PackageRule rule = policy.packages().stream()
+                .filter(r -> r != null && packageId.equals(r.packageId()))
+                .findFirst()
+                .orElse(null);
+        if (rule == null || rule.categories() == null || rule.categories().isEmpty()) {
+            return List.of();
+        }
+        List<GymPlanBenefitResponse> benefits = new ArrayList<>();
+        for (String raw : rule.categories()) {
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            String name = raw.trim();
+            var service = supportedServiceRepository
+                    .findByNameIgnoreCaseAndGymId(name, gymId)
+                    .orElse(null);
+            String description = name;
+            String icon = null;
+            if (service != null && service.getId() != null) {
+                String localized = translationService.getTranslatedValue(
+                        "SUPPORTEDSERVICE", service.getId().toString(), "name", userLanguage);
+                if (localized != null && !localized.isEmpty()) {
+                    description = localized;
+                } else if (service.getName() != null && !service.getName().isBlank()) {
+                    description = service.getName();
+                }
+                icon = service.getIconUrl();
+            }
+            benefits.add(GymPlanBenefitResponse.builder()
+                    .description(description)
+                    .iconImageUrl(icon)
+                    .build());
+        }
+        return benefits;
     }
 
     private az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier tierOfPlanItem(GymPlanItemResponseV2 item) {
