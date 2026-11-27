@@ -1264,9 +1264,8 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     private String getLocalizedGymName(Gym gym, String userLanguage) {
-        if (gym == null)
-            return null;
-        return gym.getName();
+        // Gym names are language-invariant: one value on gyms.name for AZ/EN/RU.
+        return gym == null ? null : gym.getName();
     }
 
     @Override
@@ -2982,10 +2981,7 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
                 })
                 .toList();
 
-        String localizedGymName = translationService.getTranslatedValue("GYM", gym.getId().toString(), "name", userLanguage);
-        if (localizedGymName == null || localizedGymName.isEmpty()) {
-            localizedGymName = gym.getName();
-        }
+        String localizedGymName = gym.getName();
 
         String localizedGymDescription = translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", userLanguage);
         if (localizedGymDescription == null || localizedGymDescription.isEmpty()) {

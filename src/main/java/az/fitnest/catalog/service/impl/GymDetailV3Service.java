@@ -113,7 +113,7 @@ public class GymDetailV3Service {
 
         return GymDetailResponseV3.builder()
                 .gym_id(gym.getId().toString())
-                .name(firstNonBlank(translated(translations, "GYM", gym.getId(), "name"), gym.getName()))
+                .name(gym.getName())
                 .description(firstNonBlank(translated(translations, "GYM", gym.getId(), "description"), gym.getDescription()))
                 .address(address == null ? null : new LocationResponse(
                         address.getLatitude(),

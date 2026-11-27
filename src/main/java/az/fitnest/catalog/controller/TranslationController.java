@@ -65,8 +65,10 @@ public class TranslationController {
     @Operation(summary = "Toplu tərcümələri əlavə edin və ya yeniləyin", description = "Verilmiş tərcümə siyahısını əlavə edir və ya yeniləyir.")
     @PostMapping("/bulk")
     public ResponseEntity<ApiResponse<List<Translation>>> saveOrUpdateTranslationsBulk(@RequestBody List<CreateTranslationRequest> requests) {
+        // Gym/store name rows are skipped by the service (one shared name on the entity).
         List<Translation> savedList = requests.stream()
                 .map(translationService::saveOrUpdateTranslation)
+                .filter(java.util.Objects::nonNull)
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(savedList));
     }

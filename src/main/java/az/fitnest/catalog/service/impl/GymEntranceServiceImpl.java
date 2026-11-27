@@ -56,6 +56,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     private final az.fitnest.catalog.service.TranslationService translationService;
     private final az.fitnest.catalog.service.homegym.HomeGymRuleService homeGymRuleService;
     private final VisitAttemptEventPublisher visitAttemptEventPublisher;
+    private final az.fitnest.catalog.service.category.CategoryEntryPriceResolver categoryEntryPriceResolver;
 
     private String getUserLanguage(Long userId) {
         try {
@@ -208,7 +209,8 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         return matchesYesterday;
     }
 
-    private Long extractGymIdFromQr(String qrCodeValue) {
+    /** Public/static so the v5 service resolves the gym from a QR exactly like the classic scan does. */
+    public static Long extractGymIdFromQr(String qrCodeValue) {
         if (qrCodeValue == null || qrCodeValue.isBlank())
             return null;
         try {
@@ -331,6 +333,23 @@ public class GymEntranceServiceImpl implements GymEntranceService {
     public GymEntranceScanResponse scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
                                                      String userAgent, String confirmation,
                                                      String confirmationToken, String qrScanId) {
+        // categoryId == null keeps the classic v1/v4 behaviour byte-for-byte.
+        return doScan(principal, qrCodeValue, lat, lng, userAgent, confirmation, confirmationToken, qrScanId, null)
+                .response();
+    }
+
+    @Override
+    @Transactional
+    public CategoryScanOutcome scanGymQrEntrance(Object principal, String qrCodeValue, Double lat, Double lng,
+                                                 String userAgent, String confirmation,
+                                                 String confirmationToken, String qrScanId, Long categoryId) {
+        return doScan(principal, qrCodeValue, lat, lng, userAgent, confirmation, confirmationToken, qrScanId,
+                categoryId);
+    }
+
+    private CategoryScanOutcome doScan(Object principal, String qrCodeValue, Double lat, Double lng,
+                                       String userAgent, String confirmation,
+                                       String confirmationToken, String qrScanId, Long categoryId) {
         String platform = PlatformUtil.detectPlatform(userAgent);
         Long userId = UserContext.extractUserId(principal);
         if (userId == null) {
@@ -368,6 +387,10 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         String packageName = null;
 
         Double amount = 0.0;
+        // Subcategory price override for the order check-in; stays null for classic / main-category scans
+        // so HomeGymRuleService prices keep applying unchanged.
+        Double categorySinglePrice = null;
+        Double categoryMonthlyPrice = null;
         Long packageId = null;
         boolean isTestUser = UserContext.isTestUser();
         az.fitnest.catalog.service.homegym.HomeGymRuleService.CheckInResolution resolution = null;
@@ -419,9 +442,23 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                                     VisitAttemptEventPublisher.TIER_NOT_ALLOWED_AT_THIS_TIME, scanMoment);
                         } else {
                             amount = resolution.singlePrice() != null ? resolution.singlePrice() : 0.0;
+                            if (categoryId != null) {
+                                var catPrices = categoryEntryPriceResolver.resolve(gym, userPackageId, categoryId);
+                                // Only subcategories have their own price table; main category keeps the
+                                // gym_package_price value HomeGymRuleService already resolved above.
+                                if (catPrices.fromSubcategoryTable()) {
+                                    categorySinglePrice = catPrices.singlePrice();
+                                    categoryMonthlyPrice = catPrices.monthlyPrice();
+                                    amount = categorySinglePrice != null ? categorySinglePrice : 0.0;
+                                }
+                            }
                         }
                     }
                 }
+            } catch (org.springframework.web.server.ResponseStatusException e) {
+                // CATEGORY_* validation errors from CategoryEntryPriceResolver must reach the client as
+                // 4xx instead of being masked as NO_ACTIVE_SUBSCRIPTION by the catch-all below.
+                throw e;
             } catch (Exception e) {
                 allowed = false;
                 reason = "NO_ACTIVE_SUBSCRIPTION";
@@ -471,11 +508,14 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                                 confirmationToken,
                                 resolution != null ? resolution.ruleId() : null,
                                 resolution != null ? resolution.pricePackageName() : null,
-                                resolution != null ? resolution.singlePrice() : null,
-                                resolution != null ? resolution.unlimitedPrice() : null,
+                                categorySinglePrice != null ? categorySinglePrice
+                                        : (resolution != null ? resolution.singlePrice() : null),
+                                categoryMonthlyPrice != null ? categoryMonthlyPrice
+                                        : (resolution != null ? resolution.unlimitedPrice() : null),
                                 gym.getName(),
                                 resolution != null ? resolution.availableHours() : null,
-                                qrScanId);
+                                qrScanId,
+                                categoryId);
 
                 decision = orderResponse.getDecision() != null && !orderResponse.getDecision().isBlank()
                         ? orderResponse.getDecision() : null;
@@ -543,6 +583,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .platform(platform)
                 .amount(amount)
                 .packageId(packageId)
+                .categoryId(categoryId)
                 .build();
         gymEntranceHistoryRepository.save(history);
 
@@ -551,7 +592,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
         Address addr = gym.getAddress();
         String gymAddress = addr != null ? addr.getAddressText() : null;
 
-        return GymEntranceScanResponse.builder()
+        GymEntranceScanResponse scanResponse = GymEntranceScanResponse.builder()
                 .gymName(localizedName)
                 .gymAddress(allowed ? gymAddress : null)
                 .enterDate(allowed ? java.time.LocalDate.now(ZoneId.of("Asia/Baku")).toString() : null)
@@ -581,6 +622,7 @@ public class GymEntranceServiceImpl implements GymEntranceService {
                 .availableHours(availableHours)
                 .packageName(packageName)
                 .build();
+        return new CategoryScanOutcome(scanResponse, amount, categoryId);
     }
 
     private String emptyToNull(String value) {
