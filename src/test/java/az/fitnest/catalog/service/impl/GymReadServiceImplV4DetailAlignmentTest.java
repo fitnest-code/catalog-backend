@@ -261,6 +261,60 @@ class GymReadServiceImplV4DetailAlignmentTest {
   }
 
   @Test
+  void emptyPlatinumServicesFilledFromPolicyCategories() {
+    // Qala Platinum: gym_subscriptions row exists with empty supported_services; iOS used to
+    // fall back to global package benefits. Admin categories must become gym benefits.
+    GymSubscription platinum = new GymSubscription();
+    platinum.setId(904L);
+    platinum.setGym(gym);
+    platinum.setPackageId(PLATINUM);
+    platinum.setDailyPrice(16.0);
+    platinum.setSupportedServices(new HashSet<>());
+    gym.getSubscriptions().add(platinum);
+    when(policyService.find(14L))
+        .thenReturn(Optional.of(
+            new GymMembershipPolicyV4(
+                1,
+                false,
+                List.of(
+                    rule(BRONZE, Tier.BRONZE, false, "3.00"),
+                    rule(SILVER, Tier.SILVER, false, "4.00"),
+                    ruleWithCategories(GOLD, Tier.GOLD, true, "5.00", List.of("Hovuz", "Hamam")),
+                    ruleWithCategories(
+                        PLATINUM,
+                        Tier.PLATINUM,
+                        true,
+                        "9.50",
+                        List.of("Hovuz", "Hamam", "Dolab", "Fitness zal"))),
+                List.of())));
+    when(order.getPackageNamesByIds(any()))
+        .thenAnswer(
+            inv -> {
+              List<Long> ids = inv.getArgument(0);
+              if (ids == null) {
+                return List.of();
+              }
+              return ids.stream()
+                  .map(
+                      id ->
+                          PackageNameInfo.newBuilder()
+                              .setPackageId(id)
+                              .setName(
+                                  id == GOLD
+                                      ? "Gold Plan"
+                                      : id == PLATINUM ? "Platinum Plan" : "Plan " + id)
+                              .build())
+                  .toList();
+            });
+
+    GymDetailResponseV4 detail = service.getGymDetailV4(null, 14L);
+
+    List<String> platinumBenefits =
+        plan(detail, PLATINUM).benefits().stream().map(b -> b.description()).toList();
+    assertEquals(List.of("Hovuz", "Hamam", "Dolab", "Fitness zal"), platinumBenefits);
+  }
+
+  @Test
   void platinumPackageIdAndPriceComeFromPolicyWhenAvailable() {
     when(policyService.find(14L))
         .thenReturn(Optional.of(
@@ -310,9 +364,20 @@ class GymReadServiceImplV4DetailAlignmentTest {
   }
 
   static PackageRule rule(long id, Tier tier, boolean primary, String price) {
+    return ruleWithCategories(id, tier, primary, price, List.of());
+  }
+
+  static PackageRule ruleWithCategories(
+      long id, Tier tier, boolean primary, String price, List<String> categories) {
     return new PackageRule(
-        id, tier, primary, primary, new BigDecimal(price), primary ? new BigDecimal("50") : null,
-        List.of(), null);
+        id,
+        tier,
+        primary,
+        primary,
+        new BigDecimal(price),
+        primary ? new BigDecimal("50") : null,
+        categories,
+        null);
   }
 
   static PackageRule includedOnly(long id, Tier tier, String price) {
