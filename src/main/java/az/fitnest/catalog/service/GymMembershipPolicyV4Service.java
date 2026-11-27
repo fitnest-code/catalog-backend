@@ -25,6 +25,7 @@ public class GymMembershipPolicyV4Service {
   private final GymPrimaryDisableV4Repository disables;
   private final PrimaryGymNotificationV4Service notifications;
   private final OrderServiceGrpcClient plans;
+  private final SupportedServiceRepository supportedServices;
   private final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
   public static final ZoneId ZONE = ZoneId.of("Asia/Baku");
 
@@ -210,36 +211,69 @@ public class GymMembershipPolicyV4Service {
     // Mobile list APIs read gyms.home_eligible / gym_package_price — keep them aligned with
     // admin "Əsas zal kimi seçilə bilər" (primaryEnabled), which defaults to false.
     syncHomeEligibleFlags(gym, normalized, now.toLocalDate());
-    ensurePrimarySubscriptions(gym, normalized);
+    syncIncludedSubscriptions(gym, normalized);
     return decode(row);
   }
 
   /**
-   * QR entrance ({@code HomeGymRuleService.supportsPackage}) and v4 detail
-   * {@code supportedSubscriptions} both read {@code gym_subscriptions}. V4 policy previously only
-   * inserted a row when {@code primaryEnabled} was true, so {@code included=true} packages were
-   * written to {@code gym_package_price} but missing from {@code gym_subscriptions} — members on
-   * that tier got {@code GYM_NOT_SUPPORTED}. Sync every included package (not only primary). Never
-   * deletes or edits existing rows, so admin-configured prices/services are untouched.
+   * QR entrance and v4 {@code supportedSubscriptions} both read {@code gym_subscriptions}. Keep one
+   * row per included package and set its services from policy {@code categories} so the app matches
+   * admin (empty Gold rows previously showed nothing / inherited wrong services).
    */
-  private void ensurePrimarySubscriptions(Gym gym, List<PackageRule> packages) {
-    boolean added = false;
+  private void syncIncludedSubscriptions(Gym gym, List<PackageRule> packages) {
+    boolean dirty = false;
     for (PackageRule rule : packages) {
       if (!rule.included() || rule.packageId() == null) continue;
-      boolean present =
-          gym.getSubscriptions().stream().anyMatch(s -> rule.packageId().equals(s.getPackageId()));
-      if (present) continue;
-      GymSubscription subscription = new GymSubscription();
-      subscription.setGym(gym);
-      subscription.setPackageId(rule.packageId());
+      GymSubscription subscription =
+          gym.getSubscriptions().stream()
+              .filter(s -> rule.packageId().equals(s.getPackageId()))
+              .findFirst()
+              .orElse(null);
+      if (subscription == null) {
+        subscription = new GymSubscription();
+        subscription.setGym(gym);
+        subscription.setPackageId(rule.packageId());
+        subscription.setSupportedServices(new HashSet<>());
+        gym.getSubscriptions().add(subscription);
+        dirty = true;
+      }
       if (rule.entryPrice() != null) {
         subscription.setDailyPrice(rule.entryPrice().doubleValue());
       }
-      subscription.setSupportedServices(new HashSet<>());
-      gym.getSubscriptions().add(subscription);
-      added = true;
+      Set<SupportedService> linked = resolveCategoryServices(gym.getId(), rule.categories());
+      Set<SupportedService> current =
+          subscription.getSupportedServices() == null
+              ? Set.of()
+              : subscription.getSupportedServices();
+      if (current.size() != linked.size() || !current.containsAll(linked)) {
+        subscription.setSupportedServices(linked);
+        dirty = true;
+      }
     }
-    if (added) gyms.save(gym);
+    if (dirty) {
+      gyms.save(gym);
+    }
+  }
+
+  /** Resolve admin category labels to gym-scoped supported_services (create when missing). */
+  private Set<SupportedService> resolveCategoryServices(Long gymId, List<String> categories) {
+    if (categories == null || categories.isEmpty()) {
+      return new HashSet<>();
+    }
+    Set<SupportedService> out = new LinkedHashSet<>();
+    for (String raw : categories) {
+      if (raw == null || raw.isBlank()) continue;
+      String name = raw.trim();
+      SupportedService service =
+          supportedServices
+              .findByNameIgnoreCaseAndGymId(name, gymId)
+              .orElseGet(
+                  () ->
+                      supportedServices.save(
+                          SupportedService.builder().name(name).gymId(gymId).build()));
+      out.add(service);
+    }
+    return out;
   }
 
   /**
