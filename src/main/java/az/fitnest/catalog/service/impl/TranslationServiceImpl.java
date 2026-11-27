@@ -24,14 +24,17 @@ public class TranslationServiceImpl implements TranslationService {
     }
 
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "translations", key = "#entityType + '_' + #entityId + '_' + #fieldName + '_' + #languageCode")
+    // Normalize type/lang in the key so Accept-Language "ru" and "RU" share one cache entry.
+    // Do not cache nulls: a miss before admin adds EN/RU would otherwise stick forever (Teatro Hamam rooms).
+    @org.springframework.cache.annotation.Cacheable(value = "translations",
+            key = "(#entityType == null ? '' : #entityType.toUpperCase()) + '_' + #entityId + '_' + #fieldName + '_' + (#languageCode == null ? '' : #languageCode.toUpperCase())",
+            unless = "#result == null")
     public String getTranslatedValue(String entityType, String entityId, String fieldName, String languageCode) {
         if (languageCode == null || languageCode.equalsIgnoreCase("AZ")) {
             return null;
         }
-        if (isProperNounField(entityType, fieldName)) {
-            return null;
-        }
+        // Proper nouns (gym/store name, address) may still have admin-provided EN/RU rows.
+        // Read them from DB; do not short-circuit — otherwise mobile/admin always fall back to AZ.
 
         if (entityType != null) {
             String normType = entityType.toUpperCase();
@@ -200,12 +203,24 @@ public class TranslationServiceImpl implements TranslationService {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
             return;
         }
-        // Proper nouns (names, addresses) are identical in every language:
-        // copy the AZ source to EN/RU. All other fields stay untranslated until
-        // an admin provides EN/RU manually. No machine translation.
+        // Seed EN/RU with AZ only when missing. Never overwrite admin-provided locale
+        // strings (e.g. RU gym name "Театр Хамам") when AZ name is later edited.
         if (isProperNounField(entityType, fieldName)) {
-            saveOrUpdateTranslation(entityType, entityId, "EN", fieldName, originalValueAz);
-            saveOrUpdateTranslation(entityType, entityId, "RU", fieldName, originalValueAz);
+            seedProperNounIfAbsent(entityType, entityId, "EN", fieldName, originalValueAz);
+            seedProperNounIfAbsent(entityType, entityId, "RU", fieldName, originalValueAz);
+        }
+    }
+
+    private void seedProperNounIfAbsent(String entityType, String entityId, String languageCode,
+                                        String fieldName, String originalValueAz) {
+        String normalizedEntityType = entityType.toUpperCase();
+        String normalizedLanguageCode = languageCode.toUpperCase();
+        boolean exists = translationRepository
+                .findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                        normalizedEntityType, entityId, normalizedLanguageCode, fieldName)
+                .isPresent();
+        if (!exists) {
+            saveOrUpdateTranslation(entityType, entityId, languageCode, fieldName, originalValueAz);
         }
     }
 

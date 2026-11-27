@@ -1264,8 +1264,17 @@ public class GymReadServiceImpl implements az.fitnest.catalog.service.GymReadSer
     }
 
     private String getLocalizedGymName(Gym gym, String userLanguage) {
-        if (gym == null)
+        if (gym == null) {
             return null;
+        }
+        // Prefer EN/RU rows from translations; AZ (and missing locales) stay on gyms.name.
+        // Returning the base column for every language made mobile/admin always show AZ names
+        // even when Театр Хамам / Teatro Hamam rows existed.
+        String localized = translationService.getTranslatedValue(
+                "GYM", gym.getId().toString(), "name", userLanguage);
+        if (localized != null && !localized.isBlank()) {
+            return localized;
+        }
         return gym.getName();
     }
 

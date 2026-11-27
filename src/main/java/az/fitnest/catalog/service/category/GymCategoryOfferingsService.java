@@ -152,9 +152,7 @@ public class GymCategoryOfferingsService {
                     localizedCategoryName(c, lang),
                     role,
                     desc != null && desc.getPhone() != null ? desc.getPhone() : gym.getPhone(),
-                    desc != null && desc.getDescription() != null
-                            ? desc.getDescription()
-                            : (ROLE_MAIN.equals(role) ? gym.getDescription() : null),
+                    localizedOfferingDescription(gym, c.getId(), role, desc, lang),
                     desc != null && desc.getCoverImageUrl() != null ? desc.getCoverImageUrl() : c.getPhotoUrl(),
                     roomImageUrls(gym, c.getId()),
                     services(gym, role, linksByCat.get(c.getId()), servicesById, lang),
@@ -162,6 +160,32 @@ public class GymCategoryOfferingsService {
                     prices));
         }
         return result;
+    }
+
+    /**
+     * Prefer admin EN/RU rows for {@code GYM.description_{categoryId}} (or main {@code description});
+     * fall back to the AZ columns on {@code gym_descriptions} / {@code gyms}.
+     */
+    private String localizedOfferingDescription(Gym gym, Long categoryId, String role,
+                                                GymDescription desc, String lang) {
+        String field = "description_" + categoryId;
+        String localized = lang == null ? null
+                : translationService.getTranslatedValue("GYM", gym.getId().toString(), field, lang);
+        if (localized != null && !localized.isBlank()) {
+            return localized;
+        }
+        if (desc != null && desc.getDescription() != null && !desc.getDescription().isBlank()) {
+            return desc.getDescription();
+        }
+        if (!ROLE_MAIN.equals(role)) {
+            return null;
+        }
+        String main = lang == null ? null
+                : translationService.getTranslatedValue("GYM", gym.getId().toString(), "description", lang);
+        if (main != null && !main.isBlank()) {
+            return main;
+        }
+        return gym.getDescription();
     }
 
     private String packageName(Long packageId) {
