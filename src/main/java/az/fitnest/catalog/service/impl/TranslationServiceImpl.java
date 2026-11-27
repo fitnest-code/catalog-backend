@@ -1,31 +1,48 @@
 package az.fitnest.catalog.service.impl;
 
 import az.fitnest.catalog.model.entity.Translation;
-import az.fitnest.catalog.dto.*;
-import az.fitnest.catalog.dto.request.*;
-import az.fitnest.catalog.dto.response.*;
-import az.fitnest.catalog.repository.TranslationRepository;
-import az.fitnest.catalog.service.TranslationService;
-import lombok.RequiredArgsConstructor;
 import az.fitnest.catalog.dto.request.CreateTranslationRequest;
 import az.fitnest.catalog.exception.ConflictException;
 import az.fitnest.catalog.exception.ResourceNotFoundException;
+import az.fitnest.catalog.repository.TranslationRepository;
+import az.fitnest.catalog.service.TranslationService;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 @Service
 public class TranslationServiceImpl implements TranslationService {
-    private final TranslationRepository translationRepository;
-    private final org.springframework.cache.CacheManager cacheManager;
 
-    public TranslationServiceImpl(TranslationRepository translationRepository, org.springframework.cache.CacheManager cacheManager) {
+    /** Response caches that embed translated strings — clear with every translation write. */
+    private static final String[] RESPONSE_CACHES = {
+            "translations",
+            "gym-detail",
+            "gymDetails",
+            "main-page-gyms",
+            "gym-listings",
+            "admin-gyms",
+            "landing-gyms",
+            "landing-home-gyms",
+            "landing-gym-detail",
+            "landing-gym-filters",
+            "landing-gyms-v2",
+            "landing-gym-detail-v2",
+            "landing-gym-filters-v2"
+    };
+
+    private final TranslationRepository translationRepository;
+    private final CacheManager cacheManager;
+
+    public TranslationServiceImpl(TranslationRepository translationRepository, CacheManager cacheManager) {
         this.translationRepository = translationRepository;
         this.cacheManager = cacheManager;
     }
 
     @Override
-    // Normalize type/lang in the key so Accept-Language "ru" and "RU" share one cache entry.
-    // Do not cache nulls: a miss before admin adds EN/RU would otherwise stick forever (Teatro Hamam rooms).
+    // Key is uppercased so "ru"/"RU" share one entry. Nulls are not cached — a miss before admin
+    // adds EN/RU must not stick forever after they save.
     @org.springframework.cache.annotation.Cacheable(value = "translations",
             key = "(#entityType == null ? '' : #entityType.toUpperCase()) + '_' + #entityId + '_' + #fieldName + '_' + (#languageCode == null ? '' : #languageCode.toUpperCase())",
             unless = "#result == null")
@@ -33,8 +50,10 @@ public class TranslationServiceImpl implements TranslationService {
         if (languageCode == null || languageCode.equalsIgnoreCase("AZ")) {
             return null;
         }
-        // Proper nouns (gym/store name, address) may still have admin-provided EN/RU rows.
-        // Read them from DB; do not short-circuit — otherwise mobile/admin always fall back to AZ.
+        // Gym/store names are one shared string on the entity row (same in AZ/EN/RU).
+        if (isSharedNameField(entityType, fieldName)) {
+            return null;
+        }
 
         if (entityType != null) {
             String normType = entityType.toUpperCase();
@@ -127,36 +146,22 @@ public class TranslationServiceImpl implements TranslationService {
             }
         }
 
-        String existingValue = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
-                entityType.toUpperCase(),
-                entityId,
-                languageCode.toUpperCase(),
-                fieldName
-        )
-        .map(Translation::getFieldValue)
-        .orElse(null);
-
-        if (existingValue != null) {
-            return existingValue;
-        }
-
-        if (entityType != null && (entityType.equalsIgnoreCase("CATEGORY") || entityType.equalsIgnoreCase("LESSONTYPE") || entityType.equalsIgnoreCase("LESSON_TYPE")
-                || entityType.equalsIgnoreCase("GYM") || entityType.equalsIgnoreCase("ROOM")
-                || entityType.equalsIgnoreCase("SUPPORTED_SERVICE") || entityType.equalsIgnoreCase("SUPPORTEDSERVICE")
-                || entityType.equalsIgnoreCase("RESERVATION_RULE") || entityType.equalsIgnoreCase("RESERVATIONRULE")
-                || entityType.equalsIgnoreCase("GYMSUBSCRIPTION")
-                || entityType.equalsIgnoreCase("TRAINER") || entityType.equalsIgnoreCase("PROFESSION"))) {
-            return null;
-        }
-
-        // Manual translations only: AZ lives on its own entity table, EN/RU live in
-        // the translations table (admin-provided). No machine translation.
-        return null;
+        return translationRepository
+                .findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                        entityType == null ? null : entityType.toUpperCase(),
+                        entityId,
+                        languageCode.toUpperCase(),
+                        fieldName)
+                .map(Translation::getFieldValue)
+                .orElse(null);
     }
 
     @Override
-    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public Translation createTranslation(CreateTranslationRequest request) {
+        if (isSharedNameField(request.entityType(), request.fieldName())) {
+            // Gym/store name lives on the entity; do not store per-language name rows.
+            return null;
+        }
         String normalizedEntityType = request.entityType().toUpperCase();
         Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
                 normalizedEntityType, request.entityId(), request.languageCode().toUpperCase(), request.fieldName()
@@ -173,16 +178,18 @@ public class TranslationServiceImpl implements TranslationService {
                 .fieldName(request.fieldName())
                 .fieldValue(request.fieldValue())
                 .build();
-        return translationRepository.save(translation);
+        Translation saved = translationRepository.save(translation);
+        clearResponseCaches();
+        return saved;
     }
 
     @Override
-    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public void deleteTranslation(Long id) {
         if (!translationRepository.existsById(id)) {
             throw new ResourceNotFoundException("TRANSLATION_NOT_FOUND", "error.resource_not_found");
         }
         translationRepository.deleteById(id);
+        clearResponseCaches();
     }
 
     @Override
@@ -198,30 +205,44 @@ public class TranslationServiceImpl implements TranslationService {
 
     @Override
     @org.springframework.scheduling.annotation.Async
-    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
     public void copyAzForProperNouns(String entityType, String entityId, String fieldName, String originalValueAz) {
         if (originalValueAz == null || originalValueAz.trim().isEmpty()) {
             return;
         }
-        // Seed EN/RU with AZ only when missing. Never overwrite admin-provided locale
-        // strings (e.g. RU gym name "Театр Хамам") when AZ name is later edited.
-        if (isProperNounField(entityType, fieldName)) {
-            seedProperNounIfAbsent(entityType, entityId, "EN", fieldName, originalValueAz);
-            seedProperNounIfAbsent(entityType, entityId, "RU", fieldName, originalValueAz);
+        if (!isProperNounField(entityType, fieldName)) {
+            return;
+        }
+        // Gym/store names: keep EN/RU rows identical to the entity name (for admin listing only).
+        // Reads always use gyms.name / stores.name via getTranslatedValue → null.
+        if (isSharedNameField(entityType, fieldName)) {
+            upsert(entityType, entityId, "EN", fieldName, originalValueAz);
+            upsert(entityType, entityId, "RU", fieldName, originalValueAz);
+            clearResponseCaches();
+            return;
+        }
+        seedIfAbsent(entityType, entityId, "EN", fieldName, originalValueAz);
+        seedIfAbsent(entityType, entityId, "RU", fieldName, originalValueAz);
+        clearResponseCaches();
+    }
+
+    private void seedIfAbsent(String entityType, String entityId, String languageCode,
+                              String fieldName, String value) {
+        boolean exists = translationRepository
+                .findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
+                        entityType.toUpperCase(), entityId, languageCode.toUpperCase(), fieldName)
+                .isPresent();
+        if (!exists) {
+            upsert(entityType, entityId, languageCode, fieldName, value);
         }
     }
 
-    private void seedProperNounIfAbsent(String entityType, String entityId, String languageCode,
-                                        String fieldName, String originalValueAz) {
-        String normalizedEntityType = entityType.toUpperCase();
-        String normalizedLanguageCode = languageCode.toUpperCase();
-        boolean exists = translationRepository
-                .findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
-                        normalizedEntityType, entityId, normalizedLanguageCode, fieldName)
-                .isPresent();
-        if (!exists) {
-            saveOrUpdateTranslation(entityType, entityId, languageCode, fieldName, originalValueAz);
+    /** Gym/store display name: one string for every locale. */
+    private static boolean isSharedNameField(String entityType, String fieldName) {
+        if (fieldName == null || !fieldName.equalsIgnoreCase("name") || entityType == null) {
+            return false;
         }
+        String type = entityType.toUpperCase(java.util.Locale.ROOT).replace("_", "");
+        return type.equals("GYM") || type.equals("STORE");
     }
 
     private static boolean isProperNounField(String entityType, String fieldName) {
@@ -246,6 +267,27 @@ public class TranslationServiceImpl implements TranslationService {
 
     @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void saveOrUpdateTranslation(String entityType, String entityId, String languageCode, String fieldName, String fieldValue) {
+        if (isSharedNameField(entityType, fieldName)) {
+            return;
+        }
+        upsert(entityType, entityId, languageCode, fieldName, fieldValue);
+        clearResponseCaches();
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public Translation saveOrUpdateTranslation(CreateTranslationRequest request) {
+        if (isSharedNameField(request.entityType(), request.fieldName())) {
+            return null;
+        }
+        Translation saved = upsert(request.entityType(), request.entityId(), request.languageCode(),
+                request.fieldName(), request.fieldValue());
+        clearResponseCaches();
+        return saved;
+    }
+
+    private Translation upsert(String entityType, String entityId, String languageCode,
+                               String fieldName, String fieldValue) {
         String normalizedEntityType = entityType.toUpperCase();
         String normalizedLanguageCode = languageCode.toUpperCase();
 
@@ -255,60 +297,26 @@ public class TranslationServiceImpl implements TranslationService {
 
         if (existing != null) {
             existing.setFieldValue(fieldValue);
-            translationRepository.save(existing);
-        } else {
-            Translation translation = Translation.builder()
-                    .entityType(normalizedEntityType)
-                    .entityId(entityId)
-                    .languageCode(normalizedLanguageCode)
-                    .fieldName(fieldName)
-                    .fieldValue(fieldValue)
-                    .build();
-            translationRepository.save(translation);
+            return translationRepository.save(existing);
         }
-
-        evictCache(normalizedEntityType, entityId, fieldName, normalizedLanguageCode);
+        return translationRepository.save(Translation.builder()
+                .entityType(normalizedEntityType)
+                .entityId(entityId)
+                .languageCode(normalizedLanguageCode)
+                .fieldName(fieldName)
+                .fieldValue(fieldValue)
+                .build());
     }
 
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    @org.springframework.cache.annotation.CacheEvict(value = "translations", allEntries = true)
-    public Translation saveOrUpdateTranslation(CreateTranslationRequest request) {
-        String normalizedEntityType = request.entityType().toUpperCase();
-        String normalizedLanguageCode = request.languageCode().toUpperCase();
-
-        Translation existing = translationRepository.findByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(
-                normalizedEntityType, request.entityId(), normalizedLanguageCode, request.fieldName()
-        ).orElse(null);
-
-        Translation saved;
-        if (existing != null) {
-            existing.setFieldValue(request.fieldValue());
-            saved = translationRepository.save(existing);
-        } else {
-            Translation translation = Translation.builder()
-                    .entityType(normalizedEntityType)
-                    .entityId(request.entityId())
-                    .languageCode(normalizedLanguageCode)
-                    .fieldName(request.fieldName())
-                    .fieldValue(request.fieldValue())
-                    .build();
-            saved = translationRepository.save(translation);
+    /** Programmatic clear so self-invokes and @Async paths always drop stale entries. */
+    private void clearResponseCaches() {
+        if (cacheManager == null) {
+            return;
         }
-
-        evictCache(normalizedEntityType, request.entityId(), request.fieldName(), normalizedLanguageCode);
-        return saved;
-    }
-
-    private void evictCache(String entityType, String entityId, String fieldName, String languageCode) {
-        if (cacheManager != null) {
-            try {
-                org.springframework.cache.Cache cache = cacheManager.getCache("translations");
-                if (cache != null) {
-                    String key = entityType + "_" + entityId + "_" + fieldName + "_" + languageCode;
-                    cache.evict(key);
-                }
-            } catch (Exception e) {
+        for (String name : RESPONSE_CACHES) {
+            Cache cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
             }
         }
     }
