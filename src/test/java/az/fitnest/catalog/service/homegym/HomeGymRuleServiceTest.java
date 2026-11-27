@@ -57,12 +57,15 @@ class HomeGymRuleServiceTest {
         packagePriceRepository = mock(GymPackagePriceRepository.class);
         timeSlotRuleRepository = mock(GymTimeSlotRuleRepository.class);
         orderServiceGrpcClient = mock(OrderServiceGrpcClient.class);
+        az.fitnest.catalog.repository.GymMembershipPolicyV4Repository membershipPolicies =
+                mock(az.fitnest.catalog.repository.GymMembershipPolicyV4Repository.class);
         service = new HomeGymRuleService(packagePriceRepository, timeSlotRuleRepository,
-                orderServiceGrpcClient);
+                orderServiceGrpcClient, membershipPolicies);
         clearPackageContextCache();
         when(orderServiceGrpcClient.getGymPlans()).thenReturn(List.of(
                 plan(BRONZE, "Bronze"), plan(SILVER, "Silver"),
                 plan(GOLD, "Gold"), plan(PLATINUM, "Platinum")));
+        when(membershipPolicies.findAllById(any())).thenReturn(List.of());
     }
 
     // ------------------------------------------------------------------

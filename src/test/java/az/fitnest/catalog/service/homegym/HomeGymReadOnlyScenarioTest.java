@@ -3,8 +3,10 @@ package az.fitnest.catalog.service.homegym;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
 import az.fitnest.catalog.dto.v4.GymMembershipPolicyV4.Tier;
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymMembershipPolicyV4Entity;
 import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymSubscription;
+import az.fitnest.catalog.repository.GymMembershipPolicyV4Repository;
 import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymTimeSlotRuleRepository;
 import az.fitnest.order.grpc.SubscriptionPackageInfo;
@@ -49,6 +51,7 @@ class HomeGymReadOnlyScenarioTest {
     private GymPackagePriceRepository packagePriceRepository;
     private GymTimeSlotRuleRepository timeSlotRuleRepository;
     private OrderServiceGrpcClient orderServiceGrpcClient;
+    private GymMembershipPolicyV4Repository membershipPolicyRepository;
     private HomeGymRuleService service;
 
     @BeforeEach
@@ -56,8 +59,9 @@ class HomeGymReadOnlyScenarioTest {
         packagePriceRepository = mock(GymPackagePriceRepository.class);
         timeSlotRuleRepository = mock(GymTimeSlotRuleRepository.class);
         orderServiceGrpcClient = mock(OrderServiceGrpcClient.class);
+        membershipPolicyRepository = mock(GymMembershipPolicyV4Repository.class);
         service = new HomeGymRuleService(packagePriceRepository, timeSlotRuleRepository,
-                orderServiceGrpcClient);
+                orderServiceGrpcClient, membershipPolicyRepository);
         clearPackageContextCache();
 
         when(orderServiceGrpcClient.getGymPlans()).thenReturn(List.of(
@@ -65,6 +69,7 @@ class HomeGymReadOnlyScenarioTest {
                 plan(GOLD, "Gold"), plan(PLATINUM, "Platinum")));
         when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
                 .thenReturn(List.of());
+        when(membershipPolicyRepository.findAllById(any())).thenReturn(List.of());
     }
 
     // ------------------------------------------------------------------
@@ -185,6 +190,41 @@ class HomeGymReadOnlyScenarioTest {
                         .eligibleForRequestedTier());
         assertEquals(Boolean.TRUE,
                 service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM), 3)
+                        .eligibleForRequestedTier());
+    }
+
+    @Test
+    void v4PolicyPrimaryOffWinsOverStalePriceHomeEligible() {
+        // Muskul shape: V4 Bronze/Silver primary on, Gold/Platinum off — but price rows still
+        // say home_eligible=true for higher tiers (sync lag). Policy must win.
+        when(packagePriceRepository.findLatestByGymIdIn(any(), any(LocalDate.class)))
+                .thenReturn(List.of(
+                        price(GYM_ID, BRONZE, true, true),
+                        price(GYM_ID, SILVER, true, true),
+                        price(GYM_ID, GOLD, true, true),
+                        price(GYM_ID, PLATINUM, true, true)));
+        GymMembershipPolicyV4Entity policy = new GymMembershipPolicyV4Entity();
+        policy.setGymId(GYM_ID);
+        policy.setPayload("""
+                {"timeRulesEnabled":false,"packages":[
+                  {"packageId":1201,"tier":"BRONZE","included":true,"primaryEnabled":true},
+                  {"packageId":1202,"tier":"SILVER","included":true,"primaryEnabled":true},
+                  {"packageId":1203,"tier":"GOLD","included":false,"primaryEnabled":false},
+                  {"packageId":1204,"tier":"PLATINUM","included":false,"primaryEnabled":false}
+                ],"timeRules":[]}
+                """);
+        when(membershipPolicyRepository.findAllById(any())).thenReturn(List.of(policy));
+
+        HomeGymRuleService.HomeGymInfo info =
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM));
+
+        assertEquals(Tier.BRONZE, info.minTier());
+        assertEquals(List.of(Tier.BRONZE, Tier.SILVER), info.tiers());
+        assertEquals(Boolean.FALSE,
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM), 4)
+                        .eligibleForRequestedTier());
+        assertEquals(Boolean.TRUE,
+                service.homeGymInfo(gym(GYM_ID, true, BRONZE, SILVER, GOLD, PLATINUM), 2)
                         .eligibleForRequestedTier());
     }
 

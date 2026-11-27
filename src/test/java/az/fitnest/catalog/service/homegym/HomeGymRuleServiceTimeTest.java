@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class HomeGymRuleServiceTimeTest {
 
-    private final HomeGymRuleService service = new HomeGymRuleService(null, null, null);
+    private final HomeGymRuleService service = new HomeGymRuleService(null, null, null, null);
 
     @Test
     void lastSecondOfTheWindowIsAllowed() {
