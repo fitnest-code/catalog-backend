@@ -343,6 +343,50 @@ class HomeGymRuleServiceTest {
     }
 
     @Test
+    void silverOnlyGymPricesPlatinumSubscriberFromSilverNotStubZero() {
+        // Go Premium Fitness: only Silver is included @ 5 ₼; Bronze/Gold/Platinum are stubs @ 0
+        // with leftover gym_subscriptions daily_price=5 on every tier. Platinum member must
+        // pay Silver 5 ₼ — not Platinum stub 0 ₼.
+        when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of());
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(PLATINUM), any(LocalDate.class)))
+                .thenReturn(Optional.of(stubPrice(GYM_ID, PLATINUM, 0.0)));
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(GOLD), any(LocalDate.class)))
+                .thenReturn(Optional.of(stubPrice(GYM_ID, GOLD, 0.0)));
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(SILVER), any(LocalDate.class)))
+                .thenReturn(Optional.of(price(GYM_ID, SILVER, 5.0, 50.0, true)));
+        when(packagePriceRepository
+                .findFirstByGymIdAndPackageIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                        eq(GYM_ID), eq(BRONZE), any(LocalDate.class)))
+                .thenReturn(Optional.of(stubPrice(GYM_ID, BRONZE, 0.0)));
+
+        Gym gym = new Gym();
+        gym.setId(GYM_ID);
+        gym.setHomeEligible(true);
+        Set<GymSubscription> subs = new java.util.HashSet<>();
+        for (Long pkg : List.of(BRONZE, SILVER, GOLD, PLATINUM)) {
+            GymSubscription sub = new GymSubscription();
+            sub.setPackageId(pkg);
+            sub.setDailyPrice(5.0);
+            subs.add(sub);
+        }
+        gym.setSubscriptions(subs);
+
+        HomeGymRuleService.CheckInResolution resolution =
+                service.resolveForCheckIn(gym, service.packageContext(PLATINUM), NOW);
+
+        assertTrue(resolution.allowed());
+        assertEquals(5.0, resolution.singlePrice());
+        assertEquals(50.0, resolution.unlimitedPrice());
+        assertEquals("Silver", resolution.pricePackageName());
+    }
+
+    @Test
     void gymWithRealSilverPriceStillUsesSilverForSilverSubscriber() {
         when(timeSlotRuleRepository.findEffectiveRules(GYM_ID, TODAY)).thenReturn(List.of());
         when(packagePriceRepository

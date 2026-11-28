@@ -72,4 +72,32 @@ class GymReportControllerGymPaymentsTest {
         assertEquals(1201L, item.packageId());
         assertEquals(3.50, item.amount());
     }
+
+    @Test
+    void gymPayments_excludesZeroAmountFreeEntries() {
+        // Go Premium Fitness: successful scan with amount 0 (home/free) + Platinum member package.
+        when(gymEntranceHistoryRepository.getGymPaymentsReport(any(), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{251L, 4L, 1L, 0.0}));
+
+        GymSubscription bronze = new GymSubscription();
+        bronze.setPackageId(1L);
+        bronze.setDailyPrice(5.0);
+        GymSubscription platinum = new GymSubscription();
+        platinum.setPackageId(4L);
+        platinum.setDailyPrice(5.0);
+
+        Gym gym = new Gym();
+        gym.setId(251L);
+        gym.setName("Go Premium Fitness");
+        gym.setSubscriptions(Set.of(bronze, platinum));
+
+        when(gymRepository.findWithListDetailsByIdIn(anyList())).thenReturn(List.of(gym));
+
+        ResponseEntity<List<GymPaymentReportItem>> res = controller.getGymPaymentsReport(
+                LocalDateTime.of(2026, 11, 1, 0, 0),
+                LocalDateTime.of(2026, 11, 28, 23, 59));
+
+        assertNotNull(res.getBody());
+        assertTrue(res.getBody().isEmpty());
+    }
 }
