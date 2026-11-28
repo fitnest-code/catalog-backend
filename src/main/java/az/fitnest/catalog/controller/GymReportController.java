@@ -4,8 +4,10 @@ import az.fitnest.catalog.dto.response.AppQrReportResponse;
 import az.fitnest.catalog.dto.response.GymPaymentReportItem;
 import az.fitnest.catalog.dto.response.QrScansReportResponse;
 import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
+import az.fitnest.catalog.repository.GymPackagePriceRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.service.AppQrCodeService;
 import az.fitnest.catalog.client.OrderServiceGrpcClient;
@@ -18,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,8 +50,11 @@ public class GymReportController {
      */
     private static final Map<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+    private static final ZoneId BAKU = ZoneId.of("Asia/Baku");
+
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymRepository gymRepository;
+    private final GymPackagePriceRepository gymPackagePriceRepository;
     private final OrderServiceGrpcClient orderServiceGrpcClient;
     private final AppQrCodeService appQrCodeService;
 
@@ -141,12 +148,10 @@ public class GymReportController {
         Map<String, Aggregate> aggregates = new LinkedHashMap<>();
         for (Object[] row : rawReport) {
             Long gymId = (Long) row[0];
-            Long memberPackageId = (Long) row[1];
             long count = ((Number) row[2]).longValue();
             double sumAmount = ((Number) row[3]).doubleValue();
 
-            // Payment-obligation report: free/home-gym entries (amount 0) are not payable —
-            // including them made Go Premium Fitness show Platinum @ 0 ₼ from member packageId.
+            // Payment-obligation report: zero-amount visits are not payable.
             if (sumAmount <= 0.0001) {
                 continue;
             }
@@ -155,8 +160,8 @@ public class GymReportController {
             String gymName = gym != null ? gym.getName() : "Unknown Gym";
             double averagePrice = count > 0 ? sumAmount / count : 0.0;
 
-            ResolvedTier tier = resolveEntryTier(
-                    gym, averagePrice, memberPackageId, packageNamesMap);
+            // history.packageId (row[1]) is the member's subscription — ignored for the badge.
+            ResolvedTier tier = resolveEntryTier(gymId, gym, averagePrice, packageNamesMap);
 
             String key = gymId + "|" + (tier.packageId() != null ? tier.packageId() : "na")
                     + "|" + tier.subscriptionName();
@@ -187,62 +192,102 @@ public class GymReportController {
     }
 
     /**
-     * Prefer gym subscription whose dailyPrice matches the charged average (entry price).
-     * Never use the visitor's membership package for "Zalın Abunəliyi".
+     * Resolve "Zalın Abunəliyi" from gym tariffs dynamically:
+     * 1) included {@code gym_package_price.single_price} matching the charged average
+     * 2) {@code gym_subscriptions.daily_price} matching the average
+     * 3) sole / cheapest subscription offer
+     * Never labels the column from the visitor's membership package alone.
      */
-    private static ResolvedTier resolveEntryTier(
+    private ResolvedTier resolveEntryTier(
+            Long gymId,
             Gym gym,
             double averagePrice,
-            Long memberPackageId,
             Map<Long, String> packageNamesMap) {
+        Map<Long, GymPackagePrice> includedPrices = latestIncludedPrices(gymId);
+        Optional<Map.Entry<Long, GymPackagePrice>> priceMatch = includedPrices.entrySet().stream()
+                .filter(e -> e.getValue().getSinglePrice() != null
+                        && Math.abs(e.getValue().getSinglePrice() - averagePrice) < 0.01)
+                .findFirst();
+        if (priceMatch.isPresent()) {
+            Long pkgId = priceMatch.get().getKey();
+            String name = packageNamesMap.get(pkgId);
+            if (name != null && !name.isBlank()) {
+                return new ResolvedTier(pkgId, name);
+            }
+        }
+
         if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
             Optional<GymSubscription> matched = gym.getSubscriptions().stream()
                     .filter(sub -> sub.getDailyPrice() != null
                             && Math.abs(sub.getDailyPrice() - averagePrice) < 0.01)
+                    // Prefer packages that are included entry offers when several share a price.
+                    .sorted(Comparator.comparing((GymSubscription sub) ->
+                            !includedPrices.containsKey(sub.getPackageId())))
                     .findFirst();
             if (matched.isPresent()) {
-                ResolvedTier tier = namedTier(matched.get(), packageNamesMap);
+                ResolvedTier tier = namedTier(matched.get().getPackageId(), packageNamesMap);
                 if (tier != null) {
                     return tier;
                 }
             }
-            // Single-tier gym: column is "gym subscription" — use that tier even if price drifted.
             if (gym.getSubscriptions().size() == 1) {
-                ResolvedTier only = namedTier(gym.getSubscriptions().iterator().next(), packageNamesMap);
+                ResolvedTier only = namedTier(
+                        gym.getSubscriptions().iterator().next().getPackageId(), packageNamesMap);
                 if (only != null) {
                     return only;
                 }
             }
-            // Multi-tier, no price match: lowest dailyPrice offered by the gym (not member package).
             Optional<GymSubscription> cheapest = gym.getSubscriptions().stream()
                     .filter(sub -> sub.getDailyPrice() != null && sub.getPackageId() != null)
                     .min(Comparator.comparingDouble(GymSubscription::getDailyPrice));
             if (cheapest.isPresent()) {
-                ResolvedTier tier = namedTier(cheapest.get(), packageNamesMap);
+                ResolvedTier tier = namedTier(cheapest.get().getPackageId(), packageNamesMap);
                 if (tier != null) {
                     return tier;
                 }
             }
         }
-        // Last resort only — prefer N/A over a misleading member-tier badge.
-        if (memberPackageId != null) {
-            String name = packageNamesMap.get(memberPackageId);
-            if (name != null && !name.isBlank()) {
-                return new ResolvedTier(memberPackageId, name);
+
+        if (!includedPrices.isEmpty()) {
+            Long firstIncluded = includedPrices.keySet().iterator().next();
+            ResolvedTier tier = namedTier(firstIncluded, packageNamesMap);
+            if (tier != null) {
+                return tier;
             }
         }
         return new ResolvedTier(null, "N/A");
     }
 
-    private static ResolvedTier namedTier(GymSubscription sub, Map<Long, String> packageNamesMap) {
-        if (sub == null || sub.getPackageId() == null) {
+    /** Latest effective included package-price row per packageId for a gym. */
+    private Map<Long, GymPackagePrice> latestIncludedPrices(Long gymId) {
+        Map<Long, GymPackagePrice> latest = new LinkedHashMap<>();
+        if (gymId == null) {
+            return latest;
+        }
+        LocalDate today = LocalDate.now(BAKU);
+        List<GymPackagePrice> rows = gymPackagePriceRepository
+                .findByGymIdAndEffectiveFromLessThanEqualOrderByEffectiveFromDescPackageIdAsc(gymId, today);
+        for (GymPackagePrice row : rows) {
+            if (row == null || row.getPackageId() == null) {
+                continue;
+            }
+            if (!Boolean.TRUE.equals(row.getIncluded())) {
+                continue;
+            }
+            latest.putIfAbsent(row.getPackageId(), row);
+        }
+        return latest;
+    }
+
+    private static ResolvedTier namedTier(Long packageId, Map<Long, String> packageNamesMap) {
+        if (packageId == null) {
             return null;
         }
-        String name = packageNamesMap.getOrDefault(sub.getPackageId(), "N/A");
-        if ("N/A".equals(name)) {
+        String name = packageNamesMap.get(packageId);
+        if (name == null || name.isBlank()) {
             return null;
         }
-        return new ResolvedTier(sub.getPackageId(), name);
+        return new ResolvedTier(packageId, name);
     }
 
     private Map<Long, String> resolvePackageNames(Set<Long> packageIds) {

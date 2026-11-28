@@ -470,37 +470,57 @@ public class HomeGymRuleService {
         if (hasUsableEntryPrice(gym, context.packageId())) {
             return context.packageId();
         }
+        // Highest-rank usable tariff at or below the subscriber: scan included package-price
+        // rows and subscription offers. Never fall back to a stub tier just because it matches
+        // the member's package id.
         Long best = null;
         int bestRank = -1;
-        if (gym != null && gym.getSubscriptions() != null) {
+        for (Long candidateId : candidateEntryPackageIds(gym)) {
+            if (candidateId == null || !context.eligiblePackageIds().contains(candidateId)) {
+                continue;
+            }
+            if (!hasUsableEntryPrice(gym, candidateId)) {
+                continue;
+            }
+            int rank = packageContext(candidateId).rank();
+            if (rank > bestRank) {
+                bestRank = rank;
+                best = candidateId;
+            }
+        }
+        return best;
+    }
+
+    /** Package ids that might carry an entry tariff for this gym (prices + subscriptions). */
+    private Set<Long> candidateEntryPackageIds(Gym gym) {
+        Set<Long> ids = new java.util.LinkedHashSet<>();
+        if (gym == null || gym.getId() == null) {
+            return ids;
+        }
+        for (GymPackagePrice row : packagePriceRepository.findByGymIdOrderByEffectiveFromDescPackageIdAsc(gym.getId())) {
+            if (row != null && row.getPackageId() != null) {
+                ids.add(row.getPackageId());
+            }
+        }
+        if (gym.getSubscriptions() != null) {
             for (GymSubscription subscription : gym.getSubscriptions()) {
-                Long offeredId = subscription == null ? null : subscription.getPackageId();
-                if (offeredId == null || !context.eligiblePackageIds().contains(offeredId)) {
-                    continue;
-                }
-                // Skip stub tiers (included=false) even if a subscription daily_price row exists.
-                if (!hasUsableEntryPrice(gym, offeredId)) {
-                    continue;
-                }
-                int rank = packageContext(offeredId).rank();
-                if (rank > bestRank) {
-                    bestRank = rank;
-                    best = offeredId;
+                if (subscription != null && subscription.getPackageId() != null) {
+                    ids.add(subscription.getPackageId());
                 }
             }
         }
-        return best != null ? best : context.packageId();
+        return ids;
     }
 
     /**
-     * True when the gym has a real entry tariff for {@code packageId}: an included
-     * {@code gym_package_price} row, or a {@code gym_subscriptions} row with daily_price
-     * when no package-price stub exists.
-     * <p>
-     * Go Premium Fitness shape: Silver {@code included=true} @ 5 ₼, Bronze/Gold/Platinum
-     * stubs {@code included=false} @ 0 ₼, but leftover {@code gym_subscriptions} rows still
-     * carry daily_price=5 for every tier. Those stubs must NOT count as usable — otherwise a
-     * Platinum member is priced from the Platinum stub (0 ₼) instead of Silver.
+     * True when the gym has a real entry tariff for {@code packageId}.
+     * <ul>
+     *   <li>{@code gym_package_price.included=true} → usable</li>
+     *   <li>{@code gym_package_price.included=false} → stub, never usable (even if a leftover
+     *       {@code gym_subscriptions.daily_price} exists for that package id)</li>
+     *   <li>no package-price row → usable only via subscription daily_price</li>
+     * </ul>
+     * Dynamic for every gym: driven only by included flags / offers, not gym or tier names.
      */
     private boolean hasUsableEntryPrice(Gym gym, Long packageId) {
         if (gym == null || packageId == null) {
@@ -563,6 +583,9 @@ public class HomeGymRuleService {
     }
 
     private PriceSnapshot priceFor(Gym gym, Long pricePackageId, LocalDate date) {
+        if (pricePackageId == null) {
+            return new PriceSnapshot(null, 0.0, 0.0);
+        }
         String packageName = packageContext(pricePackageId).name();
         GymPackagePrice row = latestPrice(gym.getId(), pricePackageId);
         Double single = null;
