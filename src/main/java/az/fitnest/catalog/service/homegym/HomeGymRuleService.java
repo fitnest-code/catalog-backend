@@ -478,6 +478,10 @@ public class HomeGymRuleService {
                 if (offeredId == null || !context.eligiblePackageIds().contains(offeredId)) {
                     continue;
                 }
+                // Skip stub tiers (included=false) even if a subscription daily_price row exists.
+                if (!hasUsableEntryPrice(gym, offeredId)) {
+                    continue;
+                }
                 int rank = packageContext(offeredId).rank();
                 if (rank > bestRank) {
                     bestRank = rank;
@@ -490,8 +494,13 @@ public class HomeGymRuleService {
 
     /**
      * True when the gym has a real entry tariff for {@code packageId}: an included
-     * {@code gym_package_price} row, or a {@code gym_subscriptions} row with daily_price.
-     * V4 stubs ({@code included=false}, zero/null price, no subscription offer) are not usable.
+     * {@code gym_package_price} row, or a {@code gym_subscriptions} row with daily_price
+     * when no package-price stub exists.
+     * <p>
+     * Go Premium Fitness shape: Silver {@code included=true} @ 5 ₼, Bronze/Gold/Platinum
+     * stubs {@code included=false} @ 0 ₼, but leftover {@code gym_subscriptions} rows still
+     * carry daily_price=5 for every tier. Those stubs must NOT count as usable — otherwise a
+     * Platinum member is priced from the Platinum stub (0 ₼) instead of Silver.
      */
     private boolean hasUsableEntryPrice(Gym gym, Long packageId) {
         if (gym == null || packageId == null) {
@@ -500,6 +509,10 @@ public class HomeGymRuleService {
         GymPackagePrice row = latestPrice(gym.getId(), packageId);
         if (row != null && Boolean.TRUE.equals(row.getIncluded())) {
             return true;
+        }
+        // Explicit non-included package-price row = stub tariff, not an entry offer.
+        if (row != null && Boolean.FALSE.equals(row.getIncluded())) {
+            return false;
         }
         if (gym.getSubscriptions() != null) {
             for (GymSubscription subscription : gym.getSubscriptions()) {
@@ -554,7 +567,9 @@ public class HomeGymRuleService {
         GymPackagePrice row = latestPrice(gym.getId(), pricePackageId);
         Double single = null;
         Double unlimited = null;
-        if (row != null) {
+        // Only trust included package-price rows. Stubs (included=false, often 0 ₼) must not
+        // override the real subscription daily_price / offered-tier fallback.
+        if (row != null && !Boolean.FALSE.equals(row.getIncluded())) {
             single = row.getSinglePrice();
             unlimited = row.getUnlimitedPrice();
         }
