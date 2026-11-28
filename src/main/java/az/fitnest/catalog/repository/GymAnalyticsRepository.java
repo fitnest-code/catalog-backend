@@ -18,7 +18,7 @@ public interface GymAnalyticsRepository extends JpaRepository<Gym, Long> {
                 SELECT COUNT(*) FILTER (WHERE status = 'ACTIVE') AS total_active,
                        COUNT(*) FILTER (
                            WHERE status = 'ACTIVE'
-                             AND created_at < date_trunc('month', CURRENT_DATE)
+                             AND created_date < date_trunc('month', CURRENT_DATE)
                        ) AS active_before_month
                 FROM gyms
             )
