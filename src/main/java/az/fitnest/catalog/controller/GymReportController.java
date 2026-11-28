@@ -48,6 +48,9 @@ public class GymReportController {
         return ResponseEntity.ok(appQrCodeService.getAppQrReport());
     }
 
+    private static final List<String> QR_SUCCESS_STATUSES =
+            List.of("ELIGIBLE", "SUCCESSFUL", "SUCCESS", "APPROVED", "Uğurlu");
+
     @Operation(summary = "Ümumi QR giriş sayını gətir")
     @GetMapping("/qr-scans")
     @PreAuthorize("hasRole('ADMIN')")
@@ -55,13 +58,27 @@ public class GymReportController {
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
 
-        LocalDateTime start = startDate != null ? startDate : LocalDateTime.now().minusDays(30);
         LocalDateTime end = endDate != null ? endDate : LocalDateTime.now();
+        LocalDateTime start = startDate != null ? startDate : end.minusDays(30);
 
         long count = gymEntranceHistoryRepository.countByStatusInAndScanDateBetween(
-                List.of("ELIGIBLE", "SUCCESSFUL", "SUCCESS", "APPROVED", "Uğurlu"), start, end);
+                QR_SUCCESS_STATUSES, start, end);
 
-        return ResponseEntity.ok(new QrScansReportResponse(count));
+        // Previous equal-length window for MoM/DoD trend without a second chart series.
+        long days = Math.max(1, java.time.Duration.between(start, end).toDays());
+        LocalDateTime prevEnd = start;
+        LocalDateTime prevStart = start.minusDays(days);
+        long prevCount = gymEntranceHistoryRepository.countByStatusInAndScanDateBetween(
+                QR_SUCCESS_STATUSES, prevStart, prevEnd);
+
+        double pctChange = 0.0;
+        if (prevCount > 0) {
+            pctChange = ((count - prevCount) * 100.0) / prevCount;
+        } else if (count > 0) {
+            pctChange = 100.0;
+        }
+
+        return ResponseEntity.ok(new QrScansReportResponse(count, Math.abs(pctChange), count >= prevCount));
     }
 
     @Operation(summary = "Zallar üzrə ödəniş hesabatını gətir")
