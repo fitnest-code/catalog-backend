@@ -2,6 +2,7 @@ package az.fitnest.catalog.service.dashboard;
 
 import az.fitnest.catalog.dto.dashboard.DashboardGymObligationItem;
 import az.fitnest.catalog.dto.dashboard.DashboardGymObligationsResponse;
+import az.fitnest.catalog.dto.dashboard.DashboardQrSparklineResponse;
 import az.fitnest.catalog.dto.dashboard.DashboardTopGymItem;
 import az.fitnest.catalog.dto.dashboard.DashboardTopGymsResponse;
 import az.fitnest.catalog.model.entity.Category;
@@ -35,9 +36,35 @@ public class DashboardGymService {
 
     public DashboardGymObligationsResponse getObligations(LocalDate dateFrom, LocalDate dateTo) {
         LocalDate[] range = resolveRange(dateFrom, dateTo);
+        LocalDateTime start = range[0].atStartOfDay();
+        LocalDateTime end = range[1].atTime(LocalTime.of(23, 59, 59));
         List<DashboardGymObligationItem> items = loadObligationItems(range[0], range[1]);
         double total = items.stream().mapToDouble(DashboardGymObligationItem::amount).sum();
-        return new DashboardGymObligationsResponse(total, items, range[0].toString(), range[1].toString());
+        List<Double> sparkline = denseSeries(range[0], range[1],
+                gymEntranceHistoryRepository.sumObligationByDay(start, end));
+        return new DashboardGymObligationsResponse(
+                total, items, sparkline, range[0].toString(), range[1].toString());
+    }
+
+    public DashboardQrSparklineResponse getQrSparkline(LocalDate dateFrom, LocalDate dateTo) {
+        LocalDate[] range = resolveRange(dateFrom, dateTo);
+        LocalDateTime start = range[0].atStartOfDay();
+        LocalDateTime end = range[1].atTime(LocalTime.of(23, 59, 59));
+        long days = Math.max(1, ChronoUnit.DAYS.between(range[0], range[1]) + 1);
+        LocalDateTime prevStart = range[0].minusDays(days).atStartOfDay();
+        LocalDateTime prevEnd = range[0].minusDays(1).atTime(LocalTime.of(23, 59, 59));
+
+        List<String> statuses = List.of("ELIGIBLE", "Uğurlu", "SUCCESSFUL", "SUCCESS", "APPROVED");
+        long count = gymEntranceHistoryRepository.countByStatusInAndScanDateBetween(statuses, start, end);
+        long prev = gymEntranceHistoryRepository.countByStatusInAndScanDateBetween(statuses, prevStart, prevEnd);
+        Double pct = null;
+        if (prev > 0) {
+            pct = ((count - prev) * 100.0) / prev;
+        }
+        List<Double> sparkline = denseSeries(range[0], range[1],
+                gymEntranceHistoryRepository.countScansByDay(start, end));
+        return new DashboardQrSparklineResponse(
+                count, pct, count >= prev, sparkline, range[0].toString(), range[1].toString());
     }
 
     public DashboardTopGymsResponse getTopGyms(LocalDate dateFrom, LocalDate dateTo, int limit) {
@@ -138,6 +165,35 @@ public class DashboardGymService {
         }
         Category first = gym.getMainCategories().iterator().next();
         return first != null && first.getName() != null ? first.getName() : "Zal";
+    }
+
+    private static List<Double> denseSeries(LocalDate from, LocalDate to, List<Object[]> raw) {
+        Map<LocalDate, Double> byDay = new HashMap<>();
+        for (Object[] row : raw) {
+            LocalDate day = toLocalDate(row[0]);
+            double value = row[1] instanceof Number n ? n.doubleValue() : 0.0;
+            if (day != null) {
+                byDay.put(day, value);
+            }
+        }
+        List<Double> series = new ArrayList<>();
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            series.add(byDay.getOrDefault(d, 0.0));
+        }
+        return series;
+    }
+
+    private static LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate d) {
+            return d;
+        }
+        if (value instanceof java.sql.Date d) {
+            return d.toLocalDate();
+        }
+        if (value instanceof LocalDateTime dt) {
+            return dt.toLocalDate();
+        }
+        return null;
     }
 
     private static LocalDate[] resolveRange(LocalDate dateFrom, LocalDate dateTo) {

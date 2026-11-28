@@ -37,6 +37,8 @@ class DashboardGymServiceTest {
                         new Object[]{1L, 5L, 100.0},
                         new Object[]{2L, 2L, 50.0}
                 ));
+        when(gymEntranceHistoryRepository.sumObligationByDay(any(), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{LocalDate.of(2026, 11, 1), 150.0}));
         Gym g1 = new Gym();
         g1.setId(1L);
         g1.setName("Alpha");
@@ -51,6 +53,8 @@ class DashboardGymServiceTest {
         assertEquals(150.0, res.totalObligation());
         assertEquals(2, res.gyms().size());
         assertEquals("Alpha", res.gyms().get(0).gymName());
+        assertEquals(30, res.sparkline().size());
+        assertEquals(150.0, res.sparkline().get(0));
     }
 
     @Test
