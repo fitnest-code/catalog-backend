@@ -1,6 +1,7 @@
 package az.fitnest.catalog.controller;
 
 import az.fitnest.catalog.dto.dashboard.DashboardGymObligationsResponse;
+import az.fitnest.catalog.dto.dashboard.DashboardQrSparklineResponse;
 import az.fitnest.catalog.dto.dashboard.DashboardTopGymsResponse;
 import az.fitnest.catalog.service.dashboard.DashboardGymService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,5 +46,13 @@ public class DashboardGymController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(dashboardGymService.getTopGyms(dateFrom, dateTo, limit));
+    }
+
+    @Operation(summary = "QR entrance sparkline for dashboard cards")
+    @GetMapping("/qr-sparkline")
+    public ResponseEntity<DashboardQrSparklineResponse> getQrSparkline(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(dashboardGymService.getQrSparkline(dateFrom, dateTo));
     }
 }

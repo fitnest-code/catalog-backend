@@ -47,6 +47,29 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
             @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start,
             @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
 
+    /** Daily obligation amount sparkline. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT CAST(h.scanDate AS LocalDate), COALESCE(SUM(h.amount), 0) " +
+            "FROM GymEntranceHistory h " +
+            "WHERE h.status IN ('ELIGIBLE', 'Uğurlu') AND h.scanDate BETWEEN :start AND :end " +
+            "GROUP BY CAST(h.scanDate AS LocalDate) " +
+            "ORDER BY CAST(h.scanDate AS LocalDate)")
+    List<Object[]> sumObligationByDay(
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
+
+    /** Daily successful QR scan sparkline. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT CAST(h.scanDate AS LocalDate), COUNT(h.id) " +
+            "FROM GymEntranceHistory h " +
+            "WHERE h.status IN ('ELIGIBLE', 'Uğurlu', 'SUCCESSFUL', 'SUCCESS', 'APPROVED') " +
+            "AND h.scanDate BETWEEN :start AND :end " +
+            "GROUP BY CAST(h.scanDate AS LocalDate) " +
+            "ORDER BY CAST(h.scanDate AS LocalDate)")
+    List<Object[]> countScansByDay(
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
+
     void deleteByGymIdAndPackageId(Long gymId, Long packageId);
     void deleteByGymIdAndPackageIdIsNull(Long gymId);
 
