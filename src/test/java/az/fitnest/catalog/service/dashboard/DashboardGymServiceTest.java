@@ -55,11 +55,11 @@ class DashboardGymServiceTest {
 
     @Test
     void topGyms_respectsLimit() {
-        when(gymEntranceHistoryRepository.aggregateObligationsByGym(any(), any()))
+        when(gymEntranceHistoryRepository.aggregateTopGymsByScans(any(), any()))
                 .thenReturn(List.of(
-                        new Object[]{1L, 5L, 100.0},
-                        new Object[]{2L, 2L, 50.0},
-                        new Object[]{3L, 1L, 10.0}
+                        new Object[]{1L, 50L, 20L, 100.0},
+                        new Object[]{2L, 40L, 15L, 50.0},
+                        new Object[]{3L, 10L, 5L, 10.0}
                 ));
         when(gymRepository.findWithListDetailsByIdIn(anyList())).thenReturn(List.of());
 

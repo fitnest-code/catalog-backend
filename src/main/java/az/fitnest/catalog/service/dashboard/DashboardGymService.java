@@ -4,6 +4,7 @@ import az.fitnest.catalog.dto.dashboard.DashboardGymObligationItem;
 import az.fitnest.catalog.dto.dashboard.DashboardGymObligationsResponse;
 import az.fitnest.catalog.dto.dashboard.DashboardTopGymItem;
 import az.fitnest.catalog.dto.dashboard.DashboardTopGymsResponse;
+import az.fitnest.catalog.model.entity.Category;
 import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +35,7 @@ public class DashboardGymService {
 
     public DashboardGymObligationsResponse getObligations(LocalDate dateFrom, LocalDate dateTo) {
         LocalDate[] range = resolveRange(dateFrom, dateTo);
-        List<DashboardGymObligationItem> items = loadItems(range[0], range[1]);
+        List<DashboardGymObligationItem> items = loadObligationItems(range[0], range[1]);
         double total = items.stream().mapToDouble(DashboardGymObligationItem::amount).sum();
         return new DashboardGymObligationsResponse(total, items, range[0].toString(), range[1].toString());
     }
@@ -41,15 +43,53 @@ public class DashboardGymService {
     public DashboardTopGymsResponse getTopGyms(LocalDate dateFrom, LocalDate dateTo, int limit) {
         LocalDate[] range = resolveRange(dateFrom, dateTo);
         int capped = Math.min(Math.max(limit, 1), 50);
-        List<DashboardGymObligationItem> items = loadItems(range[0], range[1]);
-        List<DashboardTopGymItem> top = items.stream()
-                .limit(capped)
-                .map(i -> new DashboardTopGymItem(i.gymId(), i.gymName(), i.qrCount(), i.amount()))
+
+        LocalDateTime start = range[0].atStartOfDay();
+        LocalDateTime end = range[1].atTime(LocalTime.of(23, 59, 59));
+        long days = Math.max(1, ChronoUnit.DAYS.between(range[0], range[1]) + 1);
+        LocalDateTime prevStart = range[0].minusDays(days).atStartOfDay();
+        LocalDateTime prevEnd = range[0].minusDays(1).atTime(LocalTime.of(23, 59, 59));
+
+        List<Object[]> current = gymEntranceHistoryRepository.aggregateTopGymsByScans(start, end);
+        List<Object[]> previous = gymEntranceHistoryRepository.aggregateTopGymsByScans(prevStart, prevEnd);
+        Map<Long, Long> prevScans = new HashMap<>();
+        for (Object[] row : previous) {
+            Long gymId = (Long) row[0];
+            long count = row[1] instanceof Number n ? n.longValue() : 0L;
+            prevScans.put(gymId, count);
+        }
+
+        List<Long> gymIds = current.stream()
+                .map(row -> (Long) row[0])
+                .filter(id -> id != null)
+                .distinct()
                 .collect(Collectors.toList());
+        Map<Long, Gym> gyms = resolveGyms(gymIds);
+
+        List<DashboardTopGymItem> top = new ArrayList<>();
+        for (Object[] row : current) {
+            if (top.size() >= capped) {
+                break;
+            }
+            Long gymId = (Long) row[0];
+            long qrCount = row[1] instanceof Number n ? n.longValue() : 0L;
+            long unique = row[2] instanceof Number n ? n.longValue() : 0L;
+            double amount = row[3] instanceof Number n ? n.doubleValue() : 0.0;
+            Gym gym = gyms.get(gymId);
+            String name = gym != null ? gym.getName() : "Unknown Gym";
+            String category = resolveCategory(gym);
+            Double trend = null;
+            long prev = prevScans.getOrDefault(gymId, 0L);
+            if (prev > 0) {
+                trend = ((qrCount - prev) * 100.0) / prev;
+            }
+            top.add(new DashboardTopGymItem(
+                    gymId, name, category, "", qrCount, unique, amount, trend));
+        }
         return new DashboardTopGymsResponse(top, range[0].toString(), range[1].toString());
     }
 
-    private List<DashboardGymObligationItem> loadItems(LocalDate from, LocalDate to) {
+    private List<DashboardGymObligationItem> loadObligationItems(LocalDate from, LocalDate to) {
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(LocalTime.of(23, 59, 59));
         List<Object[]> raw = gymEntranceHistoryRepository.aggregateObligationsByGym(start, end);
@@ -59,17 +99,17 @@ public class DashboardGymService {
                 .filter(id -> id != null)
                 .distinct()
                 .collect(Collectors.toList());
-
-        Map<Long, String> names = resolveGymNames(gymIds);
+        Map<Long, Gym> gyms = resolveGyms(gymIds);
 
         List<DashboardGymObligationItem> items = new ArrayList<>(raw.size());
         for (Object[] row : raw) {
             Long gymId = (Long) row[0];
             long count = row[1] instanceof Number n ? n.longValue() : 0L;
             double amount = row[2] instanceof Number n ? n.doubleValue() : 0.0;
+            Gym gym = gyms.get(gymId);
             items.add(new DashboardGymObligationItem(
                     gymId,
-                    names.getOrDefault(gymId, "Unknown Gym"),
+                    gym != null ? gym.getName() : "Unknown Gym",
                     count,
                     amount
             ));
@@ -77,19 +117,27 @@ public class DashboardGymService {
         return items;
     }
 
-    private Map<Long, String> resolveGymNames(List<Long> gymIds) {
-        Map<Long, String> names = new HashMap<>();
+    private Map<Long, Gym> resolveGyms(List<Long> gymIds) {
+        Map<Long, Gym> map = new HashMap<>();
         if (gymIds.isEmpty()) {
-            return names;
+            return map;
         }
         try {
             for (Gym gym : gymRepository.findWithListDetailsByIdIn(new ArrayList<>(gymIds))) {
-                names.put(gym.getId(), gym.getName());
+                map.put(gym.getId(), gym);
             }
         } catch (Exception e) {
-            log.warn("Failed to resolve gym names for dashboard: {}", e.getMessage());
+            log.warn("Failed to resolve gyms for dashboard: {}", e.getMessage());
         }
-        return names;
+        return map;
+    }
+
+    private static String resolveCategory(Gym gym) {
+        if (gym == null || gym.getMainCategories() == null || gym.getMainCategories().isEmpty()) {
+            return "Zal";
+        }
+        Category first = gym.getMainCategories().iterator().next();
+        return first != null && first.getName() != null ? first.getName() : "Zal";
     }
 
     private static LocalDate[] resolveRange(LocalDate dateFrom, LocalDate dateTo) {
