@@ -25,6 +25,17 @@ public interface GymEntranceHistoryRepository extends JpaRepository<GymEntranceH
             "GROUP BY h.gymId, h.packageId")
     List<Object[]> getGymPaymentsReport(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start, @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
 
+    /** Dashboard obligations: per-gym totals (parallel to gym-payments report). */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT h.gymId, COUNT(h.id), COALESCE(SUM(h.amount), 0) " +
+            "FROM GymEntranceHistory h " +
+            "WHERE h.status IN ('ELIGIBLE', 'Uğurlu') AND h.scanDate BETWEEN :start AND :end " +
+            "GROUP BY h.gymId " +
+            "ORDER BY SUM(h.amount) DESC")
+    List<Object[]> aggregateObligationsByGym(
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
+
     void deleteByGymIdAndPackageId(Long gymId, Long packageId);
     void deleteByGymIdAndPackageIdIsNull(Long gymId);
 
