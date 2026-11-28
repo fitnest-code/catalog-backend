@@ -3,6 +3,8 @@ package az.fitnest.catalog.controller;
 import az.fitnest.catalog.dto.response.AppQrReportResponse;
 import az.fitnest.catalog.dto.response.GymPaymentReportItem;
 import az.fitnest.catalog.dto.response.QrScansReportResponse;
+import az.fitnest.catalog.model.entity.Gym;
+import az.fitnest.catalog.model.entity.GymSubscription;
 import az.fitnest.catalog.repository.GymEntranceHistoryRepository;
 import az.fitnest.catalog.repository.GymRepository;
 import az.fitnest.catalog.service.AppQrCodeService;
@@ -28,13 +30,12 @@ import java.util.stream.Collectors;
 @SecurityRequirement(name = "bearerAuth")
 public class GymReportController {
 
+    /**
+     * Soft cache of package names from order-service only.
+     * Do not seed 1→Bronze…4→Platinum — prod package IDs are not those ordinals,
+     * and history.packageId is the member's subscription, not the gym entry tier.
+     */
     private static final Map<Long, String> PACKAGE_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
-    static {
-        PACKAGE_NAME_CACHE.put(1L, "Bronze");
-        PACKAGE_NAME_CACHE.put(2L, "Silver");
-        PACKAGE_NAME_CACHE.put(3L, "Gold");
-        PACKAGE_NAME_CACHE.put(4L, "Platinum");
-    }
 
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final GymRepository gymRepository;
@@ -94,12 +95,12 @@ public class GymReportController {
         List<Object[]> rawReport = gymEntranceHistoryRepository.getGymPaymentsReport(start, end);
 
         Set<Long> gymIds = rawReport.stream().map(row -> (Long) row[0]).collect(Collectors.toSet());
-        Set<Long> packageIds = rawReport.stream()
+        Set<Long> historyPackageIds = rawReport.stream()
                 .map(row -> (Long) row[1])
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<Long, az.fitnest.catalog.model.entity.Gym> gymsMap = new HashMap<>();
+        Map<Long, Gym> gymsMap = new HashMap<>();
         if (!gymIds.isEmpty()) {
             try {
                 var gymsWithDetails = gymRepository.findWithListDetailsByIdIn(new ArrayList<>(gymIds));
@@ -111,20 +112,122 @@ public class GymReportController {
             }
         }
 
-        Map<Long, String> packageNamesMap = new HashMap<>();
-        List<Long> missingPackageIds = new ArrayList<>();
-        for (Long pkgId : packageIds) {
-            String cachedName = PACKAGE_NAME_CACHE.get(pkgId);
-            if (cachedName != null) {
-                packageNamesMap.put(pkgId, cachedName);
-            } else {
-                missingPackageIds.add(pkgId);
+        // Collect gym subscription package IDs (entry-price tiers) + history package IDs for name lookup.
+        Set<Long> packageIdsToResolve = new HashSet<>(historyPackageIds);
+        for (Gym gym : gymsMap.values()) {
+            if (gym.getSubscriptions() == null) {
+                continue;
+            }
+            for (GymSubscription sub : gym.getSubscriptions()) {
+                if (sub.getPackageId() != null) {
+                    packageIdsToResolve.add(sub.getPackageId());
+                }
             }
         }
 
-        if (!missingPackageIds.isEmpty()) {
+        Map<Long, String> packageNamesMap = resolvePackageNames(packageIdsToResolve);
+
+        // Rebuild by (gymId, entryPricePackageId) so "Zalın Abunəliyi" is the charged gym tier,
+        // not the visiting member's subscription (history.packageId).
+        Map<String, Aggregate> aggregates = new LinkedHashMap<>();
+        for (Object[] row : rawReport) {
+            Long gymId = (Long) row[0];
+            Long memberPackageId = (Long) row[1];
+            long count = ((Number) row[2]).longValue();
+            double sumAmount = ((Number) row[3]).doubleValue();
+
+            Gym gym = gymsMap.get(gymId);
+            String gymName = gym != null ? gym.getName() : "Unknown Gym";
+            double averagePrice = count > 0 ? sumAmount / count : 0.0;
+
+            ResolvedTier tier = resolveEntryTier(
+                    gym, averagePrice, memberPackageId, packageNamesMap);
+
+            String key = gymId + "|" + (tier.packageId() != null ? tier.packageId() : "na")
+                    + "|" + tier.subscriptionName();
+            Aggregate agg = aggregates.computeIfAbsent(key,
+                    k -> new Aggregate(gymId, tier.packageId(), gymName, tier.subscriptionName()));
+            agg.qrCount += count;
+            agg.amount += sumAmount;
+        }
+
+        long idCounter = 1;
+        List<GymPaymentReportItem> responseList = new ArrayList<>();
+        for (Aggregate agg : aggregates.values()) {
+            responseList.add(new GymPaymentReportItem(
+                    idCounter++,
+                    agg.gymId,
+                    agg.packageId,
+                    agg.gymName,
+                    agg.qrCount,
+                    agg.subscriptionName,
+                    agg.amount,
+                    agg.amount));
+        }
+
+        return ResponseEntity.ok(responseList);
+    }
+
+    /**
+     * Prefer gym subscription whose dailyPrice matches the charged average (entry price).
+     * Fall back to member package name only when price match is unavailable.
+     */
+    private static ResolvedTier resolveEntryTier(
+            Gym gym,
+            double averagePrice,
+            Long memberPackageId,
+            Map<Long, String> packageNamesMap) {
+        if (gym != null && gym.getSubscriptions() != null && !gym.getSubscriptions().isEmpty()) {
+            Optional<GymSubscription> matched = gym.getSubscriptions().stream()
+                    .filter(sub -> sub.getDailyPrice() != null
+                            && Math.abs(sub.getDailyPrice() - averagePrice) < 0.01)
+                    .findFirst();
+            if (matched.isPresent()) {
+                GymSubscription sub = matched.get();
+                Long pkgId = sub.getPackageId();
+                String name = pkgId != null
+                        ? packageNamesMap.getOrDefault(pkgId, "N/A")
+                        : "N/A";
+                if (!"N/A".equals(name)) {
+                    return new ResolvedTier(pkgId, name);
+                }
+            }
+            // Single-tier gym: column is "gym subscription" — use that tier even if price drifted.
+            if (gym.getSubscriptions().size() == 1) {
+                GymSubscription only = gym.getSubscriptions().iterator().next();
+                if (only.getPackageId() != null) {
+                    String name = packageNamesMap.getOrDefault(only.getPackageId(), "N/A");
+                    if (!"N/A".equals(name)) {
+                        return new ResolvedTier(only.getPackageId(), name);
+                    }
+                }
+            }
+        }
+        if (memberPackageId != null) {
+            return new ResolvedTier(
+                    memberPackageId,
+                    packageNamesMap.getOrDefault(memberPackageId, "N/A"));
+        }
+        return new ResolvedTier(null, "N/A");
+    }
+
+    private Map<Long, String> resolvePackageNames(Set<Long> packageIds) {
+        Map<Long, String> packageNamesMap = new HashMap<>();
+        if (packageIds == null || packageIds.isEmpty()) {
+            return packageNamesMap;
+        }
+        List<Long> missing = new ArrayList<>();
+        for (Long pkgId : packageIds) {
+            String cached = PACKAGE_NAME_CACHE.get(pkgId);
+            if (cached != null) {
+                packageNamesMap.put(pkgId, cached);
+            } else {
+                missing.add(pkgId);
+            }
+        }
+        if (!missing.isEmpty()) {
             try {
-                var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(missingPackageIds);
+                var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(missing);
                 for (var info : nameInfos) {
                     PACKAGE_NAME_CACHE.put(info.getPackageId(), info.getName());
                     packageNamesMap.put(info.getPackageId(), info.getName());
@@ -133,49 +236,24 @@ public class GymReportController {
                 log.warn("Failed to resolve package names via gRPC: {}", e.getMessage());
             }
         }
+        return packageNamesMap;
+    }
 
-        long idCounter = 1;
-        List<GymPaymentReportItem> responseList = new ArrayList<>();
-        for (Object[] row : rawReport) {
-            Long gymId = (Long) row[0];
-            Long packageId = (Long) row[1];
-            long count = ((Number) row[2]).longValue();
-            double sumAmount = ((Number) row[3]).doubleValue();
+    private record ResolvedTier(Long packageId, String subscriptionName) {}
 
-            az.fitnest.catalog.model.entity.Gym gym = gymsMap.get(gymId);
-            String gymName = gym != null ? gym.getName() : "Unknown Gym";
-            String subscriptionName = "N/A";
-            if (packageId != null) {
-                subscriptionName = packageNamesMap.getOrDefault(packageId, "N/A");
-            } else {
-                try {
-                    if (gym != null) {
-                        double averagePrice = count > 0 ? sumAmount / count : 0.0;
-                        var matchedSub = gym.getSubscriptions().stream()
-                                .filter(sub -> sub.getDailyPrice() != null && Math.abs(sub.getDailyPrice() - averagePrice) < 0.01)
-                                .findFirst();
-                        if (matchedSub.isPresent() && matchedSub.get().getPackageId() != null) {
-                            Long estimatedPkgId = matchedSub.get().getPackageId();
-                            subscriptionName = PACKAGE_NAME_CACHE.get(estimatedPkgId);
-                            if (subscriptionName == null) {
-                                var nameInfos = orderServiceGrpcClient.getPackageNamesByIds(List.of(estimatedPkgId));
-                                if (!nameInfos.isEmpty()) {
-                                    subscriptionName = nameInfos.get(0).getName();
-                                    PACKAGE_NAME_CACHE.put(estimatedPkgId, subscriptionName);
-                                } else {
-                                    subscriptionName = "N/A";
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.debug("Failed estimating package name fallback", ex);
-                }
-            }
+    private static final class Aggregate {
+        final Long gymId;
+        final Long packageId;
+        final String gymName;
+        final String subscriptionName;
+        long qrCount;
+        double amount;
 
-            responseList.add(new GymPaymentReportItem(idCounter++, gymId, packageId, gymName, count, subscriptionName, sumAmount, sumAmount));
+        Aggregate(Long gymId, Long packageId, String gymName, String subscriptionName) {
+            this.gymId = gymId;
+            this.packageId = packageId;
+            this.gymName = gymName;
+            this.subscriptionName = subscriptionName;
         }
-
-        return ResponseEntity.ok(responseList);
     }
 }
