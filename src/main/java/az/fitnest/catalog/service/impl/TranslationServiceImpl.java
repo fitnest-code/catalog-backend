@@ -10,7 +10,13 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class TranslationServiceImpl implements TranslationService {
@@ -284,6 +290,86 @@ public class TranslationServiceImpl implements TranslationService {
                 request.fieldName(), request.fieldValue());
         clearResponseCaches();
         return saved;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void saveOrUpdateTranslations(List<CreateTranslationRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+
+        // Load once per entity type instead of one query per value.
+        Map<String, Set<String>> idsByType = new HashMap<>();
+        for (CreateTranslationRequest request : requests) {
+            if (isTranslatable(request)) {
+                idsByType.computeIfAbsent(normalize(request.entityType()), k -> new HashSet<>())
+                        .add(request.entityId());
+            }
+        }
+        Map<String, Translation> byKey = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : idsByType.entrySet()) {
+            for (Translation translation : translationRepository
+                    .findByEntityTypeAndEntityIdIn(entry.getKey(), entry.getValue())) {
+                byKey.put(translationKey(translation.getEntityType(), translation.getEntityId(),
+                        translation.getFieldName(), translation.getLanguageCode()), translation);
+            }
+        }
+
+        List<Translation> toSave = new ArrayList<>();
+        Set<String> processedKeys = new HashSet<>();
+        for (CreateTranslationRequest request : requests) {
+            if (!isTranslatable(request)) {
+                continue;
+            }
+            String entityType = normalize(request.entityType());
+            String languageCode = normalize(request.languageCode());
+            String fieldName = request.fieldName();
+            // Blank localized values are stored as null so every read path falls back to AZ.
+            String value = (request.fieldValue() == null || request.fieldValue().isBlank())
+                    ? null : request.fieldValue();
+            String key = translationKey(entityType, request.entityId(), fieldName, languageCode);
+            if (!processedKeys.add(key)) {
+                continue;
+            }
+
+            Translation translation = byKey.get(key);
+            if (translation == null) {
+                if (value == null) {
+                    continue;
+                }
+                translation = Translation.builder()
+                        .entityType(entityType)
+                        .entityId(request.entityId())
+                        .languageCode(languageCode)
+                        .fieldName(fieldName)
+                        .fieldValue(value)
+                        .build();
+            } else {
+                translation.setFieldValue(value);
+            }
+            byKey.put(key, translation);
+            toSave.add(translation);
+        }
+
+        if (!toSave.isEmpty()) {
+            translationRepository.saveAll(toSave);
+            clearResponseCaches();
+        }
+    }
+
+    private boolean isTranslatable(CreateTranslationRequest request) {
+        return request != null && request.entityType() != null && request.entityId() != null
+                && request.fieldName() != null && request.languageCode() != null
+                && !isSharedNameField(request.entityType(), request.fieldName());
+    }
+
+    private static String normalize(String value) {
+        return value.toUpperCase(Locale.ROOT);
+    }
+
+    private static String translationKey(String entityType, String entityId, String fieldName, String languageCode) {
+        return normalize(entityType) + "|" + entityId + "|" + fieldName + "|" + normalize(languageCode);
     }
 
     private Translation upsert(String entityType, String entityId, String languageCode,

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,8 @@ public interface TranslationRepository extends JpaRepository<Translation, Long> 
     boolean existsByEntityTypeAndEntityIdAndLanguageCodeAndFieldName(String entityType, String entityId, String languageCode, String fieldName);
 
     List<Translation> findByEntityTypeAndEntityIdInAndLanguageCode(String entityType, java.util.Collection<String> entityIds, String languageCode);
+
+    List<Translation> findByEntityTypeAndEntityIdIn(String entityType, Collection<String> entityIds);
 
     @Modifying
     @Query("DELETE FROM Translation t WHERE t.entityType = :entityType AND t.entityId = :entityId")

@@ -21,6 +21,7 @@ import az.fitnest.catalog.model.entity.Gym;
 import az.fitnest.catalog.model.entity.GymCategoryPackagePrice;
 import az.fitnest.catalog.model.entity.GymCategoryServiceLink;
 import az.fitnest.catalog.model.entity.GymCategoryWorkHour;
+import az.fitnest.catalog.model.entity.GymDescription;
 import az.fitnest.catalog.model.entity.GymPackagePrice;
 import az.fitnest.catalog.model.entity.GymWorkHour;
 import az.fitnest.catalog.model.entity.SupportedService;
@@ -193,5 +194,54 @@ class GymCategoryOfferingsServiceTest {
 
         assertEquals("Фитнес", service.buildOfferings(gym, "RU").get(0).name());
         assertEquals("Fitness", service.buildOfferings(gym, "EN").get(0).name());
+    }
+
+    // ------------------------------------------------------------------
+    // Multilingual free text: selected language, then AZ fallback
+    // ------------------------------------------------------------------
+
+    @Test
+    void localizedCategoryDescriptionWinsAndMissingLanguageFallsBackToAzRow() {
+        var main = category(GYM_MAIN, "Fitness");
+        Gym gym = gym(List.of(main), List.of(), false);
+        gym.getDescriptions().add(GymDescription.builder()
+                .gym(gym).category(main).description("AZ category text").build());
+        when(translationService.getTranslatedValue(
+                "GYM", GYM_ID.toString(), "description_" + GYM_MAIN, "EN"))
+                .thenReturn("EN category text");
+
+        assertEquals("EN category text", service.buildOfferings(gym, "EN").get(0).description());
+        assertEquals("AZ category text", service.buildOfferings(gym, "RU").get(0).description());
+    }
+
+    @Test
+    void blankTranslationFallsBackToGymLevelAzDescription() {
+        Gym gym = gym(List.of(category(GYM_MAIN, "Fitness")), List.of(), false);
+        gym.setDescription("Gym AZ description");
+        when(translationService.getTranslatedValue("GYM", GYM_ID.toString(), "description_" + GYM_MAIN, "RU"))
+                .thenReturn("  ");
+        when(translationService.getTranslatedValue("GYM", GYM_ID.toString(), "description", "RU"))
+                .thenReturn(null);
+
+        assertEquals("Gym AZ description", service.buildOfferings(gym, "RU").get(0).description());
+    }
+
+    @Test
+    void localizedServiceNameWinsAndBlankOrMissingFallsBackToAzName() {
+        Gym gym = gym(List.of(category(GYM_MAIN, "Fitness")), List.of(), false);
+        SupportedService sauna = SupportedService.builder().name("Sauna").iconUrl("sauna.png").build();
+        sauna.setId(7001L);
+        when(categoryServices.findByGymIdAndCategoryIdIn(eq(GYM_ID), anyCollection())).thenReturn(List.of(
+                GymCategoryServiceLink.builder().gymId(GYM_ID).categoryId(GYM_MAIN)
+                        .supportedServiceId(7001L).build()));
+        when(supportedServices.findAllById(any())).thenReturn(List.of(sauna));
+        when(translationService.getTranslatedValue("SUPPORTEDSERVICE", "7001", "name", "RU"))
+                .thenReturn("Сауна");
+        when(translationService.getTranslatedValue("SUPPORTEDSERVICE", "7001", "name", "EN"))
+                .thenReturn(" ");
+
+        assertEquals("Сауна", service.buildOfferings(gym, "RU").get(0).services().get(0).name());
+        assertEquals("Sauna", service.buildOfferings(gym, "EN").get(0).services().get(0).name());
+        assertEquals("Sauna", service.buildOfferings(gym, null).get(0).services().get(0).name());
     }
 }

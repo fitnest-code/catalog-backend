@@ -14,5 +14,8 @@ public interface TranslationService {
     void deleteTranslation(Long id);
     List<Translation> getTranslations(String entityType, String entityId, String fieldName, String languageCode);
     void copyAzForProperNouns(String entityType, String entityId, String fieldName, String originalValueAz);
+
+    /** Upserts many language values in one transaction and clears response caches once. */
+    void saveOrUpdateTranslations(List<CreateTranslationRequest> requests);
 }
 

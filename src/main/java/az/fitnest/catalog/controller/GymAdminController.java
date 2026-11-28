@@ -5,6 +5,9 @@ import az.fitnest.catalog.dto.request.GymInfoUpdateRequestV2;
 import az.fitnest.catalog.dto.request.GymCreateStep6RequestV2;
 import az.fitnest.catalog.dto.request.GymCreateStep1RequestV2;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV3;
+import az.fitnest.catalog.dto.request.GymCreateStep1RequestV3;
+import az.fitnest.catalog.dto.request.GymCreateStep6RequestV3;
 
 import az.fitnest.catalog.dto.PaginatedResponse;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
@@ -914,5 +917,67 @@ public class GymAdminController {
     public ResponseEntity<AddressMigrationService.MigrationResult> migrateAddresses(
             @RequestParam(defaultValue = "true") boolean dryRun) {
         return ResponseEntity.ok(addressMigrationService.migrateLegacyAddresses(dryRun));
+    }
+
+    // --- V3 Endpoints: AZ/EN/RU free text ---
+
+    @Operation(summary = "Tam idman zalı yaradın (V3, Birdəfəlik, 3 dildə sərbəst mətn)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v3/admin/gyms/create-complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GymCreateStep1Response> createGymCompleteV3(
+            @RequestPart("data") @Valid GymCreateCompleteRequestV3 request,
+            @RequestPart(value = "coverPhoto", required = false) MultipartFile coverPhoto,
+            @RequestPart(value = "categoryCovers", required = false) List<MultipartFile> categoryCovers,
+            @RequestParam(value = "categoryCoverCategoryIds", required = false) List<Long> categoryCoverCategoryIds,
+            @RequestPart(value = "trainerPhotos", required = false) List<MultipartFile> trainerPhotos,
+            @RequestPart(value = "roomPhotos", required = false) List<MultipartFile> roomPhotos,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        Long gymId = gymWriteService.createGymCompleteV3(request, coverPhoto, categoryCovers,
+                categoryCoverCategoryIds, trainerPhotos, roomPhotos, serviceIcons);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new GymCreateStep1Response(gymId));
+    }
+
+    @Operation(summary = "Step 1: Yeni idman zalı yaradın (V3, 3 dildə Haqqında)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/v3/admin/gyms/step1")
+    public ResponseEntity<GymCreateStep1Response> createGymStep1V3(@Valid @RequestBody GymCreateStep1RequestV3 request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(gymWriteService.createGymStep1V3(request));
+    }
+
+    @Operation(summary = "Validate Step 1 (V3)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/v3/admin/gyms/validate/step1")
+    public ResponseEntity<Void> validateStep1V3(@Valid @RequestBody GymCreateStep1RequestV3 request) {
+        gymWriteService.validateStep1V3(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Step 6: Abunəlik və xidmətlər (V3, 3 dildə xidmət adı)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v3/admin/gyms/{id}/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createGymStep6V3(
+            @PathVariable Long id,
+            @RequestPart("data") @Valid GymCreateStep6RequestV3 request,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        gymWriteService.createGymStep6V3(id, request, serviceIcons);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Validate Step 6 (V3)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/v3/admin/gyms/validate/step6", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> validateStep6V3(
+            @RequestPart("data") @Valid GymCreateStep6RequestV3 request,
+            @RequestPart(value = "serviceIcons", required = false) List<MultipartFile> serviceIcons) {
+        gymWriteService.validateStep6V3(request, serviceIcons);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "İdman zalı abunəliklərini yeniləyin (V3)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/v3/admin/gyms/{id}/subscriptions")
+    public ResponseEntity<Void> updateGymSubscriptionsV3(@PathVariable Long id, @Valid @RequestBody GymCreateStep6RequestV3 request) {
+        gymWriteService.updateGymSubscriptionsV3(id, request);
+        return ResponseEntity.ok().build();
     }
 }

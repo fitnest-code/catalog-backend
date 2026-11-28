@@ -134,4 +134,15 @@ public interface GymWriteService {
                              List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds,
                              List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
                              List<MultipartFile> serviceIcons);
+
+    // V3 APIs — same flows as V2 plus AZ/EN/RU free text
+    GymCreateStep1Response createGymStep1V3(az.fitnest.catalog.dto.request.GymCreateStep1RequestV3 request);
+    void validateStep1V3(az.fitnest.catalog.dto.request.GymCreateStep1RequestV3 request);
+    void createGymStep6V3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep6RequestV3 request, List<MultipartFile> serviceIcons);
+    void validateStep6V3(az.fitnest.catalog.dto.request.GymCreateStep6RequestV3 request, List<MultipartFile> serviceIcons);
+    void updateGymSubscriptionsV3(Long gymId, az.fitnest.catalog.dto.request.GymCreateStep6RequestV3 request);
+    Long createGymCompleteV3(az.fitnest.catalog.dto.request.GymCreateCompleteRequestV3 request, MultipartFile coverPhoto,
+                             List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds,
+                             List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                             List<MultipartFile> serviceIcons);
 }

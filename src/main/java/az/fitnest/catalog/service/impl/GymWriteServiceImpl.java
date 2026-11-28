@@ -8,14 +8,20 @@ import az.fitnest.catalog.dto.request.GymAdminCreateRequest;
 import az.fitnest.catalog.dto.request.GymAdminUpdateRequest;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequest;
 import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV2;
+import az.fitnest.catalog.dto.request.GymCreateCompleteRequestV3;
 import az.fitnest.catalog.dto.request.GymCreateStep1Request;
 import az.fitnest.catalog.dto.request.GymCreateStep1RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep1RequestV3;
 import az.fitnest.catalog.dto.request.GymCreateStep2Request;
 import az.fitnest.catalog.dto.request.GymCreateStep3Request;
 import az.fitnest.catalog.dto.request.GymCreateStep6Request;
 import az.fitnest.catalog.dto.request.GymCreateStep6RequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep6RequestV3;
 import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequest;
 import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequestV2;
+import az.fitnest.catalog.dto.request.GymCreateStep6SubscriptionRequestV3;
+import az.fitnest.catalog.dto.request.CategoryDetailV3;
+import az.fitnest.catalog.dto.request.LocalizedServiceNameRequest;
 import az.fitnest.catalog.dto.request.GymCreateStep7Request;
 import az.fitnest.catalog.dto.request.GymRequest;
 import az.fitnest.catalog.dto.request.GymSubscriptionBenefitsUpdateRequest;
@@ -58,6 +64,7 @@ import az.fitnest.catalog.repository.TrainerRepository;
 import az.fitnest.catalog.repository.TrainerReservationDateRepository;
 import az.fitnest.catalog.service.FileStorageService;
 import az.fitnest.catalog.service.GymQrCodeService;
+import az.fitnest.catalog.service.GymTranslationWriter;
 import az.fitnest.catalog.service.GymTrainerService;
 import az.fitnest.catalog.service.GymWriteService;
 import az.fitnest.catalog.service.ReverseGeocodingService;
@@ -110,6 +117,7 @@ public class GymWriteServiceImpl implements GymWriteService {
     private final GymQrCodeService gymQrCodeService;
     private final GymEntranceHistoryRepository gymEntranceHistoryRepository;
     private final az.fitnest.catalog.service.TranslationService translationService;
+    private final GymTranslationWriter gymTranslationWriter;
     private final Executor imageUploadExecutor;
     private final NotificationsServiceGrpcClient notificationsServiceClient;
     private final UserServiceGrpcClient userServiceGrpcClient;
@@ -2691,6 +2699,172 @@ public class GymWriteServiceImpl implements GymWriteService {
         gymActivationNotifier.notifyNewActiveGym(gymId, request.name());
 
         return gymId;
+    }
+
+    // --- V3: multilingual free text (delegates to V2 for all unchanged behavior) ---
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "admin-gyms", allEntries = true)
+    public GymCreateStep1Response createGymStep1V3(GymCreateStep1RequestV3 request) {
+        GymCreateStep1Response response = createGymStep1V2(toStep1V2(request));
+        gymTranslationWriter.saveDescriptions(response.gymId(), request.descriptionEn(), request.descriptionRu(),
+                allCategoryDetails(request.mainCategoryDetails(), request.subCategoryDetails()));
+        return response;
+    }
+
+    @Override
+    public void validateStep1V3(GymCreateStep1RequestV3 request) {
+        validateStep1V2(toStep1V2(request));
+    }
+
+    @Override
+    @Transactional
+    public void createGymStep6V3(Long gymId, GymCreateStep6RequestV3 request, List<MultipartFile> serviceIcons) {
+        createGymStep6V2(gymId, toStep6V2(request), serviceIcons);
+        gymTranslationWriter.saveCustomServiceNames(gymId, customServices(request.subscriptions()));
+    }
+
+    @Override
+    public void validateStep6V3(GymCreateStep6RequestV3 request, List<MultipartFile> serviceIcons) {
+        validateStep6V2(toStep6V2(request), serviceIcons);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = {
+                    "gym-detail",
+                    "gymDetails",
+                    "admin-gyms",
+                    "gym-listings",
+                    "main-page-gyms",
+                    "gym-count-by-category",
+                    "gym-count-by-subscription"
+            }, allEntries = true)
+    })
+    public void updateGymSubscriptionsV3(Long gymId, GymCreateStep6RequestV3 request) {
+        updateGymSubscriptionsV2(gymId, toStep6V2(request));
+        gymTranslationWriter.saveCustomServiceNames(gymId, customServices(request.subscriptions()));
+    }
+
+    @Override
+    public Long createGymCompleteV3(GymCreateCompleteRequestV3 request, MultipartFile coverPhoto,
+                                    List<MultipartFile> categoryCovers, List<Long> categoryCoverCategoryIds,
+                                    List<MultipartFile> trainerPhotos, List<MultipartFile> roomPhotos,
+                                    List<MultipartFile> serviceIcons) {
+        Long gymId = createGymCompleteV2(toCompleteV2(request), coverPhoto, categoryCovers,
+                categoryCoverCategoryIds, trainerPhotos, roomPhotos, serviceIcons);
+        gymTranslationWriter.saveDescriptions(gymId, request.descriptionEn(), request.descriptionRu(),
+                allCategoryDetails(request.mainCategoryDetails(), request.subCategoryDetails()));
+        gymTranslationWriter.saveCustomServiceNames(gymId, customServices(request.subscriptions()));
+        return gymId;
+    }
+
+    private static GymCreateStep1RequestV2 toStep1V2(GymCreateStep1RequestV3 request) {
+        return GymCreateStep1RequestV2.builder()
+                .mainCategoryDetails(toV2Details(request.mainCategoryDetails()))
+                .subCategoryDetails(toV2Details(request.subCategoryDetails()))
+                .name(request.name())
+                .phone(request.phone())
+                .description(request.description())
+                .email(request.email())
+                .hasSubcategories(request.hasSubcategories())
+                .lessonTypeIds(request.lessonTypeIds())
+                .build();
+    }
+
+    private static List<CategoryDetail> toV2Details(List<CategoryDetailV3> details) {
+        if (details == null) {
+            return null;
+        }
+        return details.stream()
+                .map(detail -> new CategoryDetail(detail.categoryId(), detail.phone(),
+                        detail.description(), detail.coverImageUrl()))
+                .toList();
+    }
+
+    private static List<CategoryDetailV3> allCategoryDetails(List<CategoryDetailV3> main,
+                                                              List<CategoryDetailV3> sub) {
+        List<CategoryDetailV3> all = new ArrayList<>();
+        if (main != null) {
+            all.addAll(main);
+        }
+        if (sub != null) {
+            all.addAll(sub);
+        }
+        return all;
+    }
+
+    private static GymCreateStep6RequestV2 toStep6V2(GymCreateStep6RequestV3 request) {
+        return GymCreateStep6RequestV2.builder()
+                .subscriptions(toV2Subscriptions(request.subscriptions()))
+                .build();
+    }
+
+    private static List<GymCreateStep6SubscriptionRequestV2> toV2Subscriptions(
+            List<GymCreateStep6SubscriptionRequestV3> subscriptions) {
+        if (subscriptions == null) {
+            return null;
+        }
+        return subscriptions.stream()
+                .map(sub -> GymCreateStep6SubscriptionRequestV2.builder()
+                        .packageId(sub.packageId())
+                        .categoryId(sub.categoryId())
+                        .dailyPrice(sub.dailyPrice())
+                        .supportedServicesId(sub.supportedServicesId())
+                        .customServices(sub.customServices() == null ? null : sub.customServices().stream()
+                                .filter(Objects::nonNull)
+                                .map(LocalizedServiceNameRequest::name)
+                                .toList())
+                        .build())
+                .toList();
+    }
+
+    private static List<LocalizedServiceNameRequest> customServices(
+            List<GymCreateStep6SubscriptionRequestV3> subscriptions) {
+        if (subscriptions == null) {
+            return List.of();
+        }
+        return subscriptions.stream()
+                .filter(Objects::nonNull)
+                .map(GymCreateStep6SubscriptionRequestV3::customServices)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private static GymCreateCompleteRequestV2 toCompleteV2(GymCreateCompleteRequestV3 request) {
+        return GymCreateCompleteRequestV2.builder()
+                .mainCategoryDetails(toV2Details(request.mainCategoryDetails()))
+                .subCategoryDetails(toV2Details(request.subCategoryDetails()))
+                .hasSubcategories(request.hasSubcategories())
+                .name(request.name())
+                .phone(request.phone())
+                .description(request.description())
+                .email(request.email())
+                .lessonTypeIds(request.lessonTypeIds())
+                .trainers(request.trainers() == null ? null : request.trainers().stream()
+                        .map(trainer -> new GymCreateCompleteRequestV2.TrainerCreateData(
+                                trainer.name(), trainer.surname(), trainer.professionId(),
+                                trainer.email(), trainer.phone(), trainer.lessonTypeIds()))
+                        .toList())
+                .generalWorkHours(request.generalWorkHours())
+                .workHoursWoman(request.workHoursWoman())
+                .workHoursMan(request.workHoursMan())
+                .restDays(request.restDays())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .altitude(request.altitude())
+                .city(request.city())
+                .rayon(request.rayon())
+                .addressText(request.addressText())
+                .roomNames(request.roomNames())
+                .roomCategoryIds(request.roomCategoryIds())
+                .subscriptions(toV2Subscriptions(request.subscriptions()))
+                .admins(request.admins())
+                .build();
     }
 
     private void updateGymSubscriptionsInternalV2(
